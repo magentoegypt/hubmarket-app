@@ -1,7 +1,7 @@
 name: hubmarket_app
 description: "Hub Market — Flutter storefront client for Magento Open Source (hub-market.magento2.click), UAE, bilingual EN/AR, AED."
 publish_to: "none"
-version: 1.0.2+125
+version: 1.0.0+1
 
 environment:
   sdk: ^3.12.0

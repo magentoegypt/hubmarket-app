@@ -140,15 +140,13 @@ class NotificationService {
     importance: Importance.high,
   );
 
-  /// Sets up local notifications (silently) and, when a Firebase config is
-  /// bundled, FCM — and only then asks for notification permission.
+  /// Sets up FCM when a Firebase config is bundled, and only then the local
+  /// notifications that display its foreground pushes and the permission ask.
   ///
-  /// Local notifications exist here to show foreground pushes, so without FCM
-  /// there is nothing to ask permission for: no "Allow notifications?" dialog
-  /// over the splash of a build that cannot receive a push, and
-  /// `FirebaseMessaging` is never touched.
+  /// Without FCM there is nothing to show, so nothing starts: no notification
+  /// channel is created and `FirebaseMessaging` is never touched. (The
+  /// Android manifest also drops POST_NOTIFICATIONS until FCM is configured.)
   Future<void> init() async {
-    await _initLocal();
     await _initFirebase();
   }
 
@@ -157,8 +155,8 @@ class NotificationService {
       // White status-bar silhouette (res/drawable/ic_stat_notify) — the colour
       // launcher icon would render as a white square in the status bar.
       android: AndroidInitializationSettings('ic_stat_notify'),
-      // The Darwin defaults request permission on initialize — i.e. at launch.
-      // Permission is requested with FCM instead (see _initFirebase).
+      // The Darwin defaults request permission on initialize. Permission is
+      // requested once, with FCM, right after this (see _initFirebase).
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -202,6 +200,8 @@ class NotificationService {
       return;
     }
     try {
+      // Before any listener: foreground pushes are shown through it.
+      await _initLocal();
       FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
       // The one permission prompt: iOS alert/badge/sound, and POST_NOTIFICATIONS
       // on Android 13+ (which also covers the local notifications that show
