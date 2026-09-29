@@ -50,8 +50,8 @@
                 <data android:scheme="https" android:host="hub-market.magento2.click"/>
                 <data android:scheme="https" android:host="www.hub-market.magento2.click"/>
                 <data android:path="/"/>
-                <data android:pathPrefix="/uae-en"/>
-                <data android:pathPrefix="/uae-ar"/>
+                <data android:pathPrefix="/en/"/>
+                <data android:pathPrefix="/ar/"/>
                 <data android:pathPattern="/.*\\.html"/>
             </intent-filter>
         </activity>

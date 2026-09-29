@@ -85,15 +85,15 @@ class AppConfig {
     defaultLocale: String.fromEnvironment('DEFAULT_LOCALE', defaultValue: 'en'),
     bootstrapStoreCode: String.fromEnvironment(
       'BOOTSTRAP_STORE_CODE',
-      defaultValue: 'eg_en',
+      defaultValue: 'en',
     ),
     storeCodeEn: String.fromEnvironment(
       'STORE_CODE_EN',
-      defaultValue: 'eg_en',
+      defaultValue: 'en',
     ),
     storeCodeAr: String.fromEnvironment(
       'STORE_CODE_AR',
-      defaultValue: 'eg_ar',
+      defaultValue: 'ar',
     ),
     currency: String.fromEnvironment('CURRENCY', defaultValue: 'AED'),
     userAgent: String.fromEnvironment(
