@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
-import '../../../core/diagnostics/payment_trace.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
@@ -9,8 +8,6 @@ import '../../auth/data/vnecoms_otp.dart';
 import '../../catalog/data/product_mapper.dart';
 import '../../catalog/domain/money.dart';
 import '../domain/checkout.dart';
-import '../domain/payment_session.dart';
-import '../domain/tabby_config.dart';
 import 'checkout_queries.dart';
 
 class CheckoutRepository {
@@ -22,6 +19,34 @@ class CheckoutRepository {
     CheckoutQueries.setGuestEmail,
     {'cartId': cartId, 'email': email},
   );
+
+  /// Whether [email] already belongs to a customer account — false when
+  /// `isEmailAvailable` says the address is taken.
+  ///
+  /// Magento 2.4.7+ answers "available" for every address unless the admin
+  /// enables Stores › Configuration › Sales › Checkout › Checkout Options ›
+  /// Enable Guest Checkout Login, so by default this is always false and the
+  /// guest's "you already have an account" prompt stays hidden, as it does on
+  /// the website. A failed check reads as false too: the prompt is a
+  /// convenience, never a gate.
+  Future<bool> hasAccount(String email) async {
+    try {
+      final result = await _client.query(
+        QueryOptions(
+          document: gql(CheckoutQueries.isEmailAvailable),
+          variables: {'email': email},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+      if (result.hasException) return false;
+      final available =
+          (result.data?['isEmailAvailable']
+              as Map<String, dynamic>?)?['is_email_available'];
+      return available == false;
+    } on Object {
+      return false;
+    }
+  }
 
   /// Sets the shipping address and returns the available shipping methods.
   ///
@@ -75,7 +100,8 @@ class CheckoutRepository {
     return moneyFromJson(prices?['grand_total'] as Map<String, dynamic>?);
   }
 
-  /// Sets billing = shipping and returns the available payment methods.
+  /// Sets billing = shipping and returns the available payment methods — all
+  /// of them; checkout decides which it can take (`payableInApp`).
   Future<List<PaymentMethodOption>> setBillingSameAsShipping(
     String cartId,
   ) async {
@@ -92,55 +118,17 @@ class CheckoutRepository {
           (m) => PaymentMethodOption(
             code: (m['code'] as String?) ?? '',
             title: (m['title'] as String?) ?? '',
+            isOnline: m['is_deferred'] == true,
           ),
         )
         .toList();
   }
 
-  /// Sets the cart's payment method, optionally with the saved-card extras.
-  ///
-  /// Returns whether the *extras* were accepted; the method itself is set either
-  /// way (or throws). [publicHash] pays with a stored card; [saveCard] asks the
-  /// gateway to tokenise the card about to be entered.
-  ///
-  /// Those two sub-inputs are backend additions (§④). A store that hasn't
-  /// shipped them rejects the value, so the save opt-in **retries bare** — not
-  /// saving a card must never cost the shopper their order. A saved-card
-  /// selection deliberately does not fall back: dropping the hash would place
-  /// the order against an unspecified token.
-  Future<bool> setPaymentMethod(
-    String cartId,
-    String code, {
-    String? publicHash,
-    bool saveCard = false,
-  }) async {
-    final extras = <String, dynamic>{
-      if (publicHash != null) 'ngeniusonline_vault': {'public_hash': publicHash},
-      if (publicHash == null && saveCard)
-        'ngeniusonline': {'is_active_payment_token_enabler': true},
-    };
-    Future<void> send(Map<String, dynamic> method) => _mutate(
-      CheckoutQueries.setPaymentMethod,
-      {'cartId': cartId, 'method': method},
-    );
-
-    if (extras.isEmpty) {
-      await send({'code': code});
-      return true;
-    }
-    try {
-      await send({'code': code, ...extras});
-      return true;
-    } on Failure catch (failure) {
-      if (publicHash != null) rethrow;
-      PaymentTrace.record(
-        'vault: save-card opt-in refused (${failure.kind.name}: '
-        '${failure.detail ?? "no detail"}) — retrying without it',
-      );
-      await send({'code': code});
-      return false;
-    }
-  }
+  /// Sets the cart's payment method.
+  Future<void> setPaymentMethod(String cartId, String code) => _mutate(
+    CheckoutQueries.setPaymentMethod,
+    {'cartId': cartId, 'code': code},
+  );
 
   /// Sends a guest-checkout code to [mobile] (E.164) —
   /// `customerCheckoutSendOtp`. Throws [Failure] (`server`, with the store's
@@ -185,58 +173,20 @@ class CheckoutRepository {
     );
   }
 
-  // --- Gateway payment sessions / Tabby config -------------------------------
-  // The seams the gateway flows (N-Genius card + wallets, Tabby, Tamara) and
-  // the "Pay in 4" promo are written against. Hub Market has no resolver behind
-  // any of them, so they report "none" without a request; checkout never gets
-  // this far on this store, because BackendCapabilities.gatewayPaymentSessions
-  // keeps gateway methods out of the list. Restore the operations (contract:
-  // docs/backend/payment-contract.md) together with the flag.
-
-  /// The gateway session for a placed order — always null on this backend,
-  /// which the callers already treat as "awaiting payment".
-  Future<PaymentSession?> fetchPaymentSession(
-    String orderNumber, {
-    String? email,
-    String? lastname,
-    String? token,
-  }) async {
-    PaymentTrace.record(
-      'session: none for $orderNumber — this backend has no paymentSession',
+  /// The carrier names the option and the method, when it says something else,
+  /// becomes its second line (Figma 17: "Standard delivery / 2–4 working
+  /// days"). A carrier without a title falls back to the method's.
+  ShippingMethodOption _parseShipping(Map<String, dynamic> json) {
+    final carrier = ((json['carrier_title'] as String?) ?? '').trim();
+    final method = ((json['method_title'] as String?) ?? '').trim();
+    return ShippingMethodOption(
+      carrierCode: (json['carrier_code'] as String?) ?? '',
+      methodCode: (json['method_code'] as String?) ?? '',
+      title: carrier.isNotEmpty ? carrier : method,
+      detail: carrier.isNotEmpty && method != carrier ? method : '',
+      amount: moneyFromJson(json['amount'] as Map<String, dynamic>?),
     );
-    return null;
   }
-
-  /// Switches a placed order to another method and returns its session —
-  /// always null here, which keeps the retry screen on "session unavailable".
-  Future<PaymentSession?> setOrderPaymentMethod(
-    String orderNumber,
-    String methodCode, {
-    String? email,
-    String? lastname,
-    String? token,
-    String? publicHash,
-  }) async {
-    PaymentTrace.record(
-      'switch: $orderNumber → $methodCode — this backend has no '
-      'setOrderPaymentMethod',
-    );
-    return null;
-  }
-
-  /// Tabby products + promo thresholds — always null here (promo hidden).
-  Future<TabbyConfig?> fetchTabbyConfig() async => null;
-
-  ShippingMethodOption _parseShipping(Map<String, dynamic> json) =>
-      ShippingMethodOption(
-        carrierCode: (json['carrier_code'] as String?) ?? '',
-        methodCode: (json['method_code'] as String?) ?? '',
-        title: [
-          json['carrier_title'],
-          json['method_title'],
-        ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
-        amount: moneyFromJson(json['amount'] as Map<String, dynamic>?),
-      );
 
   Future<Map<String, dynamic>> _mutate(
     String document,

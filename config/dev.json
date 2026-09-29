@@ -6,10 +6,5 @@
   "STORE_CODE_EN": "en",
   "STORE_CODE_AR": "ar",
   "CURRENCY": "AED",
-  "USER_AGENT": "HubMarketApp-dev/0.1.0 (Flutter)",
-  "MERCHANT_NAME": "Hub Market",
-  "APPLE_PAY_MERCHANT_ID": "",
-  "APPLE_PAY_COUNTRY_CODE": "AE",
-  "APPLE_PAY_NETWORKS": "visa,mastercard",
-  "SAMSUNG_PAY_SERVICE_ID": ""
+  "USER_AGENT": "HubMarketApp-dev/0.1.0 (Flutter)"
 }

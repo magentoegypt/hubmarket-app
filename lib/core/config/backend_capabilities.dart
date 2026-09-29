@@ -17,8 +17,6 @@ class BackendCapabilities {
   const BackendCapabilities({
     this.whatsappOtpLogin = false,
     this.guestCheckoutOtp = false,
-    this.gatewayPaymentSessions = false,
-    this.tabbyPromo = false,
     this.pushDeviceTokens = false,
   });
 
@@ -39,19 +37,6 @@ class BackendCapabilities {
   /// checkout — GraphQL `placeOrder` never checks it — so on the app it would
   /// be friction with no server-side effect.
   final bool guestCheckoutOtp;
-
-  /// A payment session for a placed order — what card (N-Genius), wallet,
-  /// Tabby and Tamara payments present. Needs a `paymentSession` /
-  /// `setOrderPaymentMethod` resolver, which Hub Market doesn't have.
-  ///
-  /// Off: checkout drops those methods from `available_payment_methods`
-  /// (placing an order with one would leave it unpaid), so only methods that
-  /// complete on `placeOrder` remain — cash on delivery on this store.
-  final bool gatewayPaymentSessions;
-
-  /// Tabby eligibility + "Pay in 4" promo metadata (`tabbyConfig`) for the
-  /// product page and cart. Off hides the promo.
-  final bool tabbyPromo;
 
   /// Binding this device's FCM token to the customer, for pushes addressed to
   /// one person (order updates) rather than a topic. Needs a

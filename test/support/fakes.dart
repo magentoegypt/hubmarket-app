@@ -13,8 +13,6 @@ import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
 import 'package:hubmarket_app/features/checkout/data/checkout_repository.dart';
 import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
-import 'package:hubmarket_app/features/checkout/domain/payment_session.dart';
-import 'package:hubmarket_app/features/checkout/domain/tabby_config.dart';
 import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/features/wishlist/domain/wishlist_entry.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
@@ -196,12 +194,14 @@ class FakeCheckoutRepository implements CheckoutRepository {
     ],
     this.paymentMethods = const <PaymentMethodOption>[
       PaymentMethodOption(code: 'cashondelivery', title: 'Cash on Delivery'),
-      PaymentMethodOption(code: 'tabby', title: 'Tabby — Pay later'),
+      PaymentMethodOption(
+        code: 'tabby_installments',
+        title: 'Tabby — Pay later',
+        isOnline: true,
+      ),
     ],
     this.grandTotal = const Money(amount: 219, currency: 'AED'),
     this.orderResult = const PlaceOrderResult(orderNumber: '000000123'),
-    this.paymentSession,
-    this.tabbyConfig,
     this.fail = false,
     this.guestOtpVerifyFails = false,
   });
@@ -210,13 +210,6 @@ class FakeCheckoutRepository implements CheckoutRepository {
   final List<PaymentMethodOption> paymentMethods;
   final Money? grandTotal;
   final PlaceOrderResult orderResult;
-
-  /// Provider session returned by [fetchPaymentSession]; null mimics a backend
-  /// without the resolver deployed (Open Q §2).
-  final PaymentSession? paymentSession;
-
-  /// Tabby config returned by [fetchTabbyConfig]; null mimics Tabby unconfigured.
-  final TabbyConfig? tabbyConfig;
   final bool fail;
   final bool guestOtpVerifyFails;
 
@@ -230,17 +223,15 @@ class FakeCheckoutRepository implements CheckoutRepository {
   Map<String, dynamic>? lastAddress;
   String? selectedShippingMethod;
   String? selectedPaymentCode;
-  String? selectedPublicHash;
-  bool lastSaveCard = false;
 
-  /// Whether the store accepts the save-card opt-in (§④ deployed). False makes
-  /// `setPaymentMethod` report the fallback, as a store without it would.
-  bool saveCardAccepted = true;
-  String? switchedToPublicHash;
-  String? lastSessionEmail;
-  String? lastSessionLastname;
-  String? lastSessionToken;
-  String? switchedToMethod;
+  /// Emails [hasAccount] reports as belonging to a customer.
+  Set<String> registeredEmails = {};
+
+  @override
+  Future<bool> hasAccount(String email) async {
+    calls.add('hasAccount');
+    return registeredEmails.contains(email);
+  }
 
   @override
   Future<void> setGuestEmail(String cartId, String email) async {
@@ -282,18 +273,10 @@ class FakeCheckoutRepository implements CheckoutRepository {
   }
 
   @override
-  Future<bool> setPaymentMethod(
-    String cartId,
-    String code, {
-    String? publicHash,
-    bool saveCard = false,
-  }) async {
+  Future<void> setPaymentMethod(String cartId, String code) async {
     calls.add('setPaymentMethod:$code');
     if (fail) throw const Failure(FailureKind.unknown);
     selectedPaymentCode = code;
-    selectedPublicHash = publicHash;
-    lastSaveCard = saveCard;
-    return !saveCard || saveCardAccepted;
   }
 
   @override
@@ -325,41 +308,6 @@ class FakeCheckoutRepository implements CheckoutRepository {
     calls.add('placeOrder');
     if (fail) throw const Failure(FailureKind.unknown);
     return orderResult;
-  }
-
-  @override
-  Future<PaymentSession?> fetchPaymentSession(
-    String orderNumber, {
-    String? email,
-    String? lastname,
-    String? token,
-  }) async {
-    calls.add('fetchPaymentSession');
-    lastSessionEmail = email;
-    lastSessionLastname = lastname;
-    lastSessionToken = token;
-    return paymentSession;
-  }
-
-  @override
-  Future<PaymentSession?> setOrderPaymentMethod(
-    String orderNumber,
-    String methodCode, {
-    String? email,
-    String? lastname,
-    String? token,
-    String? publicHash,
-  }) async {
-    calls.add('setOrderPaymentMethod:$methodCode');
-    switchedToMethod = methodCode;
-    switchedToPublicHash = publicHash;
-    return paymentSession;
-  }
-
-  @override
-  Future<TabbyConfig?> fetchTabbyConfig() async {
-    calls.add('fetchTabbyConfig');
-    return tabbyConfig;
   }
 }
 

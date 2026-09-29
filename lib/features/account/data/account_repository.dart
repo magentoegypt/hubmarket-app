@@ -667,9 +667,8 @@ final addressesProvider = FutureProvider.autoDispose<List<CustomerAddress>>((
 ///
 /// Error-safe by design: `customerPaymentTokens` 403s for a guest and errors
 /// outright until the gateway is vault-aware, and neither is a reason to break
-/// checkout. An empty list simply hides the picker, the save opt-in and the
-/// Payment Methods rows — the same "degrade, never fabricate" policy as
-/// `fetchPaymentSession` / `fetchTabbyConfig`.
+/// the screen. An empty list simply hides the Payment Methods rows — degrade,
+/// never fabricate.
 final savedCardsProvider = FutureProvider.autoDispose<List<SavedCard>>((
   ref,
 ) async {

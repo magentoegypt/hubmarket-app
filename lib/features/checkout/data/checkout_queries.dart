@@ -8,6 +8,14 @@ mutation SetGuestEmail($cartId: String!, $email: String!) {
 }
 ''';
 
+  /// Drives the guest's "You already have an account with us" prompt (Figma
+  /// 17a) — see `CheckoutRepository.hasAccount`.
+  static const String isEmailAvailable = r'''
+query IsEmailAvailable($email: String!) {
+  isEmailAvailable(email: $email) { is_email_available }
+}
+''';
+
   // --- Guest-checkout WhatsApp OTP (Vnecoms SMS) -----------------------------
   // Phone-bound, not cart-bound: the code goes to the delivery phone the guest
   // just submitted. Refusals are `success: false` + `msg` (see VnecomsOtp).
@@ -79,6 +87,8 @@ mutation SetShippingMethod(
 }
 ''';
 
+  /// `is_deferred` is Magento's "online integration" flag (`!isOffline()`);
+  /// checkout offers only the offline methods — see `payableInApp`.
   static const String setBillingSameAsShipping = r'''
 mutation SetBilling($cartId: String!) {
   setBillingAddressOnCart(
@@ -88,24 +98,16 @@ mutation SetBilling($cartId: String!) {
     }
   ) {
     cart {
-      available_payment_methods { code title }
+      available_payment_methods { code title is_deferred }
     }
   }
 }
 ''';
 
-  /// Takes the whole `PaymentMethodInput` as a variable rather than inlining
-  /// `{ code: $code }`, so the saved-card extras can ride along without a second
-  /// operation: `ngeniusonline_vault: { public_hash }` to pay with a stored
-  /// card, `ngeniusonline: { is_active_payment_token_enabler: true }` to save
-  /// the one being entered (docs/backend/payment-contract.md §④). Neither
-  /// sub-input exists on Hub Market, and they are only sent for an N-Genius
-  /// card row, which checkout never shows here; a plain `{ code }` (cash on
-  /// delivery) is what this store receives.
   static const String setPaymentMethod = r'''
-mutation SetPayment($cartId: String!, $method: PaymentMethodInput!) {
+mutation SetPayment($cartId: String!, $code: String!) {
   setPaymentMethodOnCart(
-    input: { cart_id: $cartId, payment_method: $method }
+    input: { cart_id: $cartId, payment_method: { code: $code } }
   ) {
     cart { selected_payment_method { code title } }
   }
@@ -120,10 +122,4 @@ mutation PlaceOrder($cartId: String!) {
   }
 }
 ''';
-
-  // No payment-session or Tabby operations: Hub Market has no `paymentSession`
-  // / `setOrderPaymentMethod` / `tabbyConfig` resolver (they were custom
-  // modules of the backend this app started from). See
-  // BackendCapabilities.gatewayPaymentSessions / .tabbyPromo; the contract they
-  // implemented is docs/backend/payment-contract.md.
 }

@@ -15,7 +15,6 @@ import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_preview.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/product_skeletons.dart';
-import 'package:hubmarket_app/features/checkout/payments/tabby_promo.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/fakes.dart';
@@ -58,7 +57,6 @@ Widget _harness({ProductPreview? preview, String locale = 'en'}) {
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       catalogRepositoryProvider.overrideWithValue(_StuckCatalogRepository()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
-      tabbyConfigProvider.overrideWith((ref) => null),
     ],
     child: MaterialApp.router(
       routerConfig: router,

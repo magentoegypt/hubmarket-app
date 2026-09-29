@@ -22,7 +22,6 @@ import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/reset_password_screen.dart';
 import '../features/cart/presentation/screens/cart_screen.dart';
 import '../features/checkout/presentation/screens/checkout_screen.dart';
-import '../features/checkout/presentation/screens/complete_payment_screen.dart';
 import '../features/checkout/presentation/screens/order_success_screen.dart';
 import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/auth/presentation/screens/sign_up_screen.dart';
@@ -256,22 +255,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.checkout,
         builder: (context, state) => const CheckoutScreen(),
       ),
+      // Reached only from Place order, which hands over the order in `extra`;
+      // a cold start or a restored route has none, so go Home instead.
       GoRoute(
         path: AppRoutes.orderSuccess,
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          return OrderSuccessScreen(
-            orderNumber: (extra?['number'] as String?) ?? '',
-            pendingPayment: (extra?['pending'] as bool?) ?? false,
-            deliveryEta: extra?['eta'] as String?,
-            deliveryLocation: extra?['location'] as String?,
-          );
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.completePayment,
+        redirect: (context, state) =>
+            state.extra is OrderPlacedArgs ? null : AppRoutes.home,
         builder: (context, state) =>
-            CompletePaymentScreen(args: state.extra as CompletePaymentArgs),
+            OrderSuccessScreen(args: state.extra! as OrderPlacedArgs),
       ),
       GoRoute(
         path: AppRoutes.diagnostics,

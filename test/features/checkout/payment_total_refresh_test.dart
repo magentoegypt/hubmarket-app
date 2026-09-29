@@ -11,7 +11,6 @@ import 'package:hubmarket_app/features/cart/presentation/cart_controller.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/checkout/data/checkout_repository.dart';
 import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
-import 'package:hubmarket_app/features/checkout/payments/wallet_availability.dart';
 import 'package:hubmarket_app/features/checkout/presentation/checkout_controller.dart';
 
 import '../../support/fakes.dart';
@@ -77,19 +76,9 @@ class _MethodCheckoutRepo extends FakeCheckoutRepository {
   final _SurchargeCartRepo cart;
 
   @override
-  Future<bool> setPaymentMethod(
-    String cartId,
-    String code, {
-    String? publicHash,
-    bool saveCard = false,
-  }) async {
+  Future<void> setPaymentMethod(String cartId, String code) async {
     cart.method = code;
-    return super.setPaymentMethod(
-      cartId,
-      code,
-      publicHash: publicHash,
-      saveCard: saveCard,
-    );
+    return super.setPaymentMethod(cartId, code);
   }
 }
 
@@ -104,9 +93,6 @@ Future<ProviderContainer> _seeded(
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       cartRepositoryProvider.overrideWithValue(cart),
       checkoutRepositoryProvider.overrideWithValue(checkout),
-      walletAvailabilityProvider.overrideWith(
-        (ref) async => WalletAvailability.none,
-      ),
     ],
   );
   addTearDown(container.dispose);

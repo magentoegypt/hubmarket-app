@@ -10,46 +10,10 @@
 	     `registerForRemoteNotifications` fail, so APNs hands over no device token
 	     (the FCM token then stays null). Use `production`. (Only a local Xcode
 	     debug run with a *development* profile would need `development`.) -->
-	<!-- APPLE PAY — intentionally NOT declared yet.
-	     The wallet code is in place (PaymentChannel.swift, ApplePaySession.swift)
-	     but the merchant entitlement is deliberately absent until the external
-	     setup is done, because declaring it here without regenerating the
-	     provisioning profiles produces a build that fails to install locally and
-	     an Apple Pay sheet that cannot be presented on device.
-
-	     To enable, IN THIS ORDER:
-	       1. Apple Developer portal -> Identifiers -> Merchant IDs: create
-	          merchant.com.hubmarket.app (confirm the exact string with Network
-	          International first — it must match what they register).
-	       2. Get the Apple Pay payment-processing CSR from N-Genius, upload it
-	          against the merchant id, return the certificate to them. Without
-	          this the sheet completes but authorisation always fails, because
-	          N-Genius cannot decrypt the PKPaymentToken.
-	       3. App ID com.hubmarket.app -> enable "Apple Pay Payment Processing" and
-	          associate the merchant id.
-	       4. REGENERATE BOTH ios/signing/*.mobileprovision (an existing profile
-	          never picks up a new capability). Keep the same filenames; keep the
-	          ad-hoc profile's device UDIDs; keep the App Store profile free of a
-	          ProvisionedDevices list — tool/ios_*_build.sh picks the profile
-	          solely on that key.
-	       5. Add the key here, and set APPLE_PAY_MERCHANT_ID in config/*.json to
-	          the same string.
-
-	     Note CI archives UNSIGNED and re-signs with the PROFILE's entitlements
-	     (tool/ios_*_build.sh step 5d), so this file governs local Xcode builds
-	     only — the profile is what actually ships. Those scripts assert the two
-	     stay in sync once the key is added here.
-
-	<key>com.apple.developer.in-app-payments</key>
-	<array>
-		<string>merchant.com.hubmarket.app</string>
-	</array>
-	-->
-
-	<!-- UNIVERSAL LINKS — intentionally NOT declared yet, same reasoning as
-	     Apple Pay above: an existing provisioning profile never picks up a new
-	     capability, so declaring this key before the portal work makes local
-	     Xcode builds fail to sign, and a CI build (which re-signs from the
+	<!-- UNIVERSAL LINKS — intentionally NOT declared yet: an existing
+	     provisioning profile never picks up a new capability, so declaring
+	     this key before the portal work makes local Xcode builds fail to
+	     sign, and a CI build (which re-signs from the
 	     PROFILE) would ship silently WITHOUT it — universal links would just
 	     keep opening Safari with no visible error.
 	

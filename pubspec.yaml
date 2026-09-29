@@ -47,10 +47,6 @@ dependencies:
   http: ^1.6.0
   image_picker: ^1.2.3
   webview_flutter: ^4.14.1
-  # Tabby BNPL checkout (official package, publisher tabby.ai). Renders Tabby's
-  # hosted session in an embedded WebView, so Tabby needs no native module —
-  # only N-Genius does. See lib/features/checkout/payments/tabby_payment_gateway.dart
-  tabby_flutter_inapp_sdk: ^2.1.0
   timezone: ^0.11.1
 
 dev_dependencies:
@@ -75,10 +71,6 @@ flutter:
   assets:
     - assets/branding/
     - assets/images/
-    # Official Apple Pay / Samsung Pay marks. See assets/payments/README.md —
-    # the licensed artwork is dropped in by hand; the checkout row falls back to
-    # a Material icon while the directory holds only the README.
-    - assets/payments/
   fonts:
     # Variable fonts (all weights in a single file). Inter + Playfair Display for
     # Latin/EN; Cairo for Arabic/AR. See docs/FIGMA_DESIGN.md.

@@ -8,6 +8,7 @@ import '../../../../core/store/store_urls.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
+import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
 import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
 import '../../domain/product.dart';
 import 'price_view.dart';
@@ -184,9 +185,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   };
 
   /// Adds the product to the cart (simple products add directly; the cart
-  /// controller self-heals a stale/consumed cart). Configurable products that
-  /// need option selection surface a generic error — the card's tap still opens
-  /// the PDP where options can be chosen.
+  /// controller self-heals a stale/consumed cart) and confirms with the
+  /// added-to-cart sheet. Configurable products that need option selection
+  /// surface a generic error — the card's tap still opens the PDP where options
+  /// can be chosen.
   Future<void> _add() async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -196,13 +198,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
           .read(cartControllerProvider.notifier)
           .addToCart(sku: product.sku);
       if (!mounted) return;
+      // Shown before the callback: the wishlist drops the card on add, and the
+      // sheet needs this context to find its navigator.
+      AddedToCartSheet.show(context, item: AddedItem.fromProduct(product));
       widget.onAddedToCart?.call();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.cartAdded),
-          duration: const Duration(milliseconds: 1200),
-        ),
-      );
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));

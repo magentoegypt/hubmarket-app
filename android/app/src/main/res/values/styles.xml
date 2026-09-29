@@ -15,11 +15,4 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
-    <!-- N-Genius PaymentsActivity extends AppCompatActivity but, unlike every
-         other activity in payment-sdk 5.2.3, ships without a theme of its own —
-         so it inherits the application theme and crashes with "You need to use a
-         Theme.AppCompat theme (or descendant) with this activity". The Flutter
-         application theme descends from android:Theme.Light, not AppCompat.
-         Applied to that activity in AndroidManifest.xml. -->
-    <style name="NGeniusPaymentTheme" parent="Theme.AppCompat.Light.NoActionBar"/>
 </resources>

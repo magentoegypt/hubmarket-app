@@ -90,29 +90,6 @@ if (file("google-services.json").exists()) {
 dependencies {
     // Backports java.time etc. for flutter_local_notifications on older API levels.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-
-    // N-Genius card payments (hubmarket/payments channel). Latest stable at
-    // integration time; docs/decisions/payments.md pinned 5.0.1 before the
-    // SDK deprecated CardPaymentRequest in favour of PaymentsRequest.
-    implementation("com.github.network-international.payment-sdk-android:payment-sdk:5.2.3")
-
-    // Samsung Pay (hubmarket/payments channel, wallet=samsungpay). Already reachable
-    // through payment-sdk's apiElements, but declared explicitly so the version is
-    // pinned where it is actually used. Bundles Samsung's own samsungpay_2.22.00.jar.
-    implementation("com.github.network-international.payment-sdk-android:payment-sdk-samsungpay:5.2.3")
-
-    // payment.sdk.android.core.Order + CoroutinesGatewayHttpClient, which
-    // SamsungPaySession builds and passes to SamsungPayClient. The SDK publishes
-    // payment-sdk-core in runtimeElements ONLY (checked in the Gradle module
-    // metadata), so without this line those types are on the runtime classpath
-    // but invisible to the Kotlin compiler.
-    implementation("com.github.network-international.payment-sdk-android:payment-sdk-core:5.2.3")
-
-    // JVM unit tests for SamsungPaySession's pure helpers (no device, no SDK
-    // setup). `org.json` is needed because android.jar's JSONObject is a stub
-    // that throws "not mocked" under plain unit tests.
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
 }
 
 kotlin {

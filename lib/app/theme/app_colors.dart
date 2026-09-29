@@ -44,6 +44,18 @@ abstract final class AppColors {
   /// Positive states — "FREE" delivery, in-stock, unlocked thresholds.
   static const Color success = Color(0xFF16A34A);
 
+  /// Figma `--hm-success` — completed checkout steps, the order-placed and
+  /// added-to-cart ticks, free-shipping notes.
+  static const Color successStrong = Color(0xFF0F7B3F);
+
+  /// Figma `--hm-success-subtle` — the halo behind the order-placed tick.
+  static const Color successSubtle = Color(0xFFEAF6EF);
+
+  /// Figma `--hm-info` / `--hm-info-subtle` — informational notes, e.g.
+  /// checkout's "You already have an account with us".
+  static const Color info = Color(0xFF1D4ED8);
+  static const Color infoSubtle = Color(0xFFEAF0FD);
+
   /// WhatsApp brand green — WhatsApp code / support actions.
   static const Color whatsappGreen = Color(0xFF25D366);
 
@@ -58,6 +70,10 @@ abstract final class AppColors {
 
   /// Default hairline border (`border/default`) — card outlines, dividers.
   static const Color borderDefault = Color(0xFFE3E8EF);
+
+  /// Figma `--hm-default` — a firmer outline: upcoming checkout steps and their
+  /// connectors, the bottom-sheet handle.
+  static const Color borderStrong = Color(0xFFCBD3E2);
 
   /// Light neutral band — section separators between sticky header and content.
   static const Color surfaceMuted = Color(0xFFF3F4F6);

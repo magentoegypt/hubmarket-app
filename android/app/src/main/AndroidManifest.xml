@@ -77,27 +77,6 @@
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_color" />
 
-        <!-- N-Genius card entry. payment-sdk 5.2.3 declares every other activity
-             with an SdkTheme.* theme but ships PaymentsActivity with none, so it
-             inherits our application theme — which descends from
-             android:Theme.Light, not AppCompat — and dies on launch with
-             "You need to use a Theme.AppCompat theme (or descendant) with this
-             activity". Give it one. Remove once the SDK declares its own. -->
-        <activity
-            android:name="payment.sdk.android.payments.PaymentsActivity"
-            android:theme="@style/NGeniusPaymentTheme"
-            tools:node="merge" />
-
-        <!-- Samsung Pay: SpayValidity reads this key off our own <application>
-             metaData (Bundle.getFloat("spay_sdk_api_level")) and refuses to bind
-             if it is absent or above the bundled SDK (2.22.00). Declaring a
-             wrong value yields ERROR_PARTNER_SDK_API_LEVEL (-10), which
-             SamsungPaySession degrades to "unavailable" -> the row is hidden and
-             checkout is otherwise unaffected. Keep it <= 2.22. -->
-        <meta-data
-            android:name="spay_sdk_api_level"
-            android:value="2.18" />
-
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -128,11 +107,5 @@
             <action android:name="android.intent.action.DIAL"/>
             <data android:scheme="tel"/>
         </intent>
-        <!-- Samsung Pay binds by explicit package to
-             com.samsung.android.spay/.sdk.v2.service.CommonAppService. Under
-             Android 11+ package visibility that bind silently fails without this
-             entry, so getSamsungPayStatus would answer "not found" even on a
-             Galaxy with Samsung Wallet installed. -->
-        <package android:name="com.samsung.android.spay" />
     </queries>
 </manifest>

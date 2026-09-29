@@ -35,7 +35,6 @@ abstract final class AppRoutes {
   static const String webview = '/webview';
   static const String checkout = '/checkout';
   static const String orderSuccess = '/order-success';
-  static const String completePayment = '/complete-payment';
 
   static String category(String uid) => '/category/$uid';
   static String subcategories(String uid) => '/subcategories/$uid';
