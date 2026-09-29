@@ -538,6 +538,7 @@
   "checkoutFreeShippingOver": "شحن مجاني للطلبات فوق {amount}",
   "checkoutTotalInclShipping": "الإجمالي شامل الشحن",
   "checkoutContinueToPayment": "المتابعة للدفع",
+  "checkoutNoPaymentMethods": "لا تتوفر في التطبيق بعدُ طريقة دفع لهذا الطلب.",
   "checkoutPaymentMethodTitle": "طريقة الدفع",
   "checkoutCodSubtitle": "ادفع لكل متجر عند وصول طرده",
   "checkoutOrderSummaryTitle": "ملخّص الطلب",

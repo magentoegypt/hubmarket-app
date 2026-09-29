@@ -77,6 +77,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// opens on "Ship to" (Figma 17) instead of on the address picker.
   bool _defaultAddressSent = false;
 
+  /// False until `reset()` has run. Until then the session-wide controller
+  /// can still hold the previous checkout — its step, address and total — so
+  /// the first frame draws a fresh state instead.
+  bool _started = false;
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +101,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(checkoutControllerProvider.notifier).reset();
+      setState(() => _started = true);
     });
   }
 
@@ -253,7 +259,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// A signed-in customer lands on "Ship to" with their default address
   /// (Figma 17): sent once, as soon as the address book has loaded.
   void _sendDefaultAddress(List<CustomerAddress> saved) {
-    if (!mounted || _defaultAddressSent || saved.isEmpty || _isGuest) return;
+    if (!mounted || !_started || _defaultAddressSent || saved.isEmpty) return;
+    if (_isGuest) return;
     final state = ref.read(checkoutControllerProvider);
     if (state.addressDone || state.isBusy) return;
     _defaultAddressSent = true;
@@ -339,7 +346,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(checkoutControllerProvider);
+    final watched = ref.watch(checkoutControllerProvider);
+    final state = _started ? watched : const CheckoutState();
     final cart = ref.watch(cartControllerProvider.select((s) => s.cart));
     final isGuest = !ref.watch(authControllerProvider).isAuthenticated;
     // _placing spans place order → navigation; state.isBusy covers the
@@ -698,6 +706,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             if (needsGuestOtp)
               Text(
                 l10n.checkoutVerifyMobileTitle,
+                textAlign: TextAlign.center,
+                style: CheckoutText.caption,
+              ),
+            // The store offers only methods the app can't take yet (an online
+            // gateway): say so rather than leave a dead button.
+            if (!busy &&
+                state.selectedShipping != null &&
+                state.paymentMethods.isEmpty)
+              Text(
+                l10n.checkoutNoPaymentMethods,
                 textAlign: TextAlign.center,
                 style: CheckoutText.caption,
               ),

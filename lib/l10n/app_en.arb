@@ -717,6 +717,7 @@
   },
   "checkoutTotalInclShipping": "Total incl. shipping",
   "checkoutContinueToPayment": "Continue to payment",
+  "checkoutNoPaymentMethods": "No payment method can be used for this order in the app yet.",
   "checkoutPaymentMethodTitle": "Payment method",
   "checkoutCodSubtitle": "Pay each store when its package arrives",
   "checkoutOrderSummaryTitle": "Order summary",

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
 import 'package:hubmarket_app/features/checkout/presentation/screens/order_success_screen.dart';
 import 'package:hubmarket_app/features/checkout/presentation/widgets/checkout_parts.dart';
 
@@ -119,6 +120,36 @@ void main() {
     await tester.tap(find.text('Edit').last);
     await tester.pumpAndSettle();
     expect(find.text('Payment method'), findsOneWidget);
+  });
+
+  testWidgets('a store offering only online methods says so instead of '
+      'leaving a dead button', (tester) async {
+    await mount(
+      tester,
+      FakeCheckoutRepository(
+        shippingMethods: kShippingMethods,
+        paymentMethods: const [
+          PaymentMethodOption(
+            code: 'payment_services_paypal_hosted_fields',
+            title: 'Credit Card',
+            isOnline: true,
+          ),
+        ],
+      ),
+    );
+    await throughAddress(tester);
+
+    expect(
+      find.text('No payment method can be used for this order in the app yet.'),
+      findsOneWidget,
+    );
+    final button = tester.widget<FilledButton>(
+      find.ancestor(
+        of: find.text('Continue to payment'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(button.onPressed, isNull);
   });
 
   testWidgets('"Change" reopens the address, and back returns to Ship to', (
