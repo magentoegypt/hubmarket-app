@@ -430,6 +430,7 @@
   "helpACancel": "While an order can still be cancelled, its page shows a Cancel order button. Once it has shipped it can't be cancelled. Don't see the button? Send us a message.",
   "helpQ8": "Can I return an item?",
   "helpA8": "Returns can't be started in the app yet. Contact us from the Help centre with your order number and we'll help.",
+  "helpA8Returns": "Yes. Open Account › My returns, or the order in My Orders, and choose Return items. Pick the items and tell us why; the store that sold them replies in the return's messages. Items from different stores go in separate returns.",
   "helpQPayments": "How can I pay?",
   "helpAPayments": "At checkout you'll see every payment method available for your order, such as cash on delivery.",
   "helpQGuest": "Do I need an account to order?",
@@ -636,6 +637,146 @@
   "orderCancelKeep": "Keep my order",
   "orderCancelDone": "Your order has been cancelled.",
   "orderCancelEmailSent": "Check your email — we've sent you a link to confirm the cancellation.",
+  "returnsReturnItems": "Return items",
+  "returnsMyReturns": "My returns",
+  "returnsRequestTitle": "Request a return",
+  "returnsNewRequest": "New return request",
+  "returnsEmptyTitle": "No returns yet",
+  "returnsEmptyBody": "Items from your orders can be returned from here. Choose New return request to start one.",
+  "returnsSignIn": "Sign in to see your returns and request new ones.",
+  "returnsUnavailableTitle": "Returns aren't available",
+  "returnsUnavailableBody": "Returns can't be requested in the app right now. Contact us from the Help centre and we'll help.",
+  "returnsTitle": "Return #{number}",
+  "@returnsTitle": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsRequestedOn": "Requested {date}",
+  "@returnsRequestedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsTypeRefund": "Refund",
+  "returnsTypeReplace": "Exchange",
+  "returnsSoldBy": "Sold by {seller}",
+  "@returnsSoldBy": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsNewReply": "New reply",
+  "returnsStoreNote": "Returns go to the store that sold the item. Only delivered or processing orders can be returned.",
+  "returnsStoreNoteSeller": "Returns go to the store that sold the item ({seller}). Only delivered or processing orders can be returned.",
+  "@returnsStoreNoteSeller": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsOrderLabel": "Order",
+  "returnsChooseOrder": "Choose an order",
+  "returnsMoreOrders": "Show more orders",
+  "returnsNoOrdersTitle": "Nothing to return yet",
+  "returnsNoOrdersBody": "Orders that are processing or delivered show up here once their items are invoiced.",
+  "returnsOrderNotReturnable": "Order #{number} has nothing left to return.",
+  "@returnsOrderNotReturnable": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsSelectItems": "Select items",
+  "returnsItemInReturn": "Already in return {numbers}",
+  "@returnsItemInReturn": {
+    "placeholders": {
+      "numbers": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsItemNotReturnable": "Can't be returned yet",
+  "returnsOtherSellerNote": "Sold by {seller}: return it in a separate request",
+  "@returnsOtherSellerNote": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsOtherSellerGeneric": "From another store: return it in a separate request",
+  "returnsQuantity": "Quantity",
+  "returnsRequestType": "Request type",
+  "returnsReason": "Reason",
+  "returnsReasonOptional": "Reason (optional)",
+  "returnsChooseReason": "Choose a reason",
+  "returnsOtherReason": "Other reason",
+  "returnsOtherReasonHint": "Describe the reason",
+  "returnsPackageOpened": "Package opened?",
+  "returnsAnswerYes": "Yes",
+  "returnsAnswerNo": "No",
+  "returnsRefundAmount": "Refund amount",
+  "returnsMaximumRefund": "Maximum refund",
+  "returnsCustomAmount": "Custom amount",
+  "returnsCustomAmountHint": "Amount",
+  "returnsCustomAmountMax": "Up to {amount}",
+  "@returnsCustomAmountMax": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsComment": "Tell us what happened",
+  "returnsCommentHint": "What's wrong with the item? The store reads this first.",
+  "returnsTracking": "Shipment tracking number (optional)",
+  "returnsTrackingHint": "If you already sent it back",
+  "returnsPolicy": "Return policy",
+  "returnsSubmit": "Submit return request",
+  "returnsSubmitted": "Return request sent",
+  "returnsFixErrors": "Check the highlighted fields.",
+  "returnsErrorItems": "Choose at least one item to return.",
+  "returnsErrorReason": "Choose a reason for the return.",
+  "returnsErrorOtherReasonLong": "Keep the reason under 255 characters.",
+  "returnsErrorPackage": "Tell us whether the package was opened.",
+  "returnsErrorAmount": "Enter the refund amount you're asking for.",
+  "returnsErrorAmountCap": "The refund can't be more than {amount}.",
+  "@returnsErrorAmountCap": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsErrorComment": "Tell us about the return.",
+  "returnsErrorCommentLong": "Keep the message under 5,000 characters.",
+  "returnsErrorTrackingLong": "The tracking number is too long.",
+  "returnsEventSent": "Request sent",
+  "returnsEventSentTo": "Request sent to {seller}",
+  "@returnsEventSentTo": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
+  "returnsYou": "You",
+  "returnsWriteReply": "Write a reply…",
+  "returnsSendReply": "Send",
+  "returnsClosedNote": "This return is closed, so it can't take new messages.",
+  "returnsNotFound": "We couldn't find this return.",
+  "returnsPackageOpenedRow": "Package opened",
+  "returnsTrackingRow": "Tracking number",
+  "returnsAttachment": "Attachment",
   "trackOrderTitle": "Track Order",
   "orderStatusTitle": "Order Status",
   "orderPlaced": "Order Placed",
