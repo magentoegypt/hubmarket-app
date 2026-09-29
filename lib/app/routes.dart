@@ -43,6 +43,12 @@ abstract final class AppRoutes {
   static const String checkout = '/checkout';
   static const String orderSuccess = '/order-success';
 
+  /// Figma 10b — today's deals (`hmDeals`).
+  static const String deals = '/deals';
+
+  /// Figma 10c — bundle deals (`hmBundleDeals`).
+  static const String bundles = '/bundles';
+
   static String category(String uid) => '/category/$uid';
   static String subcategories(String uid) => '/subcategories/$uid';
   static String product(String urlKey) => '/product/$urlKey';
@@ -53,6 +59,11 @@ abstract final class AppRoutes {
   static String store(String code) => '/store/${Uri.encodeComponent(code)}';
   static String review(String sku) => '/review/$sku';
   static String productReviews(String urlKey) => '/reviews/$urlKey';
+
+  /// Figma 10e — one brand's page by its `url_key` (an `HmLink.code` of a
+  /// `BRAND` link). A `Brand` in `extra` skips the brand lookup.
+  static String brandPage(String urlKey) =>
+      '/brand/${Uri.encodeComponent(urlKey)}';
 
   /// A CMS page by its identifier, e.g. `about-us`.
   static String cmsPageById(String identifier, {String? title}) =>
