@@ -773,7 +773,7 @@ class _Tabs extends StatelessWidget {
       l10n.tabReviews,
     ];
     // Four tabs matching the website (Details · Key Features · More Information ·
-    // Reviews); the active one keeps its burgundy underline. Kept scrollable so
+    // Reviews); the active one keeps its navy underline. Kept scrollable so
     // the four AR labels never overflow.
     return Container(
       decoration: const BoxDecoration(

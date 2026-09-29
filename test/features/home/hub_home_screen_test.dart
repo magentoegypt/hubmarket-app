@@ -1,9 +1,4 @@
-import 'dart:io';
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +19,7 @@ import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/fonts.dart';
 
 // Live CMS markup (hub-market.magento2.click, store `en`, 29 Sep 2026).
 const _cms = <String, String>{
@@ -57,27 +53,6 @@ final _rail = <Product>[
   _p('3-Piece Living Room Set', 255, 300),
   _p('Burgundy Rocking Chair', 180),
 ];
-
-Future<void> _loadFonts() async {
-  Future<void> load(String family, List<String> assets) async {
-    final loader = FontLoader(family);
-    for (final a in assets) {
-      loader.addFont(rootBundle.load(a));
-    }
-    await loader.load();
-  }
-
-  await load(AppTheme.latinFont, ['assets/fonts/Inter.ttf']);
-  await load(AppTheme.arabicFont, ['assets/fonts/Cairo.ttf']);
-  await load(AppTheme.displayFont, ['assets/fonts/PlayfairDisplay.ttf']);
-  final root = Platform.environment['FLUTTER_ROOT'] ?? r'C:\flutter';
-  final icons = File('$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
-  if (icons.existsSync()) {
-    final loader = FontLoader('MaterialIcons')
-      ..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())));
-    await loader.load();
-  }
-}
 
 Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false}) {
   final router = GoRouter(
@@ -130,26 +105,11 @@ Future<void> _render(WidgetTester tester, String locale) async {
   final key = GlobalKey();
   await tester.pumpWidget(_harness(locale, key));
   await tester.pumpAndSettle();
-  // Asset images (the logo) decode asynchronously; finish them before capture.
-  await tester.runAsync(() async {
-    for (final el in find.byType(Image).evaluate()) {
-      await precacheImage((el.widget as Image).image, el);
-    }
-  });
-  await tester.pumpAndSettle();
-  // A visual record for review — build/ is gitignored, nothing is asserted on it.
-  await tester.runAsync(() async {
-    final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    final image = await boundary.toImage(pixelRatio: 1);
-    final png = await image.toByteData(format: ui.ImageByteFormat.png);
-    File('build/test_screens/home_$locale.png')
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(png!.buffer.asUint8List());
-  });
+  await captureScreen(tester, key, 'home_$locale');
 }
 
 void main() {
-  setUpAll(_loadFonts);
+  setUpAll(loadAppFonts);
 
   testWidgets('Home renders every Build 1 section from Magento content (EN)', (tester) async {
     await _render(tester, 'en');

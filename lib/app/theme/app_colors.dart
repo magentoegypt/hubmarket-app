@@ -21,6 +21,12 @@ abstract final class AppColors {
   /// [accent] does not (prices, "See all" links, Accent buttons).
   static const Color accentStrong = Color(0xFFC2410C);
 
+  /// Accent tint (`--hm-accent-subtle`) — the reset-password badge.
+  static const Color accentSubtle = Color(0xFFFFF4EF);
+
+  /// Accent on navy (`--hm-accent-on-dark`) — actions on the offline banner.
+  static const Color accentOnDark = Color(0xFFFB923C);
+
   /// Light navy tint — section backgrounds, icon chips, empty-state circles.
   static const Color surfaceTint = Color(0xFFEEF2F8);
 
@@ -86,4 +92,15 @@ abstract final class AppColors {
 
   /// Marketing-footer ground — the storefront footer navy.
   static const Color footerSurface = Color(0xFF0F1A2E);
+
+  /// Figma `--hm-warning` / `--hm-warning-subtle` — the offline state's
+  /// no-signal disc.
+  static const Color warning = Color(0xFFB45309);
+  static const Color warningSubtle = Color(0xFFFDF3E7);
+
+  /// Figma `--hm-strong` — the outline of an unticked checkbox.
+  static const Color borderControl = Color(0xFF7D879C);
+
+  /// Figma `--hm-subtle` — faint rules, e.g. the "or" divider on Sign in.
+  static const Color borderSubtle = Color(0xFFE8ECF3);
 }

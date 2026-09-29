@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 
 /// EN / AR pill toggle (Figma): a light-grey rounded track with the active
-/// segment filled burgundy (white label). Shared by the Welcome screen and the
+/// segment filled navy (white label). Shared by the Welcome screen and the
 /// menu drawer.
 class LanguageToggle extends StatelessWidget {
   const LanguageToggle({

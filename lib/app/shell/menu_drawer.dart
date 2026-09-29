@@ -10,6 +10,7 @@ import '../../features/account/data/account_repository.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/catalog/domain/category.dart';
 import '../../features/catalog/presentation/catalog_providers.dart';
+import '../../features/catalog/presentation/category_icons.dart';
 import '../../features/wishlist/presentation/wishlist_controller.dart';
 import '../../l10n/l10n.dart';
 import '../routes.dart';
@@ -31,8 +32,8 @@ class MenuDrawer extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
 
     return Drawer(
-      // Figma: white panel; only the profile strip is blush (Material 3 would
-      // otherwise tint the surface pink from the burgundy seed).
+      // Figma: white panel; only the profile strip is tinted (Material 3 would
+      // otherwise tint the whole surface from the navy seed).
       backgroundColor: Colors.white,
       child: SafeArea(
         child: Column(
@@ -414,7 +415,7 @@ class _CategoryNode extends StatelessWidget {
   }
 }
 
-/// Blush rounded-square icon badge for a top-level SHOP category (Figma).
+/// Pale navy rounded-square icon badge for a top-level SHOP category (Figma).
 class _IconBadge extends StatelessWidget {
   const _IconBadge({required this.category});
   final Category category;
@@ -429,30 +430,11 @@ class _IconBadge extends StatelessWidget {
     ),
     alignment: Alignment.center,
     child: Icon(
-      _categoryIcon(category.urlKey, category.name),
+      categoryIcon(category.urlKey, category.name),
       color: AppColors.brandPrimary,
       size: 20,
     ),
   );
-}
-
-/// Maps a category (by url_key / name) to a representative icon for the SHOP
-/// list. Falls back to a generic bag for anything unrecognised.
-IconData _categoryIcon(String urlKey, String name) {
-  final s = '$urlKey $name'.toLowerCase();
-  if (s.contains('makeup') || s.contains('lip') || s.contains('cosmet')) {
-    return Icons.brush_outlined;
-  }
-  if (s.contains('skin') || s.contains('care')) return Icons.spa_outlined;
-  if (s.contains('fragrance') || s.contains('perfume') || s.contains('scent')) {
-    return Icons.local_florist_outlined;
-  }
-  if (s.contains('gift')) return Icons.card_giftcard_outlined;
-  if (s.contains('new') && s.contains('arriv')) return Icons.auto_awesome;
-  if (s.contains('best') || s.contains('seller')) return Icons.star_outline;
-  if (s.contains('hair')) return Icons.content_cut;
-  if (s.contains('bath') || s.contains('body')) return Icons.shower_outlined;
-  return Icons.local_mall_outlined;
 }
 
 /// Three quick-stat tiles (Orders / Wishlist / Vouchers) — Figma. Counts are

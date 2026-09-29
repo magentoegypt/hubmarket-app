@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +40,7 @@ import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/fonts.dart';
 
 /// Renders the P1 stream-B screens — Figma 15, 20f, 21b, 20h, 27, 28 and 20b
 /// — in English and Arabic to `build/test_screens/` for comparison with the
@@ -48,28 +48,7 @@ import '../../support/fakes.dart';
 /// render also fails on any layout exception, so it doubles as an RTL and
 /// overflow smoke test.
 
-Future<void> _loadFonts() async {
-  Future<void> load(String family, List<String> assets) async {
-    final loader = FontLoader(family);
-    for (final a in assets) {
-      loader.addFont(rootBundle.load(a));
-    }
-    await loader.load();
-  }
-
-  await load(AppTheme.latinFont, ['assets/fonts/Inter.ttf']);
-  await load(AppTheme.arabicFont, ['assets/fonts/Cairo.ttf']);
-  await load(AppTheme.displayFont, ['assets/fonts/PlayfairDisplay.ttf']);
-  final root = Platform.environment['FLUTTER_ROOT'] ?? r'C:\flutter';
-  final icons = File(
-    '$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
-  );
-  if (icons.existsSync()) {
-    final loader = FontLoader('MaterialIcons')
-      ..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())));
-    await loader.load();
-  }
-}
+Future<void> _loadFonts() => loadAppFonts();
 
 ProductReview _review(String name, int stars, String title, String text) =>
     ProductReview(

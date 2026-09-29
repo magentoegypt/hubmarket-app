@@ -300,7 +300,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          // Save Changes (Figma) — full-width burgundy.
+          // Save Changes (Figma) — full-width navy.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: SizedBox(
@@ -324,7 +324,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 }
 
-/// Circular initials avatar with a burgundy ring (Figma).
+/// Circular initials avatar with a navy ring (Figma).
 class _AvatarBadge extends StatelessWidget {
   const _AvatarBadge({required this.initials});
   final String initials;

@@ -8,8 +8,10 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/network/connectivity.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/offline_state.dart';
 import '../../../../core/util/image_prefetch.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/failure_message.dart';
@@ -162,6 +164,10 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
     }
     if (state.error != null && state.products.isEmpty) {
       final error = state.error;
+      // Figma S3 is drawn on this very screen.
+      if (isNetworkFailure(error) || ref.watch(isOfflineProvider)) {
+        return OfflineState(onRetry: _controller.refresh);
+      }
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

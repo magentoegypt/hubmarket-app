@@ -33,7 +33,7 @@ class CustomerAvatar extends StatelessWidget {
   /// Overall diameter of the circle in logical pixels.
   final double diameter;
 
-  /// Draws a burgundy ring around the avatar (Figma profile/drawer treatment).
+  /// Draws a navy ring around the avatar (Figma profile/drawer treatment).
   final bool ring;
   final double ringWidth;
 

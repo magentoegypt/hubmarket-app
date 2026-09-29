@@ -9,6 +9,7 @@ import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/auth/domain/customer.dart';
+import 'package:hubmarket_app/features/auth/domain/password_reset_ticket.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
 import 'package:hubmarket_app/features/checkout/data/checkout_repository.dart';
@@ -367,15 +368,33 @@ class FakeAuthRepository implements AuthRepository {
   final bool registrationOtpFails;
   final Customer customer;
 
+  /// Thrown by the next e-mail sign-in / sign-up / reset-link call when set
+  /// (e.g. a store refusal worded the way the backend words it).
+  Failure? loginFailure;
+  Failure? registerFailure;
+  Failure? passwordResetFailure;
+
+  /// Thrown by every code *send* (sign-in, sign-up, reset) when set.
+  Failure? sendOtpFailure;
+
+  /// Thrown by every code *check* (sign-in, sign-up, reset) when set.
+  Failure? verifyOtpFailure;
+
   // Recorded inputs for assertions.
   String? lastMobileNumber;
   String? lastOtpPhone;
   String? lastOtpCode;
   bool? lastOtpResend;
   String? lastResetPassword;
+  bool? lastSubscribeToNewsletter;
+
+  /// Every call, in order — `requestLoginOtp:+971…`, `loginWithOtp:+971…:123456`.
+  final List<String> calls = [];
 
   @override
   Future<String> login(String email, String password) async {
+    calls.add('login:$email');
+    if (loginFailure != null) throw loginFailure!;
     if (loginFails) throw const Failure(FailureKind.auth);
     return 'fake-token';
   }
@@ -387,8 +406,12 @@ class FakeAuthRepository implements AuthRepository {
     required String email,
     required String password,
     String? mobileNumber,
+    bool subscribeToNewsletter = false,
   }) async {
+    calls.add('register:$email:$mobileNumber');
+    if (registerFailure != null) throw registerFailure!;
     lastMobileNumber = mobileNumber;
+    lastSubscribeToNewsletter = subscribeToNewsletter;
   }
 
   @override
@@ -406,24 +429,36 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> requestPasswordReset(String email) async {}
+  Future<void> requestPasswordReset(String email) async {
+    calls.add('requestPasswordReset:$email');
+    if (passwordResetFailure != null) throw passwordResetFailure!;
+  }
 
   @override
   Future<void> resetPassword({
     required String email,
     required String token,
     required String newPassword,
-  }) async {}
+  }) async {
+    calls.add('resetPassword:$email:$token');
+    lastResetPassword = newPassword;
+  }
 
   @override
   Future<Customer> fetchCustomer() async => customer;
 
   // --- WhatsApp OTP ---
   @override
-  Future<void> requestLoginOtp(String phone) async => lastOtpPhone = phone;
+  Future<void> requestLoginOtp(String phone) async {
+    calls.add('requestLoginOtp:$phone');
+    if (sendOtpFailure != null) throw sendOtpFailure!;
+    lastOtpPhone = phone;
+  }
 
   @override
   Future<String> loginWithOtp(String phone, String code) async {
+    calls.add('loginWithOtp:$phone:$code');
+    if (verifyOtpFailure != null) throw verifyOtpFailure!;
     if (otpLoginFails) throw const Failure(FailureKind.auth);
     lastOtpPhone = phone;
     lastOtpCode = code;
@@ -435,12 +470,16 @@ class FakeAuthRepository implements AuthRepository {
     String phone, {
     bool resend = false,
   }) async {
+    calls.add('requestRegistrationOtp:$phone${resend ? ':resend' : ''}');
+    if (sendOtpFailure != null) throw sendOtpFailure!;
     lastOtpPhone = phone;
     lastOtpResend = resend;
   }
 
   @override
   Future<void> verifyRegistrationOtp(String phone, String code) async {
+    calls.add('verifyRegistrationOtp:$phone:$code');
+    if (verifyOtpFailure != null) throw verifyOtpFailure!;
     if (registrationOtpFails) {
       throw const Failure(
         FailureKind.server,
@@ -456,19 +495,25 @@ class FakeAuthRepository implements AuthRepository {
     String phone, {
     bool resend = false,
   }) async {
+    calls.add('requestPasswordResetOtp:$phone${resend ? ':resend' : ''}');
+    if (sendOtpFailure != null) throw sendOtpFailure!;
     lastOtpPhone = phone;
     lastOtpResend = resend;
   }
 
   @override
-  Future<void> resetPasswordWithOtp({
-    required String phone,
-    required String code,
-    required String newPassword,
-  }) async {
+  Future<PasswordResetTicket> verifyPasswordResetOtp(
+    String phone,
+    String code,
+  ) async {
+    calls.add('verifyPasswordResetOtp:$phone:$code');
+    if (verifyOtpFailure != null) throw verifyOtpFailure!;
     lastOtpPhone = phone;
     lastOtpCode = code;
-    lastResetPassword = newPassword;
+    return const PasswordResetTicket(
+      email: 'layla@example.com',
+      token: 'reset-token',
+    );
   }
 }
 

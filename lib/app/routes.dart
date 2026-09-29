@@ -14,6 +14,9 @@ abstract final class AppRoutes {
   static const String signUp = '/signup';
   static const String forgotPassword = '/forgot';
   static const String resetPassword = '/reset-password';
+
+  /// Figma 05 — carries a `VerifyCodeFlow` in `extra`.
+  static const String verifyCode = '/verify-code';
   static const String orders = '/orders';
   static const String orderDetail = '/order-detail';
   static const String orderTracking = '/order-tracking';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/offline_state.dart';
 import '../routes.dart';
 import 'back_swipe.dart';
 import 'menu_drawer.dart';
@@ -107,6 +108,8 @@ class _HubScaffoldState extends State<HubScaffold> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.bottomBar != null) widget.bottomBar!,
+            // Figma S3: "No internet connection" sits right on the tab bar.
+            const OfflineBannerSlot(),
             HubBottomNav(current: widget.currentTab),
           ],
         ),

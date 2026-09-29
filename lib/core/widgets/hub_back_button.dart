@@ -10,7 +10,7 @@ import '../../app/theme/app_colors.dart';
 class HubBackButton extends StatelessWidget {
   const HubBackButton({super.key, this.color, this.onPressed});
 
-  /// Icon colour. Defaults to [AppColors.inkHeading]; pass white for burgundy
+  /// Icon colour. Defaults to [AppColors.inkHeading]; pass white for navy
   /// surfaces.
   final Color? color;
 

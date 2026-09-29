@@ -7,9 +7,11 @@ import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/error/failure.dart';
+import '../../../core/network/connectivity.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/failure_message.dart';
 import '../../../core/widgets/network_image.dart';
+import '../../../core/widgets/offline_state.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../../../l10n/l10n.dart';
 import '../../catalog/domain/category.dart';
@@ -91,14 +93,18 @@ class HubHomeScreen extends ConsumerWidget {
   }
 }
 
-class _HomeUnavailable extends StatelessWidget {
+class _HomeUnavailable extends ConsumerWidget {
   const _HomeUnavailable({required this.error, required this.onRetry});
 
   final Object error;
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // No network: the designed offline state (Figma S3), not an error line.
+    if (isNetworkFailure(error) || ref.watch(isOfflineProvider)) {
+      return OfflineState(onRetry: onRetry);
+    }
     final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(

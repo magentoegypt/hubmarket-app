@@ -115,8 +115,5 @@
 		<string>mailto</string>
 		<string>tel</string>
 	</array>
-	<!-- image_picker: gallery access for the profile avatar. -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Hub Market needs access to your photos so you can set a profile picture.</string>
 </dict>
 </plist>

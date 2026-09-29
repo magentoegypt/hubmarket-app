@@ -8,10 +8,11 @@
 
 This repo started as a copy of `magentoegypt/zoonze-app` @ 8034e97 (the client
 allowed reusing the Zoonze codebase). The architecture, conventions and most
-features come from there; everything Zoonze-specific (backend modules, beauty
-copy, burgundy brand, N-Genius wiring, intro video) is being removed or gated.
-`docs/` still holds the Zoonze docs **as reference only** — do not treat their
-store codes, hosts, payment gateways or backend modules as Hub Market facts.
+features come from there; the Zoonze-specific parts (backend modules, beauty
+copy, burgundy brand, N-Genius / Samsung Pay / Apple Pay wiring, Tabby / Tamara,
+intro video) have been removed. `docs/zoonze-reference/` keeps a few Zoonze docs
+**as reference only**; do not treat their store codes, hosts, payment gateways or
+backend modules as Hub Market facts.
 
 ## 1. Backend facts (verified 29 Sep 2026)
 
@@ -21,9 +22,9 @@ store codes, hosts, payment gateways or backend modules as Hub Market facts.
 | Store views | `en` (default, en_US) · `ar` (ar_SA) — header `Store: <code>` |
 | Currency | AED · root category uid `Mg==` · timezone Asia/Riyadh |
 | Storefront code | GitHub `magentoegypt/multivendor`, branch **`figma-parity-home`** (local clone `C:\xampp\htdocs\multivendor`) — the reference for how the website builds every page |
-| Search | Algolia app `HL67ED06DQ`, indices `hubmarket_{en,ar}_{products,categories,pages}`; the website renders results server-side through `algoliasearch-adapter-magento-2`, so `products(search:)` returns the same ranking |
+| Search | The website searches Algolia (app `HL67ED06DQ`, indices `hubmarket_{en,ar}_{products,categories,pages}`). GraphQL `products(search:)` is answered by **OpenSearch** (backend `AlgoliaVendor` EngineResolverPlugin since e52ba5c27, because Algolia's adapter ignores GraphQL filters), so its ranking can differ. Decision 29 Sep: the app queries Algolia directly for search |
 | OTP (WhatsApp/SMS) | `customer{Login,Register,ForgotPassword,Checkout}{SendOtp,VerifyOtp}` — verify does **not** return a customer token |
-| Payments | `available_payment_methods` is the only source; cash on delivery is confirmed live; Adobe Payment Services + Vault mutations exist; **no** N-Genius `paymentSession`, **no** `tabbyConfig` |
+| Payments | `available_payment_methods` is the only source; cash on delivery is confirmed live; Adobe Payment Services + Vault mutations exist; **no** N-Genius `paymentSession`, **no** `tabbyConfig`. The app lists only methods that complete on `placeOrder` (`is_deferred` false) until a gateway is integrated |
 | Not in the schema (Zoonze-only) | hero slides, home banners/sections, brands, blog, `magentoegypt_beauty_*` config, `free_shipping_subtotal`, `cod_fee`, `is_new_arrival` / `is_bestseller`, `also_like_products`, `rating_histogram`, avatars, `registerDeviceToken` |
 
 ## 2. Tooling
@@ -39,7 +40,7 @@ store codes, hosts, payment gateways or backend modules as Hub Market facts.
 QA02 requires every banner, block, image and section title to be editable in the
 backend. Today the Home reads:
 - storefront CMS blocks `hm_delivery_promise`, `hm_home_promos`, `hm_home_trust` (Content › Blocks), parsed into native widgets by `features/home/domain/home_content.dart`;
-- categories and products from the catalogue (Shop by category, one rail per top-level category, Today's Deals = live special prices).
+- categories and products from the catalogue (Shop by category, one rail per top-level category). Today's Deals waits for `MagentoEgypt_HubApp`: GraphQL can't filter or sort on special prices.
 
 Planned backend module (not built yet): **`MagentoEgypt_HubApp`** — Home layout
 registry (section type, EN/AR titles, source, limit, dates, audience, order) +
@@ -57,8 +58,9 @@ app (see Figma G3).
 Tokens in `lib/app/theme/app_colors.dart`: navy `#0F2144` (primary), logo navy
 `#02224D`, orange `#F26522` / `#C2410C` (AA text). Logo + icon are the
 client-supplied artwork (traced to vectors in Figma, rendered to
-`assets/branding/`). Fonts: Playfair Display (display), Inter/Cairo bundled today
-— Figma uses DM Sans + Tajawal (swap pending).
+`assets/branding/`). Fonts: DM Sans (text, variable), Tajawal (Arabic) and Playfair
+Display (display), as in the Figma; OFL licences in `assets/fonts/licenses/`,
+registered by `lib/app/font_licenses.dart`.
 
 ## 5. Conventions (kept from the Zoonze base)
 

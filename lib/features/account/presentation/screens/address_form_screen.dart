@@ -124,7 +124,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                   selectedId: _selectedLabelId,
                   onSelected: (id) => setState(() => _selectedLabelId = id),
                 ),
-                // Set as default address (Figma 64:92) — label + burgundy toggle.
+                // Set as default address (Figma 64:92) — label + navy toggle.
                 ValueListenableBuilder<bool>(
                   valueListenable: _address.isDefault,
                   builder: (context, value, _) => Row(

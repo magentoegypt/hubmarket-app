@@ -9,8 +9,8 @@ import '../routes.dart';
 import '../theme/app_colors.dart';
 
 /// Persistent bottom navigation (Home · Categories · Cart · Wishlist · Account).
-/// Figma: a thin top divider, and the active tab marked by a burgundy top bar +
-/// burgundy icon/label (inactive tabs are muted grey). Live cart + wishlist
+/// Figma: a thin top divider, and the active tab marked by a navy top bar +
+/// navy icon/label (inactive tabs are muted grey). Live cart + wishlist
 /// count badges.
 class HubBottomNav extends ConsumerWidget {
   const HubBottomNav({super.key, required this.current});
@@ -111,7 +111,7 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            // Top indicator bar (Figma) — burgundy when active.
+            // Top indicator bar (Figma) — navy when active.
             Container(
               width: 18,
               height: 3,

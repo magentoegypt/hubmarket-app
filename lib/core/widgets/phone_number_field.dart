@@ -19,6 +19,8 @@ class PhoneNumberField extends StatelessWidget {
     this.enabled = true,
     this.autofocus = false,
     this.validator,
+    this.errorText,
+    this.onChanged,
     this.onSubmitted,
     this.dialCode = '+971',
     this.flag = '🇦🇪',
@@ -29,6 +31,11 @@ class PhoneNumberField extends StatelessWidget {
   final bool enabled;
   final bool autofocus;
   final String? Function(String?)? validator;
+
+  /// A refusal from the store to show under the field (e.g. the number is
+  /// already in use), in place of the validator's message.
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final String dialCode;
   final String flag;
@@ -50,6 +57,8 @@ class PhoneNumberField extends StatelessWidget {
       textDirection: TextDirection.ltr,
       textAlign: rtl ? TextAlign.right : TextAlign.left,
       validator: validator,
+      forceErrorText: errorText,
+      onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
       decoration: InputDecoration(
         hintText: hint,

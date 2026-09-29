@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +29,7 @@ import 'package:hubmarket_app/features/checkout/presentation/screens/order_succe
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/fonts.dart';
 
 /// Shared set-up for the checkout widget and render tests: a three-line cart,
 /// the two shipping methods of Figma 17, and the screen mounted in a router
@@ -231,28 +231,7 @@ Future<void> tapText(WidgetTester tester, String text) async {
 
 /// The same fonts the app bundles, plus Material Icons from the SDK, so the
 /// PNG renders read like the device.
-Future<void> loadCheckoutFonts() async {
-  Future<void> load(String family, List<String> assets) async {
-    final loader = FontLoader(family);
-    for (final a in assets) {
-      loader.addFont(rootBundle.load(a));
-    }
-    await loader.load();
-  }
-
-  await load(AppTheme.latinFont, ['assets/fonts/Inter.ttf']);
-  await load(AppTheme.arabicFont, ['assets/fonts/Cairo.ttf']);
-  await load(AppTheme.displayFont, ['assets/fonts/PlayfairDisplay.ttf']);
-  final root = Platform.environment['FLUTTER_ROOT'] ?? r'C:\flutter';
-  final icons = File(
-    '$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
-  );
-  if (icons.existsSync()) {
-    final loader = FontLoader('MaterialIcons')
-      ..addFont(Future.value(ByteData.sublistView(icons.readAsBytesSync())));
-    await loader.load();
-  }
-}
+Future<void> loadCheckoutFonts() => loadAppFonts();
 
 /// Writes what [boundary] shows to `build/test_screens/<name>.png` — a visual
 /// record for review against the Figma frames; nothing is asserted on it.

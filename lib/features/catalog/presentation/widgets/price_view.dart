@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/product.dart';
 
-/// Stacked price: bold burgundy final price over a muted, struck-through regular
+/// Stacked price: bold navy final price over a muted, struck-through regular
 /// price when the product is on sale.
 class PriceView extends StatelessWidget {
   const PriceView({super.key, required this.product, this.alignEnd = false});

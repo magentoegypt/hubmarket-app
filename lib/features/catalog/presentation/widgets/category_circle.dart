@@ -129,8 +129,8 @@ class _RailTile extends StatelessWidget {
   }
 }
 
-/// Blush tile with a burgundy spa glyph — the same stand-in the home rail uses
-/// for a category with no usable image.
+/// Pale navy tile with the neutral category glyph — the stand-in for a
+/// category with no usable image (the beauty spa glyph was Zoonze's).
 class _CategoryFallback extends StatelessWidget {
   const _CategoryFallback();
 
@@ -138,7 +138,7 @@ class _CategoryFallback extends StatelessWidget {
   Widget build(BuildContext context) => const ColoredBox(
     color: AppColors.surfaceTint,
     child: Center(
-      child: Icon(Icons.spa_outlined, color: AppColors.brandPrimary),
+      child: Icon(Icons.category_outlined, color: AppColors.brandPrimary),
     ),
   );
 }

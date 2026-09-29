@@ -37,7 +37,7 @@
             </intent-filter>
             <!-- Deep links: custom scheme (hubmarket://app/...) + https app links.
                  App-links require an assetlinks.json on the domain — see
-                 docs/decisions/release.md. -->
+                 docs/zoonze-reference/decisions/release.md. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -66,7 +66,7 @@
 
         <!-- FCM: route system-handled (background/killed) notifications to the
              app's high-importance channel, give them a valid white small icon
-             (not the launcher icon → white square), and a burgundy accent. -->
+             (not the launcher icon → white square), and the orange accent. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="hubmarket_default" />

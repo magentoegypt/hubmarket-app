@@ -8,6 +8,7 @@ import '../../../core/storage/secure_token_store.dart';
 import '../../notifications/data/device_token_repository.dart';
 import '../data/auth_repository.dart';
 import '../domain/customer.dart';
+import '../domain/password_reset_ticket.dart';
 
 enum AuthStatus { unknown, authenticated, guest }
 
@@ -103,6 +104,7 @@ class AuthController extends Notifier<AuthState> {
     required String email,
     required String password,
     String? mobileNumber,
+    bool subscribeToNewsletter = false,
   }) async {
     await _repo.register(
       firstName: firstName,
@@ -110,6 +112,7 @@ class AuthController extends Notifier<AuthState> {
       email: email,
       password: password,
       mobileNumber: mobileNumber,
+      subscribeToNewsletter: subscribeToNewsletter,
     );
     await login(email, password);
   }
@@ -139,17 +142,12 @@ class AuthController extends Notifier<AuthState> {
   Future<void> requestPasswordResetOtp(String phone, {bool resend = false}) =>
       _repo.requestPasswordResetOtp(phone, resend: resend);
 
-  /// Resets the password with a phone code. The customer then signs in
-  /// normally with the new password.
-  Future<void> resetPasswordWithOtp({
-    required String phone,
-    required String code,
-    required String newPassword,
-  }) => _repo.resetPasswordWithOtp(
-    phone: phone,
-    code: code,
-    newPassword: newPassword,
-  );
+  /// Proves a password-reset code; the returned ticket feeds [resetPassword],
+  /// exactly like the token of the reset e-mail's link.
+  Future<PasswordResetTicket> verifyPasswordResetOtp(
+    String phone,
+    String code,
+  ) => _repo.verifyPasswordResetOtp(phone, code);
 
   Future<void> logout() async {
     // Unbind this device first, while the bearer is still valid (the resolver
@@ -178,8 +176,9 @@ class AuthController extends Notifier<AuthState> {
   Future<void> requestPasswordReset(String email) =>
       _repo.requestPasswordReset(email);
 
-  /// Completes a reset with the emailed token, then signs the customer in with
-  /// their new password so they land authenticated.
+  /// Completes a reset with a token — from the reset e-mail's link or from a
+  /// verified WhatsApp code ([verifyPasswordResetOtp]) — then signs the
+  /// customer in with their new password so they land authenticated.
   Future<void> resetPassword({
     required String email,
     required String token,

@@ -4,7 +4,7 @@ import 'package:hubmarket_app/core/widgets/web_view_screen.dart';
 /// The in-app browser must not become a general-purpose browser: that is a bad
 /// experience (our chrome over someone else's site) and, to Apple,
 /// "unrestricted web access", which forces a 17+ age rating. See
-/// docs/appstore/app-information.md.
+/// docs/zoonze-reference/appstore/app-information.md.
 void main() {
   const allowed = 'hub-market.magento2.click';
 

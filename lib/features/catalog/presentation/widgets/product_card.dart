@@ -34,7 +34,7 @@ class ProductCard extends ConsumerStatefulWidget {
   /// wishlist removes the item on add).
   final VoidCallback? onAddedToCart;
 
-  /// Shows a burgundy `DEAL` tag above the merchandising/discount badges — used
+  /// Shows a navy `DEAL` tag above the merchandising/discount badges — used
   /// by the home "Deals of the Day" grid.
   final bool dealBadge;
 
@@ -221,7 +221,7 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   }
 }
 
-/// Compact burgundy add-to-cart button in the card footer (Figma / site grid
+/// Compact navy add-to-cart button in the card footer (Figma / site grid
 /// card). Shows a spinner while the add is in flight.
 class _AddToCartButton extends StatelessWidget {
   const _AddToCartButton({required this.busy, required this.onTap});

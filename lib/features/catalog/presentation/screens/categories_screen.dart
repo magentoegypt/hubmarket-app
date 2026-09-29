@@ -278,8 +278,8 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-/// Blush chip with a burgundy droplet — the empty/error state for a category
-/// tile that has no photo (Figma: teardrop on `surface/tint`).
+/// Pale navy chip with the neutral category glyph — the stand-in for a
+/// category tile that has no photo (the beauty teardrop was Zoonze's).
 class _CategoryPlaceholder extends StatelessWidget {
   const _CategoryPlaceholder();
 
@@ -288,7 +288,7 @@ class _CategoryPlaceholder extends StatelessWidget {
     return const ColoredBox(
       color: AppColors.surfaceTint,
       child: Center(
-        child: Icon(Icons.water_drop, color: AppColors.brandPrimary),
+        child: Icon(Icons.category_outlined, color: AppColors.brandPrimary),
       ),
     );
   }
