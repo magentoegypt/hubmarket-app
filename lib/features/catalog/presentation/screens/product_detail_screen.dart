@@ -10,6 +10,7 @@ import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/free_shipping.dart';
+import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/store/store_urls.dart';
 import '../../../../core/widgets/async_value_view.dart';
@@ -19,6 +20,8 @@ import '../../../../core/util/image_prefetch.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
+import '../../../marketplace/marketplace_features.dart';
+import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
 import '../../domain/money.dart';
 import '../../domain/product.dart';
@@ -29,6 +32,7 @@ import '../product_navigation.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
 import '../widgets/review_widgets.dart';
+import 'bundle_product_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.urlKey, this.preview});
@@ -79,13 +83,33 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final detail = ref.watch(productDetailProvider(widget.urlKey));
+    // HubApp's additions (P3): who sells it, and a bundle's options. Null —
+    // today's page — without HubApp.
+    final marketplace = ref.watch(productMarketplaceProvider(widget.urlKey));
+    final bundlesOn = ref.watch(
+      marketplaceFeaturesProvider.select((f) => f.bundles),
+    );
+    final loaded = detail.valueOrNull;
+    final extras = marketplace.valueOrNull;
+    // Figma 14b: a bundle builds its package on its own page.
+    if (loaded != null && bundlesOn && extras?.bundle != null) {
+      return BundleProductScreen(
+        product: loaded,
+        bundle: extras!.bundle!,
+        seller: extras.seller,
+      );
+    }
+    // A bundle's options are still on their way: keep the skeleton up rather
+    // than flash the plain page first.
+    final awaitingBundle =
+        loaded != null && loaded.isBundle && bundlesOn && marketplace.isLoading;
 
     return HubScaffold(
       currentTab: AppTab.home,
       // Sticky Add-to-Cart bar (Figma) pinned above the bottom nav — shown once
       // the product has loaded, and retracted as the footer scrolls into view.
       bottomBar: detail.maybeWhen(
-        data: (product) => (product == null || !_showBar)
+        data: (product) => (product == null || !_showBar || awaitingBundle)
             ? null
             : _StickyAddToCart(
                 product: product,
@@ -99,6 +123,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         loading: () => ProductDetailSkeleton(preview: widget.preview),
         onRetry: () => ref.invalidate(productDetailProvider(widget.urlKey)),
         data: (product) {
+          if (awaitingBundle) {
+            return ProductDetailSkeleton(preview: widget.preview);
+          }
           if (product == null) {
             // A stale or rewritten link lands here — give it a way out
             // rather than a bare string in the middle of the page.
@@ -114,6 +141,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           }
           return _Content(
             product: product,
+            seller: extras?.seller,
             scrollController: _scroll,
             selection: _selection,
             tab: _tab,
@@ -138,9 +166,14 @@ class _Content extends StatelessWidget {
     required this.onSelect,
     required this.onTab,
     required this.onQuantity,
+    this.seller,
   });
 
   final ProductDetail product;
+
+  /// Who sells it (HubApp); the "Sold by" row is left out without one, and
+  /// for Hub Market's own products.
+  final HmSellerSummary? seller;
   final ScrollController scrollController;
   final Map<String, int> selection;
   final int tab;
@@ -157,12 +190,13 @@ class _Content extends StatelessWidget {
       if (variant?.imageUrl != null) variant!.imageUrl!,
       ...product.gallery,
     ];
+    final soldBy = seller;
 
     return ListView(
       controller: scrollController,
       padding: EdgeInsets.zero,
       children: [
-        _Gallery(
+        ProductGallery(
           images: images,
           sku: product.sku,
           urlKey: product.urlKey,
@@ -174,6 +208,11 @@ class _Content extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Figma 14 "Sold by" (16:1020), above the title.
+              if (soldBy != null && !soldBy.isMarketplace) ...[
+                SoldByRow(seller: soldBy),
+                const SizedBox(height: 14),
+              ],
               if (product.brand != null && product.brand!.isNotEmpty)
                 Text(
                   product.brand!,
@@ -400,13 +439,18 @@ class _QuantityStepper extends StatelessWidget {
   }
 }
 
-class _Gallery extends ConsumerStatefulWidget {
-  const _Gallery({
+/// The product page's image gallery: swipeable images with page dots and a
+/// thumbnail strip, merchandising badges, wishlist and share. The bundle page
+/// (Figma 14b) shows its own badges along the bottom through [bottomBadges].
+class ProductGallery extends ConsumerStatefulWidget {
+  const ProductGallery({
+    super.key,
     required this.images,
     required this.sku,
     required this.urlKey,
-    required this.badge,
-    required this.discountPercent,
+    this.badge = ProductBadge.none,
+    this.discountPercent,
+    this.bottomBadges = const <Widget>[],
   });
   final List<String> images;
   final String sku;
@@ -414,11 +458,14 @@ class _Gallery extends ConsumerStatefulWidget {
   final ProductBadge badge;
   final int? discountPercent;
 
+  /// Pills along the image's bottom-start edge.
+  final List<Widget> bottomBadges;
+
   @override
-  ConsumerState<_Gallery> createState() => _GalleryState();
+  ConsumerState<ProductGallery> createState() => _GalleryState();
 }
 
-class _GalleryState extends ConsumerState<_Gallery> {
+class _GalleryState extends ConsumerState<ProductGallery> {
   final PageController _controller = PageController();
   int _index = 0;
 
@@ -486,7 +533,24 @@ class _GalleryState extends ConsumerState<_Gallery> {
         AspectRatio(
           aspectRatio: 1,
           child: images.isEmpty
-              ? Container(color: AppColors.surfaceTint)
+              ? Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(color: AppColors.surfaceTint),
+                    ),
+                    if (widget.bottomBadges.isNotEmpty)
+                      PositionedDirectional(
+                        start: 16,
+                        end: 16,
+                        bottom: 12,
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: widget.bottomBadges,
+                        ),
+                      ),
+                  ],
+                )
               : Stack(
                   children: [
                     PageView.builder(
@@ -511,7 +575,7 @@ class _GalleryState extends ConsumerState<_Gallery> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (_badgeLabel(context) != null)
-                            _GalleryBadge(
+                            GalleryBadge(
                               label: _badgeLabel(context)!,
                               color: widget.badge == ProductBadge.bestseller
                                   ? AppColors.accentGold
@@ -521,7 +585,7 @@ class _GalleryState extends ConsumerState<_Gallery> {
                               widget.discountPercent != null)
                             const SizedBox(height: 6),
                           if (widget.discountPercent != null)
-                            _GalleryBadge(
+                            GalleryBadge(
                               label: '-${widget.discountPercent}%',
                               color: AppColors.accentSale,
                             ),
@@ -544,6 +608,18 @@ class _GalleryState extends ConsumerState<_Gallery> {
                         ],
                       ),
                     ),
+                    if (widget.bottomBadges.isNotEmpty)
+                      PositionedDirectional(
+                        start: 16,
+                        end: 16,
+                        // Above the page dots when there are some.
+                        bottom: images.length > 1 ? 30 : 12,
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: widget.bottomBadges,
+                        ),
+                      ),
                     // Page-dot indicator (Figma) — current image in the gallery.
                     if (images.length > 1)
                       Positioned(
@@ -616,10 +692,18 @@ class _GalleryState extends ConsumerState<_Gallery> {
 
 /// Small pill badge over the PDP gallery image (Figma), matching the product
 /// card's NEW/BESTSELLER/discount badge style.
-class _GalleryBadge extends StatelessWidget {
-  const _GalleryBadge({required this.label, required this.color});
+class GalleryBadge extends StatelessWidget {
+  const GalleryBadge({
+    super.key,
+    required this.label,
+    required this.color,
+    this.textDirection = TextDirection.ltr,
+  });
   final String label;
   final Color color;
+
+  /// LTR for bare figures ("-24%"); worded labels follow the locale.
+  final TextDirection? textDirection;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -630,7 +714,7 @@ class _GalleryBadge extends StatelessWidget {
     ),
     child: Text(
       label,
-      textDirection: TextDirection.ltr,
+      textDirection: textDirection,
       style: const TextStyle(
         color: Colors.white,
         fontSize: 11,

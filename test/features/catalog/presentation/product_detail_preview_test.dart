@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -18,6 +19,7 @@ import 'package:hubmarket_app/features/catalog/presentation/widgets/product_skel
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/fakes.dart';
+import '../../../support/hubapp_fakes.dart';
 
 /// A repository whose PDP query never resolves, so the screen is pinned in its
 /// loading state — the frame the client's recording was complaining about.
@@ -57,6 +59,8 @@ Widget _harness({ProductPreview? preview, String locale = 'en'}) {
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       catalogRepositoryProvider.overrideWithValue(_StuckCatalogRepository()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      // The product page asks HubApp for its seller; Build 1 here.
+      hubAppOverride(const HubAppState.unavailable()),
     ],
     child: MaterialApp.router(
       routerConfig: router,

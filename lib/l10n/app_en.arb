@@ -503,6 +503,15 @@
       }
     }
   },
+  "cartStoreCount": "{count, plural, =1{1 store} other{{count} stores}}",
+  "@cartStoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartSplitPackagesNote": "Items from different stores arrive in separate packages.",
   "itemQty": "Qty {count}",
   "@itemQty": {
     "placeholders": {
@@ -603,6 +612,25 @@
   },
   "orderDetailsTitle": "Order Details",
   "orderItemsSection": "Items",
+  "orderPackageTitle": "Package {index} · {store}",
+  "@orderPackageTitle": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPackageTitleNoStore": "Package {index}",
+  "@orderPackageTitleNoStore": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
   "orderTrackingSection": "Tracking",
   "orderShippingLabel": "Shipping",
   "orderNoTracking": "Tracking details appear here once your order ships.",
@@ -878,6 +906,140 @@
   },
   "pdpQuantityLabel": "Quantity",
   "pdpYouMayAlsoLike": "You may also like",
+  "pdpSoldBy": "Sold by",
+  "pdpVisitStore": "Visit store",
+  "sellerVerified": "Verified seller",
+  "sellerRating": "Rated {rating} out of 5",
+  "@sellerRating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleItemsTitle": "Items in this package",
+  "bundleItemCount": "{count, plural, =1{1 item} other{{count} items}}",
+  "@bundleItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleLineQtyPrice": "Qty {count} · {price}",
+  "@bundleLineQtyPrice": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleLineQty": "Qty {count}",
+  "@bundleLineQty": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleSwap": "Swap",
+  "bundleAddItemOnly": "Add this item only",
+  "bundleMoreItems": "{count, plural, =1{+1 more item} other{+{count} more items}}",
+  "@bundleMoreItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleShowFewer": "Show fewer",
+  "bundleSummaryTitle": "Package summary",
+  "bundleRegularPrice": "Regular price",
+  "bundleSaving": "Bundle saving",
+  "bundleTaxesNote": "Taxes calculated at checkout",
+  "bundleEstimateNote": "Priced from your choices — your cart shows the final price.",
+  "bundleYouSave": "You save {amount}",
+  "@bundleYouSave": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleDiscountBadge": "-{percent}% BUNDLE",
+  "@bundleDiscountBadge": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleSaveBadge": "SAVE {amount}",
+  "@bundleSaveBadge": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleAddToCart": "Add bundle to cart",
+  "bundlePriceFrom": "From {price}",
+  "@bundlePriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleChoose": "Choose {option}",
+  "@bundleChoose": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleOptional": "Optional",
+  "bundleSwapTitle": "Swap {option}",
+  "@bundleSwapTitle": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleDone": "Done",
+  "bundleNeedsSelection": "Choose {option} to complete the package.",
+  "@bundleNeedsSelection": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleNeedsAttribute": "Choose the {attribute} for {item}.",
+  "@bundleNeedsAttribute": {
+    "placeholders": {
+      "attribute": {
+        "type": "String"
+      },
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleOutOfStock": "{item} is out of stock — swap it to continue.",
+  "@bundleOutOfStock": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleUnavailable": "Bundles can't be added in the app right now.",
   "reviewsCount": "{count} reviews",
   "@reviewsCount": {
     "placeholders": {

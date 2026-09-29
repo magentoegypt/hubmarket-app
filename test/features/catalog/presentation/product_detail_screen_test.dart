@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -13,6 +14,7 @@ import 'package:hubmarket_app/features/catalog/presentation/screens/product_deta
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/fakes.dart';
+import '../../../support/hubapp_fakes.dart';
 
 /// Serves one canned [ProductDetail] instead of the shared sample.
 class _DetailRepository extends FakeCatalogRepository {
@@ -52,6 +54,8 @@ Widget _harness(String locale, {CatalogRepository? repository}) {
       ),
       // Keep the PDP test network-free.
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      // The product page asks HubApp for its seller; Build 1 here.
+      hubAppOverride(const HubAppState.unavailable()),
     ],
     child: MaterialApp.router(
       routerConfig: router,

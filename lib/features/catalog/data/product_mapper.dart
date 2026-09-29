@@ -133,6 +133,29 @@ DateTime? _calendarDay(String value) {
   return date;
 }
 
+/// A configurable product's `configurable_options` (swatches, sizes): the
+/// product page's and a bundle's configurable children's.
+List<ConfigurableOption> configurableOptionsFromJson(Object? json) => [
+  for (final o in (json is List ? json : const []).whereType<Map<String, dynamic>>())
+    ConfigurableOption(
+      attributeCode: (o['attribute_code'] as String?) ?? '',
+      label: (o['label'] as String?) ?? '',
+      values: (o['values'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (v) => SwatchValue(
+              valueIndex: (v['value_index'] as int?) ?? 0,
+              label: (v['label'] as String?) ?? '',
+              uid: v['uid'] as String?,
+              swatchColor:
+                  (v['swatch_data'] as Map<String, dynamic>?)?['value']
+                      as String?,
+            ),
+          )
+          .toList(),
+    ),
+];
+
 /// Maps one `products.items[0]` of the PDP query to a [ProductDetail]. [now]
 /// only pins "today" for the NEW badge in tests.
 ProductDetail productDetailFromJson(
@@ -154,28 +177,7 @@ ProductDetail productDetailFromJson(
     }
   }
 
-  final options = (json['configurable_options'] as List<dynamic>? ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .map(
-        (o) => ConfigurableOption(
-          attributeCode: (o['attribute_code'] as String?) ?? '',
-          label: (o['label'] as String?) ?? '',
-          values: (o['values'] as List<dynamic>? ?? const [])
-              .whereType<Map<String, dynamic>>()
-              .map(
-                (v) => SwatchValue(
-                  valueIndex: (v['value_index'] as int?) ?? 0,
-                  label: (v['label'] as String?) ?? '',
-                  uid: v['uid'] as String?,
-                  swatchColor:
-                      (v['swatch_data'] as Map<String, dynamic>?)?['value']
-                          as String?,
-                ),
-              )
-              .toList(),
-        ),
-      )
-      .toList();
+  final options = configurableOptionsFromJson(json['configurable_options']);
 
   final variants = (json['variants'] as List<dynamic>? ?? const [])
       .whereType<Map<String, dynamic>>()
@@ -238,6 +240,7 @@ ProductDetail productDetailFromJson(
     sku: (json['sku'] as String?) ?? '',
     name: (json['name'] as String?) ?? '',
     urlKey: (json['url_key'] as String?) ?? '',
+    typeId: productTypeFromTypename(json['__typename']),
     brand: brand,
     attributes: attributes,
     description: _stripHtml(
