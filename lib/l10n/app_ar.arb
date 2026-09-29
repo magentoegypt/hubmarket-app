@@ -25,6 +25,19 @@
   "offlineBody": "تحقّق من الواي فاي أو بيانات الجوال. سلتك محفوظة على هذا الجهاز.",
   "offlineTryAgain": "حاول مجددًا",
   "offlineBanner": "لا يوجد اتصال بالإنترنت",
+  "maintenanceTitle": "سنعود قريبًا",
+  "maintenanceBody": "نعمل على تحديث هب ماركت. سلتك في أمان — يرجى العودة بعد قليل.",
+  "maintenanceRetryAfter": "{minutes, plural, =1{يرجى المحاولة مجددًا بعد دقيقة تقريبًا.} =2{يرجى المحاولة مجددًا بعد دقيقتين تقريبًا.} few{يرجى المحاولة مجددًا بعد {minutes} دقائق تقريبًا.} other{يرجى المحاولة مجددًا بعد {minutes} دقيقة تقريبًا.}}",
+  "@maintenanceRetryAfter": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "updateRequiredTitle": "حان وقت التحديث",
+  "updateRequiredBody": "لم يعد هذا الإصدار من هب ماركت مدعومًا. حدّث التطبيق لمواصلة التسوق.",
+  "updateRequiredAction": "حدّث الآن",
   "healthCheckTitle": "فحص حالة المتجر",
   "healthCheckSubtitle": "إعدادات المتجر الحيّة لطريقة العرض النشطة",
   "settingsConnectionTest": "اختبار الاتصال",

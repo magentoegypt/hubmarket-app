@@ -31,6 +31,19 @@
   "offlineBody": "Check your Wi-Fi or mobile data. Your cart is saved on this device.",
   "offlineTryAgain": "Try again",
   "offlineBanner": "No internet connection",
+  "maintenanceTitle": "We’ll be right back",
+  "maintenanceBody": "Hub Market is being updated. Your cart is safe — please check back soon.",
+  "maintenanceRetryAfter": "{minutes, plural, =1{Please try again in about a minute.} other{Please try again in about {minutes} minutes.}}",
+  "@maintenanceRetryAfter": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "updateRequiredTitle": "Time to update",
+  "updateRequiredBody": "This version of Hub Market is no longer supported. Update the app to keep shopping.",
+  "updateRequiredAction": "Update now",
   "healthCheckTitle": "Store health check",
   "healthCheckSubtitle": "Live storeConfig for the active store view",
   "settingsConnectionTest": "Connection test",

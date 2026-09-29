@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/hubapp/hm_app_config.dart';
+import '../../../../core/hubapp/hubapp_providers.dart';
 import '../../../../core/network/platform_http_client.dart';
 import '../../../../core/storage/local_cache.dart';
 import '../../../../core/store/store_controller.dart';
@@ -23,16 +25,25 @@ class AlgoliaUnavailable implements Exception {
   String toString() => 'AlgoliaUnavailable($reason)';
 }
 
+/// The Hub Market App API's Algolia settings for a store view — the active
+/// one's `hmAppConfig.algolia` — or null when that API isn't there. [fresh]
+/// asks for the config to be read again first (the key was refused).
+typedef HubAppAlgoliaSource =
+    Future<HmAlgoliaConfig?> Function(String storeCode, {bool fresh});
+
 /// Where the app gets its Algolia settings, per store view.
 ///
 /// The storefront's key is an Algolia *secured* key restricted by
-/// `validUntil` to 24 hours after the page was rendered, so the app can't
-/// ship one. Until the planned GraphQL `hmAppConfig { algolia { … } }`
-/// (MagentoEgypt_HubApp) serves the settings, they are read the way the
-/// website's own autocomplete reads them: from `window.algoliaConfig` on the
-/// store view's home page — one GET of about 60 KB (gzip), which Magento's
-/// full-page cache serves. That object also carries the index name, the
-/// facets with their store-view labels and the sort replicas.
+/// `validUntil` to 24 hours after it was issued, so the app can't ship one.
+///
+/// * With the Hub Market App API ([hubApp]), the key, its `valid_until` and
+///   the index names come from `hmAppConfig.algolia`. That API has no facets
+///   or sorts, so their layout (store-view labels, sort replicas) is read
+///   once from the storefront page below and kept for [layoutMaxAge].
+/// * Without it — today's fallback — everything is read the way the
+///   website's own autocomplete reads it: from `window.algoliaConfig` on the
+///   store view's home page, one GET of about 60 KB (gzip) that Magento's
+///   full-page cache serves.
 ///
 /// The result is kept in memory and in [LocalCache] until the key's
 /// `validUntil`, so a restart doesn't fetch it again. A static
@@ -44,6 +55,7 @@ class AlgoliaSettingsRepository {
     required this._client,
     required this._cache,
     required this._storefrontPage,
+    this._hubApp,
     DateTime Function()? clock,
     this.timeout = const Duration(seconds: 10),
   }) : _clock = clock ?? DateTime.now;
@@ -52,13 +64,22 @@ class AlgoliaSettingsRepository {
   final http.Client _client;
   final LocalCache _cache;
   final Uri Function(String storeCode) _storefrontPage;
+  final HubAppAlgoliaSource? _hubApp;
   final DateTime Function() _clock;
   final Duration timeout;
+
+  /// How long a storefront facet/sort layout serves the Hub Market App key.
+  static const Duration layoutMaxAge = Duration(days: 7);
 
   final Map<String, AlgoliaSettings> _memory = {};
   final Map<String, Future<AlgoliaSettings>> _pending = {};
 
+  /// Keys Algolia refused, per store view: the Hub Market App API may keep
+  /// serving one from the HTTP cache for up to an hour.
+  final Map<String, String> _refused = {};
+
   static String _cacheKey(String storeCode) => 'algolia_settings_$storeCode';
+  static String _layoutKey(String storeCode) => 'algolia_layout_$storeCode';
 
   /// The settings to search [storeCode]'s indices with. Throws
   /// [AlgoliaUnavailable] when there are none.
@@ -95,7 +116,8 @@ class AlgoliaSettingsRepository {
   /// Forgets [storeCode]'s settings — Algolia refused their key — so the next
   /// [settingsFor] reads fresh ones.
   Future<void> invalidate(String storeCode) async {
-    _memory.remove(storeCode);
+    final refused = _memory.remove(storeCode) ?? _readCache(storeCode);
+    if (refused != null) _refused[storeCode] = refused.searchKey;
     try {
       await _cache.deleteKey(_cacheKey(storeCode));
     } on Object {
@@ -104,6 +126,69 @@ class AlgoliaSettingsRepository {
   }
 
   Future<AlgoliaSettings> _fetch(String storeCode) async {
+    final fromHubApp = await _fromHubApp(storeCode);
+    if (fromHubApp != null) return _remember(storeCode, fromHubApp);
+
+    final settings = await _readStorefront(storeCode);
+    if (!settings.usableAt(_clock())) {
+      // The page came from a full-page cache older than its key.
+      throw const AlgoliaUnavailable('the storefront key has expired');
+    }
+    return _remember(storeCode, settings);
+  }
+
+  /// Settings built on `hmAppConfig.algolia`, or null when the Hub Market App
+  /// API has none (not deployed, no Algolia, or only a refused/expired key).
+  Future<AlgoliaSettings?> _fromHubApp(String storeCode) async {
+    final source = _hubApp;
+    if (source == null) return null;
+    final refused = _refused[storeCode];
+    HmAlgoliaConfig? hub;
+    try {
+      hub = await source(storeCode, fresh: refused != null);
+    } on Object {
+      return null;
+    }
+    if (hub == null || hub.searchApiKey == refused) return null;
+
+    var layout = _readLayout(storeCode);
+    if (layout == null) {
+      try {
+        layout = await _readStorefront(storeCode);
+      } on AlgoliaUnavailable {
+        // Search still works on the basic facets; the layout is read again
+        // next time.
+      }
+    }
+    final settings = AlgoliaSettings.fromHubApp(
+      hub,
+      config: _config,
+      storeCode: storeCode,
+      layout: layout,
+    );
+    return settings.usableAt(_clock()) ? settings : null;
+  }
+
+  Future<AlgoliaSettings> _remember(
+    String storeCode,
+    AlgoliaSettings settings,
+  ) async {
+    _memory[storeCode] = settings;
+    _refused.remove(storeCode);
+    try {
+      await _cache.writeString(
+        _cacheKey(storeCode),
+        jsonEncode(settings.toStorefrontConfig()),
+      );
+    } on Object {
+      // Not persisted: the next launch reads the settings again.
+    }
+    return settings;
+  }
+
+  /// `window.algoliaConfig` of [storeCode]'s storefront page, whatever the age
+  /// of its key; its facet/sort layout is kept for [layoutMaxAge].
+  Future<AlgoliaSettings> _readStorefront(String storeCode) async {
     final uri = _storefrontPage(storeCode);
     final http.Response response;
     try {
@@ -132,21 +217,37 @@ class AlgoliaSettingsRepository {
     } on FormatException catch (error) {
       throw AlgoliaUnavailable('algoliaConfig: ${error.message}');
     }
-    if (!settings.usableAt(_clock())) {
-      // The page came from a full-page cache older than its key.
-      throw const AlgoliaUnavailable('the storefront key has expired');
-    }
-
-    _memory[storeCode] = settings;
     try {
       await _cache.writeString(
-        _cacheKey(storeCode),
-        jsonEncode(settings.toStorefrontConfig()),
+        _layoutKey(storeCode),
+        jsonEncode({
+          'at': _clock().millisecondsSinceEpoch,
+          'config': settings.toStorefrontConfig(),
+        }),
       );
     } on Object {
-      // Not persisted: the next launch reads the page again.
+      // Not persisted: the layout is read again next time.
     }
     return settings;
+  }
+
+  /// The storefront layout kept by [_readStorefront], unless older than
+  /// [layoutMaxAge].
+  AlgoliaSettings? _readLayout(String storeCode) {
+    try {
+      final raw = _cache.readString(_layoutKey(storeCode));
+      if (raw == null) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final at = decoded['at'];
+      final config = decoded['config'];
+      if (at is! int || config is! Map<String, dynamic>) return null;
+      final age = _clock().difference(DateTime.fromMillisecondsSinceEpoch(at));
+      if (age > layoutMaxAge) return null;
+      return AlgoliaSettings.fromStorefrontConfig(config);
+    } on Object {
+      return null;
+    }
   }
 
   AlgoliaSettings? _readCache(String storeCode) {
@@ -202,5 +303,10 @@ final algoliaSettingsRepositoryProvider = Provider<AlgoliaSettingsRepository>((
     // Read at call time: the store view follows the app language.
     storefrontPage: (storeCode) =>
         storefrontHomeUri(ref.read(storeControllerProvider), config, storeCode),
+    hubApp: (storeCode, {bool fresh = false}) async {
+      final hubApp = ref.read(hubAppProvider.notifier);
+      if (fresh) await hubApp.refresh();
+      return hubApp.algoliaFor(storeCode);
+    },
   );
 });
