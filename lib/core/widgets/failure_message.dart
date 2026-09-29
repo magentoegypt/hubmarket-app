@@ -4,9 +4,10 @@ import '../../l10n/l10n.dart';
 import '../error/failure.dart';
 
 /// For flows where the backend already returns a **localized** message we want
-/// to surface — the WhatsApp-OTP validation/throttle errors from
-/// `MagentoEgypt_OtpVerification` come back localized eg_en/eg_ar ("The
-/// verification code is incorrect.", "Please wait N seconds…") — this returns
+/// to surface — the WhatsApp-OTP refusals from the Vnecoms SMS GraphQL
+/// mutations and the `MagentoEgypt_SmsExtend` REST endpoints come back in the
+/// store view's language ("The OTP code is not valid.", "Please wait 30
+/// seconds before requesting another code.") — this returns
 /// `Failure.detail` for a server failure and otherwise falls back to the
 /// standard localized mapping (network/service/generic) or [fallback] for a
 /// non-[Failure] error.

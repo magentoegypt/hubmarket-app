@@ -156,14 +156,22 @@ class AccountRepository {
     mutation: true,
   );
 
-  /// Writes the verified [mobileNumber] (E.164) to the `mobile_number` custom
-  /// attribute. The caller must OTP-verify the number first (see the Edit
-  /// Profile mobile editor).
-  Future<void> updateMobileNumber(String mobileNumber) => _run(
-    AccountQueries.updateMobile,
-    {'value': mobileNumber},
-    mutation: true,
-  );
+  /// Replaces the customer's mobile with [mobileNumber] (E.164), proving it
+  /// with the WhatsApp [code] that `requestRegistrationOtp` sent to it. Throws
+  /// [Failure] (`server`, with the store's message) on a wrong code.
+  Future<void> saveMobileNumber(String mobileNumber, String code) async {
+    final data = await _run(AccountQueries.saveMobile, {
+      'input': {'mobile': mobileNumber, 'otp': code},
+    }, mutation: true);
+    final saved =
+        (data['saveMobileToCustomer'] as Map<String, dynamic>?)?['result'];
+    if (saved != true) {
+      throw const Failure(
+        FailureKind.unknown,
+        detail: 'saveMobileToCustomer did not confirm the change',
+      );
+    }
+  }
 
   /// Uploads/replaces the customer avatar. [base64File] is the raw base64 of a
   /// jpg/png/webp (no data: prefix). Caller refetches the customer afterwards to

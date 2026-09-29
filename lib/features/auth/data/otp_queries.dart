@@ -1,48 +1,43 @@
-/// WhatsApp-OTP mutations from the live `MagentoEgypt_OtpVerification` module
-/// (verified against `hub-market.magento2.click/graphql`, `Store: eg_en`). All are anonymous.
+/// WhatsApp-OTP mutations of the Vnecoms SMS module (`Vnecoms_SmsGraphQl`) on
+/// the Hub Market backend. All anonymous; variables and result handling are
+/// shared in `VnecomsOtp` (`vnecoms_otp.dart`) — a refused request is
+/// `success: false` + `msg`, never a GraphQL error.
 ///
-/// On failure these return a GraphQL `errors[]` entry (input-exception) with a
-/// localized message — the data layer maps that to `Failure(server, detail:)`,
-/// which the UI surfaces verbatim (it is already localized eg_en / eg_ar). The
-/// `*/request` mutations for login & password always return `success:true`
-/// (anti-enumeration) — never infer account existence from them.
-///
-/// Guest-checkout OTP is cart-bound and lives with the checkout queries
-/// (`checkout_queries.dart`), not here.
+/// Sign-in by code is **not** here: `customerLoginVerifyOtp` returns no customer
+/// token, so passwordless sign-in goes through the REST pair in
+/// `whatsapp_otp_api.dart`. Guest-checkout OTP lives with the checkout queries.
 abstract final class OtpQueries {
-  static const String requestLoginOtp = r'''
-mutation RequestLoginOtp($phone: String!) {
-  requestLoginOtp(phone: $phone) { success message }
+  /// Registration: fails when another account already holds the number.
+  static const String registerSendOtp = r'''
+mutation RegisterSendOtp($input: CustomerSendOtp!) {
+  customerRegisterSendOtp(input: $input) { success msg }
 }
 ''';
 
-  static const String loginWithOtp = r'''
-mutation LoginWithOtp($phone: String!, $code: String!) {
-  loginWithOtp(phone: $phone, code: $code) { success token message }
+  /// Consumes the code — the account itself is created by `createCustomer`.
+  static const String registerVerifyOtp = r'''
+mutation RegisterVerifyOtp($input: CustomerrVerifyOtp!) {
+  customerRegisterVerifyOtp(input: $input) { success msg }
 }
 ''';
 
-  static const String requestRegistrationOtp = r'''
-mutation RequestRegistrationOtp($phone: String!) {
-  requestRegistrationOtp(phone: $phone) { success message }
+  /// Password reset: fails when no account holds exactly this number.
+  static const String forgotPasswordSendOtp = r'''
+mutation ForgotPasswordSendOtp($input: CustomerSendOtp!) {
+  customerForgotPasswordSendOtp(input: $input) { success msg }
 }
 ''';
 
-  static const String verifyRegistrationOtp = r'''
-mutation VerifyRegistrationOtp($phone: String!, $code: String!) {
-  verifyRegistrationOtp(phone: $phone, code: $code) { success message }
-}
-''';
-
-  static const String requestPasswordResetOtp = r'''
-mutation RequestPasswordResetOtp($phone: String!) {
-  requestPasswordResetOtp(phone: $phone) { success message }
-}
-''';
-
-  static const String resetPasswordWithOtp = r'''
-mutation ResetPasswordWithOtp($phone: String!, $code: String!, $newPassword: String!) {
-  resetPasswordWithOtp(phone: $phone, code: $code, newPassword: $newPassword) { success message }
+  /// Answers the account's e-mail and a one-off reset token for core
+  /// `resetPassword` — the same token `requestPasswordResetEmail` would mail.
+  static const String forgotPasswordVerifyOtp = r'''
+mutation ForgotPasswordVerifyOtp($input: CustomerrVerifyOtp!) {
+  customerForgotPasswordVerifyOtp(input: $input) {
+    success
+    msg
+    email
+    resetPasswordToken
+  }
 }
 ''';
 }

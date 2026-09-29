@@ -116,7 +116,8 @@ class AuthController extends Notifier<AuthState> {
 
   // --- WhatsApp OTP ----------------------------------------------------------
 
-  /// Sends a passwordless-login OTP to [phone].
+  /// Sends a passwordless-login code to [phone]. Fails (with the store's
+  /// message) when no account holds the number.
   Future<void> requestLoginOtp(String phone) => _repo.requestLoginOtp(phone);
 
   /// Completes a passwordless login: exchanges the code for a token and runs the
@@ -126,20 +127,20 @@ class AuthController extends Notifier<AuthState> {
     await _completeLogin(token);
   }
 
-  /// Requests / verifies the registration OTP (WhatsApp). Verification must land
-  /// within the module's post-verify window before the account is created.
-  Future<void> requestRegistrationOtp(String phone) =>
-      _repo.requestRegistrationOtp(phone);
+  /// Requests / verifies the registration code (WhatsApp). The request fails
+  /// when another account already holds the number; [resend] marks a repeat.
+  /// Also used to verify a *new* number from Edit Profile.
+  Future<void> requestRegistrationOtp(String phone, {bool resend = false}) =>
+      _repo.requestRegistrationOtp(phone, resend: resend);
   Future<void> verifyRegistrationOtp(String phone, String code) =>
       _repo.verifyRegistrationOtp(phone, code);
 
-  /// Requests a password-reset OTP (always succeeds server-side).
-  Future<void> requestPasswordResetOtp(String phone) =>
-      _repo.requestPasswordResetOtp(phone);
+  /// Requests a password-reset code. Fails when no account holds the number.
+  Future<void> requestPasswordResetOtp(String phone, {bool resend = false}) =>
+      _repo.requestPasswordResetOtp(phone, resend: resend);
 
-  /// Resets the password with a phone OTP. The customer then signs in normally
-  /// (phone or email) — there is no auto-login here since no email is captured
-  /// on the phone path.
+  /// Resets the password with a phone code. The customer then signs in
+  /// normally with the new password.
   Future<void> resetPasswordWithOtp({
     required String phone,
     required String code,

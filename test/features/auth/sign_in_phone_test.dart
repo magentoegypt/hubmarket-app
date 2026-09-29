@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/config/backend_capabilities.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/core/widgets/otp_code_field.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
@@ -10,12 +11,17 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
 
-Future<void> _pump(WidgetTester tester, {String locale = 'en'}) async {
+Future<void> _pump(
+  WidgetTester tester, {
+  String locale = 'en',
+  BackendCapabilities capabilities = BackendCapabilities.hubMarket,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
         authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+        backendCapabilitiesProvider.overrideWithValue(capabilities),
       ],
       child: MaterialApp(
         locale: Locale(locale),
@@ -67,6 +73,14 @@ void main() {
 
     // Drain the 60s resend cooldown so no timer is pending at teardown.
     await tester.pump(const Duration(seconds: 61));
+  });
+
+  testWidgets('without a token-issuing OTP endpoint there is no Phone tab', (
+    tester,
+  ) async {
+    await _pump(tester, capabilities: const BackendCapabilities());
+    expect(find.text('Phone Number'), findsNothing);
+    expect(find.text('Sign In'), findsOneWidget); // e-mail + password only
   });
 
   testWidgets('renders Arabic tab labels + RTL', (tester) async {

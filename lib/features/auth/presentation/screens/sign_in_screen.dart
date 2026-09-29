@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/config/backend_capabilities.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/brand_logo.dart';
@@ -156,6 +157,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Phone sign-in needs a backend endpoint that trades a code for a token;
+    // without one the screen is e-mail + password only.
+    final phoneLogin = ref.watch(
+      backendCapabilitiesProvider.select((c) => c.whatsappOtpLogin),
+    );
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -175,14 +181,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 subtitle: l10n.authSignInSubtitle,
               ),
               const SizedBox(height: 24),
-              AuthMethodTabs(
-                emailLabel: l10n.authMethodEmail,
-                phoneLabel: l10n.authMethodPhone,
-                phoneSelected: _phoneTab,
-                onChanged: _switchTab,
-              ),
-              const SizedBox(height: 16),
-              if (_phoneTab) _phoneSection(l10n) else _emailSection(l10n),
+              if (phoneLogin) ...[
+                AuthMethodTabs(
+                  emailLabel: l10n.authMethodEmail,
+                  phoneLabel: l10n.authMethodPhone,
+                  phoneSelected: _phoneTab,
+                  onChanged: _switchTab,
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (phoneLogin && _phoneTab)
+                _phoneSection(l10n)
+              else
+                _emailSection(l10n),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

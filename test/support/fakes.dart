@@ -396,6 +396,7 @@ class FakeAuthRepository implements AuthRepository {
   String? lastMobileNumber;
   String? lastOtpPhone;
   String? lastOtpCode;
+  bool? lastOtpResend;
   String? lastResetPassword;
 
   @override
@@ -455,8 +456,13 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> requestRegistrationOtp(String phone) async =>
-      lastOtpPhone = phone;
+  Future<void> requestRegistrationOtp(
+    String phone, {
+    bool resend = false,
+  }) async {
+    lastOtpPhone = phone;
+    lastOtpResend = resend;
+  }
 
   @override
   Future<void> verifyRegistrationOtp(String phone, String code) async {
@@ -471,8 +477,13 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> requestPasswordResetOtp(String phone) async =>
-      lastOtpPhone = phone;
+  Future<void> requestPasswordResetOtp(
+    String phone, {
+    bool resend = false,
+  }) async {
+    lastOtpPhone = phone;
+    lastOtpResend = resend;
+  }
 
   @override
   Future<void> resetPasswordWithOtp({
