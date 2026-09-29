@@ -45,6 +45,7 @@ class Product {
     this.inStock = true,
     this.badge = ProductBadge.none,
     this.categories = const <ProductCategoryRef>[],
+    this.typeId,
   });
 
   final String sku;
@@ -72,6 +73,17 @@ class Product {
 
   /// The categories the product is filed under — search results only.
   final List<ProductCategoryRef> categories;
+
+  /// Magento's product type — `simple`, `configurable`, `bundle`, … — when
+  /// the source says (Algolia records carry `type_id`, GraphQL items their
+  /// `__typename`); null when unknown.
+  final String? typeId;
+
+  /// True for a product that can't go into the cart by SKU alone: a
+  /// configurable (size, colour), bundle or grouped product needs its
+  /// choices made on the product page first.
+  bool get requiresOptions =>
+      typeId == 'configurable' || typeId == 'bundle' || typeId == 'grouped';
 
   /// The category a search hit names in its "in Home Furniture" line: the
   /// deepest one shown in the menu, else the deepest of any. Null without

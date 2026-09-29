@@ -73,6 +73,30 @@ void main() {
     expect(find.text('BESTSELLER'), findsNothing);
   });
 
+  testWidgets('a configurable\'s "+" opens its page instead of adding', (
+    tester,
+  ) async {
+    var opened = 0;
+    const product = Product(
+      sku: 'sofabed123',
+      name: 'Corner Sofa Bed',
+      urlKey: 'sofabed123',
+      regularPrice: Money(amount: 500, currency: 'AED'),
+      finalPrice: Money(amount: 425, currency: 'AED'),
+      typeId: 'configurable',
+    );
+    await tester.pumpWidget(
+      _wrap(ProductCard(product: product, onTap: () => opened++)),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Add to Cart'));
+    await tester.pump();
+
+    expect(opened, 1);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
   // The mapper never produces BESTSELLER on Hub Market (no backing attribute);
   // the card keeps rendering it so the enum value stays usable.
   testWidgets('renders the BESTSELLER merchandising badge when flagged', (
