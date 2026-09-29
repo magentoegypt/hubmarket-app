@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp_providers.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
@@ -16,6 +17,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/algolia_fakes.dart';
 import '../../../support/fakes.dart';
+import '../../../support/hubapp_fakes.dart';
 import '../../../support/fonts.dart';
 import '../../../support/search_fixtures.dart';
 
@@ -71,6 +73,7 @@ Widget _harness(
         ),
       ),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      hubAppOverride(const HubAppState.unavailable()),
       algoliaHttpClientProvider.overrideWithValue(algolia.client),
     ],
     child: RepaintBoundary(

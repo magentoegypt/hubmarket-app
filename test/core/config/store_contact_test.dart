@@ -3,15 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 
 /// The shape of the live `hm_footer_customer` block: the website footer's
 /// "Customer" column, whose last link is the WhatsApp support chat.
-const _footerBlock = '<h3>Customer</h3>\n<ul>\n'
+const _footerBlock =
+    '<h3>Customer</h3>\n<ul>\n'
     '  <li><a href="https://hub-market.magento2.click/en/customer/account/">My Account</a></li>\n'
     '  <li><a href="https://hub-market.magento2.click/en/customer-service/">Help Center</a></li>\n'
     '  <li><a href="https://wa.me/971500000000">WhatsApp</a></li>\n'
@@ -46,13 +49,17 @@ GraphQLClient _cmsClient(String? content) => GraphQLClient(
   cache: GraphQLCache(),
 );
 
-ProviderContainer _container(GraphQLClient client) {
+ProviderContainer _container(
+  GraphQLClient client, {
+  HubAppState hubApp = const HubAppState.unavailable(),
+}) {
   final container = ProviderContainer(
     overrides: [
       localCacheProvider.overrideWithValue(FakeLocalCache()),
       localePrefsProvider.overrideWithValue(FakeLocalePrefs('en')),
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       graphqlClientProvider.overrideWithValue(client),
+      hubAppOverride(hubApp),
     ],
   );
   addTearDown(container.dispose);
@@ -104,6 +111,38 @@ void main() {
       expect(contact.company, isNull);
       expect(contact.socials, isEmpty);
       expect(contact.website, 'https://hub-market.magento2.click');
+    });
+
+    test('the Hub Market App settings publish their channels', () async {
+      final contact = await _settled(
+        _container(
+          _cmsClient(_footerBlock),
+          hubApp: const HubAppState.available(kSampleHmAppConfig),
+        ),
+      );
+
+      expect(contact.whatsapp, 'https://wa.me/971501234567');
+      expect(contact.phone, '+97145550000');
+      expect(contact.email, 'care@hub-market.example');
+      expect(contact.hours, 'Daily 9 am – 11 pm');
+    });
+
+    test('settings without WhatsApp fall back to the footer block', () async {
+      final contact = await _settled(
+        _container(
+          _cmsClient(_footerBlock),
+          hubApp: const HubAppState.available(
+            HmAppConfig(
+              storeCode: 'en',
+              contact: HmContactConfig(email: 'care@hub-market.example'),
+            ),
+          ),
+        ),
+      );
+
+      expect(contact.whatsapp, 'https://wa.me/971500000000');
+      expect(contact.email, 'care@hub-market.example');
+      expect(contact.phone, isNull);
     });
 
     test('a failed block request leaves every channel unset', () async {

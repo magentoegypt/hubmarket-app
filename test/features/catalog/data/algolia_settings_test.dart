@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/config/app_config.dart';
+import 'package:hubmarket_app/core/hubapp/hm_app_config.dart';
 import 'package:hubmarket_app/core/store/store_controller.dart';
 import 'package:hubmarket_app/core/store/store_view.dart';
 import 'package:hubmarket_app/features/catalog/data/algolia/algolia_settings.dart';
@@ -292,6 +293,131 @@ void main() {
           repository(stale).settingsFor('en'),
           throwsA(isA<AlgoliaUnavailable>()),
         );
+      },
+    );
+  });
+
+  group('AlgoliaSettingsRepository with the Hub Market App API', () {
+    HmAlgoliaConfig hubAlgolia(
+      String key, {
+      DateTime? until,
+      String store = 'en',
+    }) => HmAlgoliaConfig(
+      applicationId: 'HL67ED06DQ',
+      searchApiKey: key,
+      validUntil: until ?? DateTime.now().add(const Duration(hours: 23)),
+      indexPrefix: 'hubmarket_',
+      productIndex: 'hubmarket_${store}_products',
+      categoryIndex: 'hubmarket_${store}_categories',
+      pageIndex: 'hubmarket_${store}_pages',
+    );
+
+    AlgoliaSettingsRepository repository(
+      FakeAlgoliaBackend backend,
+      Future<HmAlgoliaConfig?> Function(String store, {bool fresh}) hubApp, {
+      FakeLocalCache? cache,
+    }) => AlgoliaSettingsRepository(
+      config: _config(),
+      client: backend.client,
+      cache: cache ?? FakeLocalCache(),
+      storefrontPage: (store) =>
+          Uri.parse('https://hub-market.magento2.click/$store/'),
+      hubApp: hubApp,
+    );
+
+    test(
+      'key, valid_until and indices from hmAppConfig; layout from the page once',
+      () async {
+        final backend = FakeAlgoliaBackend();
+        final cache = FakeLocalCache();
+        final until = DateTime.now().add(const Duration(hours: 20));
+        Future<HmAlgoliaConfig?> hub(
+          String store, {
+          bool fresh = false,
+        }) async => hubAlgolia('hub-key', until: until, store: store);
+
+        final settings = await repository(
+          backend,
+          hub,
+          cache: cache,
+        ).settingsFor('ar');
+
+        expect(settings.searchKey, 'hub-key');
+        expect(settings.validUntil, until);
+        expect(settings.productsIndex, 'hubmarket_ar_products');
+        expect(settings.fromBackend, isTrue);
+        // The storefront's facet labels and sort replicas, read once.
+        expect(settings.facet('color')!.label, 'اللون');
+        expect(settings.sorts.last.label, 'الأحدث أولاً');
+        expect(backend.pageRequests, hasLength(1));
+
+        // A new launch with an expired key: the kept layout, no page.
+        await cache.deleteKey('algolia_settings_ar');
+        final again = await repository(
+          backend,
+          hub,
+          cache: cache,
+        ).settingsFor('ar');
+        expect(again.facet('mgs_brand'), isNotNull);
+        expect(backend.pageRequests, hasLength(1));
+      },
+    );
+
+    test(
+      'no page to read: the basic facets and the configured replicas',
+      () async {
+        final backend = FakeAlgoliaBackend(pageStatus: 503);
+        final settings = await repository(
+          backend,
+          (store, {bool fresh = false}) async => hubAlgolia('hub-key'),
+        ).settingsFor('en');
+
+        expect(settings.searchKey, 'hub-key');
+        expect(settings.facets.map((f) => f.attribute), [
+          'price',
+          'categories',
+          'rating_summary',
+        ]);
+        expect(
+          settings.sorts.map((s) => s.indexName),
+          contains('hubmarket_en_products_created_at_desc'),
+        );
+      },
+    );
+
+    test(
+      'without hmAppConfig.algolia it is the storefront page, as before',
+      () async {
+        final backend = FakeAlgoliaBackend();
+        final settings = await repository(
+          backend,
+          (store, {bool fresh = false}) async => null,
+        ).settingsFor('en');
+
+        expect(settings.searchKey, isNot('hub-key'));
+        expect(backend.pageRequests, hasLength(1));
+      },
+    );
+
+    test(
+      'a refused key: fresh settings are asked for, and a repeat is skipped',
+      () async {
+        final backend = FakeAlgoliaBackend();
+        final asked = <bool>[];
+        Future<HmAlgoliaConfig?> hub(String store, {bool fresh = false}) async {
+          asked.add(fresh);
+          return hubAlgolia('hub-key');
+        }
+
+        final repo = repository(backend, hub);
+        expect((await repo.settingsFor('en')).searchKey, 'hub-key');
+
+        await repo.invalidate('en');
+        final next = await repo.settingsFor('en');
+
+        expect(asked, [false, true]);
+        // HubApp served the refused key again (HTTP cache): the page's instead.
+        expect(next.searchKey, isNot('hub-key'));
       },
     );
   });

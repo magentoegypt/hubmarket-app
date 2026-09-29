@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../graphql/graphql_client.dart';
+import '../hubapp/hubapp_providers.dart';
 import '../store/store_controller.dart';
 import 'app_config.dart';
 
@@ -10,17 +11,20 @@ import 'app_config.dart';
 ///
 /// Every channel is optional. A null field means the backend doesn't publish
 /// it, and the screens leave that button or row out instead of showing a
-/// placeholder — or another store's details. What Hub Market publishes today:
+/// placeholder — or another store's details. Where they come from:
 ///
-/// * **WhatsApp** — the `wa.me` link in the `hm_footer_customer` CMS block (the
-///   website footer's "Customer" column), read through core `cmsBlocks`. CMS
-///   blocks are store-scoped, so each language reads its own block.
+/// * the Hub Market App settings (`hmAppConfig.contact`: WhatsApp, phone,
+///   e-mail, service hours — Stores › Configuration › Hub Market App) when
+///   that API is deployed;
+/// * otherwise, and for a WhatsApp link those settings leave empty, the
+///   `wa.me` link in the `hm_footer_customer` CMS block (the website footer's
+///   "Customer" column), read through core `cmsBlocks`. CMS blocks are
+///   store-scoped, so each language reads its own block;
 /// * **website** — the storefront origin (the GraphQL endpoint's host).
 ///
-/// Nothing else. Core `StoreConfig` has no business name / address / phone /
-/// e-mail / social fields; the app's first client served all of them from a
-/// custom `magentoegypt_beauty_config` field that this backend doesn't have.
-/// Wire a channel in here once the backend exposes it.
+/// Core `StoreConfig` has no business name / address / social fields; the
+/// app's first client served them from a custom `magentoegypt_beauty_config`
+/// field that this backend doesn't have.
 class StoreContact {
   const StoreContact({
     required this.website,
@@ -134,13 +138,21 @@ String? whatsappLinkFromHtml(String? html) {
   return match == null ? null : 'https://wa.me/${match.group(1)}';
 }
 
-/// The store's published contact channels (see [StoreContact]). Until the CMS
-/// block loads — or when it has no link — WhatsApp is null too, so the screens
-/// simply show fewer channels.
+/// The store's published contact channels (see [StoreContact]). Until a
+/// source loads — or when none has a link — WhatsApp is null too, so the
+/// screens simply show fewer channels.
 final storeContactProvider = Provider.autoDispose<StoreContact>((ref) {
-  final html = ref.watch(_supportBlockHtmlProvider).valueOrNull;
+  final contact = ref.watch(hmAppConfigProvider)?.contact;
+  // The footer block is only read when the settings have no WhatsApp link.
+  final whatsapp =
+      contact?.whatsappUrl ??
+      whatsappLinkFromHtml(ref.watch(_supportBlockHtmlProvider).valueOrNull);
   return StoreContact(
     website: Uri.parse(ref.watch(appConfigProvider).graphqlEndpoint).origin,
-    whatsapp: whatsappLinkFromHtml(html),
+    whatsapp: whatsapp,
+    phone: contact?.phone,
+    phoneDisplay: contact?.phone,
+    email: contact?.email,
+    hours: contact?.hours ?? '',
   );
 });

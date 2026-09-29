@@ -18,6 +18,7 @@ import '../../catalog/domain/category.dart';
 import '../../catalog/domain/product.dart';
 import '../../catalog/presentation/catalog_providers.dart';
 import '../../catalog/presentation/product_navigation.dart';
+import '../../catalog/presentation/search_providers.dart';
 import '../../catalog/presentation/storefront_links.dart';
 import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
@@ -131,7 +132,7 @@ class _HomeUnavailable extends ConsumerWidget {
 
 // ─────────────────────────────────────────────────────────────── header
 
-class _HomeHeader extends StatelessWidget implements PreferredSizeWidget {
+class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
   const _HomeHeader();
 
   static const double _contentHeight = 4 + 48 + 8 + 46 + 10 + 20 + 12;
@@ -144,7 +145,7 @@ class _HomeHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return Material(
       color: AppColors.brandPrimary,
@@ -176,7 +177,9 @@ class _HomeHeader extends StatelessWidget implements PreferredSizeWidget {
               Padding(
                 padding: const EdgeInsetsDirectional.only(end: 8),
                 child: _SearchBox(
-                  hint: l10n.homeSearchMarketplaceHint,
+                  hint:
+                      ref.watch(searchHintProvider) ??
+                      l10n.homeSearchMarketplaceHint,
                   onTap: () => context.push(AppRoutes.search),
                 ),
               ),
