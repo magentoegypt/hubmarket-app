@@ -90,5 +90,5 @@ else
   echo "     node tool/json_to_sdl.mjs $OUT_DIR/schema.introspection.json $OUT_DIR/schema.graphql"
 fi
 echo
-echo "Next: update docs/decisions/stores.md + config/*.json with the confirmed codes,"
+echo "Next: update config/*.json with the confirmed store codes,"
 echo "      then \`dart run build_runner build\` to (re)generate typed GraphQL Dart."

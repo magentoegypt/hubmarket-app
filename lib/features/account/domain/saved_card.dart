@@ -6,7 +6,7 @@ import 'dart:convert';
 /// The app never sees a PAN, a CVV or the gateway `cardToken` — only the masked
 /// display details Magento puts in `PaymentToken.details`. Paying with one is
 /// done by handing its [publicHash] back to Magento, which attaches the real
-/// token to the N-Genius order server-side (docs/backend/payment-contract.md §④).
+/// token to the gateway order server-side.
 class SavedCard {
   const SavedCard({
     required this.publicHash,

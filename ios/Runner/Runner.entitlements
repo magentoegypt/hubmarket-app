@@ -17,36 +17,31 @@
 	     PROFILE) would ship silently WITHOUT it — universal links would just
 	     keep opening Safari with no visible error.
 	
-	     Android already behaves correctly: assetlinks.json is live and the
-	     intent filter is scoped, so a hub-market.magento2.click link opens the app when
-	     installed and the browser when not. This key is the iOS equivalent.
+	     Android declares its app-link intent filters (/en/, /ar/) too, but
+	     hub-market.magento2.click does not serve /.well-known/assetlinks.json
+	     yet (404 on 2026-09-29), so links open the browser there as well. It
+	     needs publishing for com.hubmarket.app with the release key's SHA-256.
 	     The in-app routing is already done and platform-agnostic
 	     (DeepLinkResolverScreen); nothing else in Dart needs to change, and
 	     FlutterDeepLinkingEnabled is already true in Info.plist.
-	
+
 	     To enable, IN THIS ORDER:
-	       1. Publish the AASA file at BOTH
+	       1. Publish an AASA file at BOTH
 	            https://hub-market.magento2.click/.well-known/apple-app-site-association
 	            https://www.hub-market.magento2.click/.well-known/apple-app-site-association
-	          Content from docs/backend/apple-app-site-association. It must be
-	          served as application/json, with NO redirect and NO file
-	          extension. As of 2026-08-22 that path 301s to /uae-en/ (Magento's
-	          store-code redirect swallows it) and Apple does NOT follow
-	          redirects — so this step is a real server change, not a copy.
-	          Verify with tool/verify_applinks.sh.
+	          with Hub Market's Team ID + bundle id (the shape is in
+	          docs/zoonze-reference/backend/apple-app-site-association). It must
+	          be served as application/json, with NO redirect and NO file
+	          extension; Apple does NOT follow redirects. Both URLs return 404
+	          today (2026-09-29). Verify with tool/verify_applinks.sh.
 	       2. Apple Developer portal -> Identifiers -> App ID com.hubmarket.app:
 	          enable the "Associated Domains" capability.
-	       3. REGENERATE BOTH ios/signing/*.mobileprovision. Keep the same
-	          filenames; keep the ad-hoc profile's device UDIDs; keep the App
-	          Store profile free of a ProvisionedDevices list — tool/ios_*_build.sh
-	          picks the profile solely on that key.
-	       4. Uncomment the key below. tool/ios_appstore_build.sh then asserts the
-	          signed app actually carries it and fails the build if the profile
-	          was not regenerated.
-	
-	     Team ID 544Y9RU66L; App ID 544Y9RU66L.com.hubmarket.app (from the
-	     committed profiles). The AASA appIDs entry must match that exactly.
-	
+	       3. Regenerate the app's provisioning profiles so they carry it.
+	       4. Uncomment the key below.
+
+	     Hub Market's Apple Team ID is not known yet; the AASA appIDs entry must
+	     be <TeamID>.com.hubmarket.app exactly.
+
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:hub-market.magento2.click</string>

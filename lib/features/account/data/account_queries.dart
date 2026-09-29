@@ -166,10 +166,9 @@ mutation DeleteAddress($id: Int!) {
 ''';
 
   // --- Saved cards (Magento Vault) -----------------------------------------
-  // Core `Magento_VaultGraphQl`, already live on the store. Saved N-Genius
-  // cards appear here once the gateway is vault-aware
-  // (docs/backend/payment-contract.md §④); until then the list is empty and the
-  // whole feature stays hidden. `details` is a JSON string — parsed (and
+  // Core `Magento_VaultGraphQl`, already live on the store. Cards appear here
+  // once Hub Market runs a vault-aware card gateway; until then the list is
+  // empty and the whole feature stays hidden. `details` is a JSON string — parsed (and
   // tolerated when malformed) by `SavedCard.fromToken`.
   static const String savedCards = r'''
 query CustomerPaymentTokens {

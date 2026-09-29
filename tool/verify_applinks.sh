@@ -7,7 +7,7 @@
 #
 # Both must be served over https, as application/json, with NO redirect —
 # Apple in particular does not follow redirects when fetching the AASA, and
-# Magento's store-code rewrite happily 301s /.well-known/... to /uae-en/.
+# a store-code rewrite can 301 /.well-known/... to a store path.
 #
 # Runs anywhere curl exists (no Mac, no device needed).
 #   bash tool/verify_applinks.sh
@@ -18,7 +18,8 @@ HOSTS=("${@:-}")
 
 UA="${USER_AGENT:-HubMarketApp/0.1.0 (Flutter)}"
 ANDROID_PKG="com.hubmarket.app"
-IOS_APPID="544Y9RU66L.com.hubmarket.app"
+# Hub Market's Apple Team ID is not known yet; pass it as IOS_TEAM_ID.
+IOS_APPID="${IOS_TEAM_ID:-TEAMID}.com.hubmarket.app"
 
 fail=0
 note() { printf '  %-9s %s\n' "$1" "$2"; }
