@@ -9,7 +9,6 @@ import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/config/store_timezone.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
-import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -24,26 +23,12 @@ import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
-import '../../support/hubapp_fakes.dart';
 import '../../support/store_credit_fakes.dart';
-
-/// `hmAppConfig` with store credit switched on (and nothing else).
-const HmAppConfig kCreditOnConfig = HmAppConfig(
-  storeCode: 'en',
-  locale: 'en_US',
-  features: {'store_credit': true},
-);
 
 /// The HubApp probe as a test wants it: the module deployed with store
 /// credit on, deployed with it off, or not there at all.
 Override creditHubApp({bool deployed = true, bool creditOn = true}) =>
-    hubAppOverride(
-      deployed
-          ? HubAppState.available(
-              creditOn ? kCreditOnConfig : kSampleHmAppConfig,
-            )
-          : const HubAppState.unavailable(),
-    );
+    accountHubApp(deployed: deployed, storeCredit: creditOn);
 
 /// A screen on a router with stand-ins for the routes it can leave to, over
 /// fakes: a signed-in customer (unless [signedIn] is false), [credit] as the

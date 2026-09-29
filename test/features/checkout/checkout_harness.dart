@@ -12,6 +12,7 @@ import 'package:hubmarket_app/app/theme/app_theme.dart';
 import 'package:hubmarket_app/core/address/regions.dart';
 import 'package:hubmarket_app/core/config/backend_capabilities.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -30,6 +31,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
+import '../../support/hubapp_fakes.dart';
 
 /// Shared set-up for the checkout widget and render tests: a three-line cart,
 /// the two shipping methods of Figma 17, and the screen mounted in a router
@@ -135,6 +137,9 @@ Widget checkoutHarness({
   bool darkMode = false,
   BackendCapabilities capabilities = BackendCapabilities.hubMarket,
   GlobalKey? boundary,
+  Override? hubApp,
+  CartRepository? cartRepository,
+  List<Override> overrides = const [],
 }) {
   final cache = FakeLocalCache()..writeString('guest_cart_id', 'guest-1');
   final router = GoRouter(
@@ -187,7 +192,9 @@ Widget checkoutHarness({
         FakeSecureTokenStore(signedIn ? 'customer-token' : null),
       ),
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-      cartRepositoryProvider.overrideWithValue(CheckoutCartRepository()),
+      cartRepositoryProvider.overrideWithValue(
+        cartRepository ?? CheckoutCartRepository(),
+      ),
       checkoutRepositoryProvider.overrideWithValue(repository),
       backendCapabilitiesProvider.overrideWithValue(capabilities),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
@@ -196,6 +203,9 @@ Widget checkoutHarness({
       addressesProvider.overrideWith(
         (ref) async => signedIn ? const [kSavedAddress] : const [],
       ),
+      // Build 1 (no Hub Market App) unless a test deploys it.
+      hubApp ?? hubAppOverride(const HubAppState.unavailable()),
+      ...overrides,
     ],
     child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
   );

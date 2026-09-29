@@ -360,6 +360,38 @@ class CheckoutController extends Notifier<CheckoutState> {
     }
   }
 
+  /// Re-reads what the order costs after something outside the three steps
+  /// changed it — store credit used or given back on the payment step.
+  ///
+  /// [paymentMethods] is `available_payment_methods` of the cart that change
+  /// left, when the caller has it: credit that covers the whole order leaves
+  /// Magento offering only Zero Subtotal Checkout (`free`), and taking it back
+  /// brings cash on delivery back. A selection the new list no longer offers
+  /// is replaced by the default, as when the shipping method is chosen.
+  Future<void> refreshTotals({
+    List<PaymentMethodOption>? paymentMethods,
+  }) async {
+    if (_cartId == null) return;
+    state = state.copyWith(isBusy: true, error: null);
+    if (paymentMethods != null) {
+      final payments = payableInApp(paymentMethods);
+      final selected = state.selectedPayment;
+      final kept =
+          selected != null && payments.any((m) => m.code == selected.code);
+      state = state.copyWith(
+        paymentMethods: payments,
+        selectedPayment: kept ? selected : null,
+      );
+      if (!kept) {
+        final fallback = _defaultPayment(payments);
+        // selectPayment re-reads the total itself.
+        if (fallback != null && await selectPayment(fallback)) return;
+      }
+    }
+    final total = await _refreshedGrandTotal();
+    state = state.copyWith(grandTotal: total, isBusy: false);
+  }
+
   Future<bool> selectPayment(PaymentMethodOption method) async {
     final cartId = _cartId;
     if (cartId == null) return false;

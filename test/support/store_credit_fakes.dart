@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hubmarket_app/core/error/failure.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
@@ -5,8 +6,45 @@ import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
 import 'package:hubmarket_app/features/store_credit/data/store_credit_repository.dart';
 import 'package:hubmarket_app/features/store_credit/domain/store_credit.dart';
 
-/// Test doubles for store credit (`HubAppAccount`): a repository serving
-/// canned pages and cart credit and recording every call.
+import 'hubapp_fakes.dart';
+
+/// Test doubles for `HubAppAccount`: the probe with the account switches as a
+/// test wants them, and a store-credit repository serving canned pages and
+/// cart credit and recording every call.
+
+/// `hmAppConfig` with the HubAppAccount switches as given.
+HmAppConfig hubAppAccountConfig({
+  bool storeCredit = false,
+  bool push = false,
+  bool whatsappLogin = false,
+}) => HmAppConfig(
+  storeCode: 'en',
+  locale: 'en_US',
+  features: {
+    'store_credit': storeCredit,
+    'push': push,
+    'whatsapp_login': whatsappLogin,
+  },
+);
+
+/// The HubApp probe with the module deployed and the account switches as
+/// given — or, with [deployed] false, a server without the module.
+Override accountHubApp({
+  bool deployed = true,
+  bool storeCredit = true,
+  bool push = false,
+  bool whatsappLogin = false,
+}) => hubAppOverride(
+  deployed
+      ? HubAppState.available(
+          hubAppAccountConfig(
+            storeCredit: storeCredit,
+            push: push,
+            whatsappLogin: whatsappLogin,
+          ),
+        )
+      : const HubAppState.unavailable(),
+);
 
 Money aedCredit(double amount) => Money(amount: amount, currency: 'AED');
 
