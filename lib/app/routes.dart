@@ -10,6 +10,10 @@ abstract final class AppRoutes {
   static const String search = '/search';
   static const String brands = '/brands';
   static const String brand = '/brand';
+
+  /// Figma 12 — every approved seller (`hmStores`); Home's store sections and
+  /// search's "Browse stores" open it. See [store] for one seller.
+  static const String stores = '/stores';
   static const String signIn = '/signin';
   static const String signUp = '/signup';
   static const String forgotPassword = '/forgot';
@@ -42,6 +46,11 @@ abstract final class AppRoutes {
   static String category(String uid) => '/category/$uid';
   static String subcategories(String uid) => '/subcategories/$uid';
   static String product(String urlKey) => '/product/$urlKey';
+
+  /// Figma 13 — one seller's store page, by seller code: `HmStoreCard.code`,
+  /// or `HmLink.code` of a `STORE` link. A `StoreCard` in `extra` paints the
+  /// header before the page loads.
+  static String store(String code) => '/store/${Uri.encodeComponent(code)}';
   static String review(String sku) => '/review/$sku';
   static String productReviews(String urlKey) => '/reviews/$urlKey';
 
