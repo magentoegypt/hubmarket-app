@@ -250,6 +250,55 @@ void main() {
     });
   });
 
+  group('PDP "More Information" attributes', () {
+    Map<String, dynamic> selected(String code, List<String> labels) => {
+      'code': code,
+      'selected_options': [
+        for (final label in labels) {'label': label, 'value': '1'},
+      ],
+    };
+
+    test("Hub Market's mgs_brand is the brand", () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'custom_attributesV2': {
+          'items': [
+            selected('color', ['Black']),
+            selected('mgs_brand', ['Samsung']),
+          ],
+        },
+      });
+      expect(detail.brand, 'Samsung');
+      expect(
+        [for (final a in detail.attributes) (a.code, a.value, a.isBrand)],
+        [('color', 'Black', false), ('mgs_brand', 'Samsung', true)],
+      );
+    });
+
+    test('a multiselect lists every label, entity-decoded', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'custom_attributesV2': {
+          'items': [
+            selected('material', ['Nylon', 'CoolTech&trade;', 'Wool']),
+            selected('climate', ['Spring', ' ']),
+            {'code': 'dimensions', 'value': ' high width '},
+            {'code': 'pattern', 'value': ' '},
+          ],
+        },
+      });
+      expect(detail.brand, isNull);
+      expect(
+        [for (final a in detail.attributes) (a.code, a.value)],
+        [
+          ('material', 'Nylon, CoolTech™, Wool'),
+          ('climate', 'Spring'),
+          ('dimensions', 'high width'),
+        ],
+      );
+    });
+  });
+
   group('discount badge from price_range (regular vs final)', () {
     test('a real markdown => rounded percent', () {
       final product = productFromJson(_json(regular: 250, finalPrice: 199));

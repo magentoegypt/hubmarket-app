@@ -136,12 +136,20 @@ class ReviewRatingMetadata {
 }
 
 /// One storefront-visible additional attribute (the PDP "More Information"
-/// table), e.g. `manufacturer` → "Emporio Armani". [code] is the Magento
-/// attribute code; [value] is the resolved label/text.
+/// table), e.g. `mgs_brand` → "Samsung". [code] is the Magento attribute code;
+/// [value] is the resolved text (a multiselect's labels comma-joined).
 class ProductAttribute {
-  const ProductAttribute({required this.code, required this.value});
+  const ProductAttribute({
+    required this.code,
+    required this.value,
+    this.isBrand = false,
+  });
   final String code;
   final String value;
+
+  /// True for the catalogue's brand attribute, so the table can label the row
+  /// "Brand" without knowing the store's attribute code.
+  final bool isBrand;
 }
 
 /// Full product detail for the PDP. Reviews degrade to an empty state when the

@@ -3,6 +3,13 @@ import '../domain/money.dart';
 import '../domain/product.dart';
 import '../domain/product_detail.dart';
 
+/// Hub Market's brand attribute (label "Brand"), used for the brand landing
+/// filter and the PDP brand line. Core `manufacturer` exists but is neither
+/// filterable nor filled on this store; it is still honoured on the PDP.
+const String kBrandAttributeCode = 'mgs_brand';
+
+const Set<String> _brandAttributeCodes = {kBrandAttributeCode, 'manufacturer'};
+
 /// Shared parsers for the common `Money` and listing-`Product` GraphQL shapes,
 /// reused by catalogue and wishlist repositories.
 Money? moneyFromJson(Map<String, dynamic>? json) {
@@ -163,9 +170,11 @@ ProductDetail productDetailFromJson(
 
   // "More Information" tab — the storefront-visible additional attributes
   // (Magento `custom_attributesV2(is_visible_on_front:true)`), mirroring the
-  // website's product-details table. Selected-option attributes carry a label
-  // (e.g. manufacturer → "Emporio Armani"); plain ones carry a value. Blank
-  // values (color/material set to a space) are dropped, matching the site.
+  // website's product-details table. Selected-option attributes carry labels
+  // (e.g. mgs_brand → "Samsung"; a multiselect such as material lists every
+  // label: "Nylon, CoolTech™, Wool"); plain ones carry a value. Option labels
+  // are entity-decoded (the catalogue stores "CoolTech&trade;"). Blank values
+  // are dropped, matching the site.
   final attributes = <ProductAttribute>[];
   String? brand;
   final customAttrs =
@@ -174,15 +183,18 @@ ProductDetail productDetailFromJson(
   for (final item in customAttrs ?? const []) {
     if (item is! Map<String, dynamic>) continue;
     final code = (item['code'] as String?) ?? '';
-    final selected = item['selected_options'] as List<dynamic>?;
-    final value = (selected != null && selected.isNotEmpty)
-        ? ((selected.first as Map<String, dynamic>?)?['label'] as String? ??
-              '')
-        : (item['value'] as String? ?? '');
-    final trimmed = value.trim();
-    if (code.isEmpty || trimmed.isEmpty) continue;
-    if (code == 'manufacturer') brand = trimmed;
-    attributes.add(ProductAttribute(code: code, value: trimmed));
+    final labels = [
+      for (final option in item['selected_options'] as List<dynamic>? ?? [])
+        if (option is Map<String, dynamic>)
+          _decodeHtmlEntities((option['label'] as String? ?? '').trim()),
+    ].where((label) => label.isNotEmpty);
+    final value = labels.isNotEmpty
+        ? labels.join(', ')
+        : (item['value'] as String? ?? '').trim();
+    if (code.isEmpty || value.isEmpty) continue;
+    final isBrand = _brandAttributeCodes.contains(code);
+    if (isBrand) brand ??= value;
+    attributes.add(ProductAttribute(code: code, value: value, isBrand: isBrand));
   }
 
   return ProductDetail(
@@ -269,6 +281,9 @@ String _decodeHtmlEntities(String s) => s
       (m) => String.fromCharCode(int.parse(m.group(1)!, radix: 16)),
     )
     .replaceAll('&nbsp;', ' ')
+    .replaceAll('&trade;', '™')
+    .replaceAll('&reg;', '®')
+    .replaceAll('&copy;', '©')
     .replaceAll('&apos;', "'")
     .replaceAll('&quot;', '"')
     .replaceAll('&lt;', '<')

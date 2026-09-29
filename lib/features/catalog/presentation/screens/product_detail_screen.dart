@@ -1256,8 +1256,7 @@ class _MoreInformation extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final rows = <(String, String)>[
-      for (final attr in product.attributes)
-        (_label(l10n, attr.code), attr.value),
+      for (final attr in product.attributes) (_label(l10n, attr), attr.value),
       (l10n.specSku, product.sku),
     ];
     return Column(
@@ -1288,18 +1287,14 @@ class _MoreInformation extends StatelessWidget {
     );
   }
 
-  /// Localized row label for a known attribute code; unknown codes are
-  /// prettified from snake_case so new catalogue attributes still read cleanly.
-  String _label(AppLocalizations l10n, String code) {
-    switch (code) {
-      case 'manufacturer':
-        return l10n.attrBrand;
-      default:
-        return code
-            .split('_')
-            .where((w) => w.isNotEmpty)
-            .map((w) => w[0].toUpperCase() + w.substring(1))
-            .join(' ');
-    }
+  /// Localized row label for the brand attribute; other codes are prettified
+  /// from snake_case so new catalogue attributes still read cleanly.
+  String _label(AppLocalizations l10n, ProductAttribute attr) {
+    if (attr.isBrand) return l10n.attrBrand;
+    return attr.code
+        .split('_')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 }
