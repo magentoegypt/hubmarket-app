@@ -448,11 +448,15 @@ class FakeAuthRepository implements AuthRepository {
   Future<Customer> fetchCustomer() async => customer;
 
   // --- WhatsApp OTP ---
+  /// What a sign-in send reports as the resend cooldown (null: unknown).
+  int? loginResendAfterSeconds;
+
   @override
-  Future<void> requestLoginOtp(String phone) async {
+  Future<int?> requestLoginOtp(String phone) async {
     calls.add('requestLoginOtp:$phone');
     if (sendOtpFailure != null) throw sendOtpFailure!;
     lastOtpPhone = phone;
+    return loginResendAfterSeconds;
   }
 
   @override

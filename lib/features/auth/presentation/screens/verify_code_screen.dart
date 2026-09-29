@@ -40,21 +40,28 @@ class VerifyCodeFlow {
     required this.resend,
     required this.verify,
     this.offerEmail = false,
+    this.resendAfterSeconds = 60,
   });
 
-  /// Sign in by code — the WhatsApp REST pair of `MagentoEgypt_SmsExtend`,
-  /// the only route that answers a customer token. Then back to whatever
-  /// opened Sign in ([completeAuthFlow]).
-  factory VerifyCodeFlow.signIn(AuthController auth, String phone) =>
-      VerifyCodeFlow(
-        phone: phone,
-        offerEmail: true,
-        resend: () => auth.requestLoginOtp(phone),
-        verify: (code) async {
-          await auth.loginWithOtp(phone, code);
-          return completeAuthFlow;
-        },
-      );
+  /// Sign in by code — a pair that answers a customer token: the Hub Market
+  /// App's GraphQL one when the server has it, else `MagentoEgypt_SmsExtend`'s
+  /// REST one (`AuthRepository`). Then back to whatever opened Sign in
+  /// ([completeAuthFlow]). [resendAfterSeconds] is the cooldown the backend
+  /// gave with the code, when it said.
+  factory VerifyCodeFlow.signIn(
+    AuthController auth,
+    String phone, {
+    int? resendAfterSeconds,
+  }) => VerifyCodeFlow(
+    phone: phone,
+    offerEmail: true,
+    resendAfterSeconds: resendAfterSeconds ?? 60,
+    resend: () => auth.requestLoginOtp(phone),
+    verify: (code) async {
+      await auth.loginWithOtp(phone, code);
+      return completeAuthFlow;
+    },
+  );
 
   /// Sign-up — Vnecoms `customerRegister{Send,Verify}Otp`. Pops
   /// [VerifyCodeOutcome.verified]; Register then creates the account.
@@ -94,6 +101,9 @@ class VerifyCodeFlow {
 
   /// Offers "Use email instead" (sign in, password reset).
   final bool offerEmail;
+
+  /// How long "Resend code" waits: the WhatsApp code's cooldown.
+  final int resendAfterSeconds;
 }
 
 /// Figma "05 Verify WhatsApp code": the green chat badge, "Verify your number"
@@ -228,6 +238,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
         Center(
           child: ResendCountdown(
             onResend: _resend,
+            cooldownSeconds: widget.flow.resendAfterSeconds,
             resendLabel: l10n.authResendCode,
             countingLabel: l10n.authResendIn,
             style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
