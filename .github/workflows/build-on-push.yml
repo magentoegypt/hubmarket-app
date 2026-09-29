@@ -6,10 +6,11 @@ name: Build · main (Android APK)
 # Artifact: apk-prod (download from the run). iOS is manual for now —
 # .github/workflows/build-ios.yml — until Hub Market's Apple signing exists.
 on:
-  # Manual until the Hub Market build is green (re-enable push then).
+  push:
+    branches: [main]
   workflow_dispatch:
 
-# A newer push to main cancels an older in-progress run (saves macOS minutes).
+# A newer push to main cancels an older in-progress run.
 concurrency:
   group: build-on-push-${{ github.ref }}
   cancel-in-progress: true
