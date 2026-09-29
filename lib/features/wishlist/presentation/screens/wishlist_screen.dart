@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/brand_logo.dart';
@@ -114,7 +113,6 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
               );
             },
           ),
-          const MarketingFooter(),
         ],
       );
     }

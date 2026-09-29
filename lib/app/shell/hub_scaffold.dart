@@ -9,8 +9,7 @@ import 'hub_app_bar.dart';
 import 'hub_bottom_nav.dart';
 
 /// Standard chrome for primary screens: shared app bar + drawer + bottom nav.
-/// Content screens place the [MarketingFooter] at the end of their own scroll
-/// view; the 1st-group screens (splash/welcome/auth) do NOT use this scaffold.
+/// The 1st-group screens (splash/welcome/auth) do NOT use this scaffold.
 ///
 /// Owns the back policy for its screens (QA): an open drawer closes first; a
 /// pushed route pops; a non-Home tab root returns to Home (instead of exiting

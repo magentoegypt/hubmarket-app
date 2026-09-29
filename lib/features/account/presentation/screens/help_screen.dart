@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -155,7 +154,6 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
                 initiallyExpanded: _query.isEmpty && i == 0,
                 showDivider: i != filtered.length - 1,
               ),
-          const MarketingFooter(),
         ],
       ),
     );

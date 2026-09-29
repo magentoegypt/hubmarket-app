@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
@@ -228,7 +227,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
           const SliverToBoxAdapter(
             child: ProductGridSkeleton(childAspectRatio: 0.66, count: 2),
           ),
-        const SliverToBoxAdapter(child: MarketingFooter()),
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
   }

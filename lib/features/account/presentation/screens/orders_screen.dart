@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/config/store_timezone.dart';
@@ -161,7 +160,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator()),
           ),
-        const MarketingFooter(),
       ],
     );
   }
@@ -224,7 +222,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             ],
           ),
         ),
-        const MarketingFooter(),
       ],
     );
   }

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/config/free_shipping.dart';
@@ -156,7 +155,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
                   ),
                 ),
-                const MarketingFooter(),
               ],
             ),
           ),
@@ -270,7 +268,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        const MarketingFooter(),
       ],
     );
   }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/network_image.dart';
@@ -73,7 +72,6 @@ class CategoriesScreen extends ConsumerWidget {
                 child: ColoredBox(color: AppColors.surfaceMuted),
               ),
               _CategoryGrid(items: items),
-              const MarketingFooter(),
             ],
           );
         },
@@ -133,7 +131,6 @@ class SubcategoriesScreen extends ConsumerWidget {
                 ),
               ),
               _CategoryGrid(items: subs),
-              const MarketingFooter(),
             ],
           );
         },
