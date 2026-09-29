@@ -1,23 +1,38 @@
 #!/usr/bin/env python3
-"""Validate every GraphQL operation in the app against the live Magento schema.
+"""Validate every GraphQL operation in the app against the Magento schema.
 
 Finds operations in `.graphql` files and in Dart string literals (inline
 `query`/`mutation`/`fragment` documents), then checks every selected field,
-argument, inline-fragment type and fragment spread against the introspected
-schema of the backend. Nothing is executed on the server — introspection only.
+argument, inline-fragment type and fragment spread against the schema of the
+backend. Nothing is executed on the server — introspection only.
+
+Two modes:
+
+* default — the live introspection **plus** the Hub Market App contract
+  (`lib/core/graphql/hubapp.graphql`, not deployed yet), merged the way Magento
+  merges module schemas: a `type X` / `interface X` that already exists adds
+  its fields, fields added to an interface also land on every type that
+  implements it, and new types, enums and inputs are added;
+* `--live-only` — only what the server supports today.
 
 Usage:
-  python tool/validate_ops.py [endpoint]      (default: Hub Market live GraphQL)
+  python tool/validate_ops.py [endpoint] [--live-only] [--sdl PATH]
+      (default endpoint: Hub Market live GraphQL)
 Exit code 1 when any operation references something the schema doesn't have.
 """
+import argparse
 import json
 import os
 import re
 import sys
 import urllib.request
 
-ENDPOINT = sys.argv[1] if len(sys.argv) > 1 else 'https://hub-market.magento2.click/graphql'
+DEFAULT_ENDPOINT = 'https://hub-market.magento2.click/graphql'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_SDL = os.path.join(ROOT, 'lib', 'core', 'graphql', 'hubapp.graphql')
+
+# Type-system files, never operation documents.
+SCHEMA_FILES = {'schema.graphql', 'hubapp.graphql'}
 
 INTROSPECTION = """{ __schema { queryType { name } mutationType { name }
  types { kind name fields(includeDeprecated: true) { name args { name } type { ...R } }
@@ -25,13 +40,18 @@ INTROSPECTION = """{ __schema { queryType { name } mutationType { name }
 fragment R on __Type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } }"""
 
 
-def load_schema():
-    req = urllib.request.Request(ENDPOINT, data=json.dumps({'query': INTROSPECTION}).encode(),
+def fetch_schema(endpoint):
+    """The live `__schema` (introspection only)."""
+    req = urllib.request.Request(endpoint, data=json.dumps({'query': INTROSPECTION}).encode(),
                                  headers={'Content-Type': 'application/json', 'User-Agent': 'HubMarketApp-validate'})
     with urllib.request.urlopen(req, timeout=60) as r:
-        s = json.load(r)['data']['__schema']
-    types = {t['name']: t for t in s['types']}
-    return types, s['queryType']['name'], (s.get('mutationType') or {}).get('name')
+        return json.load(r)['data']['__schema']
+
+
+def index_schema(schema):
+    """(types by name, query root name, mutation root name)."""
+    types = {t['name']: t for t in schema['types']}
+    return types, schema['queryType']['name'], (schema.get('mutationType') or {}).get('name')
 
 
 def named(t):
@@ -173,6 +193,199 @@ class P:
         return ops, frags
 
 
+# ---------------------------------------------------------------- SDL overlay
+SDL_KINDS = {'type': 'OBJECT', 'interface': 'INTERFACE', 'input': 'INPUT_OBJECT',
+             'enum': 'ENUM', 'union': 'UNION', 'scalar': 'SCALAR'}
+
+
+class SdlParser(P):
+    """Reads the type definitions of an SDL document into introspection-shaped
+    dicts. Directives (`@doc`, `@resolver`, `@cache`, …), descriptions and
+    default values are skipped; `schema` and `directive` definitions are
+    ignored."""
+
+    def descriptions(self):
+        while self.peek()[0] in ('str', 'block'):
+            self.take()
+
+    def type_ref(self):
+        if self.peek()[1] == '[':
+            self.take('[')
+            inner = self.type_ref()
+            self.take(']')
+            ref = {'kind': 'LIST', 'name': None, 'ofType': inner}
+        else:
+            ref = {'kind': None, 'name': self.take()[1], 'ofType': None}
+        if self.peek()[1] == '!':
+            self.take('!')
+            ref = {'kind': 'NON_NULL', 'name': None, 'ofType': ref}
+        return ref
+
+    def input_value(self):
+        self.descriptions()
+        name = self.take()[1]
+        self.take(':')
+        ref = self.type_ref()
+        if self.peek()[1] == '=':
+            self.take('=')
+            self.skip_value()
+        self.directives()
+        return {'name': name, 'type': ref}
+
+    def arguments_definition(self):
+        args = []
+        if self.peek()[1] == '(':
+            self.take('(')
+            while self.peek()[1] != ')':
+                args.append(self.input_value())
+            self.take(')')
+        return args
+
+    def fields_definition(self):
+        fields = []
+        if self.peek()[1] != '{':
+            return fields
+        self.take('{')
+        while self.peek()[1] != '}':
+            self.descriptions()
+            name = self.take()[1]
+            args = self.arguments_definition()
+            self.take(':')
+            ref = self.type_ref()
+            self.directives()
+            fields.append({'name': name, 'args': [{'name': a['name']} for a in args], 'type': ref})
+        self.take('}')
+        return fields
+
+    def definitions(self):
+        defs = []
+        while self.peek()[0]:
+            self.descriptions()
+            keyword = self.take()[1]
+            extend = keyword == 'extend'
+            if extend:
+                keyword = self.take()[1]
+            if keyword == 'schema':
+                self.directives()
+                self.take('{')
+                while self.peek()[1] != '}':
+                    self.take()
+                self.take('}')
+                continue
+            if keyword == 'directive':
+                self.take('@')
+                self.take()
+                self.arguments_definition()
+                if self.peek()[1] == 'repeatable':
+                    self.take()
+                self.take('on')
+                if self.peek()[1] == '|':
+                    self.take('|')
+                self.take()
+                while self.peek()[1] == '|':
+                    self.take('|')
+                    self.take()
+                continue
+            if keyword not in SDL_KINDS:
+                raise SyntaxError(f'unexpected SDL keyword {keyword!r}')
+            d = {'kind': SDL_KINDS[keyword], 'name': self.take()[1], 'extend': extend,
+                 'fields': [], 'inputFields': [], 'enumValues': [], 'interfaces': [], 'members': []}
+            if keyword in ('type', 'interface') and self.peek()[1] == 'implements':
+                self.take()
+                while self.peek()[0] == 'name' or self.peek()[1] == '&':
+                    tok = self.take()
+                    if tok[1] != '&':
+                        d['interfaces'].append(tok[1])
+                    if self.peek()[1] in ('{', '@') or self.peek()[0] is None:
+                        break
+            self.directives()
+            if keyword in ('type', 'interface'):
+                d['fields'] = self.fields_definition()
+            elif keyword == 'input' and self.peek()[1] == '{':
+                self.take('{')
+                while self.peek()[1] != '}':
+                    d['inputFields'].append(self.input_value())
+                self.take('}')
+            elif keyword == 'enum' and self.peek()[1] == '{':
+                self.take('{')
+                while self.peek()[1] != '}':
+                    self.descriptions()
+                    d['enumValues'].append({'name': self.take()[1]})
+                    self.directives()
+                self.take('}')
+            elif keyword == 'union' and self.peek()[1] == '=':
+                self.take('=')
+                if self.peek()[1] == '|':
+                    self.take('|')
+                d['members'].append(self.take()[1])
+                while self.peek()[1] == '|':
+                    self.take('|')
+                    d['members'].append(self.take()[1])
+            defs.append(d)
+        return defs
+
+
+def parse_sdl(src):
+    return SdlParser(tokenize(src)).definitions()
+
+
+def _add_named(items, new, stats, label):
+    """Appends the entries of [new] whose name [items] lacks; returns [items]."""
+    items = list(items or [])
+    have = {x['name'] for x in items}
+    for x in new:
+        if x['name'] not in have:
+            items.append(x)
+            have.add(x['name'])
+            stats.append(f"{label}.{x['name']}")
+    return items
+
+
+def merge_sdl(types, defs):
+    """Overlays SDL definitions on introspected [types] (modified in place),
+    the way Magento merges every module's schema.graphqls:
+
+    * a type / interface / input / enum that already exists gains the fields
+      (values) it lacks — nothing it has is replaced;
+    * fields declared on an interface are added to every type implementing it
+      (the live `possibleTypes`, plus SDL types that `implements` it);
+    * anything new is added.
+
+    Returns {'types': [...added type names], 'fields': [...added Type.field]}.
+    """
+    added_types, added_fields = [], []
+    sdl_implementers = {}
+    for d in defs:
+        name = d['name']
+        t = types.get(name)
+        if t is None:
+            t = types[name] = {'kind': d['kind'], 'name': name, 'fields': None,
+                               'inputFields': None, 'possibleTypes': None}
+            added_types.append(name)
+        if d['kind'] in ('OBJECT', 'INTERFACE'):
+            t['fields'] = _add_named(t.get('fields'), d['fields'], added_fields, name)
+            for iface in d['interfaces']:
+                sdl_implementers.setdefault(iface, []).append(name)
+        elif d['kind'] == 'INPUT_OBJECT':
+            t['inputFields'] = _add_named(t.get('inputFields'), d['inputFields'], added_fields, name)
+        elif d['kind'] == 'ENUM':
+            t['enumValues'] = _add_named(t.get('enumValues'), d['enumValues'], [], name)
+        elif d['kind'] == 'UNION':
+            t['possibleTypes'] = _add_named(t.get('possibleTypes'), [{'name': m} for m in d['members']], [], name)
+    for iface, impls in sdl_implementers.items():
+        t = types.get(iface)
+        if t is not None:
+            t['possibleTypes'] = _add_named(t.get('possibleTypes'), [{'name': n} for n in impls], [], iface)
+    for d in defs:
+        if d['kind'] != 'INTERFACE' or not d['fields']:
+            continue
+        for impl in (types[d['name']].get('possibleTypes') or []):
+            target = types.get(impl['name'])
+            if target is not None and target.get('fields') is not None:
+                target['fields'] = _add_named(target['fields'], d['fields'], added_fields, impl['name'])
+    return {'types': added_types, 'fields': added_fields}
+
+
 # ---------------------------------------------------------------- extraction
 DART_STR = re.compile(r"(r?)('''|\"\"\")(.*?)\2", re.S)
 LOOKS_GQL = re.compile(r'^\s*(#[^\n]*\n\s*)*(query|mutation|fragment|subscription|\{)\b|^\s*(#[^\n]*\n\s*)*\{', re.S)
@@ -196,27 +409,32 @@ def extract(path):
     return docs
 
 
-def main():
-    types, qroot, mroot = load_schema()
+def collect(root, bases=('lib', 'test', 'integration_test')):
+    """(parsed [(file, ops, frags)], all fragments, parse errors, file count)."""
     files = []
-    for base in ('lib', 'test', 'integration_test'):
-        for dp, dn, fn in os.walk(os.path.join(ROOT, base)):
+    for base in bases:
+        for dp, dn, fn in os.walk(os.path.join(root, base)):
             for f in fn:
-                if f == 'schema.graphql' or f.endswith('.graphql.dart'):
+                if f in SCHEMA_FILES or f.endswith('.graphql.dart'):
                     continue
                 if f.endswith('.graphql') or f.endswith('.dart'):
                     files.append(os.path.join(dp, f))
     parsed, fragments, parse_errors = [], {}, []
-    for f in files:
+    for f in sorted(files):
         for doc in extract(f):
             try:
                 ops, frags = P(tokenize(doc)).document()
             except SyntaxError as e:
                 if re.search(r'\b(query|mutation)\s+\w+', doc):
-                    parse_errors.append(f'{os.path.relpath(f, ROOT)}: {e}')
+                    parse_errors.append(f'{os.path.relpath(f, root)}: {e}')
                 continue
             fragments.update(frags)
             parsed.append((f, ops, frags))
+    return parsed, fragments, parse_errors, len(files)
+
+
+def validate(types, qroot, mroot, parsed, fragments, root=ROOT):
+    """(sorted unique problems, operation count)."""
     problems = []
 
     def check(sel, tname, where, seen=()):
@@ -252,22 +470,42 @@ def main():
 
     n_ops = 0
     for f, ops, frags in parsed:
-        rel = os.path.relpath(f, ROOT)
+        rel = os.path.relpath(f, root)
         for kind, name, sel in ops:
             n_ops += 1
-            root = qroot if kind == 'query' else mroot
-            check(sel, root, f'{rel} [{kind} {name}]')
+            check(sel, qroot if kind == 'query' else mroot, f'{rel} [{kind} {name}]')
         for name, (tname, sel) in frags.items():
             check(sel, tname, f'{rel} [fragment {name}]')
-    uniq = sorted(set(problems))
-    print(f'validated {n_ops} operations + {len(fragments)} fragments in {len(files)} files against {ENDPOINT}')
+    return sorted(set(problems)), n_ops
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    ap.add_argument('endpoint', nargs='?', default=DEFAULT_ENDPOINT)
+    ap.add_argument('--live-only', action='store_true',
+                    help='check against the live schema alone, without the Hub Market App contract')
+    ap.add_argument('--sdl', default=DEFAULT_SDL, help='the contract SDL to overlay (default: %(default)s)')
+    args = ap.parse_args(argv)
+
+    types, qroot, mroot = index_schema(fetch_schema(args.endpoint))
+    if args.live_only:
+        mode = f'live only ({args.endpoint})'
+    else:
+        with open(args.sdl, encoding='utf-8') as f:
+            merged = merge_sdl(types, parse_sdl(f.read()))
+        mode = (f'live ({args.endpoint}) + {os.path.relpath(args.sdl, ROOT)} '
+                f'({len(merged["types"])} types, {len(merged["fields"])} fields overlaid)')
+    parsed, fragments, parse_errors, n_files = collect(ROOT)
+    problems, n_ops = validate(types, qroot, mroot, parsed, fragments)
+    print(f'mode: {mode}')
+    print(f'validated {n_ops} operations + {len(fragments)} fragments in {n_files} files')
     for p in parse_errors:
         print('  PARSE', p)
-    for p in uniq:
+    for p in problems:
         print('  ✗', p)
-    print(f'{len(uniq)} problem(s)')
-    sys.exit(1 if uniq else 0)
+    print(f'{len(problems)} problem(s)')
+    return 1 if problems else 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
