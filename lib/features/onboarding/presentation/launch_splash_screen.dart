@@ -9,18 +9,14 @@ import '../../../app/theme/app_colors.dart';
 import '../../../core/assets/app_images.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/storage/secure_token_store.dart';
-import '../../../core/util/image_prefetch.dart';
-import '../../../core/widgets/network_image.dart';
-import '../../catalog/data/hero_slides_provider.dart';
-import '../../catalog/data/home_config_provider.dart';
 import '../../catalog/domain/category.dart';
-import '../../catalog/domain/home_config.dart';
 import '../../catalog/presentation/catalog_providers.dart';
+import '../../home/presentation/home_providers.dart';
 import '../../../core/widgets/brand_lockup.dart';
 import '../../../l10n/l10n.dart';
 import 'intro_video_screen.dart';
 
-/// Launch splash: full Hub Market logo (tinted white on burgundy) + tagline. While
+/// Launch splash (Figma "01 Splash"): reversed Hub Market logo on navy + tagline. While
 /// it shows, we read the saved session: a returning signed-in customer skips
 /// Welcome/Sign In and lands on Home; everyone else goes to Welcome. Chrome-free.
 ///
@@ -78,34 +74,15 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
   /// splash after 2.6s. These three providers keepAlive(), so the results
   /// survive until Home reads them.
   void _warmHome() {
-    unawaited(
-      Future(() async {
-        try {
-          // The product rails await the category tree before they can even
-          // issue their own query, so this removes a serial round-trip.
-          unawaited(ref.read(categoryTreeProvider.future).catchError((_) {
-            return const <Category>[];
-          }));
-          unawaited(ref.read(homeConfigProvider.future).catchError((_) {
-            return HomeConfig.empty;
-          }));
-          final slides = await ref.read(heroSlidesProvider.future);
-          if (!mounted || slides.isEmpty) return;
-          // Only the first slide — the one Home paints immediately.
-          await prefetchImages(
-            context,
-            [slides.first.imageUrl],
-            decodeWidth: HubImage.decodePixels(
-              context,
-              MediaQuery.sizeOf(context).width,
-            ),
-            limit: 1,
-          );
-        } catch (_) {
-          // A warm-up failure is not a startup failure.
-        }
-      }),
-    );
+    // The product rails await the category tree before they can even issue
+    // their own query, and the CMS blocks feed the strip, promos and trust
+    // row — both keepAlive(), so the results survive until Home reads them.
+    unawaited(ref.read(categoryTreeProvider.future).catchError((_) {
+      return const <Category>[];
+    }));
+    unawaited(ref.read(homeCmsBlocksProvider.future).catchError((_) {
+      return const <String, String>{};
+    }));
   }
 
   Future<void> _routeOnboarding() async {
@@ -169,11 +146,10 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
               ],
             ),
           ),
-          // Loading dots pinned near the bottom of the screen (shared PNG
-          // position) — replaces the centered round spinner.
+          // Progress bar near the bottom of the screen (Figma "01 Splash").
           const Align(
             alignment: Alignment(0, 0.72),
-            child: _DotsLoader(),
+            child: _SplashProgress(),
           ),
           Align(
             alignment: const Alignment(0, 0.84),
@@ -198,55 +174,22 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
   );
 }
 
-/// Three pulsing dots used as the splash loading indicator (shared PNG) — the
-/// highlight sweeps left→right across the dots. White on the burgundy splash.
-class _DotsLoader extends StatefulWidget {
-  const _DotsLoader();
-
-  @override
-  State<_DotsLoader> createState() => _DotsLoaderState();
-}
-
-class _DotsLoaderState extends State<_DotsLoader>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))
-        ..repeat();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+/// Slim orange progress bar on a faint white track (Figma "01 Splash").
+/// Indeterminate: the splash hold is a fixed 2.6 s, not measurable progress.
+class _SplashProgress extends StatelessWidget {
+  const _SplashProgress();
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < 3; i++)
-            Padding(
-              padding: EdgeInsetsDirectional.only(start: i == 0 ? 0 : 9),
-              child: _dot(i),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dot(int index) {
-    // Each dot leads the next by a third of the cycle so the highlight travels
-    // across them. `%` on a positive divisor stays non-negative in Dart.
-    final phase = (_controller.value - index / 3) % 1.0;
-    final t = (1 - (phase * 2 - 1).abs()).clamp(0.0, 1.0); // triangle 0→1→0
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.3 + 0.7 * t),
+    return const SizedBox(
+      width: 120,
+      child: ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(2)),
+        child: LinearProgressIndicator(
+          minHeight: 4,
+          backgroundColor: Colors.white24,
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+        ),
       ),
     );
   }

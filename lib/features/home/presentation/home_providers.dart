@@ -16,6 +16,9 @@ const int kHomeRailSize = 10;
 final homeCmsBlocksProvider = FutureProvider.autoDispose<Map<String, String>>((
   ref,
 ) {
+  // Kept alive: tiny, and the splash warms it so Home paints on arrival.
+  // A store switch still refetches via the activeStoreCode watch.
+  ref.keepAlive();
   ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
   return ref
       .watch(homeContentRepositoryProvider)
