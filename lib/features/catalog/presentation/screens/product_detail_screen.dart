@@ -18,6 +18,7 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../core/util/image_prefetch.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
+import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
 import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
 import '../../domain/money.dart';
 import '../../domain/product.dart';
@@ -903,9 +904,11 @@ class _StickyAddToCart extends ConsumerWidget {
             selectedOptionUids: uids,
           );
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        AddedToCartSheet.show(
           context,
-        ).showSnackBar(SnackBar(content: Text(l10n.cartAdded)));
+          item: AddedItem.fromDetail(product, selection, quantity),
+          recommendations: product.alsoLike,
+        );
       }
     } catch (_) {
       if (context.mounted) {

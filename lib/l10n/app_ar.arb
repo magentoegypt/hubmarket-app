@@ -373,6 +373,9 @@
     }
   },
   "cartAdded": "تمت الإضافة إلى السلة",
+  "cartViewCart": "عرض السلة",
+  "cartSubtotalItems": "المجموع الفرعي للسلة ({count, plural, =1{منتج واحد} other{{count} منتجات}})",
+  "cartAlsoLike": "قد يعجبك أيضًا",
   "cartCouponError": "هذا الرمز غير صالح.",
   "wishlistHeading": "مفضّلتي",
   "wishlistSavedCount": "{count, plural, =1{عنصر محفوظ واحد} other{{count} عناصر محفوظة}}",

@@ -517,6 +517,16 @@
     }
   },
   "cartAdded": "Added to cart",
+  "cartViewCart": "View cart",
+  "cartSubtotalItems": "Cart subtotal ({count, plural, =1{1 item} other{{count} items}})",
+  "@cartSubtotalItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartAlsoLike": "You might also like",
   "cartCouponError": "That code didn't work.",
   "wishlistHeading": "My Wishlist",
   "wishlistSavedCount": "{count, plural, =1{1 saved item} other{{count} saved items}}",
