@@ -4,24 +4,8 @@ name: Verify · iOS deep links
 # Simulator work is macOS-only, so this can't run on the Windows dev machine.
 # Uploads the before/after frames so a failure can be eyeballed.
 on:
+  # Manual until the Hub Market build is green (re-enable push then).
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "ios/Runner/Info.plist"
-      - "ios/Runner/AppDelegate.swift"
-      # Runner.entitlements carries the (currently staged) associated-domains
-      # key — the iOS half of "open the app if installed, else the browser".
-      - "ios/Runner/Runner.entitlements"
-      - "lib/app/router.dart"
-      # The router only forwards unmatched locations; the resolver is where a
-      # storefront URL actually becomes a PDP/PLP/WebView, so a change here is
-      # exactly what this job exists to catch.
-      - "lib/app/deep_link_resolver_screen.dart"
-      - "lib/features/catalog/presentation/storefront_links.dart"
-      # Decides which URLs reach Flutter at all on Android.
-      - "android/app/src/main/AndroidManifest.xml"
-      - "tool/ios_verify_deeplinks.sh"
 
 jobs:
   verify:

@@ -184,11 +184,14 @@ def extract(path):
         return [src]
     docs = []
     for m in DART_STR.finditer(src):
-        body = m.group(3)
+        raw, body = m.group(1) == 'r', m.group(3)
+        if not raw:
+            # In a non-raw Dart string `$x` / `${...}` is Dart interpolation (shared
+            # fragments, optional args) and `\$x` is a GraphQL variable.
+            body = re.sub(r'(?<!\\)\$\{[^}]*\}', ' ', body)
+            body = re.sub(r'(?<!\\)\$[A-Za-z_]\w*', ' ', body)
+            body = body.replace('\\$', '$')
         if LOOKS_GQL.search(body) and re.search(r'\b(query|mutation|fragment)\b|^\s*\{', body):
-            # drop Dart interpolations of shared fragments ($fooFragment / ${...}); they are
-            # validated where they are defined
-            body = re.sub(r'\$\{[^}]*\}|\$[A-Za-z_]\w*(?![\w:])(?=\s*$|\s*\n)', '', body)
             docs.append(body)
     return docs
 

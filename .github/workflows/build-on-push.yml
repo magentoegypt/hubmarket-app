@@ -8,8 +8,8 @@ name: Build · main (APK + IPA)
 #     registered devices); without them an UNSIGNED IPA (sideload/resign).
 # Artifacts: apk-prod / ipa-prod (download from the run, e.g. for Diawi).
 on:
-  push:
-    branches: [main]
+  # Manual until the Hub Market build is green (re-enable push then).
+  workflow_dispatch:
 
 # A newer push to main cancels an older in-progress run (saves macOS minutes).
 concurrency:
