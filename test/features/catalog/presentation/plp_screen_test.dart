@@ -75,7 +75,7 @@ void main() {
     expect(find.text('Coco Mademoiselle EDP'), findsWidgets);
   });
 
-  testWidgets('filter sheet shows facets, Discount + Rating, and footer — no Sort', (
+  testWidgets('filter sheet shows facets and footer — no Discount/Rating/Sort', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 3200));
@@ -93,11 +93,12 @@ void main() {
     expect(find.text('Brand'), findsOneWidget);
     expect(find.text('Chanel'), findsOneWidget);
     expect(find.text('Dior'), findsOneWidget);
-    // Website's Discount + Rating threshold sections.
-    expect(find.text('Discount'), findsOneWidget);
-    expect(find.text('50% or more'), findsOneWidget);
-    expect(find.text('Rating'), findsOneWidget);
-    expect(find.text('& above'), findsWidgets);
+    // No Discount / Rating thresholds: Hub Market has no filterable attribute
+    // for either (kDiscountFilterSupported / kRatingFilterSupported).
+    expect(find.text('Discount'), findsNothing);
+    expect(find.text('50% or more'), findsNothing);
+    expect(find.text('Rating'), findsNothing);
+    expect(find.text('& above'), findsNothing);
     // Two-button footer + header reset.
     expect(find.text('Reset'), findsOneWidget);
     expect(find.text('Clear All'), findsOneWidget);

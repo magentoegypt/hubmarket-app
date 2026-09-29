@@ -2,6 +2,10 @@ import 'money.dart';
 
 /// Optional merchandising badge shown on a product card. Derived from catalog
 /// data only — never fabricated.
+///
+/// [isNew] comes from Magento's core `new_from_date` / `new_to_date` window.
+/// [bestseller] stays renderable but is currently never produced: Hub Market
+/// has no bestseller attribute to back it (see `badgeFromJson`).
 enum ProductBadge { none, isNew, bestseller }
 
 /// A catalogue product as needed for listing (home / PLP / search) and the PDP
@@ -29,8 +33,8 @@ class Product {
 
   /// A smaller derivative for thumbnail-sized surfaces, when the catalogue has
   /// one. Today it never does: `image`, `small_image` and `thumbnail` all
-  /// resolve to the same generated file, because the store's view.xml defines
-  /// no per-role dimensions (verified against the live endpoint 2026-08-21).
+  /// resolve to the same generated cache file, because the theme's view.xml
+  /// defines no per-role dimensions (checked on Hub Market 2026-09-29).
   /// The field exists so the switch is a one-line mapper change once the
   /// backend adds the presets — see docs/decisions/performance.md.
   final String? thumbUrl;

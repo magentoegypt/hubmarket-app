@@ -227,9 +227,9 @@ class _Content extends StatelessWidget {
   }
 }
 
-/// "You may also like" horizontal rail (Figma), driven by Magento
-/// `also_like_products`. Hidden entirely when the field is empty (no
-/// fabricated recommendations).
+/// "You may also like" horizontal rail (Figma), driven by the product's core
+/// Magento related + upsell links ([ProductDetail.alsoLike]). Hidden entirely
+/// when the product links nothing (no fabricated recommendations).
 class _RelatedProducts extends StatefulWidget {
   const _RelatedProducts({required this.products});
   final List<Product> products;
@@ -1014,8 +1014,8 @@ class _ReviewsSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final average = product.ratingSummary / 20; // 0–5
-    // Server `rating_histogram` keyed by star (5★ → 1★). Bar lengths use the
-    // percent the resolver already computed.
+    // Per-star bars (5★ → 1★) derived from the loaded reviews — Magento core
+    // has no histogram field. Bar lengths use each bucket's percent.
     final byStar = <int, RatingBar>{
       for (final b in product.ratingHistogram) b.stars: b,
     };
@@ -1256,8 +1256,7 @@ class _MoreInformation extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final rows = <(String, String)>[
-      for (final attr in product.attributes)
-        (_label(l10n, attr.code), attr.value),
+      for (final attr in product.attributes) (_label(l10n, attr), attr.value),
       (l10n.specSku, product.sku),
     ];
     return Column(
@@ -1288,18 +1287,14 @@ class _MoreInformation extends StatelessWidget {
     );
   }
 
-  /// Localized row label for a known attribute code; unknown codes are
-  /// prettified from snake_case so new catalogue attributes still read cleanly.
-  String _label(AppLocalizations l10n, String code) {
-    switch (code) {
-      case 'manufacturer':
-        return l10n.attrBrand;
-      default:
-        return code
-            .split('_')
-            .where((w) => w.isNotEmpty)
-            .map((w) => w[0].toUpperCase() + w.substring(1))
-            .join(' ');
-    }
+  /// Localized row label for the brand attribute; other codes are prettified
+  /// from snake_case so new catalogue attributes still read cleanly.
+  String _label(AppLocalizations l10n, ProductAttribute attr) {
+    if (attr.isBrand) return l10n.attrBrand;
+    return attr.code
+        .split('_')
+        .where((w) => w.isNotEmpty)
+        .map((w) => w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 }

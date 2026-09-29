@@ -1,7 +1,9 @@
 # Product listing — drives home featured, PLP, and search results.
 # `search`/`filter` are individually optional but Magento needs at least one.
-# `aggregations` builds the PLP filter panel dynamically. Confirmed live
-# (Introspect run #4): real SKUs with AED price_range + stock_status.
+# `aggregations` builds the PLP filter panel dynamically. Checked on Hub Market
+# (2026-09-29): real SKUs with AED price_range + stock_status. The NEW badge
+# reads Magento's core `new_from_date` / `new_to_date` — the store has no
+# NEW/bestseller flags of its own. Codegen mirror of CatalogQueries.products.
 query Products(
   $search: String
   $filter: ProductAttributeFilterInput
@@ -27,8 +29,8 @@ query Products(
       name
       url_key
       stock_status
-      is_new_arrival
-      is_bestseller
+      new_from_date
+      new_to_date
       image {
         url
         label
