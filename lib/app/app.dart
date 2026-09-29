@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/hubapp/hubapp_providers.dart';
 import '../core/notifications/notification_service.dart';
 import '../core/store/store_controller.dart';
 import '../core/widgets/offline_state.dart';
+import '../features/app_status/presentation/app_status_gate.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/cart/presentation/cart_controller.dart';
 import '../features/wishlist/presentation/wishlist_controller.dart';
@@ -54,6 +56,9 @@ class _HubAppState extends ConsumerState<HubApp>
     // Real-time sync: on returning to the app, pull the server cart (and, when
     // signed in, the wishlist) so changes made on the website appear.
     if (state == AppLifecycleState.resumed) {
+      // Settle an unknown Hub Market App probe and re-read stale settings
+      // (maintenance, force update, flags, the Algolia key).
+      ref.read(hubAppProvider.notifier).onResume();
       ref.read(cartControllerProvider.notifier).refresh();
       if (ref.read(authControllerProvider).isAuthenticated) {
         ref.read(wishlistControllerProvider.notifier).refresh();
@@ -128,13 +133,18 @@ class _HubAppState extends ConsumerState<HubApp>
       // it reaches every route — including the screens that build a bare
       // Scaffold and so never had one (CL042-DEV11). The offline strip (Figma
       // S3) is app-wide for the same reason.
+      //
+      // Maintenance mode and a required update (Hub Market App settings) hold
+      // every route behind their own screen, offline strip included.
       builder: (context, child) => Directionality(
         textDirection: store.isRtl ? TextDirection.rtl : TextDirection.ltr,
-        child: OfflineBannerHost(
-          child: AppBackSwipe(
-            router: router,
-            navigatorKey: rootNavigatorKey,
-            child: child ?? const SizedBox.shrink(),
+        child: AppStatusGate(
+          child: OfflineBannerHost(
+            child: AppBackSwipe(
+              router: router,
+              navigatorKey: rootNavigatorKey,
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
         ),
       ),

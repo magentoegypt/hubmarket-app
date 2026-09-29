@@ -22,6 +22,7 @@ import '../plp_controller.dart';
 import '../product_navigation.dart';
 import '../search_controller.dart';
 import '../search_history.dart';
+import '../search_providers.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
@@ -243,6 +244,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           onChanged: _onChanged,
           onSubmitted: _submit,
           onClear: _clearField,
+          hint: ref.watch(searchHintProvider),
         ),
       ),
       body: switch (mode) {
