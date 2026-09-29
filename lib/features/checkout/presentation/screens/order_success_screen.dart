@@ -14,13 +14,11 @@ class OrderSuccessScreen extends ConsumerWidget {
   const OrderSuccessScreen({
     super.key,
     required this.orderNumber,
-    this.pendingPayment = false,
     this.deliveryEta,
     this.deliveryLocation,
   });
 
   final String orderNumber;
-  final bool pendingPayment;
 
   /// Shipping-method label for the delivery chip (e.g. "Standard Shipping").
   final String? deliveryEta;
@@ -31,21 +29,16 @@ class OrderSuccessScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    // Awaiting-payment orders get a neutral gold "received" treatment, not the
-    // celebratory burgundy check reserved for a confirmed order.
-    final accent = pendingPayment
-        ? AppColors.accentGold
-        : AppColors.brandPrimary;
     final firstName = ref.watch(authControllerProvider).customer?.firstName ?? '';
 
-    // Delivery chip from real data (shipping method + emirate); hidden for
-    // awaiting-payment orders or when neither is known.
+    // Delivery chip from real data (shipping method + emirate); hidden when
+    // neither is known.
     final chipText = [
       if (deliveryEta != null && deliveryEta!.isNotEmpty) deliveryEta!,
       if (deliveryLocation != null && deliveryLocation!.isNotEmpty)
         deliveryLocation!,
     ].join(' · ');
-    final showChip = !pendingPayment && chipText.isNotEmpty;
+    final showChip = chipText.isNotEmpty;
 
     return Scaffold(
       // Figma: centered HUB MARKET lockup + a close (×) to leave the success flow.
@@ -79,19 +72,17 @@ class OrderSuccessScreen extends ConsumerWidget {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
-                        color: accent,
+                        color: AppColors.brandPrimary,
                       ),
-                      child: Icon(
-                        pendingPayment ? Icons.schedule : Icons.check,
+                      child: const Icon(
+                        Icons.check,
                         size: 40,
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      pendingPayment
-                          ? l10n.orderPendingTitle
-                          : l10n.orderSuccessTitle,
+                      l10n.orderSuccessTitle,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -109,14 +100,6 @@ class OrderSuccessScreen extends ConsumerWidget {
                     if (showChip) ...[
                       const SizedBox(height: 12),
                       _DeliveryChip(text: chipText),
-                    ],
-                    if (pendingPayment) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.paymentRedirectPending,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.inkMuted),
-                      ),
                     ],
                     const SizedBox(height: 24),
                     SizedBox(

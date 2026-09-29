@@ -43,16 +43,14 @@ void main() {
         isFalse,
       );
       expect(
-        const PaymentMethodOption(code: 'ngeniusonline', title: 'X').isFree,
+        const PaymentMethodOption(code: 'cashondelivery', title: 'X').isFree,
         isFalse,
       );
     });
 
-    test('free is a non-redirect method (instant-success checkout path)', () {
+    test('free is an offline method, so checkout offers it', () {
       const free = PaymentMethodOption(code: 'free', title: 'No Payment');
-      expect(free.isRedirect, isFalse);
-      expect(free.isTabby, isFalse);
-      expect(free.tabbyProduct, isNull);
+      expect(payableInApp(const [free]), [free]);
     });
   });
 
@@ -66,8 +64,6 @@ void main() {
         find.text('No payment needed — your order total is free'),
         findsOneWidget,
       );
-      // No Tabby brand chip for a free order.
-      expect(find.text('tabby'), findsNothing);
     });
 
     testWidgets('renders the no-payment-needed subtitle translated (AR)', (

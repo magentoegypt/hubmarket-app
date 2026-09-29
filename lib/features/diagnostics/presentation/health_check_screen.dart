@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
-import '../../../core/diagnostics/payment_trace.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/graphql/graphql_client.dart';
 import '../../../core/notifications/notification_service.dart';
@@ -75,8 +74,6 @@ class HealthCheckScreen extends ConsumerWidget {
             const _PushDiagnostics(),
             const SizedBox(height: 24),
             const _TokenDiagnostics(),
-            const SizedBox(height: 24),
-            const _PaymentTraceCard(),
             const SizedBox(height: 24),
             const _TransportProbe(),
             const SizedBox(height: 24),
@@ -304,107 +301,6 @@ class _PushDiagnosticsState extends State<_PushDiagnostics> {
 /// (the raw transport test, no token) returns 200. This card shows whether a
 /// token is stored, wipes it, **re-reads to confirm the iOS Keychain delete
 /// took**, and re-runs the store-view test as guest.
-/// Why the last card/BNPL payment did or didn't launch.
-///
-/// Every payment failure surfaces to the customer as the same "awaiting
-/// payment" screen, so without this a missing native module, a resolver that
-/// can't find the order, a stale token and a PENDING session are
-/// indistinguishable. Persisted by [PaymentTrace] because debugPrint does not
-/// reach logcat in a release build.
-class _PaymentTraceCard extends StatefulWidget {
-  const _PaymentTraceCard();
-
-  @override
-  State<_PaymentTraceCard> createState() => _PaymentTraceCardState();
-}
-
-class _PaymentTraceCardState extends State<_PaymentTraceCard> {
-  List<String> _entries = const [];
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _refresh();
-  }
-
-  Future<void> _refresh() async {
-    final entries = await PaymentTrace.read();
-    if (!mounted) return;
-    setState(() {
-      _entries = entries;
-      _loaded = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Payment trace',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Newest first. "session: NONE" means the backend could not find '
-              'the order for the credentials sent — check auth= to see which '
-              'were used. "NATIVE MODULE MISSING" means the gateway SDK is not '
-              'in this build.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 10),
-            if (!_loaded)
-              const Text('…')
-            else if (_entries.isEmpty)
-              const Text('No payment attempted on this device yet.')
-            else
-              SelectableText(
-                _entries.join('\n'),
-                style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-              ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                TextButton(onPressed: _refresh, child: const Text('Refresh')),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: _entries.isEmpty
-                      ? null
-                      : () async {
-                          await PaymentTrace.clear();
-                          await _refresh();
-                        },
-                  child: const Text('Clear'),
-                ),
-                if (_entries.isNotEmpty) ...[
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'Copy',
-                    icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () {
-                      Clipboard.setData(
-                        ClipboardData(text: _entries.join('\n')),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Payment trace copied')),
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _TokenDiagnostics extends ConsumerStatefulWidget {
   const _TokenDiagnostics();
 

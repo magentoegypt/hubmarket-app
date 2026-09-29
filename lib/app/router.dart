@@ -20,7 +20,6 @@ import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/reset_password_screen.dart';
 import '../features/cart/presentation/screens/cart_screen.dart';
 import '../features/checkout/presentation/screens/checkout_screen.dart';
-import '../features/checkout/presentation/screens/complete_payment_screen.dart';
 import '../features/checkout/presentation/screens/order_success_screen.dart';
 import '../features/auth/presentation/screens/sign_in_screen.dart';
 import '../features/auth/presentation/screens/sign_up_screen.dart';
@@ -218,16 +217,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as Map<String, dynamic>?;
           return OrderSuccessScreen(
             orderNumber: (extra?['number'] as String?) ?? '',
-            pendingPayment: (extra?['pending'] as bool?) ?? false,
             deliveryEta: extra?['eta'] as String?,
             deliveryLocation: extra?['location'] as String?,
           );
         },
-      ),
-      GoRoute(
-        path: AppRoutes.completePayment,
-        builder: (context, state) =>
-            CompletePaymentScreen(args: state.extra as CompletePaymentArgs),
       ),
       GoRoute(
         path: AppRoutes.diagnostics,

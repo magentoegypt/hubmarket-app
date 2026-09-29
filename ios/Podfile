@@ -1,14 +1,9 @@
-# CocoaPods is here for ONE dependency: the N-Genius card SDK (NISdk), which
-# ships as a podspec/Carthage only — there is no Package.swift on the v6.0.1
-# tag, so it cannot come in through Swift Package Manager.
+# No pods of our own. Flutter plugins in this project resolve through SPM
+# (Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage); Flutter's
+# podhelper is SPM-aware and skips plugins already provided that way, so
+# flutter_install_all_ios_pods only covers a plugin that isn't SPM-compatible.
 #
-# Flutter plugins in this project resolve through SPM
-# (Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage). Flutter's
-# podhelper is SPM-aware and skips plugins already provided that way, so the
-# two coexist; flutter_install_all_ios_pods stays in place to cover any plugin
-# that isn't SPM-compatible.
-#
-# The release build already archives Runner.xcworkspace (tool/ios_appstore_build.sh),
+# The release build archives Runner.xcworkspace (tool/ios_appstore_build.sh),
 # which is what CocoaPods requires, so no change is needed there.
 platform :ios, '15.0'
 
@@ -42,12 +37,6 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-
-  # Network International card payments. Pinned to the version recorded in
-  # docs/decisions/payments.md; consumed by ios/Runner/PaymentChannel.swift,
-  # which is guarded with #if canImport(NISdk) so the app still builds if this
-  # ever fails to resolve.
-  pod 'NISdk', '6.0.1'
 
   target 'RunnerTests' do
     inherit! :search_paths

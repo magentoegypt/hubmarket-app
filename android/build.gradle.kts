@@ -2,10 +2,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // N-Genius (Network International) publishes payment-sdk-android via
-        // JitPack only — it is not on Maven Central. Used by
-        // app/src/main/kotlin/com/hubmarket/app/PaymentChannel.kt.
-        maven { url = uri("https://jitpack.io") }
     }
 }
 

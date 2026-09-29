@@ -19,20 +19,14 @@ import '../../../../core/widgets/summary_row.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/data/account_repository.dart';
 import '../../../account/domain/customer_address.dart';
-import '../../../account/domain/saved_card.dart';
 import '../../../account/presentation/widgets/postcode_field.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../catalog/domain/money.dart';
-import '../../domain/payment_session.dart';
 import '../../domain/shipping_address_input.dart';
 import '../../payments/payment_method_card.dart';
-import '../../payments/payment_runner.dart';
-import '../../payments/saved_card_picker.dart';
-import '../../payments/wallet_availability.dart';
 import '../checkout_controller.dart';
-import 'complete_payment_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -49,7 +43,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// Only shown (and sent) when the store requires a postcode for the UAE.
   final _postcode = TextEditingController();
 
-  /// Re-entrancy guard for the place-order → redirect handoff.
+  /// Re-entrancy guard for place order → order placed.
   bool _placing = false;
 
   /// True once an address has actually been submitted in THIS screen instance.
@@ -84,10 +78,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(checkoutControllerProvider.notifier).reset();
-      // Re-probe the device wallets once per checkout entry: a shopper can add
-      // a card to Samsung Wallet (or remove their last Apple Pay card) while
-      // the app is still running, and the answer is cached for the session.
-      ref.invalidate(walletAvailabilityProvider);
     });
   }
 
@@ -238,20 +228,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
   }
 
-  /// Selects a stored card: the *method* becomes the vault code, the card's
-  /// `public_hash` rides along. Guarded on the vault method existing, because
-  /// the picker only offers cards when it does.
-  Future<void> _payWithSavedCard(SavedCard card) async {
-    final vault = ref.read(checkoutControllerProvider).cardVaultMethod;
-    if (vault == null) return;
-    await _controller.selectPayment(vault, savedCardHash: card.publicHash);
-  }
-
   Future<void> _placeOrder() async {
     if (_placing) return;
-    // Hold the busy lock across the WHOLE flow (place order → session poll →
-    // native present), not just placeOrder — otherwise the form is tappable and
-    // the barrier vanishes while a payment runs against an already-consumed cart.
     setState(() => _placing = true);
     try {
       final result = await _controller.placeOrder();
@@ -260,84 +238,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         _snack(AppLocalizations.of(context).errorGeneric);
         return;
       }
-      final state = ref.read(checkoutControllerProvider);
-      final payment = state.selectedPayment;
-      if (payment == null || !payment.isRedirect) {
-        // Non-gateway methods complete immediately with no payment step:
-        // Zero Subtotal Checkout (`free`, total = 0), cash on delivery, etc.
-        _goSuccess(result.orderNumber, pending: false);
-        return;
-      }
-      // Gateway method: fetch the session (the controller sends the guest's
-      // order token + billing email/lastname to authorize a guest order) and
-      // route by status.
-      final session = await _controller.loadPaymentSession(
-        result.orderNumber,
-        orderToken: result.orderToken,
-      );
-      if (!mounted) return;
-      await _drive(
-        session,
-        result.orderNumber,
-        state.grandTotal,
-        result.orderToken,
-      );
+      // Every method checkout offers completes on placeOrder (payableInApp):
+      // cash on delivery, Zero Subtotal `free`, check / money order.
+      _goSuccess(result.orderNumber);
     } finally {
       if (mounted) setState(() => _placing = false);
     }
   }
 
-  Future<void> _drive(
-    PaymentSession? session,
-    String orderNumber,
-    Money? amount,
-    String? orderToken,
-  ) async {
-    final result = await runPaymentSession(
-      context: context,
-      ref: ref,
-      session: session,
-      amount: amount,
-    );
-    if (!mounted) return;
-    switch (result.step) {
-      case PaymentStep.presented:
-        if (result.outcome == PaymentOutcome.success) {
-          // A real success must still be re-confirmed server-side before it is
-          // trusted (§5) — wired once the gateway exposes order status.
-          _goSuccess(orderNumber, pending: false);
-        } else {
-          // Reject / cancel / expiry / failure on a placed order — let the user
-          // retry or switch method (or pay later) on the complete-payment screen.
-          _goCompletePayment(orderNumber, amount, orderToken);
-        }
-      case PaymentStep.rejected:
-      case PaymentStep.failed:
-        _goCompletePayment(orderNumber, amount, orderToken);
-      case PaymentStep.pending:
-      case PaymentStep.unavailable:
-        // Not launchable / no native module yet — order is placed, awaiting payment.
-        _goSuccess(orderNumber, pending: true);
-    }
-  }
-
-  void _goCompletePayment(String orderNumber, Money? amount, String? orderToken) {
-    final s = ref.read(checkoutControllerProvider);
-    context.go(
-      AppRoutes.completePayment,
-      extra: CompletePaymentArgs(
-        orderNumber: orderNumber,
-        methods: s.paymentMethods,
-        currentMethodCode: s.selectedPayment?.code,
-        amount: amount,
-        email: s.isGuest ? s.email : null,
-        lastname: s.isGuest ? s.lastname : null,
-        orderToken: s.isGuest ? orderToken : null,
-      ),
-    );
-  }
-
-  void _goSuccess(String number, {required bool pending}) {
+  void _goSuccess(String number) {
     final state = ref.read(checkoutControllerProvider);
     // Resolve the emirate name for the order-success delivery chip.
     String? location;
@@ -357,8 +266,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       AppRoutes.orderSuccess,
       extra: {
         'number': number,
-        'pending': pending,
-        'eta': pending ? null : state.selectedShipping?.title,
+        'eta': state.selectedShipping?.title,
         'location': location,
       },
     );
@@ -518,26 +426,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 if (state.shippingDone) ...[
                   const SizedBox(height: 24),
                   _StepHeader(index: 3, title: l10n.checkoutPayment),
-                  for (final method in state.visiblePaymentMethods)
+                  for (final method in state.paymentMethods)
                     PaymentMethodCard(
                       method: method,
-                      selected: state.isRowSelected(method),
+                      selected: state.selectedPayment?.code == method.code,
                       onTap: () => _controller.selectPayment(method),
-                      // Saved cards live inside the card row rather than as
-                      // extra top-level options; the picker draws nothing until
-                      // the customer actually has one.
-                      child: method.isCard
-                          ? SavedCardPicker(
-                              vaultMethod: state.cardVaultMethod,
-                              selectedHash: state.selectedSavedCardHash,
-                              saveCard: state.saveCard,
-                              enabled: !busy,
-                              onSelectCard: (card) => _payWithSavedCard(card),
-                              onUseNewCard: () =>
-                                  _controller.selectPayment(method),
-                              onSaveCardChanged: _controller.setSaveCard,
-                            )
-                          : null,
                     ),
                   // Security reassurance below the methods (Figma / QA #5).
                   Padding(

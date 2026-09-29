@@ -15,7 +15,6 @@ import '../../../../core/widgets/summary_row.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
-import '../../../checkout/payments/tabby_promo.dart';
 import '../../domain/cart.dart';
 import '../cart_controller.dart';
 
@@ -244,11 +243,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (cart.totals.grandTotal != null)
-                TabbyPromo(
-                  price: cart.totals.grandTotal!,
-                  padding: const EdgeInsets.only(top: 4, bottom: 8),
-                ),
               FilledButton(
                 onPressed: () => context.push(AppRoutes.checkout),
                 child: Row(

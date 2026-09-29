@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hubmarket_app/core/config/backend_capabilities.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
@@ -9,25 +8,11 @@ import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/cart/presentation/cart_controller.dart';
 import 'package:hubmarket_app/features/checkout/data/checkout_repository.dart';
 import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
-import 'package:hubmarket_app/features/checkout/payments/wallet_availability.dart';
 import 'package:hubmarket_app/features/checkout/presentation/checkout_controller.dart';
 
 import '../../support/fakes.dart';
 
-/// A backend with gateway payment sessions — the one the gateway ordering and
-/// wallet logic is written for. Hub Market is [BackendCapabilities.hubMarket].
-const _withGateways = BackendCapabilities(gatewayPaymentSessions: true);
-
-ProviderContainer _container(
-  FakeCheckoutRepository repo, {
-  // Device wallet support. Overridden in every test so the checkout list never
-  // depends on a platform channel that has no handler under `flutter test`.
-  WalletAvailability wallets = const WalletAvailability(
-    applePay: true,
-    samsungPay: true,
-  ),
-  BackendCapabilities capabilities = BackendCapabilities.hubMarket,
-}) {
+ProviderContainer _container(FakeCheckoutRepository repo) {
   final container = ProviderContainer(
     overrides: [
       localCacheProvider.overrideWithValue(FakeLocalCache()),
@@ -35,8 +20,6 @@ ProviderContainer _container(
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
       checkoutRepositoryProvider.overrideWithValue(repo),
-      walletAvailabilityProvider.overrideWith((ref) async => wallets),
-      backendCapabilitiesProvider.overrideWithValue(capabilities),
     ],
   );
   addTearDown(container.dispose);
@@ -47,19 +30,8 @@ ProviderContainer _container(
 }
 
 /// Seeds a guest cart so the checkout controller has a non-empty cart id.
-Future<ProviderContainer> _seededContainer(
-  FakeCheckoutRepository repo, {
-  WalletAvailability wallets = const WalletAvailability(
-    applePay: true,
-    samsungPay: true,
-  ),
-  BackendCapabilities capabilities = BackendCapabilities.hubMarket,
-}) async {
-  final container = _container(
-    repo,
-    wallets: wallets,
-    capabilities: capabilities,
-  );
+Future<ProviderContainer> _seededContainer(FakeCheckoutRepository repo) async {
+  final container = _container(repo);
   await container.read(cartControllerProvider.notifier).addToCart(sku: 'SKU1');
   return container;
 }
@@ -112,9 +84,9 @@ void main() {
     test('a guest places a cash-on-delivery order end to end (Hub Market)',
         () async {
       // What this store can actually do today: its available_payment_methods
-      // may still list a gateway (Tabby here), but with no payment session
-      // behind it only cash on delivery is offered, pre-selected, and the
-      // order completes on placeOrder with no payment step.
+      // may still list an online method (Tabby here), but the app completes
+      // only offline ones, so cash on delivery is offered, pre-selected, and
+      // the order completes on placeOrder with no payment step.
       final repo = FakeCheckoutRepository();
       final container = await _seededContainer(repo);
       final checkout = container.read(checkoutControllerProvider.notifier);
@@ -137,7 +109,6 @@ void main() {
       expect(state.grandTotal?.amount, 219);
       expect([for (final m in state.paymentMethods) m.code], ['cashondelivery']);
       expect(state.selectedPayment?.code, 'cashondelivery');
-      expect(state.selectedPayment!.isRedirect, isFalse); // → no payment step
       // Guest OTP is off on this store, so nothing gates Place Order.
       expect(state.guestOtpVerified, isFalse);
 
@@ -154,24 +125,29 @@ void main() {
         'setPaymentMethod:cashondelivery',
         'placeOrder',
       ]);
-      // The order consumed the cart; nothing asked for a payment session.
+      // The order consumed the cart.
       expect(container.read(cartControllerProvider).cart.id, isEmpty);
     });
 
-    test('without payment sessions, gateway and web-SDK methods are dropped',
+    test('online methods are dropped, offline ones kept in backend order',
         () async {
+      // `is_deferred` marks an online integration: a card gateway, a wallet,
+      // BNPL, PayPal via Payment Services. None completes on placeOrder, so
+      // offering one would leave the order unpaid.
       final repo = FakeCheckoutRepository(
         paymentMethods: const [
-          PaymentMethodOption(code: 'ngeniusonline', title: 'Visa & MasterCard'),
-          PaymentMethodOption(code: 'ngeniusonline_applepay', title: 'Apple Pay'),
-          PaymentMethodOption(code: 'tabby_installments', title: 'Tabby'),
-          PaymentMethodOption(code: 'tamara_pay_by_instalments', title: 'Tamara'),
+          PaymentMethodOption(
+            code: 'ngeniusonline',
+            title: 'Visa & MasterCard',
+            isOnline: true,
+          ),
+          PaymentMethodOption(code: 'checkmo', title: 'Check / Money order'),
           PaymentMethodOption(
             code: 'payment_services_paypal_hosted_fields',
             title: 'Credit Card',
+            isOnline: true,
           ),
           PaymentMethodOption(code: 'cashondelivery', title: 'Cash On Delivery'),
-          PaymentMethodOption(code: 'checkmo', title: 'Check / Money order'),
         ],
       );
       final container = await _seededContainer(repo);
@@ -188,157 +164,9 @@ void main() {
       final state = container.read(checkoutControllerProvider);
       expect(
         [for (final m in state.paymentMethods) m.code],
-        ['cashondelivery', 'checkmo'],
+        ['checkmo', 'cashondelivery'],
       );
-      expect(state.selectedPayment?.code, 'cashondelivery');
-    });
-
-    test('walks address → shipping → gateway payment → place order', () async {
-      final repo = FakeCheckoutRepository();
-      final container = await _seededContainer(
-        repo,
-        capabilities: _withGateways,
-      );
-      final checkout = container.read(checkoutControllerProvider.notifier);
-
-      final addressOk = await checkout.submitAddress(
-        email: 'guest@example.com',
-        shippingAddress: _newAddress,
-        lastname: 'Hassan',
-        telephone: '0500000000',
-        isGuest: true,
-      );
-      expect(addressOk, isTrue);
-      var state = container.read(checkoutControllerProvider);
-      expect(state.addressDone, isTrue);
-      expect(state.shippingMethods, hasLength(1));
-
-      final shippingOk = await checkout.selectShipping(
-        state.shippingMethods.first,
-      );
-      expect(shippingOk, isTrue);
-      state = container.read(checkoutControllerProvider);
-      expect(state.shippingDone, isTrue);
-      expect(state.paymentMethods, hasLength(2));
-      expect(repo.selectedShippingMethod, 'flatrate|flatrate');
-
-      final paymentOk = await checkout.selectPayment(
-        state.paymentMethods.firstWhere((m) => m.code == 'tabby'),
-      );
-      expect(paymentOk, isTrue);
-      state = container.read(checkoutControllerProvider);
-      expect(state.paymentDone, isTrue);
-      expect(repo.selectedPaymentCode, 'tabby');
-
-      final result = await checkout.placeOrder();
-      expect(result, isNotNull);
-      expect(result!.orderNumber, '000000123');
-      expect(container.read(checkoutControllerProvider).isBusy, isFalse);
-    });
-
-    test('orders the payment methods per CL042-DEV27', () async {
-      // Client-requested order: Apple Pay, Samsung Pay, Visa & MasterCard,
-      // Tabby, Cash on Delivery. Check/Money order is not in that list, so it
-      // sorts below it. Fed in deliberately shuffled API order.
-      final repo = FakeCheckoutRepository(
-        paymentMethods: const [
-          PaymentMethodOption(code: 'checkmo', title: 'Check / Money order'),
-          PaymentMethodOption(code: 'cashondelivery', title: 'Cash on Delivery'),
-          PaymentMethodOption(code: 'tabby_installments', title: 'Tabby'),
-          PaymentMethodOption(code: 'ngeniusonline_samsungpay', title: 'Samsung Pay'),
-          PaymentMethodOption(code: 'ngeniusonline', title: 'Visa & MasterCard'),
-          PaymentMethodOption(code: 'ngeniusonline_applepay', title: 'Apple Pay'),
-        ],
-      );
-      final container = await _seededContainer(
-        repo,
-        capabilities: _withGateways,
-      );
-      final checkout = container.read(checkoutControllerProvider.notifier);
-      await checkout.submitAddress(
-        email: 'guest@example.com',
-        shippingAddress: _newAddress,
-        lastname: 'Hassan',
-        telephone: '0500000000',
-        isGuest: true,
-      );
-      await checkout.selectShipping(
-        container.read(checkoutControllerProvider).shippingMethods.first,
-      );
-
-      final state = container.read(checkoutControllerProvider);
-      expect(
-        [for (final m in state.paymentMethods) m.code],
-        ['ngeniusonline_applepay', 'ngeniusonline_samsungpay', 'ngeniusonline',
-         'tabby_installments', 'cashondelivery', 'checkmo'],
-      );
-      // COD stays the pre-selected default even though its row moved to the
-      // bottom — pre-selecting the first row would arm a wallet payment sheet
-      // the shopper never asked for.
-      expect(state.selectedPayment?.code, 'cashondelivery');
-    });
-
-    test('hides wallets this device cannot pay with', () async {
-      final repo = FakeCheckoutRepository(
-        paymentMethods: const [
-          PaymentMethodOption(code: 'ngeniusonline_applepay', title: 'Apple Pay'),
-          PaymentMethodOption(code: 'ngeniusonline_samsungpay', title: 'Samsung Pay'),
-          PaymentMethodOption(code: 'ngeniusonline', title: 'Visa & MasterCard'),
-          PaymentMethodOption(code: 'cashondelivery', title: 'Cash on Delivery'),
-        ],
-      );
-      final container = await _seededContainer(
-        repo,
-        wallets: const WalletAvailability(applePay: true),
-        capabilities: _withGateways,
-      );
-      final checkout = container.read(checkoutControllerProvider.notifier);
-      await checkout.submitAddress(
-        email: 'guest@example.com',
-        shippingAddress: _newAddress,
-        lastname: 'Hassan',
-        telephone: '0500000000',
-        isGuest: true,
-      );
-      await checkout.selectShipping(
-        container.read(checkoutControllerProvider).shippingMethods.first,
-      );
-
-      final state = container.read(checkoutControllerProvider);
-      expect(
-        [for (final m in state.paymentMethods) m.code],
-        ['ngeniusonline_applepay', 'ngeniusonline', 'cashondelivery'],
-      );
-    });
-
-    test('a device with no wallets still reaches the payment step', () async {
-      final repo = FakeCheckoutRepository(
-        paymentMethods: const [
-          PaymentMethodOption(code: 'ngeniusonline_applepay', title: 'Apple Pay'),
-          PaymentMethodOption(code: 'ngeniusonline_samsungpay', title: 'Samsung Pay'),
-          PaymentMethodOption(code: 'cashondelivery', title: 'Cash on Delivery'),
-        ],
-      );
-      final container = await _seededContainer(
-        repo,
-        wallets: WalletAvailability.none,
-        capabilities: _withGateways,
-      );
-      final checkout = container.read(checkoutControllerProvider.notifier);
-      await checkout.submitAddress(
-        email: 'guest@example.com',
-        shippingAddress: _newAddress,
-        lastname: 'Hassan',
-        telephone: '0500000000',
-        isGuest: true,
-      );
-      await checkout.selectShipping(
-        container.read(checkoutControllerProvider).shippingMethods.first,
-      );
-
-      final state = container.read(checkoutControllerProvider);
-      expect([for (final m in state.paymentMethods) m.code], ['cashondelivery']);
-      expect(state.shippingDone, isTrue);
+      // Cash on delivery stays the default wherever the backend lists it.
       expect(state.selectedPayment?.code, 'cashondelivery');
     });
 
@@ -381,68 +209,6 @@ void main() {
       expect(state.isBusy, isFalse);
       expect(state.addressDone, isFalse);
     });
-
-    test(
-      'loadPaymentSession never asks a backend without payment sessions',
-      () async {
-        final repo = FakeCheckoutRepository();
-        final container = await _seededContainer(repo);
-        final checkout = container.read(checkoutControllerProvider.notifier);
-
-        final session = await checkout.loadPaymentSession('000000123');
-
-        expect(session, isNull);
-        expect(repo.calls, isNot(contains('fetchPaymentSession')));
-      },
-    );
-
-    test(
-      'loadPaymentSession sends email + lastname for a guest order',
-      () async {
-        final repo = FakeCheckoutRepository();
-        final container = await _seededContainer(
-          repo,
-          capabilities: _withGateways,
-        );
-        final checkout = container.read(checkoutControllerProvider.notifier);
-
-        await checkout.submitAddress(
-          email: 'guest@example.com',
-          shippingAddress: _newAddress,
-        lastname: 'Hassan',
-        telephone: '0500000000',
-          isGuest: true,
-        );
-        await checkout.loadPaymentSession('000000123');
-
-        expect(repo.lastSessionEmail, 'guest@example.com');
-        expect(repo.lastSessionLastname, 'Hassan');
-      },
-    );
-
-    test(
-      'loadPaymentSession sends no guest credentials for a customer order',
-      () async {
-        final repo = FakeCheckoutRepository();
-        final container = await _seededContainer(
-          repo,
-          capabilities: _withGateways,
-        );
-        final checkout = container.read(checkoutControllerProvider.notifier);
-
-        await checkout.submitAddress(
-          email: 'layla@example.com',
-          shippingAddress: _newAddress,
-        lastname: 'Hassan',
-        telephone: '0500000000',
-          isGuest: false,
-        );
-        await checkout.loadPaymentSession('000000123');
-
-        expect(repo.lastSessionEmail, isNull);
-        expect(repo.lastSessionLastname, isNull);
-      },
-    );
 
     test('reset() clears progress so the next checkout starts clean', () async {
       // Regression: the controller is a session-wide singleton. Without a reset

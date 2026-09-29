@@ -18,7 +18,6 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../core/util/image_prefetch.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
-import '../../../checkout/payments/tabby_promo.dart';
 import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
 import '../../domain/money.dart';
 import '../../domain/product.dart';
@@ -206,10 +205,6 @@ class _Content extends StatelessWidget {
                 ),
               const _SectionDivider(),
               _QuantityStepper(quantity: quantity, onChanged: onQuantity),
-              if (price != null) ...[
-                const _SectionDivider(),
-                TabbyPromo(price: price),
-              ],
               const SizedBox(height: 16),
               const _TrustRow(),
               const SizedBox(height: 24),
@@ -341,7 +336,7 @@ class _RatingLine extends StatelessWidget {
   }
 }
 
-/// Quantity stepper (− N +) shown above the Tabby promo (Figma).
+/// Quantity stepper (− N +) under the options (Figma).
 class _QuantityStepper extends StatelessWidget {
   const _QuantityStepper({required this.quantity, required this.onChanged});
 

@@ -74,62 +74,6 @@ post "" '{"query":"{ __type(name:\"StoreConfig\"){ fields{ name } } }"}' \
   || echo "  (no announcement/offer fields on StoreConfig — module not deployed yet?)"
 echo
 
-echo "== Phase 3 payment contract — MagentoEgypt_PaymentGraphQl (no Store header) =="
-# Schema introspection is store-agnostic, so it works without a valid code.
-# Confirm the resolvers + args exist on the live schema and match the app's queries
-# (docs/backend/payment-contract.md). paymentSession must accept
-# order_number!, email, lastname, guest_token; tabbyConfig must exist.
-post "" '{"query":"{ __type(name:\"Query\"){ fields(includeDeprecated:true){ name args{ name type{ kind name ofType{ kind name } } } } } }"}' \
-  | tr ',' '\n' | grep -A12 -iE '"name": ?"(paymentSession|tabbyConfig)"' || \
-  echo "  (paymentSession/tabbyConfig not found on Query — module not deployed?)"
-echo
-for t in PaymentSessionOutput TabbyConfigOutput TabbyProduct; do
-  echo "-- type $t --"
-  post "" "{\"query\":\"{ __type(name:\\\"$t\\\"){ name kind fields{ name type{ kind name ofType{ kind name } } } enumValues{ name } } }\"}"
-  echo
-done
-echo "Cross-check the above field/arg/enum names against docs/backend/payment-contract.md."
-echo
-
-echo "== Definitive arg + enum check (python3, no Store header) =="
-# Clean, unambiguous output: confirms paymentSession / setOrderPaymentMethod arg
-# names (esp. whether guest_token exists) and the three enum value sets.
-python3 - "$ENDPOINT" "${TOKEN:-}" "$UA" <<'PY' || echo "  (python3 unavailable or request failed)"
-import json, sys, urllib.request
-endpoint, token, ua = sys.argv[1], sys.argv[2], sys.argv[3]
-def q(query):
-    data = json.dumps({"query": query}).encode()
-    req = urllib.request.Request(endpoint, data=data,
-        headers={"Content-Type": "application/json", "User-Agent": ua})
-    if token:
-        req.add_header("Authorization", "Bearer " + token)
-    return json.load(urllib.request.urlopen(req, timeout=40))
-for parent in ("Query", "Mutation"):
-    r = q('{ __type(name:"%s"){ fields{ name args{ name } } } }' % parent)
-    fields = ((r.get("data") or {}).get("__type") or {}).get("fields") or []
-    for f in fields:
-        if f["name"] in ("paymentSession", "setOrderPaymentMethod", "tabbyConfig"):
-            print("  %s.%s args: %s" % (parent, f["name"], [a["name"] for a in f["args"]]))
-for t in ("PaymentGateway", "PaymentSessionStatus", "TabbyProductType"):
-    r = q('{ __type(name:"%s"){ enumValues{ name } } }' % t)
-    ty = (r.get("data") or {}).get("__type")
-    vals = [e["name"] for e in (ty.get("enumValues") or [])] if ty else None
-    print("  enum %s: %s" % (t, vals))
-# Object/input shapes the app selects on: additional_data element ({key,value}?)
-# and the setOrderPaymentMethod input fields.
-for t in ("PaymentSessionData", "SetOrderPaymentMethodInput"):
-    r = q('{ __type(name:"%s"){ kind fields{ name } inputFields{ name } } }' % t)
-    ty = (r.get("data") or {}).get("__type")
-    if ty:
-        fields = [x["name"] for x in (ty.get("fields") or [])]
-        inputs = [x["name"] for x in (ty.get("inputFields") or [])]
-        print("  %s: kind=%s fields=%s inputFields=%s"
-              % (t, ty.get("kind"), fields or None, inputs or None))
-    else:
-        print("  %s: (type not found — element name may differ)" % t)
-PY
-echo
-
 echo "== Full schema introspection -> $OUT_DIR/schema.graphql (SDL) or schema.json =="
 # Prefer SDL via a tool if available; otherwise dump the introspection JSON.
 # Store-agnostic → no header needed.
