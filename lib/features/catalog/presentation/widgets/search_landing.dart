@@ -33,13 +33,16 @@ class SearchLanding extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final history = ref.watch(searchHistoryProvider);
     final recent = history.take(recentLimit).toList(growable: false);
-    // Interface wording until the planned `appConfig` serves the storefront's
-    // own Search Terms (Marketing › SEO & Search), which drive the website's.
-    final trending = l10n.searchTrendingCsv
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList(growable: false);
+    // The admin's list (Hub Market App settings) when there is one; the
+    // app's own wording otherwise.
+    final configured = ref.watch(trendingSearchesProvider);
+    final trending = configured.isNotEmpty
+        ? configured
+        : l10n.searchTrendingCsv
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList(growable: false);
     final categories =
         ref.watch(searchCategoryChoicesProvider).valueOrNull ??
         const <Category>[];
