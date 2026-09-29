@@ -29,6 +29,9 @@ abstract final class AppRoutes {
   static const String addresses = '/addresses';
   static const String addressForm = '/address';
   static const String paymentMethods = '/payment-methods';
+
+  /// Figma 20d — store credit balance and transactions (HubAppAccount).
+  static const String myCredit = '/my-credit';
   static const String editProfile = '/profile';
   static const String notifications = '/notifications';
   static const String notificationSettings = '/notification-settings';
