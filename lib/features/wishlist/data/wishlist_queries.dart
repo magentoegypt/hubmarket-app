@@ -11,8 +11,8 @@ fragment WishlistFields on Wishlist {
         name
         url_key
         stock_status
-        is_new_arrival
-        is_bestseller
+        new_from_date
+        new_to_date
         image { url }
         price_range {
           minimum_price {

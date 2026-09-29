@@ -55,6 +55,26 @@ void main() {
     expect(find.textContaining('%'), findsNothing);
   });
 
+  testWidgets('renders the NEW badge for a product inside its new window', (
+    tester,
+  ) async {
+    const product = Product(
+      sku: 'NEW1',
+      name: 'Fresh Arrival',
+      urlKey: 'fresh-arrival',
+      regularPrice: Money(amount: 100, currency: 'AED'),
+      finalPrice: Money(amount: 100, currency: 'AED'),
+      badge: ProductBadge.isNew,
+    );
+    await tester.pumpWidget(_wrap(const ProductCard(product: product)));
+    await tester.pump();
+
+    expect(find.text('NEW'), findsOneWidget);
+    expect(find.text('BESTSELLER'), findsNothing);
+  });
+
+  // The mapper never produces BESTSELLER on Hub Market (no backing attribute);
+  // the card keeps rendering it so the enum value stays usable.
   testWidgets('renders the BESTSELLER merchandising badge when flagged', (
     tester,
   ) async {

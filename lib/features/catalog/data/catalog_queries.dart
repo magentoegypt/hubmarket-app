@@ -112,8 +112,8 @@ query Products(
       name
       url_key
       stock_status
-      is_new_arrival
-      is_bestseller
+      new_from_date
+      new_to_date
       image {
         url
         label
@@ -155,8 +155,8 @@ query ProductDetail($urlKey: String!) {
       name
       url_key
       stock_status
-      is_new_arrival
-      is_bestseller
+      new_from_date
+      new_to_date
       rating_summary
       review_count
       rating_histogram {

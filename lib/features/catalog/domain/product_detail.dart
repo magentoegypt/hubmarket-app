@@ -155,7 +155,8 @@ class ProductDetail {
   final Money? finalPrice;
   final bool inStock;
 
-  /// Merchandising badge (NEW / BESTSELLER) from `is_new_arrival`/`is_bestseller`.
+  /// Merchandising badge — NEW from the core `new_from_date` / `new_to_date`
+  /// window; never BESTSELLER (see [ProductBadge]).
   final ProductBadge badge;
   final List<ConfigurableOption> options;
   final List<ProductVariant> variants;

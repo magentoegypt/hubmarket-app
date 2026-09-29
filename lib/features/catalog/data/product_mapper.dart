@@ -14,7 +14,9 @@ Money? moneyFromJson(Map<String, dynamic>? json) {
   );
 }
 
-Product productFromJson(Map<String, dynamic> json) {
+/// Maps a listing product (PLP / search / wishlist / PDP rails). [now] only
+/// pins "today" for the NEW badge in tests.
+Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
   final image = json['image'] as Map<String, dynamic>?;
   final minPrice =
       (json['price_range'] as Map<String, dynamic>?)?['minimum_price']
@@ -31,22 +33,68 @@ Product productFromJson(Map<String, dynamic> json) {
       minPrice?['final_price'] as Map<String, dynamic>?,
     ),
     inStock: (json['stock_status'] as String?) != 'OUT_OF_STOCK',
-    badge: badgeFromJson(json),
+    badge: badgeFromJson(json, now: now),
   );
 }
 
-/// Maps the backend `is_new_arrival` / `is_bestseller` flags to a single
-/// merchandising badge. Bestseller wins when a product qualifies for both.
-/// Tolerates GraphQL Boolean or Magento Int (0/1). Absent fields → no badge.
-ProductBadge badgeFromJson(Map<String, dynamic> json) {
-  bool truthy(Object? v) => v == true || (v is num && v != 0);
-  if (truthy(json['is_bestseller'])) return ProductBadge.bestseller;
-  if (truthy(json['is_new_arrival'])) return ProductBadge.isNew;
-  return ProductBadge.none;
+/// The merchandising badge the catalogue can actually back.
+///
+/// Hub Market has no NEW / bestseller flags of its own, so NEW comes from
+/// Magento's core "Set Product as New From / To" dates (`new_from_date` /
+/// `new_to_date`, see [isNewByDateWindow]). [ProductBadge.bestseller] is never
+/// produced: the store has no bestseller attribute, and a guessed one would be
+/// fabricated merchandising.
+ProductBadge badgeFromJson(Map<String, dynamic> json, {DateTime? now}) =>
+    isNewByDateWindow(json['new_from_date'], json['new_to_date'], now: now)
+    ? ProductBadge.isNew
+    : ProductBadge.none;
+
+/// Whether today falls inside a product's "new" window — the rule Magento's
+/// own New Products widget applies: at least one bound is set, `from` (when
+/// set) is on or before today and `to` (when set) is on or after today.
+///
+/// Compared by calendar day: Magento stores both as dates and returns them as
+/// `2026-09-10 00:00:00`. "Today" is the device's date, which can differ from
+/// the store's (Asia/Riyadh) date for a few hours around midnight — harmless
+/// for a badge. A bound that is set but unreadable yields no badge rather than
+/// a guess.
+bool isNewByDateWindow(Object? from, Object? to, {DateTime? now}) {
+  final fromText = from is String ? from.trim() : '';
+  final toText = to is String ? to.trim() : '';
+  if (fromText.isEmpty && toText.isEmpty) return false;
+  final start = fromText.isEmpty ? null : _calendarDay(fromText);
+  final end = toText.isEmpty ? null : _calendarDay(toText);
+  if ((fromText.isNotEmpty && start == null) ||
+      (toText.isNotEmpty && end == null)) {
+    return false;
+  }
+  final clock = now ?? DateTime.now();
+  final today = DateTime.utc(clock.year, clock.month, clock.day);
+  if (start != null && today.isBefore(start)) return false;
+  if (end != null && today.isAfter(end)) return false;
+  return true;
 }
 
-/// Maps one `products.items[0]` of the PDP query to a [ProductDetail].
-ProductDetail productDetailFromJson(Map<String, dynamic> json) {
+/// The calendar day of a Magento date / datetime string (`YYYY-MM-DD…`), as a
+/// UTC midnight so comparisons ignore DST. Null for anything else, including
+/// roll-overs such as `0000-00-00` or `2026-02-31`.
+DateTime? _calendarDay(String value) {
+  final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(value);
+  if (m == null) return null;
+  final year = int.parse(m.group(1)!);
+  final month = int.parse(m.group(2)!);
+  final day = int.parse(m.group(3)!);
+  final date = DateTime.utc(year, month, day);
+  if (date.year != year || date.month != month || date.day != day) return null;
+  return date;
+}
+
+/// Maps one `products.items[0]` of the PDP query to a [ProductDetail]. [now]
+/// only pins "today" for the NEW badge in tests.
+ProductDetail productDetailFromJson(
+  Map<String, dynamic> json, {
+  DateTime? now,
+}) {
   final minPrice =
       (json['price_range'] as Map<String, dynamic>?)?['minimum_price']
           as Map<String, dynamic>?;
@@ -157,7 +205,7 @@ ProductDetail productDetailFromJson(Map<String, dynamic> json) {
       minPrice?['final_price'] as Map<String, dynamic>?,
     ),
     inStock: (json['stock_status'] as String?) != 'OUT_OF_STOCK',
-    badge: badgeFromJson(json),
+    badge: badgeFromJson(json, now: now),
     options: options,
     variants: variants,
     ratingSummary: (json['rating_summary'] as int?) ?? 0,
