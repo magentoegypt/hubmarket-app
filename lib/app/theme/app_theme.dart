@@ -3,16 +3,50 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Builds the app [ThemeData] from Figma tokens with locale-aware typography:
-/// Inter for Latin (EN), Cairo for Arabic (AR). The Playfair Display wordmark
-/// is applied locally where the brand lockup is rendered, not as the base font.
+/// Builds the app [ThemeData] from Figma tokens with locale-aware typography
+/// (Figma "01 · Cover & Foundations"): DM Sans for Latin (EN), Tajawal for
+/// Arabic (AR). Playfair Display is the EN Display / Heading 1 face — applied
+/// where those styles are used ([AppTextStyles]), never as the base font, and
+/// never in Arabic (it has no Arabic glyphs).
 abstract final class AppTheme {
-  static const String latinFont = 'Inter';
-  static const String arabicFont = 'Cairo';
+  static const String latinFont = 'DM Sans';
+  static const String arabicFont = 'Tajawal';
   static const String displayFont = 'Playfair Display';
 
   static String fontFor(String languageCode) =>
       languageCode == 'ar' ? arabicFont : latinFont;
+
+  /// DM Sans is a variable font with an optical-size (`opsz`, 9–40) axis whose
+  /// default is 9. Figma and the storefront (CSS `font-optical-sizing: auto`)
+  /// draw each size at its own optical size; the engine does not, so the text
+  /// theme pins `opsz` to every style's size. Text that only overrides
+  /// `fontSize` inherits the body style's optical size — close enough.
+  static List<FontVariation> opticalSize(double fontSize) => <FontVariation>[
+    FontVariation('opsz', fontSize.clamp(9, 40).toDouble()),
+  ];
+
+  static TextStyle? _withOpticalSize(TextStyle? style) {
+    final size = style?.fontSize;
+    return size == null ? style : style!.copyWith(fontVariations: opticalSize(size));
+  }
+
+  static TextTheme _opticalSizes(TextTheme t) => t.copyWith(
+    displayLarge: _withOpticalSize(t.displayLarge),
+    displayMedium: _withOpticalSize(t.displayMedium),
+    displaySmall: _withOpticalSize(t.displaySmall),
+    headlineLarge: _withOpticalSize(t.headlineLarge),
+    headlineMedium: _withOpticalSize(t.headlineMedium),
+    headlineSmall: _withOpticalSize(t.headlineSmall),
+    titleLarge: _withOpticalSize(t.titleLarge),
+    titleMedium: _withOpticalSize(t.titleMedium),
+    titleSmall: _withOpticalSize(t.titleSmall),
+    bodyLarge: _withOpticalSize(t.bodyLarge),
+    bodyMedium: _withOpticalSize(t.bodyMedium),
+    bodySmall: _withOpticalSize(t.bodySmall),
+    labelLarge: _withOpticalSize(t.labelLarge),
+    labelMedium: _withOpticalSize(t.labelMedium),
+    labelSmall: _withOpticalSize(t.labelSmall),
+  );
 
   static ThemeData light(String languageCode) =>
       _build(languageCode, Brightness.light);
@@ -34,8 +68,14 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       fontFamily: fontFor(languageCode),
     );
+    // Tajawal ships as static weights, so only the Latin face needs this.
+    final latin = languageCode != 'ar';
 
     return base.copyWith(
+      textTheme: latin ? _opticalSizes(base.textTheme) : base.textTheme,
+      primaryTextTheme: latin
+          ? _opticalSizes(base.primaryTextTheme)
+          : base.primaryTextTheme,
       // Edge-swipe back on every platform (CL042-DEV11). Android's default
       // Zoom transition has no back gesture at all, so a pushed screen could
       // only be left through the app-bar arrow. The Cupertino builder brings

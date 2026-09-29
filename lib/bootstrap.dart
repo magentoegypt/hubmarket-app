@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
+import 'app/font_licenses.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/local_cache.dart';
 import 'core/storage/locale_prefs.dart';
@@ -20,6 +21,9 @@ import 'features/notifications/presentation/notification_settings_controller.dar
 /// the app. The flavor itself comes from `--dart-define-from-file`.
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // The OFL texts of the bundled fonts (DM Sans, Tajawal, Playfair Display).
+  registerFontLicenses();
 
   // Locale date symbols (so Arabic order dates render Arabic month names).
   await initializeDateFormatting();

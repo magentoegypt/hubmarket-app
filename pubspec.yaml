@@ -79,15 +79,29 @@ flutter:
     # the licensed artwork is dropped in by hand; the checkout row falls back to
     # a Material icon while the directory holds only the README.
     - assets/payments/
+    # SIL OFL texts of the bundled fonts, shown on the licenses page
+    # (lib/app/font_licenses.dart).
+    - assets/fonts/licenses/
   fonts:
-    # Variable fonts (all weights in a single file). Inter + Playfair Display for
-    # Latin/EN; Cairo for Arabic/AR. See docs/FIGMA_DESIGN.md.
-    - family: Inter
+    # The Figma "01 · Cover & Foundations" text styles: DM Sans for Latin (EN)
+    # and Tajawal for Arabic (AR) UI text, Playfair Display Bold for the EN
+    # Display / Heading 1 / Logo styles. Official OFL files from google/fonts.
+    # DM Sans and Playfair Display are variable fonts — the engine maps each
+    # FontWeight onto their wght axis — while Tajawal comes as the four static
+    # weights the styles use (400 / 500 / 700 / 800).
+    - family: DM Sans
       fonts:
-        - asset: assets/fonts/Inter.ttf
-    - family: Cairo
+        - asset: assets/fonts/DMSans.ttf
+    - family: Tajawal
       fonts:
-        - asset: assets/fonts/Cairo.ttf
+        - asset: assets/fonts/Tajawal-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Tajawal-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Tajawal-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Tajawal-ExtraBold.ttf
+          weight: 800
     - family: Playfair Display
       fonts:
         - asset: assets/fonts/PlayfairDisplay.ttf
