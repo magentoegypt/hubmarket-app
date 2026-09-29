@@ -13,18 +13,27 @@ import '../domain/product_page.dart';
 import 'catalog_queries.dart';
 import 'product_mapper.dart';
 
-// Magento's ProductAttributeSortInput on this store exposes only manufacturer /
-// name / position / price / relevance — there is NO created_at / newest_sort, so
-// the website's "Newest First" sort can't be issued via GraphQL. The Sort panel
-// shows it disabled (see kNewestSortSupported) until the backend adds the field.
+// Hub Market's ProductAttributeSortInput exposes only color / name / position /
+// price / relevance — there is NO created_at / newest sort, so the website's
+// "Newest First" sort can't be issued via GraphQL. The Sort panel shows it
+// disabled (see kNewestSortSupported) until the backend adds such a field.
 enum ProductSortField { relevance, priceAsc, priceDesc, nameAsc }
 
 /// The live GraphQL `ProductAttributeSortInput` has no newest/date sort field,
 /// so the website's "Newest First" option can't be requested yet. The Sort panel
-/// renders it disabled until the backend adds `newest_sort`; flip this to `true`
-/// (and add a `ProductSortField.newest` → `{newest_sort: DESC}` mapping) then.
-/// Tracked in ClickUp 86d3m97au.
+/// renders it disabled; flip this to `true` (and add a `ProductSortField.newest`
+/// mapping) once the backend exposes a sortable date attribute.
 const bool kNewestSortSupported = false;
+
+/// Hub Market's `ProductAttributeFilterInput` has no `discount` or `rating`
+/// field (both were Zoonze theme attributes), and Magento rejects the whole
+/// query when one is sent. Until the backend exposes filterable attributes for
+/// them, the filter sheet hides the "N% or more" / "N★ & above" sections and
+/// [CatalogRepository.fetchProducts] never sends the thresholds.
+const bool kDiscountFilterSupported = false;
+
+/// See [kDiscountFilterSupported].
+const bool kRatingFilterSupported = false;
 
 /// Reads catalogue data via GraphQL and returns domain entities (or throws a
 /// [Failure]). Presentation never sees a raw GraphQL map.
@@ -88,8 +97,8 @@ class CatalogRepository {
     return thumbnails;
   }
 
-  /// Ceiling on one [fetchCategoryThumbnails] batch — the deepest category
-  /// level on this store has fewer children than this.
+  /// Ceiling on one [fetchCategoryThumbnails] batch — no category level on
+  /// Hub Market has more children than this (27 at most, 2026-09-29).
   static const int _thumbnailBatchLimit = 40;
 
   /// Resolves a storefront URL (e.g. a hero CTA's friendly `.html` category or
@@ -122,15 +131,17 @@ class CatalogRepository {
     }
   }
 
-  /// Strips the scheme/host and a leading store-code segment (e.g. `uae-en`,
-  /// `eg_ar`) from a storefront URL, leaving the store-relative path that
-  /// `urlResolver` expects (it's scoped by the active Store header).
+  /// Strips the scheme/host and a leading store-code segment from a storefront
+  /// URL, leaving the store-relative path that `urlResolver` expects — it is
+  /// scoped by the Store header and returns null for `en/<key>.html`. Hub
+  /// Market's segments are `en` / `ar` (its `base_link_url`s); `uae-en`-style
+  /// codes are still accepted.
   String _storeRelativePath(String url) {
     final uri = Uri.tryParse(url);
     if (uri == null) return '';
     var segs = uri.pathSegments.where((s) => s.isNotEmpty).toList();
-    if (segs.isNotEmpty &&
-        RegExp(r'^[a-z]{2,4}[-_][a-z]{2}$').hasMatch(segs.first)) {
+    if (segs.length > 1 &&
+        RegExp(r'^(?:[a-z]{2}|[a-z]{2,4}[-_][a-z]{2})$').hasMatch(segs.first)) {
       segs = segs.sublist(1);
     }
     return segs.join('/');
@@ -160,11 +171,16 @@ class CatalogRepository {
     if (categoryUid != null) {
       filter['category_uid'] = <String, dynamic>{'eq': categoryUid};
     }
-    // Brand landing: filter by the manufacturer attribute option id (the true
+    // Brand landing: filter by the brand attribute's option id (the true
     // "Shop by Brand" product set), NOT a text search on the brand name — a
     // name search returns cross-brand matches. `Brand.optionId` supplies this.
+    // Hub Market's brand attribute is `mgs_brand` (label "Brand"); core
+    // `manufacturer` is not filterable here, so sending it fails the query.
+    // The parameter keeps its old name for the existing callers.
     if (manufacturerId != null) {
-      filter['manufacturer'] = <String, dynamic>{'eq': manufacturerId.toString()};
+      filter[kBrandAttributeCode] = <String, dynamic>{
+        'eq': manufacturerId.toString(),
+      };
     }
     attributeFilters.forEach((code, values) {
       // 'price' uses a range input (handled below); apply equal-type filters
@@ -181,14 +197,13 @@ class CatalogRepository {
         if (priceTo != null) 'to': priceTo.toStringAsFixed(2),
       };
     }
-    // `discount` and `rating` are custom store attributes (added by the beauty
-    // theme's layered nav) exposed as FilterRangeTypeInput — a lower-bound
-    // threshold, mirroring the website's "N% or more" / "N★ & above" buckets.
-    // They are NOT returned in `aggregations`, so the buckets are fixed app-side.
-    if (minDiscount != null) {
+    // Lower-bound "N% or more" / "N★ & above" thresholds, only where the store
+    // has matching range attributes — Hub Market has neither, and an unknown
+    // filter field fails the whole query (see kDiscountFilterSupported).
+    if (kDiscountFilterSupported && minDiscount != null) {
       filter['discount'] = <String, dynamic>{'from': minDiscount.toString()};
     }
-    if (minRating != null) {
+    if (kRatingFilterSupported && minRating != null) {
       filter['rating'] = <String, dynamic>{'from': minRating.toString()};
     }
     final variables = <String, dynamic>{
@@ -245,9 +260,10 @@ class CatalogRepository {
         .toList();
   }
 
-  /// Submits a review. Magento's form has three rating dimensions (Quality /
-  /// Value / Price); we send a value for each so the review saves with the same
-  /// shape the website produces. [ratings] is `(id, value_id)` per dimension.
+  /// Submits a review with one value per rating dimension that
+  /// `productReviewRatingsMetadata` lists (Hub Market has a single "Rating"),
+  /// so the review saves with the same shape the website produces. [ratings]
+  /// is `(id, value_id)` per dimension.
   Future<void> createReview({
     required String sku,
     required String nickname,

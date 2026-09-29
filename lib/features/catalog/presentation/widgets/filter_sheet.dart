@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../l10n/l10n.dart';
+import '../../data/catalog_repository.dart';
 import '../../domain/aggregation.dart';
 
 /// Result of the filter sheet: the selected attribute facets, an optional price
@@ -25,10 +26,11 @@ class FilterResult {
 }
 
 /// Filter-only bottom sheet (Figma "Filters (Sheet)"). Flat labelled sections:
-/// Price Range (slider), one section per aggregation facet (Category,
-/// Manufacturer, …), then the website's fixed-bucket Discount and Rating
-/// thresholds. The `price` facet drives the slider bounds. Returns a
-/// [FilterResult] on Apply. Sorting is handled separately by [SortSheet].
+/// Price Range (slider), one section per aggregation facet (Category, Brand,
+/// …), then fixed-bucket Discount and Rating thresholds where the store can
+/// filter on them (not on Hub Market — see [kDiscountFilterSupported]). The
+/// `price` facet drives the slider bounds. Returns a [FilterResult] on Apply.
+/// Sorting is handled separately by [SortSheet].
 class FilterSheet extends StatefulWidget {
   const FilterSheet({
     super.key,
@@ -226,44 +228,50 @@ class _FilterSheetState extends State<FilterSheet> {
                     ),
                   const SizedBox(height: 8),
                 ],
-                // Discount — fixed "N% or more" thresholds (single-select).
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.borderDefault,
-                ),
-                _SectionLabel(text: l10n.filterDiscountLabel),
-                for (final pct in FilterSheet.discountBuckets)
-                  _ThresholdRow(
-                    selected: _minDiscount == pct,
-                    onTap: () => setState(
-                      () => _minDiscount = _minDiscount == pct ? null : pct,
-                    ),
-                    child: Text(
-                      l10n.filterDiscountOption(pct),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: AppColors.inkHeading,
+                // Discount — fixed "N% or more" thresholds (single-select),
+                // only where the store can filter on a discount attribute.
+                if (kDiscountFilterSupported) ...[
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.borderDefault,
+                  ),
+                  _SectionLabel(text: l10n.filterDiscountLabel),
+                  for (final pct in FilterSheet.discountBuckets)
+                    _ThresholdRow(
+                      selected: _minDiscount == pct,
+                      onTap: () => setState(
+                        () => _minDiscount = _minDiscount == pct ? null : pct,
+                      ),
+                      child: Text(
+                        l10n.filterDiscountOption(pct),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.inkHeading,
+                        ),
                       ),
                     ),
+                  const SizedBox(height: 8),
+                ],
+                // Rating — fixed "N★ & above" thresholds (single-select),
+                // only where the store can filter on a rating attribute.
+                if (kRatingFilterSupported) ...[
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.borderDefault,
                   ),
-                const SizedBox(height: 8),
-                // Rating — fixed "N★ & above" thresholds (single-select).
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.borderDefault,
-                ),
-                _SectionLabel(text: l10n.filterRatingLabel),
-                for (final stars in FilterSheet.ratingBuckets)
-                  _ThresholdRow(
-                    selected: _minRating == stars,
-                    onTap: () => setState(
-                      () => _minRating = _minRating == stars ? null : stars,
+                  _SectionLabel(text: l10n.filterRatingLabel),
+                  for (final stars in FilterSheet.ratingBuckets)
+                    _ThresholdRow(
+                      selected: _minRating == stars,
+                      onTap: () => setState(
+                        () => _minRating = _minRating == stars ? null : stars,
+                      ),
+                      child: _RatingLabel(stars: stars),
                     ),
-                    child: _RatingLabel(stars: stars),
-                  ),
-                const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           ),

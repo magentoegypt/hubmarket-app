@@ -76,6 +76,15 @@ void main() {
     expect(find.text('Color'), findsOneWidget);
   });
 
+  testWidgets('hides Discount / Rating where the store cannot filter them', (
+    tester,
+  ) async {
+    await _open(tester, aggregations: const [_priceAgg, _colorAgg]);
+    expect(find.text('Color'), findsOneWidget);
+    expect(find.text('Discount'), findsNothing);
+    expect(find.text('Rating'), findsNothing);
+  });
+
   testWidgets('apply returns a FilterResult (full range => null price)', (
     tester,
   ) async {
