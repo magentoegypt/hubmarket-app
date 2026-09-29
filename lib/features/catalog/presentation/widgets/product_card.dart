@@ -184,12 +184,19 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     ProductBadge.none => null,
   };
 
-  /// Adds the product to the cart (simple products add directly; the cart
-  /// controller self-heals a stale/consumed cart) and confirms with the
-  /// added-to-cart sheet. Configurable products that need option selection
-  /// surface a generic error — the card's tap still opens the PDP where options
-  /// can be chosen.
+  /// Adds the product to the cart by SKU (the cart controller self-heals a
+  /// stale/consumed cart) and confirms with the added-to-cart sheet.
+  ///
+  /// A product that needs choices first — a configurable's size or colour
+  /// ([Product.requiresOptions]) — can't go in by SKU, so its "+" opens the
+  /// product page, as tapping the card does. When the listing doesn't know
+  /// the product's type, the add is attempted and a refusal shows the
+  /// generic error.
   Future<void> _add() async {
+    if (product.requiresOptions) {
+      widget.onTap?.call();
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _adding = true);

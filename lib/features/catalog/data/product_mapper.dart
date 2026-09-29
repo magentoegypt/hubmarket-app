@@ -42,7 +42,17 @@ Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
     inStock: (json['stock_status'] as String?) != 'OUT_OF_STOCK',
     badge: badgeFromJson(json, now: now),
     categories: productCategoriesFromJson(json['categories']),
+    typeId: productTypeFromTypename(json['__typename']),
   );
+}
+
+/// Magento's product type from a GraphQL item's `__typename` (which the
+/// client adds to every selection): `ConfigurableProduct` → `configurable`,
+/// `SimpleProduct` → `simple`. Null for anything else.
+String? productTypeFromTypename(Object? typename) {
+  if (typename is! String || !typename.endsWith('Product')) return null;
+  final type = typename.substring(0, typename.length - 'Product'.length);
+  return type.isEmpty ? null : type.toLowerCase();
 }
 
 /// `items.categories` of the search query → [ProductCategoryRef]s. Entries with

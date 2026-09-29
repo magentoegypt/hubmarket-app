@@ -90,10 +90,10 @@ class SearchOutlinedChip extends StatelessWidget {
   }
 }
 
-/// "Search by algolia" (Figma 09): the site's product search is Algolia,
-/// served through Magento, so the attribution is accurate. A brand lockup, so
-/// it stays in English and left-to-right in both languages, as the AR frame
-/// draws it.
+/// "Search by algolia" (Figma 09). The type-ahead shows it only when Algolia
+/// answered — the app queries the storefront's Algolia indices directly — and
+/// hides it on the GraphQL fallback. A brand lockup, so it stays in English
+/// and left-to-right in both languages, as the AR frame draws it.
 class SearchByAlgolia extends StatelessWidget {
   const SearchByAlgolia({super.key});
 

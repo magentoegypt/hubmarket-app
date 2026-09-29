@@ -178,6 +178,7 @@
   "searchOrIn": "or in",
   "searchListSeparator": ", ",
   "searchCategoriesLabel": "Categories",
+  "searchPagesLabel": "Pages",
   "searchViewAllResults": "{count, plural, =1{View 1 result} other{View all {count} results}}",
   "@searchViewAllResults": {
     "placeholders": {

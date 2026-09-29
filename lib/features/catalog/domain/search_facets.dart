@@ -54,19 +54,20 @@ List<SearchCategory> searchCategoriesFrom({
       filed.putIfAbsent(category.uid, () => category);
     }
   }
-  final menuLevels = _menuLevels(tree);
+  final menu = _menuEntries(tree);
 
   final ranked = <(SearchCategory, int)>[];
   for (final option in facet.options) {
     final uid = option.value;
     if (uid.isEmpty || uid == excludeUid || option.count <= 0) continue;
     final ref = filed[uid];
+    final entry = menu[uid];
     final int level;
     if (ref != null) {
       if (!ref.inMenu) continue;
       level = ref.level;
-    } else if (menuLevels[uid] case final int treeLevel) {
-      level = treeLevel;
+    } else if (entry != null) {
+      level = entry.level;
     } else {
       continue;
     }
@@ -89,19 +90,55 @@ List<SearchCategory> searchCategoriesFrom({
   return List.unmodifiable(ranked.map((entry) => entry.$1));
 }
 
-/// Menu entries of the category tree by uid, with their Magento level. The
-/// tree's roots are the top level (2); a child switched out of the menu is
-/// skipped along with everything under it.
-Map<String, int> _menuLevels(List<Category> tree) {
-  final levels = <String, int>{};
+/// The categories a search's results fall into, from Algolia's `categoryIds`
+/// facet ([counts]: category id → matching products), best first.
+///
+/// Algolia records carry ids, not names, so each id is named from the app's
+/// category [tree] in the active store view; an id the menu doesn't show (a
+/// root, a hidden category, one outside the tree) is dropped, as
+/// [searchCategoriesFrom] drops it. Ranked the same way.
+List<SearchCategory> searchCategoriesFromIds(
+  Map<String, int> counts,
+  List<Category> tree, {
+  String? excludeUid,
+}) {
+  final menu = _menuEntries(tree);
+  final options = <AggregationOption>[
+    for (final MapEntry(key: id, value: count) in counts.entries)
+      if (menu[categoryUidFromId(id)] case final entry?)
+        AggregationOption(
+          label: entry.name,
+          value: categoryUidFromId(id),
+          count: count,
+        ),
+  ];
+  return searchCategoriesFrom(
+    aggregations: [
+      Aggregation(
+        attributeCode: kCategoryAggregationCode,
+        label: '',
+        options: options,
+      ),
+    ],
+    products: const <Product>[],
+    tree: tree,
+    excludeUid: excludeUid,
+  );
+}
+
+/// Menu entries of the category tree by uid, with their name and Magento
+/// level. The tree's roots are the top level (2); a child switched out of the
+/// menu is skipped along with everything under it.
+Map<String, ({String name, int level})> _menuEntries(List<Category> tree) {
+  final entries = <String, ({String name, int level})>{};
   void visit(List<Category> nodes, int level) {
     for (final node in nodes) {
       if (!node.includeInMenu || node.uid.isEmpty) continue;
-      levels[node.uid] = level;
+      entries[node.uid] = (name: node.name.trim(), level: level);
       visit(node.children, level + 1);
     }
   }
 
   visit(tree, 2);
-  return levels;
+  return entries;
 }

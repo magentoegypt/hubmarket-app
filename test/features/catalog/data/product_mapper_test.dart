@@ -432,4 +432,27 @@ void main() {
       expect(listing.primaryCategory, isNull);
     });
   });
+
+  group('product type from __typename', () {
+    test('a configurable needs its options chosen; a simple one doesn\'t', () {
+      final configurable = productFromJson(
+        _json(extra: {'__typename': 'ConfigurableProduct'}),
+      );
+      expect(configurable.typeId, 'configurable');
+      expect(configurable.requiresOptions, isTrue);
+
+      final simple = productFromJson(
+        _json(extra: {'__typename': 'SimpleProduct'}),
+      );
+      expect(simple.typeId, 'simple');
+      expect(simple.requiresOptions, isFalse);
+    });
+
+    test('unknown without a product __typename', () {
+      expect(productFromJson(_json()).typeId, isNull);
+      expect(productTypeFromTypename('Money'), isNull);
+      expect(productTypeFromTypename('Product'), isNull);
+      expect(productTypeFromTypename('GroupedProduct'), 'grouped');
+    });
+  });
 }

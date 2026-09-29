@@ -27,10 +27,11 @@ class FilterResult {
 
 /// Filter-only bottom sheet (Figma "Filters (Sheet)"). Flat labelled sections:
 /// Price Range (slider), one section per aggregation facet (Category, Brand,
-/// …), then fixed-bucket Discount and Rating thresholds where the store can
-/// filter on them (not on Hub Market — see [kDiscountFilterSupported]). The
-/// `price` facet drives the slider bounds. Returns a [FilterResult] on Apply.
-/// Sorting is handled separately by [SortSheet].
+/// …), then fixed-bucket Discount and Rating thresholds where the source can
+/// filter on them (GraphQL on Hub Market can't — see
+/// [kDiscountFilterSupported]; Algolia search can rate). The `price` facet
+/// drives the slider bounds. Returns a [FilterResult] on Apply. Sorting is
+/// handled separately by [SortSheet].
 class FilterSheet extends StatefulWidget {
   const FilterSheet({
     super.key,
@@ -41,6 +42,8 @@ class FilterSheet extends StatefulWidget {
     this.initialPriceTo,
     this.initialMinDiscount,
     this.initialMinRating,
+    this.showDiscount = kDiscountFilterSupported,
+    this.showRating = kRatingFilterSupported,
   });
 
   final List<Aggregation> aggregations;
@@ -50,6 +53,10 @@ class FilterSheet extends StatefulWidget {
   final double? initialPriceTo;
   final int? initialMinDiscount;
   final int? initialMinRating;
+
+  /// Whether the "N% or more" and "N★ & above" sections are offered.
+  final bool showDiscount;
+  final bool showRating;
 
   /// Discount thresholds shown on the website ("N% or more"), high → low.
   static const List<int> discountBuckets = [50, 40, 30, 20];
@@ -230,7 +237,7 @@ class _FilterSheetState extends State<FilterSheet> {
                 ],
                 // Discount — fixed "N% or more" thresholds (single-select),
                 // only where the store can filter on a discount attribute.
-                if (kDiscountFilterSupported) ...[
+                if (widget.showDiscount) ...[
                   const Divider(
                     height: 1,
                     thickness: 1,
@@ -255,7 +262,7 @@ class _FilterSheetState extends State<FilterSheet> {
                 ],
                 // Rating — fixed "N★ & above" thresholds (single-select),
                 // only where the store can filter on a rating attribute.
-                if (kRatingFilterSupported) ...[
+                if (widget.showRating) ...[
                   const Divider(
                     height: 1,
                     thickness: 1,

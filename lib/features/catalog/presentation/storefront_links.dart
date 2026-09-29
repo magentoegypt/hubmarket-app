@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -16,6 +14,7 @@ import '../../cms/domain/cms_links.dart';
 import '../data/brands_provider.dart';
 import '../data/catalog_repository.dart';
 import '../domain/brand.dart';
+import '../domain/category.dart';
 
 /// Storefront-URL -> in-app-route plumbing, shared by the home CTAs and by the
 /// deep-link resolver (`DeepLinkResolverScreen`). Kept in one place so an
@@ -273,5 +272,5 @@ bool isInternalStoreUrl(WidgetRef ref, String url) {
 String? categoryUidFromUrl(String url) {
   final match = RegExp(r'/category/view/id/(\d+)').firstMatch(url);
   if (match == null) return null;
-  return base64.encode(utf8.encode(match.group(1)!));
+  return categoryUidFromId(match.group(1)!);
 }

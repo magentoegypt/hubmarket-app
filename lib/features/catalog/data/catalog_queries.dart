@@ -148,9 +148,10 @@ query Products(
   /// Kept separate so the PLP and Home rails don't pay for the category lists
   /// (a bag on Hub Market sits in eleven).
   ///
-  /// `products(search:)` is answered by Algolia through the storefront's
-  /// adapter, so the ranking, `total_count` and the `category_uid` aggregation
-  /// match the website's search.
+  /// Search goes to Algolia first (`CatalogSearch`); this is the fallback.
+  /// Hub Market answers `products(search:)` from OpenSearch (the backend's
+  /// AlgoliaVendor EngineResolverPlugin), so its ranking can differ from the
+  /// website's.
   static const String searchProducts = r'''
 query SearchProducts(
   $search: String!

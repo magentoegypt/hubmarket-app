@@ -1,7 +1,7 @@
 # Product search — the Products listing plus each hit's `categories`, which the
-# type-ahead names ("in Home Furniture") and ranks its category links by. Hub
-# Market answers `products(search:)` through Algolia (the storefront's adapter),
-# so ranking, total_count and the `category_uid` aggregation match the website.
+# type-ahead names ("in Home Furniture") and ranks its category links by. The
+# fallback when Algolia can't answer: Hub Market answers `products(search:)`
+# from OpenSearch (AlgoliaVendor EngineResolverPlugin), so ranking can differ.
 # Checked 2026-09-29: `categories.include_in_menu` is an Int (0/1).
 # Codegen mirror of CatalogQueries.searchProducts.
 query SearchProducts(

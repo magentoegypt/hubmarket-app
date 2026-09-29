@@ -68,6 +68,56 @@ class SortSheet extends StatelessWidget {
   }
 }
 
+/// One choice of a [SortChoiceSheet].
+typedef SortChoice<T> = ({T value, String label});
+
+/// A sort sheet over a list the data decides — search results offer
+/// relevance plus whatever the engine can sort by (Algolia: the replicas the
+/// admin configured). Looks like [SortSheet]; pops the chosen value, or null
+/// when dismissed.
+class SortChoiceSheet<T> extends StatelessWidget {
+  const SortChoiceSheet({
+    super.key,
+    required this.choices,
+    required this.current,
+  });
+
+  final List<SortChoice<T>> choices;
+  final T current;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(20, 10, 20, 10),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                l10n.sortLabel,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
+          for (final choice in choices)
+            _SortRow(
+              label: choice.label,
+              selected: choice.value == current,
+              onTap: () => Navigator.of(context).pop(choice.value),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
 /// One sort option row: a radio indicator, the label, and either a selected
 /// check or a "Coming soon" note. Muted and non-tappable when [enabled] is false.
 class _SortRow extends StatelessWidget {

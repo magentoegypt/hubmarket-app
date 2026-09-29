@@ -149,6 +149,7 @@
   "searchOrIn": "أو في",
   "searchListSeparator": "، ",
   "searchCategoriesLabel": "الأقسام",
+  "searchPagesLabel": "الصفحات",
   "searchViewAllResults": "عرض كل النتائج ({count})",
   "searchTabProducts": "المنتجات ({count})",
   "searchTabCategories": "الأقسام ({count})",

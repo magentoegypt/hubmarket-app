@@ -10,24 +10,27 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../cms/domain/cms_links.dart';
 import '../../domain/category.dart';
 import '../../domain/product.dart';
 import '../../domain/search_facets.dart';
 import '../../domain/search_highlight.dart';
-import '../plp_controller.dart';
+import '../../domain/search_results.dart';
 import '../product_navigation.dart';
 import '../search_controller.dart';
 import '../search_providers.dart';
 import 'search_no_results.dart';
 import 'search_style.dart';
 
-/// The type-ahead while a search is being typed (Figma 09): a category scope,
-/// the top products with the typed words highlighted, the "See products in …"
-/// line, and a bar pinned above the keyboard with the result's top categories,
-/// "View all N results" and the Algolia attribution.
+/// The type-ahead while a search is being typed (Figma 09), as the website's
+/// Algolia autocomplete draws it: a category scope, the top products with
+/// Algolia's highlight of the typed words, the "See products in …" line, and
+/// a bar pinned above the keyboard with matching categories and CMS pages,
+/// "View all N results" and the "Search by algolia" attribution.
 ///
-/// The frame's "Pages" chips are left out: GraphQL has no CMS page search, so
-/// they wait for Build 2.
+/// When Algolia can't answer, the same layout shows the GraphQL fallback's
+/// products and result categories — with no pages (GraphQL has no page
+/// search) and no attribution.
 class SearchTypeAhead extends ConsumerStatefulWidget {
   const SearchTypeAhead({
     super.key,
@@ -47,14 +50,9 @@ class SearchTypeAhead extends ConsumerStatefulWidget {
   /// Opens the full results (Figma 09c).
   final VoidCallback onViewAll;
 
-  /// Product rows shown.
-  static const int hitLimit = 5;
-
-  /// Categories linked in the "See products in … or in A, B" line.
+  /// Categories linked in the "See products in … or in A, B" line — the
+  /// website's autocomplete footer names two.
   static const int linkLimit = 2;
-
-  /// Chips in the pinned Categories row.
-  static const int chipLimit = 5;
 
   @override
   ConsumerState<SearchTypeAhead> createState() => _SearchTypeAheadState();
@@ -63,7 +61,7 @@ class SearchTypeAhead extends ConsumerStatefulWidget {
 class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
   /// The last answer that finished loading. While the next keystroke's search
   /// is in flight the type-ahead keeps showing it, under a progress bar, rather
-  /// than blanking — the backend takes a few seconds a request.
+  /// than blanking.
   _Answer? _last;
 
   @override
@@ -79,22 +77,22 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
     }
 
     final request = SearchRequest(query, categoryUid: widget.scope?.uid);
-    final state = ref.watch(searchControllerProvider(request));
-    final categories = ref.watch(searchResultCategoriesProvider(request));
-
-    if (!state.isLoading && state.error == null) {
-      _last = _Answer(request, state, categories);
-    }
+    final async = ref.watch(typeAheadProvider(request));
+    final loading = async.isLoading;
+    // Both engines failed — Algolia, then the GraphQL fallback.
+    final error = !loading && async.hasError ? async.error : null;
+    final loaded = loading ? null : async.valueOrNull;
+    if (loaded != null) _last = _Answer(request, loaded);
     final previous = _last;
-    final answer = !state.isLoading
-        ? _Answer(request, state, categories)
-        : (previous != null &&
+    final answer = loaded != null
+        ? _Answer(request, loaded)
+        : (error == null &&
+                  previous != null &&
                   previous.request.categoryUid == request.categoryUid
               ? previous
               : null);
 
-    if (answer == null || (state.error != null && state.products.isEmpty)) {
-      final error = state.error;
+    if (answer == null) {
       return ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
@@ -105,28 +103,36 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
               message: error is Failure
                   ? failureMessage(context, error)
                   : l10n.errorGeneric,
-              onRetry: () => ref
-                  .read(searchControllerProvider(request).notifier)
-                  .refresh(),
+              onRetry: () => ref.invalidate(typeAheadProvider(request)),
             ),
         ],
       );
     }
 
-    if (answer.state.products.isEmpty) {
+    final result = answer.result;
+    final pinned = _PinnedActions(
+      total: result.totalCount,
+      categories: result.categoryChips,
+      pages: result.pages,
+      attribution: result.engine == SearchEngine.algolia,
+      onViewAll: result.products.isEmpty ? null : widget.onViewAll,
+    );
+
+    if (result.products.isEmpty) {
       return Column(
         children: [
-          if (state.isLoading) const _Pending() else const SizedBox(height: 6),
+          if (loading) const _Pending() else const SizedBox(height: 6),
           if (widget.scope != null) scopeChip,
           Expanded(child: SearchNoResults(query: answer.request.query)),
+          // Matching categories and pages still help when no product does.
+          if (!result.isEmpty) pinned,
         ],
       );
     }
 
-    final total = answer.state.totalCount;
     return Column(
       children: [
-        if (state.isLoading) const _Pending() else const SizedBox(height: 6),
+        if (loading) const _Pending() else const SizedBox(height: 6),
         Expanded(
           child: ListView(
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -134,14 +140,11 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
               scopeChip,
               _GroupLabel(text: l10n.searchProductsHeading.toUpperCase()),
               const SizedBox(height: 4),
-              for (final product in answer.state.products.take(
-                SearchTypeAhead.hitLimit,
-              ))
-                _HitRow(product: product, query: answer.request.query),
+              for (final hit in result.products) _HitRow(hit: hit),
               _SeeProductsIn(
                 allLabel: widget.scope?.name ?? l10n.searchAllDepartments,
-                total: total,
-                categories: answer.categories
+                total: result.totalCount,
+                categories: result.resultCategories
                     .take(SearchTypeAhead.linkLimit)
                     .toList(growable: false),
                 onAll: widget.onViewAll,
@@ -149,13 +152,7 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
             ],
           ),
         ),
-        _PinnedActions(
-          total: total,
-          categories: answer.categories
-              .take(SearchTypeAhead.chipLimit)
-              .toList(growable: false),
-          onViewAll: widget.onViewAll,
-        ),
+        pinned,
       ],
     );
   }
@@ -163,16 +160,21 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
 
 /// One finished search, as the type-ahead draws it.
 class _Answer {
-  const _Answer(this.request, this.state, this.categories);
+  const _Answer(this.request, this.result);
 
   final SearchRequest request;
-  final PlpState state;
-  final List<SearchCategory> categories;
+  final TypeAheadResult result;
 }
 
 /// Opens a category's listing — what every category link in search does.
 void openSearchCategory(BuildContext context, String uid, String name) =>
     context.push(AppRoutes.category(uid), extra: name);
+
+/// Opens a CMS page suggestion in the native content page, resolved by its
+/// storefront path (`route(url:)`).
+void openSearchPage(BuildContext context, SearchPageHit page) => context.push(
+  AppRoutes.cmsPageByUrl(storePathOf(page.url), title: page.title),
+);
 
 /// A 2 pt progress bar in the 6 pt gap under the field while a search loads.
 class _Pending extends StatelessWidget {
@@ -270,19 +272,19 @@ class _GroupLabel extends StatelessWidget {
   }
 }
 
-/// One product hit: 48 pt thumbnail · name with the typed words in bold
+/// One product hit: 48 pt thumbnail · name with the matched words in bold
 /// orange over "in Home Furniture" · price, with the regular price struck
 /// through when discounted. Opens the PDP.
 class _HitRow extends StatelessWidget {
-  const _HitRow({required this.product, required this.query});
+  const _HitRow({required this.hit});
 
-  final Product product;
-  final String query;
+  final SearchProductHit hit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final category = product.primaryCategory;
+    final product = hit.product;
+    final category = hit.categoryName;
     return InkWell(
       onTap: () => openProduct(context, product),
       child: Padding(
@@ -302,11 +304,14 @@ class _HitRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SearchHighlightedText(text: product.name, query: query),
+                  SearchHighlightedText(
+                    text: product.name,
+                    matches: hit.nameMatches,
+                  ),
                   if (category != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      l10n.searchInCategory(category.name),
+                      l10n.searchInCategory(category),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -328,16 +333,20 @@ class _HitRow extends StatelessWidget {
   }
 }
 
-/// A product name with the words of [query] drawn bold in the accent colour.
+/// A product name with the search's [matches] drawn bold in the accent
+/// colour — Algolia's `_highlightResult`, or the literal matches of the
+/// GraphQL fallback.
 class SearchHighlightedText extends StatelessWidget {
   const SearchHighlightedText({
     super.key,
     required this.text,
-    required this.query,
+    required this.matches,
   });
 
   final String text;
-  final String query;
+
+  /// Sorted, non-overlapping slices of [text].
+  final List<TextSlice> matches;
 
   /// The style of the matched words.
   static const TextStyle matchStyle = TextStyle(
@@ -349,7 +358,8 @@ class SearchHighlightedText extends StatelessWidget {
   Widget build(BuildContext context) {
     final spans = <TextSpan>[];
     var at = 0;
-    for (final slice in searchMatchSlices(text, query)) {
+    for (final slice in matches) {
+      if (slice.start < at || slice.end > text.length) continue;
       if (slice.start > at) {
         spans.add(TextSpan(text: text.substring(at, slice.start)));
       }
@@ -509,22 +519,56 @@ class _SeeProductsInState extends State<_SeeProductsIn> {
   }
 }
 
-/// The bar pinned above the keyboard: top categories of the result as chips,
-/// "View all N results", and "Search by algolia".
+/// The bar pinned above the keyboard: the Categories and Pages chips, "View
+/// all N results", and "Search by algolia" when Algolia answered.
 class _PinnedActions extends StatelessWidget {
   const _PinnedActions({
     required this.total,
     required this.categories,
+    required this.pages,
+    required this.attribution,
     required this.onViewAll,
   });
 
   final int total;
   final List<SearchCategory> categories;
-  final VoidCallback onViewAll;
+  final List<SearchPageHit> pages;
+
+  /// Shows "Search by algolia" — only true when Algolia answered.
+  final bool attribution;
+
+  /// Opens the full results; null hides the button (no product matched).
+  final VoidCallback? onViewAll;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final viewAll = onViewAll;
+    final rows = <Widget>[
+      if (categories.isNotEmpty)
+        _ChipRow(
+          label: l10n.searchCategoriesLabel,
+          chips: [
+            for (final category in categories)
+              SearchOutlinedChip(
+                label: category.name,
+                onTap: () =>
+                    openSearchCategory(context, category.uid, category.name),
+              ),
+          ],
+        ),
+      if (pages.isNotEmpty)
+        _ChipRow(
+          label: l10n.searchPagesLabel,
+          chips: [
+            for (final page in pages)
+              SearchOutlinedChip(
+                label: page.title,
+                onTap: () => openSearchPage(context, page),
+              ),
+          ],
+        ),
+    ];
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -536,64 +580,70 @@ class _PinnedActions extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (categories.isNotEmpty) ...[
-              Row(
-                children: [
-                  SizedBox(
-                    width: 68,
-                    child: Text(
-                      l10n.searchCategoriesLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: context.scaffoldMuted,
-                      ),
-                    ),
+            for (final row in rows) ...[row, const SizedBox(height: 10)],
+            if (viewAll != null) ...[
+              // The theme's navy 52 pt button; styled on the Text, as a
+              // ButtonStyle textStyle would drop the theme font.
+              FilledButton(
+                onPressed: viewAll,
+                child: Text(
+                  l10n.searchViewAllResults(total),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (var i = 0; i < categories.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 8),
-                            SearchOutlinedChip(
-                              label: categories[i].name,
-                              onTap: () => openSearchCategory(
-                                context,
-                                categories[i].uid,
-                                categories[i].name,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 10),
             ],
-            // The theme's navy 52 pt button; styled on the Text, as a
-            // ButtonStyle textStyle would drop the theme font.
-            FilledButton(
-              onPressed: onViewAll,
-              child: Text(
-                l10n.searchViewAllResults(total),
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const SearchByAlgolia(),
+            if (attribution) const SearchByAlgolia(),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "Categories  [chip] [chip] …" — a 68 pt label and chips scrolling
+/// sideways.
+class _ChipRow extends StatelessWidget {
+  const _ChipRow({required this.label, required this.chips});
+
+  final String label;
+  final List<Widget> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 68,
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: context.scaffoldMuted,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var i = 0; i < chips.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  chips[i],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
