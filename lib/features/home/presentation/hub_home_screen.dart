@@ -6,7 +6,9 @@ import '../../../app/routes.dart';
 import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../core/error/failure.dart';
 import '../../../core/widgets/brand_logo.dart';
+import '../../../core/widgets/failure_message.dart';
 import '../../../core/widgets/network_image.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../../../l10n/l10n.dart';
@@ -36,38 +38,84 @@ const double _kRailHeight = 292;
 class HubHomeScreen extends ConsumerWidget {
   const HubHomeScreen({super.key});
 
+  Future<void> _reload(WidgetRef ref) async {
+    ref
+      ..invalidate(homeCmsBlocksProvider)
+      ..invalidate(categoryTreeProvider)
+      ..invalidate(homeCategoryRailProvider);
+    try {
+      await ref.read(homeCategoriesProvider.future);
+    } catch (_) {
+      // A failed feed collapses its own section; nothing to surface here.
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories =
-        ref.watch(homeCategoriesProvider).valueOrNull ?? const <Category>[];
+    final categoriesAsync = ref.watch(homeCategoriesProvider);
+    final categories = categoriesAsync.valueOrNull ?? const <Category>[];
+    // Without the category tree Home has nothing to show but the CMS strip, so
+    // a failed load (the backend sheds load with 503s) gets a retry instead of
+    // a blank page. While a retry runs, the skeletons show again.
+    final unavailable = categoriesAsync.hasError &&
+        !categoriesAsync.hasValue &&
+        !categoriesAsync.isLoading;
     return HubScaffold(
       currentTab: AppTab.home,
       showSearch: false,
       appBar: const _HomeHeader(),
-      body: RefreshIndicator(
-        color: AppColors.brandPrimary,
-        onRefresh: () async {
-          ref
-            ..invalidate(homeCmsBlocksProvider)
-            ..invalidate(categoryTreeProvider)
-            ..invalidate(homeCategoryRailProvider);
-          try {
-            await ref.read(homeCategoriesProvider.future);
-          } catch (_) {
-            // A failed feed collapses its own section; nothing to surface here.
-          }
-        },
-        // Each rail is its own list child, so its product query only starts
-        // when it scrolls near the viewport instead of all six at launch.
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 28),
+      body: unavailable
+          ? _HomeUnavailable(
+              error: categoriesAsync.error!,
+              onRetry: () => _reload(ref),
+            )
+          : RefreshIndicator(
+              color: AppColors.brandPrimary,
+              onRefresh: () => _reload(ref),
+              // Each rail is its own list child, so its product query only
+              // starts when it scrolls near the viewport instead of all six
+              // at launch.
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 28),
+                children: [
+                  const _PromiseStrip(),
+                  const _ShopByCategory(),
+                  for (final c in categories.take(kHomeRailCount))
+                    _CategoryRail(key: ValueKey(c.uid), category: c),
+                  const _PromoBanners(),
+                  const _TrustRow(),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _HomeUnavailable extends StatelessWidget {
+  const _HomeUnavailable({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const _PromiseStrip(),
-            const _ShopByCategory(),
-            for (final c in categories.take(kHomeRailCount))
-              _CategoryRail(key: ValueKey(c.uid), category: c),
-            const _PromoBanners(),
-            const _TrustRow(),
+            const Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.inkMuted),
+            const SizedBox(height: 12),
+            Text(
+              error is Failure
+                  ? failureMessage(context, error as Failure)
+                  : l10n.errorGeneric,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: Text(l10n.actionRetry)),
           ],
         ),
       ),

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/core/error/failure.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
@@ -78,7 +79,7 @@ Future<void> _loadFonts() async {
   }
 }
 
-Widget _harness(String locale, GlobalKey boundary) {
+Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false}) {
   final router = GoRouter(
     initialLocation: '/home',
     routes: [
@@ -96,7 +97,11 @@ Widget _harness(String locale, GlobalKey boundary) {
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       homeCmsBlocksProvider.overrideWith((ref) async => _cms),
-      homeCategoriesProvider.overrideWith((ref) async => _categories),
+      homeCategoriesProvider.overrideWith(
+        (ref) async => storeDown
+            ? throw const Failure(FailureKind.service, detail: 'HTTP 503')
+            : _categories,
+      ),
       categoryThumbnailsProvider.overrideWith((ref, key) async => const <String, String>{}),
       homeCategoryRailProvider.overrideWith((ref, uid) async => _rail),
     ],
@@ -165,5 +170,19 @@ void main() {
       TextDirection.rtl,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('A failed catalogue load offers Retry instead of a blank Home', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_harness('en', GlobalKey(), storeDown: true));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('The store is temporarily unavailable. Please try again shortly.'),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+    expect(find.text('Shop by category'), findsNothing);
   });
 }
