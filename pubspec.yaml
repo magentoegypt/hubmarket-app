@@ -33,8 +33,7 @@ dependencies:
   hive_ce: ^2.0.0
   hive_ce_flutter: ^2.0.0
 
-  # Networking (non-GraphQL) + images
-  dio: ^5.4.0
+  # Images
   cached_network_image: ^3.3.0
   # Direct (not just transitive via cached_network_image): HubImage installs a
   # dedicated CacheManager — see lib/core/util/image_cache_config.dart.
@@ -48,7 +47,6 @@ dependencies:
   share_plus: ^12.0.2
   cupertino_http: ^3.0.2
   http: ^1.6.0
-  image_picker: ^1.2.3
   webview_flutter: ^4.14.1
   # Tabby BNPL checkout (official package, publisher tabby.ai). Renders Tabby's
   # hosted session in an embedded WebView, so Tabby needs no native module —
