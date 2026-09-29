@@ -307,6 +307,17 @@
   "authResetError": "Couldn't reset your password. Check the code and try again.",
   "fieldResetCode": "Reset code",
   "authSignInError": "Couldn't sign you in. Please check your details.",
+  "authErrorWrongCredentials": "Email or password is incorrect",
+  "authErrorWrongCredentialsHint": "Repeated failures lock sign-in for 10 minutes.",
+  "@authErrorWrongCredentialsHint": {
+    "description": "Under the wrong-password banner. Magento locks an account for 10 minutes after 10 failures (customer/password lockout defaults); it does not report the attempts left."
+  },
+  "authErrorNoAccount": "No account uses this mobile number.",
+  "authErrorMobileInUse": "Another account already uses this mobile number.",
+  "authErrorEmailInUse": "An account with this email already exists.",
+  "authErrorInvalidCode": "That code isn’t right. Check it and try again.",
+  "authErrorExpiredCode": "That code has expired. Request a new one.",
+  "authErrorTooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
   "authMethodEmail": "Email",
   "authMethodPhone": "Phone Number",
   "authGetOtp": "Get OTP",
@@ -354,8 +365,8 @@
     }
   },
   "validationRequired": "Required",
-  "validationEmail": "Enter a valid email",
-  "validationPassword": "Use at least 8 characters",
+  "validationEmail": "Enter a valid email address",
+  "validationPassword": "Password must be at least 8 characters",
   "accountGuestTitle": "Your Hub Market account",
   "accountGuestBody": "Sign in to track orders, save addresses and check out faster.",
   "accountSignOut": "Sign Out",
