@@ -19,6 +19,7 @@ class BackendCapabilities {
     this.guestCheckoutOtp = false,
     this.gatewayPaymentSessions = false,
     this.tabbyPromo = false,
+    this.pushDeviceTokens = false,
   });
 
   /// Passwordless sign-in with a WhatsApp code.
@@ -51,6 +52,13 @@ class BackendCapabilities {
   /// Tabby eligibility + "Pay in 4" promo metadata (`tabbyConfig`) for the
   /// product page and cart. Off hides the promo.
   final bool tabbyPromo;
+
+  /// Binding this device's FCM token to the customer, for pushes addressed to
+  /// one person (order updates) rather than a topic. Needs a
+  /// register/remove-device endpoint; Hub Market has none yet, so the app
+  /// neither fetches the token for it nor calls one. Topic pushes (the
+  /// promotions opt-in) don't depend on this.
+  final bool pushDeviceTokens;
 
   /// What the Hub Market backend supports today.
   static const BackendCapabilities hubMarket = BackendCapabilities(

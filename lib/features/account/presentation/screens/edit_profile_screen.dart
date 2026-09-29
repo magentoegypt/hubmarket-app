@@ -1,17 +1,12 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/network_image.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/store/store_controller.dart';
-import '../../../../core/util/media.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
@@ -37,7 +32,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _savingProfile = false;
   bool _savingPassword = false;
   bool _showPassword = false;
-  bool _uploadingAvatar = false;
 
   @override
   void initState() {
@@ -102,55 +96,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  /// Pick an image from the gallery, base64-encode it, upload, and refetch the
-  /// customer so the new `avatar_url` shows. Cancelling the picker is a no-op.
-  Future<void> _pickAndUploadAvatar() async {
-    final l10n = AppLocalizations.of(context);
-    final XFile? picked;
-    try {
-      // Downscale + recompress on-device before upload. The avatar renders at
-      // ≤86px, so 512² is ample — and the smaller JPEG keeps the base64 body
-      // well under the edge (CloudFront/WAF) POST limits that were intermittently
-      // rejecting large uploads with "Something went wrong" (QA). This also
-      // normalises iOS HEIC/large originals to a modest JPEG.
-      picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 82,
-      );
-    } catch (_) {
-      _snack(l10n.errorGeneric);
-      return;
-    }
-    if (picked == null) return; // cancelled
-    setState(() => _uploadingAvatar = true);
-    try {
-      final base64File = base64Encode(await picked.readAsBytes());
-      await ref.read(accountRepositoryProvider).uploadAvatar(base64File);
-      await ref.read(authControllerProvider.notifier).refreshCustomer();
-      _snack(l10n.profilePhotoUpdated);
-    } catch (_) {
-      _snack(l10n.errorGeneric);
-    } finally {
-      if (mounted) setState(() => _uploadingAvatar = false);
-    }
-  }
-
-  Future<void> _removeAvatar() async {
-    final l10n = AppLocalizations.of(context);
-    setState(() => _uploadingAvatar = true);
-    try {
-      await ref.read(accountRepositoryProvider).deleteAvatar();
-      await ref.read(authControllerProvider.notifier).refreshCustomer();
-      _snack(l10n.profilePhotoRemoved);
-    } catch (_) {
-      _snack(l10n.errorGeneric);
-    } finally {
-      if (mounted) setState(() => _uploadingAvatar = false);
-    }
-  }
-
   void _snack(String message) {
     if (mounted) {
       ScaffoldMessenger.of(
@@ -188,42 +133,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         padding: EdgeInsets.zero,
         children: [
           const SizedBox(height: 24),
-          // Avatar with camera badge + Change / Remove photo (Figma).
+          // Initials avatar. No photo upload: the backend has no
+          // customer-photo endpoint (the app's first client had a custom
+          // `uploadCustomerAvatar` module that Hub Market doesn't).
           Center(
-            child: Column(
-              children: [
-                _AvatarBadge(
-                  initials: _initials(customer?.fullName ?? ''),
-                  avatarUrl: httpsMediaUrl(customer?.avatarUrl),
-                  uploading: _uploadingAvatar,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton(
-                      onPressed: _uploadingAvatar ? null : _pickAndUploadAvatar,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.brandPrimary,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      child: Text(l10n.profileChangePhoto),
-                    ),
-                    if ((customer?.avatarUrl ?? '').isNotEmpty)
-                      TextButton(
-                        onPressed: _uploadingAvatar ? null : _removeAvatar,
-                        style: TextButton.styleFrom(
-                          foregroundColor: context.scaffoldMuted,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        child: Text(l10n.profileRemovePhoto),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+            child: _AvatarBadge(initials: _initials(customer?.fullName ?? '')),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           _SectionHeader(l10n.profilePersonalInfo),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
@@ -373,79 +289,29 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 }
 
-/// Circular initials avatar with a burgundy ring and a camera badge (Figma).
+/// Circular initials avatar with a burgundy ring (Figma).
 class _AvatarBadge extends StatelessWidget {
-  const _AvatarBadge({
-    required this.initials,
-    this.avatarUrl,
-    this.uploading = false,
-  });
+  const _AvatarBadge({required this.initials});
   final String initials;
-  final String? avatarUrl;
-  final bool uploading;
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = avatarUrl != null && avatarUrl!.isNotEmpty;
-    final initialsText = Text(
-      initials,
-      style: const TextStyle(
-        color: AppColors.brandPrimary,
-        fontWeight: FontWeight.w700,
-        fontSize: 26,
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceTint,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.brandPrimary, width: 2),
       ),
-    );
-    return SizedBox(
-      width: 86,
-      height: 86,
-      child: Stack(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceTint,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.brandPrimary, width: 2),
-            ),
-            alignment: Alignment.center,
-            child: uploading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : hasPhoto
-                ? HubImage(
-                    url: avatarUrl,
-                    width: 80,
-                    height: 80,
-                    placeholder: (_) =>
-                        const ColoredBox(color: AppColors.surfaceTint),
-                    error: (_) => initialsText,
-                  )
-                : initialsText,
-          ),
-          PositionedDirectional(
-            bottom: 0,
-            end: 0,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: AppColors.brandPrimary,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Icon(
-                Icons.photo_camera_outlined,
-                size: 14,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: AppColors.brandPrimary,
+          fontWeight: FontWeight.w700,
+          fontSize: 26,
+        ),
       ),
     );
   }

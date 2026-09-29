@@ -26,8 +26,15 @@ class NotificationMessage {
 }
 
 /// App-side push plumbing. Local notifications work standalone; FCM is enabled
-/// only when a Firebase config (google-services.json / GoogleService-Info.plist)
-/// is present, otherwise it degrades to a no-op so the app still runs.
+/// only when a Firebase config is bundled — `android/app/google-services.json`
+/// (the Gradle build applies the google-services plugin only when that file
+/// exists) and `ios/Runner/GoogleService-Info.plist` in the Runner target.
+/// Without one, every FCM call degrades to a no-op and the app runs normally.
+///
+/// Hub Market ships none yet: the previous client's Firebase project was
+/// deliberately not carried over, and this app must never register devices
+/// with it. Adding Hub Market's own config files turns FCM on with no code
+/// change.
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -133,6 +140,13 @@ class NotificationService {
     importance: Importance.high,
   );
 
+  /// Sets up local notifications (silently) and, when a Firebase config is
+  /// bundled, FCM — and only then asks for notification permission.
+  ///
+  /// Local notifications exist here to show foreground pushes, so without FCM
+  /// there is nothing to ask permission for: no "Allow notifications?" dialog
+  /// over the splash of a build that cannot receive a push, and
+  /// `FirebaseMessaging` is never touched.
   Future<void> init() async {
     await _initLocal();
     await _initFirebase();
@@ -143,64 +157,55 @@ class NotificationService {
       // White status-bar silhouette (res/drawable/ic_stat_notify) — the colour
       // launcher icon would render as a white square in the status bar.
       android: AndroidInitializationSettings('ic_stat_notify'),
-      iOS: DarwinInitializationSettings(),
+      // The Darwin defaults request permission on initialize — i.e. at launch.
+      // Permission is requested with FCM instead (see _initFirebase).
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
     );
     await _local.initialize(
       settings: settings,
       onDidReceiveNotificationResponse: _onLocalTap,
     );
-    final android = _local
+    await _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >();
-    await android?.createNotificationChannel(_channel);
-    await android?.requestNotificationsPermission();
+        >()
+        ?.createNotificationChannel(_channel);
   }
 
-  /// iOS Firebase config — mirrors `ios/Runner/GoogleService-Info.plist`, which
-  /// is NOT in the Runner target's Copy Bundle Resources, so the plist-based
-  /// auto-init throws and FCM never comes up (token stays null → the device
-  /// token silently fails to register, incl. after login). Initialising from
-  /// explicit options fixes that without depending on the Xcode target. Firebase
-  /// client keys aren't secret — they identify the project; access is gated by
-  /// Firebase rules + the APNs key. (Android keeps the native
-  /// google-services.json path.)
-  static const FirebaseOptions _iosFirebaseOptions = FirebaseOptions(
-    apiKey: 'AIzaSyAxJd7zE7oJUQzv9M6h4SqJHGQ3N1KheuU',
-    appId: '1:430391293935:ios:9e32756a368ba456e9681a',
-    messagingSenderId: '430391293935',
-    projectId: 'hubmarket',
-    storageBucket: 'hubmarket.firebasestorage.app',
-    iosBundleId: 'com.hubmarket.app',
-  );
-
+  /// Initialises Firebase from the bundled platform config only — never from
+  /// options compiled into the app, so there is no path by which a build could
+  /// talk to another client's Firebase project. With no config bundled (the
+  /// state of this app today) `initializeApp` throws, FCM stays off, and
+  /// nothing else depends on it.
   Future<void> _initFirebase() async {
     try {
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        await Firebase.initializeApp(options: _iosFirebaseOptions);
-      } else {
-        await Firebase.initializeApp();
-      }
+      await Firebase.initializeApp();
       _fcmAvailable = true;
-    } catch (error, stack) {
-      // No Firebase config bundled — FCM stays disabled (see docs/decisions).
+    } catch (error) {
+      // No Firebase config bundled — FCM stays disabled.
       _fcmAvailable = false;
       _initError = error.toString();
       debugPrint('FCM disabled (Firebase.initializeApp failed): $error');
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        // On iOS a real config can still fail init if GoogleService-Info.plist
+        // With a real config, iOS init still fails if GoogleService-Info.plist
         // isn't in the Runner target's Copy Bundle Resources, or the running
         // flavor's bundle id doesn't match the plist's BUNDLE_ID.
         debugPrint(
-          'iOS Firebase init failed — verify GoogleService-Info.plist is in '
-          'the Runner target and its BUNDLE_ID matches the running flavor.\n'
-          '$stack',
+          'iOS: add GoogleService-Info.plist to the Runner target (matching '
+          'the flavor bundle id) to enable FCM.',
         );
       }
       return;
     }
     try {
       FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+      // The one permission prompt: iOS alert/badge/sound, and POST_NOTIFICATIONS
+      // on Android 13+ (which also covers the local notifications that show
+      // foreground pushes). Only reached with a working FCM setup.
       await FirebaseMessaging.instance.requestPermission();
       FirebaseMessaging.onMessage.listen(_showRemote);
       // Tapped while backgrounded → navigate (and record in the inbox). Cold-

@@ -173,18 +173,6 @@ class AccountRepository {
     }
   }
 
-  /// Uploads/replaces the customer avatar. [base64File] is the raw base64 of a
-  /// jpg/png/webp (no data: prefix). Caller refetches the customer afterwards to
-  /// pick up the new `avatar_url`.
-  Future<void> uploadAvatar(String base64File) => _run(
-    AccountQueries.uploadAvatar,
-    {'file': base64File},
-    mutation: true,
-  );
-
-  Future<void> deleteAvatar() =>
-      _run(AccountQueries.deleteAvatar, const {}, mutation: true);
-
   /// Discovers the `address_label` select options (id + store-scoped label) so
   /// the "Save as" chips map to option ids without hardcoding. Empty on error.
   Future<List<({String value, String label})>> fetchAddressLabelOptions() async {

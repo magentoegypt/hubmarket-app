@@ -194,20 +194,6 @@ mutation SaveMobile($input: MobileCustomerInput!) {
 }
 ''';
 
-  /// Uploads/replaces the signed-in customer's avatar (base64 jpg/png/webp).
-  /// MagentoEgypt_PaymentGraphQl; requires the customer bearer token.
-  static const String uploadAvatar = r'''
-mutation UploadAvatar($file: String!) {
-  uploadCustomerAvatar(input: { base64_encoded_file: $file }) { url }
-}
-''';
-
-  static const String deleteAvatar = r'''
-mutation DeleteAvatar {
-  deleteCustomerAvatar { url }
-}
-''';
-
   /// Discovers the `address_label` select options (Home/Office/Other → their
   /// option ids) so the "Save as" chips map to ids without hardcoding. Labels
   /// are store-scoped.
