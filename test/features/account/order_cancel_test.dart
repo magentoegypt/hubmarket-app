@@ -99,7 +99,8 @@ Future<void> _pump(
         accountRepositoryProvider.overrideWithValue(
           account ?? FakeAccountRepository(),
         ),
-        // Build 1: no Hub Market App (no store-credit lookup).
+        // Build 1: no Hub Market App, so no store-credit lookup and no Return
+        // items (see the returns tests).
         hubAppOverride(const HubAppState.unavailable()),
       ],
       child: MaterialApp.router(

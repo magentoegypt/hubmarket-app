@@ -25,6 +25,11 @@ abstract final class AppRoutes {
   static const String orderDetail = '/order-detail';
   static const String orderTracking = '/order-tracking';
   static const String guestTrackOrder = '/track-order';
+
+  /// Returns: My returns (Figma 23b), the return form (23) and one return
+  /// (23c, [returnDetail]).
+  static const String returns = '/returns';
+  static const String returnRequest = '/return-request';
   static const String myReviews = '/my-reviews';
   static const String addresses = '/addresses';
   static const String addressForm = '/address';
@@ -56,6 +61,14 @@ abstract final class AppRoutes {
   static String store(String code) => '/store/${Uri.encodeComponent(code)}';
   static String review(String sku) => '/review/$sku';
   static String productReviews(String urlKey) => '/reviews/$urlKey';
+
+  /// The return form opened on order [orderNumber].
+  static String returnRequestFor(String orderNumber) => Uri(
+    path: returnRequest,
+    queryParameters: {'order': orderNumber},
+  ).toString();
+
+  static String returnDetail(int id) => '$returns/$id';
 
   /// A CMS page by its identifier, e.g. `about-us`.
   static String cmsPageById(String identifier, {String? title}) =>

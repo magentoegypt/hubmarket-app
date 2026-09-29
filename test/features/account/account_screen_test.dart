@@ -70,7 +70,8 @@ Widget _harness({
       storeFeaturesProvider.overrideWith(
         (ref) async => StoreFeatures(newsletterEnabled: newsletter),
       ),
-      // Build 1: no Hub Market App (store credit's row stays out).
+      // Build 1: no Hub Market App, so no My credit row and no My returns
+      // (see the store credit and returns tests).
       hubAppOverride(const HubAppState.unavailable()),
     ],
     child: MaterialApp.router(

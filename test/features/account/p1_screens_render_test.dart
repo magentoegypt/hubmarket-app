@@ -227,7 +227,8 @@ Future<void> _render(
       storeTimezoneProvider.overrideWith((ref) async => 'Asia/Dubai'),
       appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
       pushNotificationsAvailableProvider.overrideWithValue(push),
-      // Build 1: no Hub Market App (no store-credit lookup).
+      // Build 1: no Hub Market App; the P1 frames predate store credit and
+      // returns.
       hubAppOverride(const HubAppState.unavailable()),
     ],
   );

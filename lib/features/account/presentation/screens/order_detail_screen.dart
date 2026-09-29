@@ -8,6 +8,7 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
 import '../../../store_credit/presentation/store_credit_providers.dart';
+import '../../../returns/presentation/widgets/return_items_button.dart';
 import '../../domain/order.dart';
 import '../order_actions.dart';
 import '../order_format.dart';
@@ -62,6 +63,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               label: Text(l10n.orderReorder),
             ),
           ),
+          // Return items (Figma 22), when the order has something returnable.
+          ReturnItemsButton(order: order),
           const SizedBox(height: 24),
 
           _SectionTitle(l10n.orderItemsSection),

@@ -14,6 +14,7 @@ import '../../../l10n/l10n.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../notifications/presentation/notification_settings_controller.dart';
 import '../../store_credit/presentation/store_credit_providers.dart';
+import '../../returns/presentation/returns_providers.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
 
@@ -90,6 +91,7 @@ class _Authenticated extends ConsumerWidget {
     final creditValue = creditBalance == null
         ? null
         : '\u2066${creditBalance.formatted()}\u2069';
+    final returnsAvailable = ref.watch(returnsAvailableProvider);
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -213,6 +215,16 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.accountOrders,
           onTap: () => context.push(AppRoutes.orders),
         ),
+        // My returns (Figma 20 "Returns") — only when the store takes returns
+        // in the app (HubApp and its `returns` flag).
+        if (returnsAvailable) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.replay,
+            label: l10n.returnsMyReturns,
+            onTap: () => context.push(AppRoutes.returns),
+          ),
+        ],
         const _TileDivider(),
         _AccountTile(
           icon: Icons.favorite_border,

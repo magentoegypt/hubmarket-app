@@ -15,6 +15,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../cms/domain/faq.dart';
 import '../../../cms/presentation/cms_navigation.dart';
 import '../../../cms/presentation/cms_providers.dart';
+import '../../../returns/presentation/returns_providers.dart';
 import '../help_faq.dart';
 import '../widgets/contact_form_card.dart';
 import '../widgets/faq_tile.dart';
@@ -64,7 +65,11 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
         .watch(appVersionProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
     final topics =
-        ref.watch(cmsFaqProvider).valueOrNull ?? bundledHelpFaq(l10n);
+        ref.watch(cmsFaqProvider).valueOrNull ??
+        bundledHelpFaq(
+          l10n,
+          returnsInApp: ref.watch(returnsAvailableProvider),
+        );
 
     final channels = <Widget>[
       if (contact.whatsapp != null)

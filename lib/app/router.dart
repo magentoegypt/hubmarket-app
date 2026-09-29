@@ -45,6 +45,10 @@ import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/stores/presentation/screens/store_screen.dart';
 import '../features/stores/presentation/screens/stores_screen.dart';
 import '../features/store_credit/presentation/my_credit_screen.dart';
+import '../features/returns/domain/returns.dart';
+import '../features/returns/presentation/screens/my_returns_screen.dart';
+import '../features/returns/presentation/screens/request_return_screen.dart';
+import '../features/returns/presentation/screens/return_detail_screen.dart';
 import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../features/diagnostics/presentation/health_check_screen.dart';
 import '../features/onboarding/presentation/launch_splash_screen.dart';
@@ -220,6 +224,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.guestTrackOrder,
         builder: (context, state) => const GuestTrackOrderScreen(),
+      ),
+      // Returns (Figma 23b / 23 / 23c). Each screen shows "not available"
+      // itself when the store has no returns, so a stale link lands softly.
+      GoRoute(
+        path: AppRoutes.returns,
+        builder: (context, state) => const MyReturnsScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.returns}/:id',
+        redirect: (context, state) =>
+            int.tryParse(state.pathParameters['id'] ?? '') == null
+            ? AppRoutes.returns
+            : null,
+        builder: (context, state) => ReturnDetailScreen(
+          returnId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      // Return items on an order hands its returnable lines over in `extra`;
+      // a deep link carries only `?order=`, which the form looks up.
+      GoRoute(
+        path: AppRoutes.returnRequest,
+        builder: (context, state) => RequestReturnScreen(
+          order: state.extra is ReturnableOrder
+              ? state.extra! as ReturnableOrder
+              : null,
+          orderNumber: state.uri.queryParameters['order'],
+        ),
       ),
       GoRoute(
         path: AppRoutes.myReviews,
