@@ -224,6 +224,32 @@ void main() {
     });
   });
 
+  group('rating histogram from the loaded reviews', () {
+    test('built from reviews.items, with no server histogram field', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'rating_summary': 93,
+        'review_count': 3,
+        'reviews': {
+          'items': [
+            {'nickname': 'A', 'average_rating': 100},
+            {'nickname': 'B', 'average_rating': 100},
+            {'nickname': 'C', 'average_rating': 80},
+          ],
+        },
+      });
+      expect(detail.reviews, hasLength(3));
+      expect(
+        [for (final b in detail.ratingHistogram) (b.stars, b.count, b.percent)],
+        [(5, 2, 67), (4, 1, 33), (3, 0, 0), (2, 0, 0), (1, 0, 0)],
+      );
+    });
+
+    test('no reviews => no bars', () {
+      expect(productDetailFromJson(_json()).ratingHistogram, isEmpty);
+    });
+  });
+
   group('discount badge from price_range (regular vs final)', () {
     test('a real markdown => rounded percent', () {
       final product = productFromJson(_json(regular: 250, finalPrice: 199));

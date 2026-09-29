@@ -71,8 +71,8 @@ class ProductReview {
   int get stars => (averageRating / 20).round();
 }
 
-/// One bar of the per-star rating distribution (`rating_histogram`), e.g.
-/// `stars: 5, count: 12, percent: 80`. Store-scoped, computed server-side.
+/// One bar of the per-star rating distribution, e.g.
+/// `stars: 5, count: 12, percent: 80`.
 class RatingBar {
   const RatingBar({
     required this.stars,
@@ -80,9 +80,41 @@ class RatingBar {
     required this.percent,
   });
 
+  /// 1–5.
   final int stars;
+
+  /// Reviews whose rating rounds to [stars].
   final int count;
+
+  /// Share of the rated reviews, 0–100 (rounded).
   final int percent;
+
+  /// The 5★ → 1★ distribution of [reviews], bucketed by each review's rounded
+  /// star rating ([ProductReview.stars], the same stars its card shows).
+  ///
+  /// Magento core has no histogram field, so it is derived from the reviews
+  /// the PDP loaded. Reviews without a usable rating are left out; when none
+  /// is rated the result is empty — bars are never drawn for ratings that
+  /// don't exist.
+  static List<RatingBar> histogramOf(Iterable<ProductReview> reviews) {
+    final counts = List<int>.filled(6, 0);
+    var rated = 0;
+    for (final review in reviews) {
+      final stars = review.stars;
+      if (stars < 1 || stars > 5) continue;
+      counts[stars]++;
+      rated++;
+    }
+    if (rated == 0) return const <RatingBar>[];
+    return List.unmodifiable([
+      for (var stars = 5; stars >= 1; stars--)
+        RatingBar(
+          stars: stars,
+          count: counts[stars],
+          percent: (counts[stars] * 100 / rated).round(),
+        ),
+    ]);
+  }
 }
 
 /// Review rating metadata value (e.g. "5 stars" -> value_id).
@@ -133,7 +165,6 @@ class ProductDetail {
     this.ratingSummary = 0,
     this.reviewCount = 0,
     this.reviews = const <ProductReview>[],
-    this.ratingHistogram = const <RatingBar>[],
     this.alsoLike = const <Product>[],
   });
 
@@ -164,11 +195,14 @@ class ProductDetail {
   /// 0–100 (Magento `rating_summary`).
   final int ratingSummary;
   final int reviewCount;
+  /// The first page of published reviews (the PDP query loads up to 20).
   final List<ProductReview> reviews;
 
-  /// Per-star distribution bars (5★→1★) from `rating_histogram`. Store-scoped,
-  /// computed server-side; empty when the store has no reviews.
-  final List<RatingBar> ratingHistogram;
+  /// Per-star distribution bars (5★→1★) derived from the loaded [reviews]
+  /// (see [RatingBar.histogramOf]); empty when none is rated. With more than
+  /// one page of reviews ([reviewCount] > [reviews].length) it describes the
+  /// loaded page only.
+  List<RatingBar> get ratingHistogram => RatingBar.histogramOf(reviews);
 
   /// "You may also like" — Magento's core `related_products` then
   /// `upsell_products`, de-duplicated by SKU (without the product itself) and

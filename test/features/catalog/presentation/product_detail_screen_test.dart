@@ -103,6 +103,50 @@ void main() {
     expect(find.text('No reviews yet'), findsOneWidget);
   });
 
+  testWidgets('reviews tab draws the per-star bars from the loaded reviews', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 3600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    ProductReview review(int averageRating) => ProductReview(
+      nickname: 'Hub Market Demo',
+      summary: 'Good value',
+      text: '',
+      averageRating: averageRating,
+      date: '2026-08-27 14:18:40',
+    );
+    await tester.pumpWidget(
+      _harness(
+        'en',
+        repository: _DetailRepository(
+          ProductDetail(
+            sku: kSampleDetail.sku,
+            name: kSampleDetail.name,
+            urlKey: kSampleDetail.urlKey,
+            ratingSummary: 93,
+            reviewCount: 3,
+            reviews: [review(100), review(100), review(80)],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Reviews'));
+    await tester.pumpAndSettle();
+
+    final bars = tester
+        .widgetList<LinearProgressIndicator>(
+          find.byType(LinearProgressIndicator),
+        )
+        .map((bar) => bar.value)
+        .toList();
+    // 5★ → 1★: two of three reviews are 5★, one is 4★.
+    expect(bars, [0.67, 0.33, 0.0, 0.0, 0.0]);
+    expect(find.text('3 reviews'), findsOneWidget);
+  });
+
   testWidgets('"You may also like" hides when the product links nothing', (
     tester,
   ) async {

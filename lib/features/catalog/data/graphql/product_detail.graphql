@@ -1,7 +1,9 @@
 # Single product by url_key for the PDP: gallery, description, price, reviews,
 # and (for configurable products) the swatch options + per-variant price/stock.
-# Reviews degrade to the empty state when absent (store has zero — no fake stars).
-# Configurable-swatch modeling is the remaining item to verify on live data.
+# Reviews degrade to the empty state when absent (no fake stars); the per-star
+# histogram is derived app-side from `reviews` (core Magento has no histogram
+# field). "You may also like" = core related + upsell links, merged app-side.
+# Codegen mirror of CatalogQueries.productDetail.
 query ProductDetail($urlKey: String!) {
   products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
     items {
@@ -14,11 +16,6 @@ query ProductDetail($urlKey: String!) {
       new_to_date
       rating_summary
       review_count
-      rating_histogram {
-        stars
-        count
-        percent
-      }
       related_products {
         ...LinkedProductFields
       }
@@ -39,6 +36,20 @@ query ProductDetail($urlKey: String!) {
       }
       short_description {
         html
+      }
+      custom_attributesV2(filters: { is_visible_on_front: true }) {
+        items {
+          code
+          ... on AttributeValue {
+            value
+          }
+          ... on AttributeSelectedOptions {
+            selected_options {
+              label
+              value
+            }
+          }
+        }
       }
       image {
         url

@@ -210,16 +210,6 @@ ProductDetail productDetailFromJson(
     variants: variants,
     ratingSummary: (json['rating_summary'] as int?) ?? 0,
     reviewCount: (json['review_count'] as int?) ?? 0,
-    ratingHistogram: (json['rating_histogram'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(
-          (b) => RatingBar(
-            stars: (b['stars'] as num?)?.toInt() ?? 0,
-            count: (b['count'] as num?)?.toInt() ?? 0,
-            percent: (b['percent'] as num?)?.toInt() ?? 0,
-          ),
-        )
-        .toList(growable: false),
     alsoLike: alsoLikeFromJson(json, now: now),
     reviews:
         ((json['reviews'] as Map<String, dynamic>?)?['items']

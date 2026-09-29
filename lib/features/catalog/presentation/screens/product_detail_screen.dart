@@ -1014,8 +1014,8 @@ class _ReviewsSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final average = product.ratingSummary / 20; // 0–5
-    // Server `rating_histogram` keyed by star (5★ → 1★). Bar lengths use the
-    // percent the resolver already computed.
+    // Per-star bars (5★ → 1★) derived from the loaded reviews — Magento core
+    // has no histogram field. Bar lengths use each bucket's percent.
     final byStar = <int, RatingBar>{
       for (final b in product.ratingHistogram) b.stars: b,
     };

@@ -161,11 +161,6 @@ query ProductDetail($urlKey: String!) {
       new_to_date
       rating_summary
       review_count
-      rating_histogram {
-        stars
-        count
-        percent
-      }
       related_products {
         ...LinkedProductFields
       }
