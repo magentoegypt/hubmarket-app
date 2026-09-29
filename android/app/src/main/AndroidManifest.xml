@@ -2,13 +2,11 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- No push until Hub Market's own Firebase project exists (no
-         google-services.json yet), so the app must not ask for notification
-         permission: on the HyperOS test phone an "Allow notifications?" dialog
-         opened over the splash even with every Dart-side request disabled.
-         Removing the permission (also any copy merged in from the Firebase /
-         local-notification libraries) makes every request a silent no-op.
-         Delete this element when FCM is configured; NotificationService asks
-         once FCM is up. -->
+         google-services.json yet), so the app declares no notification
+         permission and nothing can put "Allow notifications?" in front of a
+         user who can't receive one. This also strips the copies merged in
+         from the Firebase / local-notification libraries. Delete this element
+         when FCM is configured; NotificationService asks once FCM is up. -->
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS"
         tools:node="remove"/>
