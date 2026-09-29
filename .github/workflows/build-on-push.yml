@@ -154,8 +154,8 @@ jobs:
             # Package it into the standard IPA layout (Payload/Runner.app zip).
             mkdir -p build/ios/ipa/Payload
             cp -R build/ios/iphoneos/Runner.app build/ios/ipa/Payload/Runner.app
-            ( cd build/ios/ipa && zip -qry Hub Market-unsigned.ipa Payload && rm -rf Payload )
-            echo "Built unsigned IPA → build/ios/ipa/Hub Market-unsigned.ipa"
+            ( cd build/ios/ipa && zip -qry HubMarket-unsigned.ipa Payload && rm -rf Payload )
+            echo "Built unsigned IPA → build/ios/ipa/HubMarket-unsigned.ipa"
             ls -lh build/ios/ipa/*.ipa
           fi
 

@@ -19,14 +19,22 @@ class WebViewArgs {
 /// branded chrome, a progress bar, an error/retry state, and an
 /// "open in browser" escape hatch. The loaded page owns its own LTR/RTL — only
 /// the surrounding chrome follows the app's [Directionality].
-/// Last two labels of a host, so `uae-en.hub-market.magento2.click` and `www.hub-market.magento2.click` both
-/// reduce to `hub-market.magento2.click`. Deliberately naive about multi-part public suffixes
-/// (`co.uk`): it only ever guards against wandering off our own site, and is
-/// not a security boundary.
-String registrableDomain(String host) {
-  final labels = host.toLowerCase().split('.');
-  if (labels.length <= 2) return host.toLowerCase();
-  return labels.sublist(labels.length - 2).join('.');
+/// The site a page belongs to: its host, lower-cased, without a leading
+/// `www.` — so `WWW.hub-market.magento2.click` and `hub-market.magento2.click`
+/// are the same site.
+///
+/// Deliberately NOT "the last two labels": the store lives on a subdomain of a
+/// shared staging domain (`*.magento2.click` also hosts other stores), so
+/// reducing to `magento2.click` would treat every one of them as ours.
+String siteHost(String host) {
+  final h = host.toLowerCase();
+  return h.startsWith('www.') ? h.substring(4) : h;
+}
+
+/// Whether [host] is [site] itself or one of its subdomains.
+bool isSameSite(String host, String site) {
+  final h = host.toLowerCase();
+  return site.isNotEmpty && (h == site || h.endsWith('.$site'));
 }
 
 /// Whether a navigation should stay inside the in-app browser.
@@ -49,7 +57,7 @@ bool staysInApp({
   if (uri == null) return false;
   // mailto:, tel: and app schemes belong to the platform, not this WebView.
   if (uri.scheme != 'http' && uri.scheme != 'https') return false;
-  return registrableDomain(uri.host) == allowedDomain;
+  return isSameSite(uri.host, allowedDomain);
 }
 
 class WebViewScreen extends StatefulWidget {
@@ -72,9 +80,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
   /// when a genuinely different URL starts loading.
   String? _erroredUrl;
 
-  /// Registrable domain of the page we were asked to open (e.g. `hub-market.magento2.click`).
-  /// Navigation is confined to this domain — see [_shouldNavigate].
-  late final String _allowedDomain = registrableDomain(
+  /// Site of the page we were asked to open (e.g. `hub-market.magento2.click`).
+  /// Navigation is confined to it and its subdomains — see [_shouldNavigate].
+  late final String _allowedDomain = siteHost(
     Uri.tryParse(widget.args.url)?.host ?? '',
   );
 

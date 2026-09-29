@@ -14,23 +14,28 @@ void main() {
     allowedDomain: allowed,
   );
 
-  group('registrableDomain', () {
-    test('reduces a host to its last two labels', () {
-      expect(registrableDomain('www.hub-market.magento2.click'), 'hub-market.magento2.click');
-      expect(registrableDomain('uae-en.hub-market.magento2.click'), 'hub-market.magento2.click');
-      expect(registrableDomain('hub-market.magento2.click'), 'hub-market.magento2.click');
+  group('siteHost', () {
+    test('drops a leading www. and lower-cases', () {
+      expect(siteHost('WWW.Hub-Market.Magento2.Click'), 'hub-market.magento2.click');
+      expect(siteHost('hub-market.magento2.click'), 'hub-market.magento2.click');
     });
 
-    test('is case-insensitive', () {
-      expect(registrableDomain('WWW.Hub Market.COM'), 'hub-market.magento2.click');
+    test('keeps the store subdomain — never reduces to the shared domain', () {
+      expect(siteHost('hub-market.magento2.click'), isNot('magento2.click'));
     });
   });
 
   group('staysInApp', () {
     test('keeps the store and its subdomains in the app', () {
-      expect(stays('https://hub-market.magento2.click/uae-en/about-us'), isTrue);
-      expect(stays('https://www.hub-market.magento2.click/uae-ar/faq'), isTrue);
+      expect(stays('https://hub-market.magento2.click/en/about-us'), isTrue);
+      expect(stays('https://www.hub-market.magento2.click/ar/customer-service/'), isTrue);
       expect(stays('http://hub-market.magento2.click/terms'), isTrue);
+    });
+
+    // magento2.click is a shared staging domain: other stores live next door.
+    test('treats other stores on the shared domain as foreign', () {
+      expect(stays('https://multi.magento2.click/'), isFalse);
+      expect(stays('https://magento2.click/'), isFalse);
     });
 
     test('sends other sites to the platform browser', () {
