@@ -256,6 +256,15 @@
       }
     }
   },
+  "searchTabVendors": "Vendors ({count})",
+  "@searchTabVendors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchVendorsLabel": "Vendors",
   "searchTabCategories": "Categories ({count})",
   "@searchTabCategories": {
     "placeholders": {
@@ -307,6 +316,15 @@
       }
     }
   },
+  "searchNoVendorMatches": "No stores match “{query}”.",
+  "@searchNoVendorMatches": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchVendorView": "View",
   "searchNoResultsTitle": "No results for “{query}”",
   "@searchNoResultsTitle": {
     "placeholders": {
@@ -316,6 +334,8 @@
     }
   },
   "searchNoResultsBody": "Check the spelling or use fewer words.",
+  "searchNoResultsBodyStores": "Check the spelling or use fewer words. You can also browse our stores.",
+  "searchBrowseStores": "Browse stores",
   "searchPopularNow": "Popular right now",
   "comingSoon": "Coming soon",
   "comingSoonBody": "This section arrives in a later phase.",
