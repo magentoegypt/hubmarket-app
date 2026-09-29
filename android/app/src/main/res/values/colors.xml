@@ -2,6 +2,8 @@
 <resources>
     <!-- Adaptive-icon background: the Hub Market logo navy. -->
     <color name="ic_launcher_background">#02224D</color>
+    <!-- Native launch screen (Figma 01a): the same logo navy behind the mark. -->
+    <color name="launch_background">#02224D</color>
     <!-- FCM/notification accent (Hub Market orange). -->
     <color name="notification_color">#F26522</color>
 </resources>

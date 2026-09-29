@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ launch (Figma 01a): the system SplashScreen shows the logo
+         navy with the app mark. splash_icon is a 288 dp canvas (an icon with no
+         icon background) whose mark stays inside the 192 dp circle the system
+         keeps. windowBackground covers the moment after the splash, until
+         Flutter's first frame. NormalTheme comes from values/styles.xml. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>
