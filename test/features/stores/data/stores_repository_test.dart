@@ -43,33 +43,38 @@ void main() {
       expect(page.items.last.isRated, isFalse);
     });
 
-    test('declares no Hm* variable: the sort and filter shape are inline', () async {
-      final backend = FakeStoresBackend((_) => storesData(const []));
-      await StoresRepository(backend.client).fetchStores(
-        query: const StoreListQuery(
-          categoryId: 74,
-          name: '  mia ',
-          sort: StoreSort.topRated,
-        ),
-        pageSize: 20,
-        currentPage: 2,
-      );
+    test(
+      'declares no Hm* variable: the sort and filter shape are inline',
+      () async {
+        final backend = FakeStoresBackend((_) => storesData(const []));
+        await StoresRepository(backend.client).fetchStores(
+          query: const StoreListQuery(
+            categoryId: 74,
+            name: '  mia ',
+            sort: StoreSort.topRated,
+          ),
+          pageSize: 20,
+          currentPage: 2,
+        );
 
-      final request = backend.of('HmStores').single;
-      expect(request.document, contains('sort: TOP_RATED'));
-      expect(
-        request.document,
-        contains('filter: {featured: \$featured, category_id: \$categoryId, name: \$name}'),
-      );
-      expect(request.variableTypes, isNot(contains(startsWith('Hm'))));
-      expect(request.variables, {
-        'pageSize': 20,
-        'currentPage': 2,
-        'featured': null,
-        'categoryId': 74,
-        'name': 'mia',
-      });
-    });
+        final request = backend.of('HmStores').single;
+        expect(request.document, contains('sort: TOP_RATED'));
+        expect(
+          request.document,
+          contains(
+            'filter: {featured: \$featured, category_id: \$categoryId, name: \$name}',
+          ),
+        );
+        expect(request.variableTypes, isNot(contains(startsWith('Hm'))));
+        expect(request.variables, {
+          'pageSize': 20,
+          'currentPage': 2,
+          'featured': null,
+          'categoryId': 74,
+          'name': 'mia',
+        });
+      },
+    );
 
     test('every sort goes inline, featured by default', () async {
       final backend = FakeStoresBackend((_) => storesData(const []));
@@ -78,7 +83,10 @@ void main() {
         await repository.fetchStores(query: StoreListQuery(sort: sort));
       }
       expect(
-        [for (final r in backend.requests) RegExp(r'sort: (\w+)').firstMatch(r.document)!.group(1)],
+        [
+          for (final r in backend.requests)
+            RegExp(r'sort: (\w+)').firstMatch(r.document)!.group(1),
+        ],
         ['FEATURED', 'TOP_RATED', 'NEWEST', 'NAME', 'PRODUCT_COUNT'],
       );
     });
@@ -102,7 +110,9 @@ void main() {
     });
 
     test('a server without the seller API throws HubAppMissing', () async {
-      final backend = FakeStoresBackend((_) => hubAppMissingResponse('hmStores'));
+      final backend = FakeStoresBackend(
+        (_) => hubAppMissingResponse('hmStores'),
+      );
       await expectLater(
         StoresRepository(backend.client).fetchStores(),
         throwsA(isA<HubAppMissing>()),
@@ -113,12 +123,17 @@ void main() {
   group('StoresRepository.fetchStore (hmStore)', () {
     test('reads the card, texts and policies', () async {
       final backend = FakeStoresBackend((_) => miaStoreData());
-      final profile = await StoresRepository(backend.client).fetchStore(' MIA ');
+      final profile = await StoresRepository(
+        backend.client,
+      ).fetchStore(' MIA ');
 
       expect(backend.requests.single.variables, {'code': 'MIA'});
       expect(backend.requests.single.variableTypes, ['String']);
       expect(profile!.card.name, 'MIA CO');
-      expect(profile.shortDescription, 'Modern furniture for homes and offices');
+      expect(
+        profile.shortDescription,
+        'Modern furniture for homes and offices',
+      );
       expect(profile.aboutHtml, startsWith('<p>MIA CO designs'));
       expect(profile.hasPolicies, isTrue);
       expect(profile.bannerUrl, isNull);
@@ -137,55 +152,58 @@ void main() {
   });
 
   group('StoreProductsRepository (products by vendor_id)', () {
-    test('filters on the seller with a FULL match, never eq or PARTIAL', () async {
-      final backend = FakeStoresBackend((_) => productsData(miaProducts()));
-      final page = await StoreProductsRepository(backend.client).fetchProducts(
-        vendorEntityId: 12,
-      );
+    test(
+      'filters on the seller with a FULL match, never eq or PARTIAL',
+      () async {
+        final backend = FakeStoresBackend((_) => productsData(miaProducts()));
+        final page = await StoreProductsRepository(
+          backend.client,
+        ).fetchProducts(vendorEntityId: 12);
 
-      final request = backend.of('Products').single;
-      expect(request.variables['filter'], {
-        'vendor_id': {'match': '12', 'match_type': 'FULL'},
-      });
-      expect(request.variables.containsKey('search'), isFalse);
-      expect(request.variables.containsKey('sort'), isFalse);
-      expect(page.items.map((p) => p.name), contains('Corner Sofa Bed'));
-      expect(page.items.first.typeId, 'simple');
-      // The seller filter is not offered as a facet on its own page.
-      expect(
-        page.aggregations.map((a) => a.attributeCode),
-        ['category_uid'],
-      );
-    });
+        final request = backend.of('Products').single;
+        expect(request.variables['filter'], {
+          'vendor_id': {'match': '12', 'match_type': 'FULL'},
+        });
+        expect(request.variables.containsKey('search'), isFalse);
+        expect(request.variables.containsKey('sort'), isFalse);
+        expect(page.items.map((p) => p.name), contains('Corner Sofa Bed'));
+        expect(page.items.first.typeId, 'simple');
+        // The seller filter is not offered as a facet on its own page.
+        expect(page.aggregations.map((a) => a.attributeCode), ['category_uid']);
+      },
+    );
 
-    test('the store search, attribute filters, price and sort ride along', () async {
-      final backend = FakeStoresBackend((_) => productsData(const []));
-      await StoreProductsRepository(backend.client).fetchProducts(
-        vendorEntityId: 12,
-        search: ' sofa ',
-        attributeFilters: {
-          'category_uid': {'NzU='},
-          'color': <String>{},
-        },
-        priceFrom: 10,
-        priceTo: 500,
-        sort: ProductSortField.priceDesc,
-        pageSize: 20,
-        currentPage: 3,
-      );
+    test(
+      'the store search, attribute filters, price and sort ride along',
+      () async {
+        final backend = FakeStoresBackend((_) => productsData(const []));
+        await StoreProductsRepository(backend.client).fetchProducts(
+          vendorEntityId: 12,
+          search: ' sofa ',
+          attributeFilters: {
+            'category_uid': {'NzU='},
+            'color': <String>{},
+          },
+          priceFrom: 10,
+          priceTo: 500,
+          sort: ProductSortField.priceDesc,
+          pageSize: 20,
+          currentPage: 3,
+        );
 
-      final variables = backend.requests.single.variables;
-      expect(variables['search'], 'sofa');
-      expect(variables['filter'], {
-        'vendor_id': {'match': '12', 'match_type': 'FULL'},
-        'category_uid': {
-          'in': ['NzU='],
-        },
-        'price': {'from': '10.00', 'to': '500.00'},
-      });
-      expect(variables['sort'], {'price': 'DESC'});
-      expect(variables['currentPage'], 3);
-    });
+        final variables = backend.requests.single.variables;
+        expect(variables['search'], 'sofa');
+        expect(variables['filter'], {
+          'vendor_id': {'match': '12', 'match_type': 'FULL'},
+          'category_uid': {
+            'in': ['NzU='],
+          },
+          'price': {'from': '10.00', 'to': '500.00'},
+        });
+        expect(variables['sort'], {'price': 'DESC'});
+        expect(variables['currentPage'], 3);
+      },
+    );
   });
 
   group('BestSellersRepository (hmBestSellers)', () {

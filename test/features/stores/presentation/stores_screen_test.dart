@@ -19,7 +19,9 @@ void main() {
   ) async {
     await phoneSurface(tester, height: 1400);
     final backend = FakeStoresBackend(storesAnswers());
-    await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+    await tester.pumpWidget(
+      storesHarness(location: '/stores', backend: backend),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Stores'), findsOneWidget);
@@ -48,9 +50,9 @@ void main() {
     final list = _lists(backend).single;
     expect(list.document, contains('sort: TOP_RATED'));
     expect(list.variables['pageSize'], 20);
-    final featured = backend.of('HmStores').firstWhere(
-      (r) => r.variables['featured'] == true,
-    );
+    final featured = backend
+        .of('HmStores')
+        .firstWhere((r) => r.variables['featured'] == true);
     expect(featured.variables['pageSize'], 1);
     // The banner photo comes from the featured seller's page.
     expect(backend.of('HmStore').single.variables['code'], 'MIA');
@@ -62,7 +64,9 @@ void main() {
   ) async {
     await phoneSurface(tester);
     final backend = FakeStoresBackend(storesAnswers());
-    await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+    await tester.pumpWidget(
+      storesHarness(location: '/stores', backend: backend),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Furniture'));
@@ -74,7 +78,11 @@ void main() {
       containsPair('categoryId', 74),
     );
     expect(
-      backend.of('HmStores').where((r) => r.variables['featured'] == true).last.variables['categoryId'],
+      backend
+          .of('HmStores')
+          .where((r) => r.variables['featured'] == true)
+          .last
+          .variables['categoryId'],
       74,
     );
   });
@@ -84,17 +92,14 @@ void main() {
   ) async {
     await phoneSurface(tester);
     final backend = FakeStoresBackend(storesAnswers());
-    await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+    await tester.pumpWidget(
+      storesHarness(location: '/stores', backend: backend),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Top rated'));
     await tester.pumpAndSettle();
-    for (final label in [
-      'Featured',
-      'Newest',
-      'Name: A–Z',
-      'Most products',
-    ]) {
+    for (final label in ['Featured', 'Newest', 'Name: A–Z', 'Most products']) {
       expect(find.text(label), findsOneWidget);
     }
     await tester.tap(find.text('Newest'));
@@ -109,7 +114,9 @@ void main() {
   ) async {
     await phoneSurface(tester);
     final backend = FakeStoresBackend(storesAnswers());
-    await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+    await tester.pumpWidget(
+      storesHarness(location: '/stores', backend: backend),
+    );
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'mia ');
@@ -123,7 +130,9 @@ void main() {
   testWidgets('a seller opens its store page, the banner too', (tester) async {
     await phoneSurface(tester, height: 1400);
     final backend = FakeStoresBackend(storesAnswers());
-    await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+    await tester.pumpWidget(
+      storesHarness(location: '/stores', backend: backend),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('ENARA'));
@@ -138,7 +147,9 @@ void main() {
           ? storesData(const [])
           : storesAnswers()(r),
     );
-    await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+    await tester.pumpWidget(
+      storesHarness(location: '/stores', backend: backend),
+    );
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'zzz');
@@ -193,7 +204,9 @@ void main() {
       final backend = FakeStoresBackend(
         (_) => hubAppMissingResponse('hmStores'),
       );
-      await tester.pumpWidget(storesHarness(location: '/stores', backend: backend));
+      await tester.pumpWidget(
+        storesHarness(location: '/stores', backend: backend),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Coming soon'), findsOneWidget);

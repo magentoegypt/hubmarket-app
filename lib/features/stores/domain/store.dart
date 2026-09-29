@@ -95,7 +95,8 @@ class StoreListPage {
   static StoreListPage fromJson(Object? json) {
     if (json is! Map<String, dynamic>) return empty;
     final items = <HmStoreCard>[
-      for (final item in json['items'] is List ? json['items'] as List : const [])
+      for (final item
+          in json['items'] is List ? json['items'] as List : const [])
         if (HmStoreCard.fromJson(item) case final card?) card,
     ];
     return StoreListPage(

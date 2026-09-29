@@ -69,10 +69,13 @@ class FakeStoresBackend {
       if (result is Response) return Stream.value(result);
       if (result is Exception) return Stream.error(result);
       // A late answer: the test completes it when it wants the data in.
-      if (result is Future<Object?>) return Stream.fromFuture(result.then(data));
+      if (result is Future<Object?>) {
+        return Stream.fromFuture(result.then(data));
+      }
       return Stream.value(data(result));
     }),
-    // Canned data leaves out the `__typename`s the client adds.
+    // Canned data may leave out `__typename`s; the ones a fragment needs are
+    // in the fixtures below.
     cache: GraphQLCache(partialDataPolicy: PartialDataCachePolicy.accept),
   );
 }
@@ -261,7 +264,9 @@ List<Map<String, dynamic>> miaProducts({String store = 'en'}) {
     ),
     productJson(
       sku: 'chairs125',
-      name: ar ? 'كرسي طعام بارجل ذهبية معدنية' : 'Dining Chair with Gold Metal Legs',
+      name: ar
+          ? 'كرسي طعام بارجل ذهبية معدنية'
+          : 'Dining Chair with Gold Metal Legs',
       price: 34,
       regular: 40,
     ),
@@ -290,7 +295,11 @@ Map<String, dynamic> productsData(
           'attribute_code': 'category_uid',
           'label': ar ? 'الفئة' : 'Category',
           'options': [
-            {'label': ar ? 'اثاث' : 'Furniture', 'value': kFurnitureUid, 'count': 38},
+            {
+              'label': ar ? 'اثاث' : 'Furniture',
+              'value': kFurnitureUid,
+              'count': 38,
+            },
             {
               'label': ar ? 'أثاث منزلي' : 'Home Furniture',
               'value': kHomeFurnitureUid,

@@ -77,7 +77,11 @@ List<SearchVendor> searchVendorsFrom({
   for (final card in nameMatches) {
     if (listed.add(card.code)) {
       vendors.add(
-        SearchVendor(store: card, matchCount: counts[card.code], nameMatch: true),
+        SearchVendor(
+          store: card,
+          matchCount: counts[card.code],
+          nameMatch: true,
+        ),
       );
     }
   }

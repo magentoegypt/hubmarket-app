@@ -29,7 +29,8 @@ String storeJoinedLabel(BuildContext context, DateTime joined) {
 }
 
 /// A count with Western digits and grouping ("1,240").
-String storeCount(int value) => NumberFormat.decimalPattern('en_US').format(value);
+String storeCount(int value) =>
+    NumberFormat.decimalPattern('en_US').format(value);
 
 /// Figma 13b "About": the seller's About text, the numbers (products,
 /// dispatch, rating, reviews, joining date), a summary of the policies and the
@@ -69,10 +70,7 @@ class StoreAboutTab extends ConsumerWidget {
       if (store.isRated)
         StoreStat.rating(store.rating!, l10n.storeStatAverageRating),
       if (store.reviewCount > 0)
-        StoreStat(
-          storeCount(store.reviewCount),
-          l10n.storeStatCustomerReviews,
-        ),
+        StoreStat(storeCount(store.reviewCount), l10n.storeStatCustomerReviews),
       if (store.joinedAt case final joined?)
         StoreStat(
           storeJoinedLabel(context, joined.toLocal()),

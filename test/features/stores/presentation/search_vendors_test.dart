@@ -68,11 +68,14 @@ void main() {
       expect(vendors.map((v) => v.store.code), ['loly']);
     });
 
-    test('without the facet (GraphQL fallback) only name matches are found', () {
-      final vendors = searchVendorsFrom(nameMatches: [mia]);
-      expect(vendors.single.store.code, 'MIA');
-      expect(vendors.single.matchCount, isNull);
-    });
+    test(
+      'without the facet (GraphQL fallback) only name matches are found',
+      () {
+        final vendors = searchVendorsFrom(nameMatches: [mia]);
+        expect(vendors.single.store.code, 'MIA');
+        expect(vendors.single.matchCount, isNull);
+      },
+    );
   });
 
   group('mostSpecificCategories', () {
@@ -104,13 +107,14 @@ void main() {
   group('StoreListQuery', () {
     test('equal when they ask the same, the name trimmed', () {
       expect(
-        const StoreListQuery(categoryId: 74, name: ' mia ', sort: StoreSort.name),
+        const StoreListQuery(
+          categoryId: 74,
+          name: ' mia ',
+          sort: StoreSort.name,
+        ),
         const StoreListQuery(categoryId: 74, name: 'mia', sort: StoreSort.name),
       );
-      expect(
-        const StoreListQuery(name: ''),
-        const StoreListQuery(),
-      );
+      expect(const StoreListQuery(name: ''), const StoreListQuery());
       expect(
         const StoreListQuery(sort: StoreSort.topRated),
         isNot(const StoreListQuery()),
@@ -129,7 +133,10 @@ void main() {
   group('StoreCardX', () {
     test('the logo placeholder shows the first letter', () {
       expect(mia.initial, 'M');
-      expect(_card(storeCardJson(code: 'x', id: 1, name: 'متجر لولي')).initial, 'م');
+      expect(
+        _card(storeCardJson(code: 'x', id: 1, name: 'متجر لولي')).initial,
+        'م',
+      );
     });
   });
 }

@@ -75,7 +75,13 @@ Widget _searchHarness(
         path: '/search',
         builder: (_, __) => SearchScreen(initialQuery: initialQuery),
       ),
-      for (final p in ['/home', '/categories', '/cart', '/wishlist', '/account'])
+      for (final p in [
+        '/home',
+        '/categories',
+        '/cart',
+        '/wishlist',
+        '/account',
+      ])
         GoRoute(path: p, builder: (_, __) => const Scaffold()),
     ],
   );
@@ -202,9 +208,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('S2 with Popular right now renders in $locale', (
-      tester,
-    ) async {
+    testWidgets('S2 with Popular right now renders in $locale', (tester) async {
       await withRealShadows(() async {
         _surface(tester);
         final key = GlobalKey();

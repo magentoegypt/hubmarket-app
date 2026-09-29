@@ -15,7 +15,8 @@ import '../domain/store.dart';
 /// `vendor_id` (see `StoreProductsRepository`).
 abstract final class StoresQueries {
   /// The shared card fragments the documents spread.
-  static const String _cardFragments = '${HmFragments.storeCard}\n${HmFragments.link}';
+  static const String _cardFragments =
+      '${HmFragments.storeCard}\n${HmFragments.link}';
 
   /// The list document, sorted [StoreSort.featured]; [storeList] swaps the
   /// sort in.

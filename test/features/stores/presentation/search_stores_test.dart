@@ -61,7 +61,13 @@ Widget _harness({
         path: '/category/:uid',
         builder: (_, state) => stub('PLP ${state.pathParameters['uid']}'),
       ),
-      for (final p in ['/home', '/categories', '/cart', '/wishlist', '/account'])
+      for (final p in [
+        '/home',
+        '/categories',
+        '/cart',
+        '/wishlist',
+        '/account',
+      ])
         GoRoute(path: p, builder: (_, __) => stub(p)),
     ],
   );
@@ -149,7 +155,16 @@ void main() {
       await tester.pumpWidget(
         _harness(
           algolia: FakeAlgoliaBackend(answer: sofaAnswers()),
-          stores: _stores(named: [storeCardJson(code: 'sofa_world', id: 40, name: 'Sofa World', products: 12)]),
+          stores: _stores(
+            named: [
+              storeCardJson(
+                code: 'sofa_world',
+                id: 40,
+                name: 'Sofa World',
+                products: 12,
+              ),
+            ],
+          ),
           initialQuery: 'sofa',
         ),
       );

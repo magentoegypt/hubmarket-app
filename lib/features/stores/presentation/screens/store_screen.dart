@@ -163,7 +163,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     if (products == null) return;
     final state = ref.read(storeProductsControllerProvider(_vendorId!));
     products.applyFilters(
-      {...state.selectedFilters, kCategoryAggregationCode: {category.uid}},
+      {
+        ...state.selectedFilters,
+        kCategoryAggregationCode: {category.uid},
+      },
       priceFrom: state.priceFrom,
       priceTo: state.priceTo,
     );
@@ -353,7 +356,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
           ),
           ...switch (tab) {
-            StoreTab.products => _productSlivers(context, l10n, store, products),
+            StoreTab.products => _productSlivers(
+              context,
+              l10n,
+              store,
+              products,
+            ),
             StoreTab.about => [
               SliverToBoxAdapter(
                 child: StoreAboutTab(
@@ -443,10 +451,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
-        background: _Banner(
-          profile: profile,
-          bannerHeight: _bannerHeight,
-        ),
+        background: _Banner(profile: profile, bannerHeight: _bannerHeight),
       ),
     );
   }
@@ -542,7 +547,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       return [
         SliverToBoxAdapter(
           child: EmptyState(
-            icon: filtered ? Icons.search_off_outlined : Icons.inventory_2_outlined,
+            icon: filtered
+                ? Icons.search_off_outlined
+                : Icons.inventory_2_outlined,
             title: filtered ? l10n.storeNoMatches : l10n.storeNoProducts,
           ),
         ),
@@ -966,7 +973,11 @@ class _StoreSearchField extends StatelessWidget {
                 isLabelVisible: activeFilters > 0,
                 smallSize: 8,
                 backgroundColor: AppColors.accent,
-                child: Icon(Icons.tune, size: 18, color: context.scaffoldHeading),
+                child: Icon(
+                  Icons.tune,
+                  size: 18,
+                  color: context.scaffoldHeading,
+                ),
               ),
             ),
           ],
