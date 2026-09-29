@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -18,6 +19,7 @@ import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 
 const _testContact = StoreContact(
   company: 'Hub Market',
@@ -68,6 +70,8 @@ Widget _harness({
       storeFeaturesProvider.overrideWith(
         (ref) async => StoreFeatures(newsletterEnabled: newsletter),
       ),
+      // Build 1: no Hub Market App (store credit's row stays out).
+      hubAppOverride(const HubAppState.unavailable()),
     ],
     child: MaterialApp.router(
       routerConfig: router,
