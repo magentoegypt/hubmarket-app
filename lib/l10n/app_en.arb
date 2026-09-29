@@ -94,6 +94,67 @@
       }
     }
   },
+  "storesTitle": "Stores",
+  "storesSearchHint": "Search stores",
+  "storesFeaturedBadge": "FEATURED STORE",
+  "storesVisit": "Visit",
+  "storesAllTitle": "All stores",
+  "storesSortTopRated": "Top rated",
+  "storesSortNewest": "Newest",
+  "storesSortMostProducts": "Most products",
+  "storesEmpty": "No stores found",
+  "storesNoMatch": "No store matches “{query}”.",
+  "@storesNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "storeVerified": "Verified seller",
+  "storeReviewCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@storeReviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeNoReviews": "No reviews yet",
+  "storeStatProducts": "Products",
+  "storeStatSellingSince": "Selling since",
+  "storeTabProducts": "Products",
+  "storeTabAbout": "About",
+  "storeTabPolicies": "Policies",
+  "storeSearchHint": "Search {store} products",
+  "@storeSearchHint": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storeAboutTitle": "About the store",
+  "storeStatProductsListed": "Products listed",
+  "storeStatDispatch": "Typical dispatch",
+  "storeStatAverageRating": "Average rating",
+  "storeStatCustomerReviews": "Customer reviews",
+  "storePoliciesTitle": "Store policies",
+  "storeShippingPolicy": "Shipping policy",
+  "storeRefundPolicy": "Refund & exchange policy",
+  "storeCategoriesTitle": "Categories in this store",
+  "storeNotFoundTitle": "Store not found",
+  "storeNotFoundBody": "This store isn't on Hub Market right now.",
+  "storeNoProducts": "This store has no products yet.",
+  "storeNoMatches": "No products match your search.",
+  "storeShare": "{store} on Hub Market",
+  "@storeShare": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
   "filtersLabel": "Filters",
   "filterPriceLabel": "Price",
   "filterSortByLabel": "Sort By",
