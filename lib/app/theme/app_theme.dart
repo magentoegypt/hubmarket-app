@@ -25,28 +25,37 @@ abstract final class AppTheme {
     FontVariation('opsz', fontSize.clamp(9, 40).toDouble()),
   ];
 
-  static TextStyle? _withOpticalSize(TextStyle? style) {
-    final size = style?.fontSize;
-    return size == null ? style : style!.copyWith(fontVariations: opticalSize(size));
+  /// Every Foundations style sets letters at 0 tracking. Material 3's text
+  /// theme tracks most styles out (bodyMedium +0.25, labelLarge +0.1…), which
+  /// widens DM Sans past the frames and pulls apart Arabic's joined letters —
+  /// so the theme's styles drop it, and pin DM Sans's optical size.
+  static TextStyle? _foundation(TextStyle? style, {required bool latin}) {
+    if (style == null) return null;
+    final size = style.fontSize;
+    return style.copyWith(
+      letterSpacing: 0,
+      fontVariations: latin && size != null ? opticalSize(size) : null,
+    );
   }
 
-  static TextTheme _opticalSizes(TextTheme t) => t.copyWith(
-    displayLarge: _withOpticalSize(t.displayLarge),
-    displayMedium: _withOpticalSize(t.displayMedium),
-    displaySmall: _withOpticalSize(t.displaySmall),
-    headlineLarge: _withOpticalSize(t.headlineLarge),
-    headlineMedium: _withOpticalSize(t.headlineMedium),
-    headlineSmall: _withOpticalSize(t.headlineSmall),
-    titleLarge: _withOpticalSize(t.titleLarge),
-    titleMedium: _withOpticalSize(t.titleMedium),
-    titleSmall: _withOpticalSize(t.titleSmall),
-    bodyLarge: _withOpticalSize(t.bodyLarge),
-    bodyMedium: _withOpticalSize(t.bodyMedium),
-    bodySmall: _withOpticalSize(t.bodySmall),
-    labelLarge: _withOpticalSize(t.labelLarge),
-    labelMedium: _withOpticalSize(t.labelMedium),
-    labelSmall: _withOpticalSize(t.labelSmall),
-  );
+  static TextTheme _foundations(TextTheme t, {required bool latin}) =>
+      t.copyWith(
+        displayLarge: _foundation(t.displayLarge, latin: latin),
+        displayMedium: _foundation(t.displayMedium, latin: latin),
+        displaySmall: _foundation(t.displaySmall, latin: latin),
+        headlineLarge: _foundation(t.headlineLarge, latin: latin),
+        headlineMedium: _foundation(t.headlineMedium, latin: latin),
+        headlineSmall: _foundation(t.headlineSmall, latin: latin),
+        titleLarge: _foundation(t.titleLarge, latin: latin),
+        titleMedium: _foundation(t.titleMedium, latin: latin),
+        titleSmall: _foundation(t.titleSmall, latin: latin),
+        bodyLarge: _foundation(t.bodyLarge, latin: latin),
+        bodyMedium: _foundation(t.bodyMedium, latin: latin),
+        bodySmall: _foundation(t.bodySmall, latin: latin),
+        labelLarge: _foundation(t.labelLarge, latin: latin),
+        labelMedium: _foundation(t.labelMedium, latin: latin),
+        labelSmall: _foundation(t.labelSmall, latin: latin),
+      );
 
   static ThemeData light(String languageCode) =>
       _build(languageCode, Brightness.light);
@@ -68,14 +77,12 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       fontFamily: fontFor(languageCode),
     );
-    // Tajawal ships as static weights, so only the Latin face needs this.
+    // Tajawal ships as static weights: only the Latin face has an opsz axis.
     final latin = languageCode != 'ar';
 
     return base.copyWith(
-      textTheme: latin ? _opticalSizes(base.textTheme) : base.textTheme,
-      primaryTextTheme: latin
-          ? _opticalSizes(base.primaryTextTheme)
-          : base.primaryTextTheme,
+      textTheme: _foundations(base.textTheme, latin: latin),
+      primaryTextTheme: _foundations(base.primaryTextTheme, latin: latin),
       // Edge-swipe back on every platform (CL042-DEV11). Android's default
       // Zoom transition has no back gesture at all, so a pushed screen could
       // only be left through the app-bar arrow. The Cupertino builder brings

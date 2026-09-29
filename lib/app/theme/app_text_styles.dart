@@ -74,6 +74,7 @@ class AppTextStyles {
     fontSize: size,
     height: lineHeight / size,
     leadingDistribution: TextLeadingDistribution.even,
+    letterSpacing: 0,
     fontWeight: weight,
     fontVariations: family == AppTheme.latinFont
         ? AppTheme.opticalSize(size)
@@ -86,6 +87,7 @@ class AppTextStyles {
         fontSize: size,
         height: lineHeight / size,
         leadingDistribution: TextLeadingDistribution.even,
+        letterSpacing: 0,
         fontWeight: weight,
       );
 }
