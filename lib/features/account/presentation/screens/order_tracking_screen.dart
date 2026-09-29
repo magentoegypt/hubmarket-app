@@ -12,6 +12,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../domain/order.dart';
 import '../order_format.dart';
+import '../widgets/order_cancel_section.dart';
 
 /// One timeline step: a label, an optional timestamp, and whether it's done.
 typedef _Step = ({String label, String time, bool done});
@@ -21,10 +22,21 @@ typedef _Step = ({String label, String time, bool done});
 /// carrier + tracking number(s) once a shipment exists, delivery address,
 /// items, and a help link. Reached from the My Orders "Track" action — and,
 /// for a guest, straight from checkout — with the [CustomerOrder].
-class OrderTrackingScreen extends ConsumerWidget {
+class OrderTrackingScreen extends ConsumerStatefulWidget {
   const OrderTrackingScreen({super.key, required this.order});
 
   final CustomerOrder order;
+
+  @override
+  ConsumerState<OrderTrackingScreen> createState() =>
+      _OrderTrackingScreenState();
+}
+
+class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
+  /// Replaced by Magento's copy once the order is cancelled here.
+  late CustomerOrder _order = widget.order;
+
+  CustomerOrder get order => _order;
 
   /// Which of the 4 fixed stages the order has reached (0 = Placed …
   /// 3 = Delivered), read from what the backend has actually recorded rather
@@ -105,7 +117,7 @@ class OrderTrackingScreen extends ConsumerWidget {
       : orderFmtDateTime(order.date, locale, storeZone);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     // Empty until the store config lands — the timestamp then reads as it
@@ -282,6 +294,16 @@ class OrderTrackingScreen extends ConsumerWidget {
             _ItemRow(line: line, l10n: l10n),
           const SizedBox(height: 8),
           const _Band(),
+
+          // Cancel order (Figma 21b) — a guest's lookup lands here (26), so
+          // this is where a guest asks for a cancellation by e-mail.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: OrderCancelSection(
+              order: order,
+              onCancelled: (updated) => setState(() => _order = updated),
+            ),
+          ),
 
           // Need help.
           InkWell(

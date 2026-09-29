@@ -48,6 +48,10 @@ class CustomerOrder {
     required this.number,
     required this.status,
     required this.date,
+    this.id = '',
+    this.token,
+    this.availableActions = const <String>{},
+    this.placedAsGuest = false,
     this.total,
     this.subtotal,
     this.shippingAmount,
@@ -74,6 +78,23 @@ class CustomerOrder {
   final String number;
   final String status;
   final String date;
+
+  /// `CustomerOrder.id` — the uid `cancelOrder` takes. Empty when unknown.
+  final String id;
+
+  /// `CustomerOrder.token`, which authorises a guest's actions on the order
+  /// (`requestGuestOrderCancel`). Null when the backend didn't return one.
+  final String? token;
+
+  /// `CustomerOrder.available_actions` (`CANCEL`, `REORDER`), as computed by
+  /// Magento for this order right now.
+  final Set<String> availableActions;
+
+  /// Looked up through the guest queries (`guestOrder` / `guestOrderByToken`)
+  /// — Magento only returns orders placed without an account there, and a
+  /// guest cancels by e-mail confirmation rather than directly.
+  final bool placedAsGuest;
+
   final Money? total;
   final Money? subtotal;
   final Money? shippingAmount;
@@ -146,6 +167,14 @@ class CustomerOrder {
   /// it genuinely got to and the status card says so, rather than implying the
   /// order is still moving.
   bool get isOnHold => status.toLowerCase().contains('hold');
+
+  /// Magento offers `CANCEL` for this order — cancellation is enabled for its
+  /// store, it isn't complete/closed/cancelled/on hold and nothing shipped —
+  /// and the app holds what the matching mutation needs (the uid for a
+  /// customer, the token for a guest).
+  bool get offersCancel =>
+      availableActions.contains('CANCEL') &&
+      (placedAsGuest ? (token ?? '').isNotEmpty : id.isNotEmpty);
 }
 
 /// A page of customer orders (for append-on-scroll pagination).

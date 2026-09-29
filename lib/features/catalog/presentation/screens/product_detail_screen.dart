@@ -28,6 +28,7 @@ import '../catalog_providers.dart';
 import '../product_navigation.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
+import '../widgets/review_widgets.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.urlKey, this.preview});
@@ -189,6 +190,8 @@ class _Content extends StatelessWidget {
                 _RatingLine(
                   ratingSummary: product.ratingSummary,
                   reviewCount: product.reviewCount,
+                  onTap: () =>
+                      context.push(AppRoutes.productReviews(product.urlKey)),
                 ),
               ],
               const SizedBox(height: 12),
@@ -310,33 +313,43 @@ class _SectionDivider extends StatelessWidget {
   );
 }
 
-/// Star + "4.6 · N reviews" line under the product title (Figma).
+/// Star + "4.6 · N reviews" line under the product title (Figma); opens the
+/// Reviews screen.
 class _RatingLine extends StatelessWidget {
-  const _RatingLine({required this.ratingSummary, required this.reviewCount});
+  const _RatingLine({
+    required this.ratingSummary,
+    required this.reviewCount,
+    required this.onTap,
+  });
 
   /// 0–100 (Magento `rating_summary`).
   final int ratingSummary;
   final int reviewCount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final rating = ratingSummary / 20; // 0–5
     final filled = rating.round();
-    return Row(
-      children: [
-        for (var i = 1; i <= 5; i++)
-          Icon(
-            i <= filled ? Icons.star : Icons.star_border,
-            size: 16,
-            color: AppColors.accentGold,
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 1; i <= 5; i++)
+            Icon(
+              i <= filled ? Icons.star : Icons.star_border,
+              size: 16,
+              color: AppColors.accentGold,
+            ),
+          const SizedBox(width: 6),
+          Text(
+            l10n.pdpRatingReviews(rating.toStringAsFixed(1), reviewCount),
+            style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
           ),
-        const SizedBox(width: 6),
-        Text(
-          l10n.pdpRatingReviews(rating.toStringAsFixed(1), reviewCount),
-          style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1002,186 +1015,8 @@ class _TrustItem extends StatelessWidget {
   );
 }
 
-/// Reviews summary block (Figma): big average, star row, total count, and
-/// per-star distribution bars derived from the loaded reviews.
-class _ReviewsSummary extends StatelessWidget {
-  const _ReviewsSummary({required this.product});
-  final ProductDetail product;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final average = product.ratingSummary / 20; // 0–5
-    // Per-star bars (5★ → 1★) derived from the loaded reviews — Magento core
-    // has no histogram field. Bar lengths use each bucket's percent.
-    final byStar = <int, RatingBar>{
-      for (final b in product.ratingHistogram) b.stars: b,
-    };
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Column(
-          children: [
-            Text(
-              average.toStringAsFixed(1),
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w700,
-                color: AppColors.inkHeading,
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 1; i <= 5; i++)
-                  Icon(
-                    i <= average.round() ? Icons.star : Icons.star_border,
-                    size: 14,
-                    color: AppColors.accentGold,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.reviewsCount(product.reviewCount),
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
-            ),
-          ],
-        ),
-        const SizedBox(width: 20),
-        // Per-star bars, 5★ at the top.
-        Expanded(
-          child: Column(
-            children: [
-              for (var star = 5; star >= 1; star--)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      Text(
-                        '$star',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.inkMuted,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(3),
-                          child: LinearProgressIndicator(
-                            value: (byStar[star]?.percent ?? 0) / 100,
-                            minHeight: 6,
-                            backgroundColor: AppColors.surfaceMuted,
-                            valueColor: const AlwaysStoppedAnimation(
-                              AppColors.accentGold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 20,
-                        child: Text(
-                          '${byStar[star]?.count ?? 0}',
-                          textAlign: TextAlign.end,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.inkMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.review});
-  final ProductReview review;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              // Avatar with initials (Figma) — derived from the reviewer name.
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.surfaceTint,
-                child: Text(
-                  _initials(review.nickname),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.brandPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  review.nickname,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              if (review.date.isNotEmpty)
-                Text(
-                  review.date,
-                  style: const TextStyle(
-                    color: AppColors.inkMuted,
-                    fontSize: 12,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (var i = 1; i <= 5; i++)
-                Icon(
-                  i <= review.stars ? Icons.star : Icons.star_border,
-                  size: 16,
-                  color: AppColors.accentGold,
-                ),
-            ],
-          ),
-          if (review.summary.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              review.summary,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-          if (review.text.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              review.text,
-              style: const TextStyle(color: AppColors.inkMuted),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-    return (parts.first.characters.first + parts.last.characters.first)
-        .toUpperCase();
-  }
-}
+/// Reviews the product page shows before "See all".
+const int _pdpReviewPreview = 3;
 
 class _TabContent extends StatelessWidget {
   const _TabContent({required this.product, required this.tab});
@@ -1202,15 +1037,36 @@ class _TabContent extends StatelessWidget {
       // More Information: storefront-visible attributes + SKU.
       case 2:
         return _MoreInformation(product: product);
-      // Reviews.
+      // Reviews: the summary, the newest few, and "See all" for the rest
+      // (Figma 14 → 15). Bars only when every review is here — see
+      // ProductDetail.ratingHistogram.
       case 3:
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (product.hasReviews) ...[
-              _ReviewsSummary(product: product),
-              const SizedBox(height: 16),
-              for (final review in product.reviews) _ReviewCard(review: review),
+              ReviewsSummaryCard(
+                ratingSummary: product.ratingSummary,
+                reviewCount: product.reviewCount,
+                histogram: product.ratingHistogram,
+              ),
+              for (final review in product.reviews.take(_pdpReviewPreview))
+                ReviewCard(review: review),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton(
+                  onPressed: () =>
+                      context.push(AppRoutes.productReviews(product.urlKey)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accentStrong,
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: Text(
+                    l10n.reviewsSeeAll(product.reviewCount),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ] else ...[
               Text(
                 l10n.reviewsEmptyTitle,

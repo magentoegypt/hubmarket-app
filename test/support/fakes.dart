@@ -5,6 +5,8 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/core/store/store_repository.dart';
 import 'package:hubmarket_app/core/store/store_view.dart';
+import 'package:hubmarket_app/features/account/data/account_repository.dart';
+import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/auth/domain/customer.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
@@ -16,6 +18,7 @@ import 'package:hubmarket_app/features/checkout/domain/tabby_config.dart';
 import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/features/wishlist/domain/wishlist_entry.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
+import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/aggregation.dart';
 import 'package:hubmarket_app/features/catalog/domain/brand.dart';
 import 'package:hubmarket_app/features/catalog/domain/category.dart';
@@ -23,6 +26,9 @@ import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_page.dart';
+import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
+import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
+import 'package:hubmarket_app/features/cms/domain/cms_page.dart';
 
 class FakeLocalCache implements LocalCache {
   FakeLocalCache([this._stores]);
@@ -594,6 +600,203 @@ class FakeCatalogRepository implements CatalogRepository {
     required List<({String id, String valueId})> ratings,
   }) async {}
 }
+
+/// Reviews served in real pages: [productReviews] and [customerReviews] are
+/// sliced by the requested page size, like Magento does.
+class FakeReviewsRepository implements ReviewsRepository {
+  FakeReviewsRepository({
+    this.productReviews = const <ProductReview>[],
+    this.reviewCount,
+    this.ratingSummary = 80,
+    this.customerReviews = const <CustomerReview>[],
+    this.productExists = true,
+  });
+
+  final List<ProductReview> productReviews;
+
+  /// `review_count`; defaults to the number of [productReviews].
+  final int? reviewCount;
+  final int ratingSummary;
+  final List<CustomerReview> customerReviews;
+  final bool productExists;
+
+  final List<int> productPagesRequested = <int>[];
+  final List<int> customerPagesRequested = <int>[];
+
+  @override
+  Future<ProductReviewsPage?> fetchProductReviews(
+    String urlKey, {
+    int pageSize = 20,
+    int currentPage = 1,
+  }) async {
+    productPagesRequested.add(currentPage);
+    if (!productExists) return null;
+    return ProductReviewsPage(
+      sku: 'SKU-$urlKey',
+      name: 'Product $urlKey',
+      urlKey: urlKey,
+      ratingSummary: ratingSummary,
+      reviewCount: reviewCount ?? productReviews.length,
+      reviews: _page(productReviews, pageSize, currentPage),
+      currentPage: currentPage,
+      totalPages: (productReviews.length / pageSize).ceil(),
+    );
+  }
+
+  @override
+  Future<CustomerReviewsPage> fetchCustomerReviews({
+    int pageSize = 20,
+    int currentPage = 1,
+  }) async {
+    customerPagesRequested.add(currentPage);
+    return CustomerReviewsPage(
+      items: _page(customerReviews, pageSize, currentPage),
+      currentPage: currentPage,
+      totalPages: (customerReviews.length / pageSize).ceil(),
+    );
+  }
+
+  static List<T> _page<T>(List<T> all, int size, int page) =>
+      all.skip((page - 1) * size).take(size).toList();
+}
+
+/// A published review with [stars] (1–5).
+ProductReview sampleReview(int stars, {String nickname = 'Nour A.'}) =>
+    ProductReview(
+      nickname: nickname,
+      summary: 'Lovely fabric',
+      text: 'The fit is true to size.',
+      averageRating: stars * 20,
+      date: '2026-09-12 10:24:33',
+    );
+
+/// Account data for the order-cancellation, newsletter and contact-form flows.
+/// Records every write so tests can assert the exact call; reads not listed
+/// here are unexpected and throw.
+class FakeAccountRepository implements AccountRepository {
+  FakeAccountRepository({
+    this.orders = const <CustomerOrder>[],
+    this.cancelledOrder,
+    this.cancelError,
+    this.newsletterSubscribed = false,
+    this.newsletterNeedsConfirmation = false,
+    this.contactFails = false,
+  });
+
+  final List<CustomerOrder> orders;
+
+  /// What `cancelOrder` returns; null mimics a payload without the order.
+  final CustomerOrder? cancelledOrder;
+
+  /// When set, both cancel calls fail with this store message, as Magento
+  /// reports a refusal in `errorV2`.
+  final String? cancelError;
+
+  bool newsletterSubscribed;
+
+  /// "Need to Confirm" on: a new subscription saves as not yet subscribed.
+  final bool newsletterNeedsConfirmation;
+  final bool contactFails;
+
+  final List<({String orderId, String reason})> cancelCalls = [];
+  final List<({String token, String reason})> guestCancelCalls = [];
+  final List<bool> newsletterCalls = <bool>[];
+  final List<Map<String, String?>> contactMessages = [];
+
+  @override
+  Future<OrderPage> fetchOrders({int pageSize = 10, int currentPage = 1}) async =>
+      OrderPage(
+        items: orders,
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: orders.length,
+      );
+
+  @override
+  Future<CustomerOrder?> cancelOrder({
+    required String orderId,
+    required String reason,
+  }) async {
+    cancelCalls.add((orderId: orderId, reason: reason));
+    if (cancelError != null) {
+      throw Failure(FailureKind.server, detail: cancelError);
+    }
+    return cancelledOrder;
+  }
+
+  @override
+  Future<void> requestGuestOrderCancel({
+    required String token,
+    required String reason,
+  }) async {
+    guestCancelCalls.add((token: token, reason: reason));
+    if (cancelError != null) {
+      throw Failure(FailureKind.server, detail: cancelError);
+    }
+  }
+
+  @override
+  Future<bool> fetchNewsletterSubscription() async => newsletterSubscribed;
+
+  @override
+  Future<bool> setNewsletterSubscription(bool subscribed) async {
+    newsletterCalls.add(subscribed);
+    newsletterSubscribed = subscribed && !newsletterNeedsConfirmation;
+    return newsletterSubscribed;
+  }
+
+  @override
+  Future<void> sendContactMessage({
+    required String name,
+    required String email,
+    required String comment,
+    String? telephone,
+  }) async {
+    if (contactFails) throw const Failure(FailureKind.network);
+    contactMessages.add({
+      'name': name,
+      'email': email,
+      'telephone': telephone,
+      'comment': comment,
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// CMS content by page identifier, by URL path and by block identifier.
+class FakeCmsRepository implements CmsRepository {
+  FakeCmsRepository({
+    this.pages = const <String, CmsPage>{},
+    this.pagesByUrl = const <String, CmsPage>{},
+    this.blocks = const <String, String>{},
+  });
+
+  final Map<String, CmsPage> pages;
+  final Map<String, CmsPage> pagesByUrl;
+  final Map<String, String> blocks;
+
+  final List<String> requestedUrls = <String>[];
+
+  @override
+  Future<CmsPage?> fetchPage(String identifier) async => pages[identifier];
+
+  @override
+  Future<CmsPage?> fetchPageByUrl(String url) async {
+    requestedUrls.add(url);
+    return pagesByUrl[url];
+  }
+
+  @override
+  Future<String?> fetchBlock(String identifier) async => blocks[identifier];
+}
+
+/// The live `hm_footer_legal` block (store `en`, 29 Sep 2026).
+const String kLegalLinksBlock =
+    '<ul><li><a href="https://hub-market.magento2.click/en/privacy-policy-cookie-restriction-mode/">Privacy</a></li>'
+    '<li><a href="https://hub-market.magento2.click/en/customer-service/">Terms</a></li>'
+    '<li><a href="https://hub-market.magento2.click/en/enable-cookies/">Cookies</a></li></ul>';
 
 const List<StoreView> kSampleStores = <StoreView>[
   StoreView(

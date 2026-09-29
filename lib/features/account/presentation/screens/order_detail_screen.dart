@@ -10,17 +10,28 @@ import '../../../catalog/domain/money.dart';
 import '../../domain/order.dart';
 import '../order_actions.dart';
 import '../order_format.dart';
+import '../widgets/order_cancel_section.dart';
 
 /// Full detail for a single placed order, navigated to with the [CustomerOrder]
 /// via go_router `extra` (the list already holds every field, so no extra
-/// query). Shows items, totals, shipping method and shipment tracking.
-class OrderDetailScreen extends ConsumerWidget {
+/// query). Shows items, totals, shipping method and shipment tracking, and
+/// "Cancel order" when the store and the order allow it (Figma 22 / 21b).
+class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
 
   final CustomerOrder order;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
+  /// Replaced by Magento's copy once the order is cancelled here.
+  late CustomerOrder _order = widget.order;
+
+  @override
+  Widget build(BuildContext context) {
+    final order = _order;
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     // Magento stamps order times in the store's zone — see orderFmtDate.
@@ -198,6 +209,11 @@ class OrderDetailScreen extends ConsumerWidget {
                   },
                 ),
               ),
+
+          OrderCancelSection(
+            order: order,
+            onCancelled: (updated) => setState(() => _order = updated),
+          ),
         ],
       ),
     );

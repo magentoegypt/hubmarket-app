@@ -7,13 +7,14 @@ import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/theme_x.dart';
 import '../../../core/app_info.dart';
+import '../../../core/config/store_features.dart';
 import '../../../core/widgets/customer_avatar.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../l10n/l10n.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../notifications/presentation/notification_settings_controller.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
-import 'delete_account_action.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -76,6 +77,10 @@ class _Authenticated extends ConsumerWidget {
     final languageLabel = activeLocale == 'ar'
         ? l10n.languageArabic
         : l10n.languageEnglish;
+    final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
+    final newsletterEnabled =
+        ref.watch(storeFeaturesProvider).valueOrNull?.newsletterEnabled ??
+        false;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -217,6 +222,31 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.savedCardsTitle,
           onTap: () => context.push(AppRoutes.paymentMethods),
         ),
+        const _TileDivider(),
+        _AccountTile(
+          icon: Icons.star_outline,
+          label: l10n.myReviewsTitle,
+          onTap: () => context.push(AppRoutes.myReviews),
+        ),
+        // Both open Notification settings (Figma 20h); each row only when
+        // there is something behind it — push needs FCM, the newsletter the
+        // store's newsletter switch.
+        if (pushAvailable) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.notifications_none,
+            label: l10n.notificationsTitle,
+            onTap: () => context.push(AppRoutes.notificationSettings),
+          ),
+        ],
+        if (newsletterEnabled) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.mail_outline,
+            label: l10n.newsletterTitle,
+            onTap: () => context.push(AppRoutes.notificationSettings),
+          ),
+        ],
         const _AccountBand(),
         // Preferences group (Figma 43:3 …).
         _AccountTile(
@@ -226,9 +256,22 @@ class _Authenticated extends ConsumerWidget {
           onTap: () => context.push(AppRoutes.settings),
         ),
         const _TileDivider(),
+        // Account deletion has to be findable, not merely present: 1.0.0 (80)
+        // was rejected under Guideline 5.1.1(v) as having no option to delete
+        // an account, while the option existed in Settings — reachable only by
+        // tapping a row labelled "Language". Figma 20 keeps the words "Delete
+        // account" on this row, so a customer (or a reviewer) finds it here;
+        // Privacy & data holds the action, and Settings keeps its copy too.
         _AccountTile(
-          icon: Icons.headset_mic_outlined,
-          label: l10n.accountHelpSupport,
+          icon: Icons.shield_outlined,
+          label: l10n.privacyDataTitle,
+          value: l10n.deleteAccountTitle,
+          onTap: () => context.push(AppRoutes.privacyData),
+        ),
+        const _AccountBand(),
+        _AccountTile(
+          icon: Icons.help_outline,
+          label: l10n.helpCentreTitle,
           onTap: () => context.push(AppRoutes.help),
         ),
         const _TileDivider(),
@@ -236,17 +279,6 @@ class _Authenticated extends ConsumerWidget {
           icon: Icons.info_outline,
           label: l10n.accountAbout,
           onTap: () => context.push(AppRoutes.about),
-        ),
-        const _TileDivider(),
-        // Account deletion has to be findable, not merely present: 1.0.0 (80)
-        // was rejected under Guideline 5.1.1(v) as having no option to delete
-        // an account, while the option existed in Settings — reachable only by
-        // tapping a row labelled "Language". It stays in Settings too; this is
-        // the copy a customer (or a reviewer) actually finds.
-        _AccountTile(
-          icon: Icons.delete_forever_outlined,
-          label: l10n.deleteAccountTitle,
-          onTap: () => confirmAndDeleteAccount(context, ref),
         ),
         const _AccountBand(),
         // Log out (Figma 43:34) — red, centered.

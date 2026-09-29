@@ -73,7 +73,105 @@ class AccountRepository {
     if (payload is! Map<String, dynamic>) {
       throw const Failure(FailureKind.unknown);
     }
-    return _parseOrder(payload);
+    return _parseOrder(payload, placedAsGuest: true);
+  }
+
+  /// Cancels the signed-in customer's order [orderId] (`CustomerOrder.id`)
+  /// for one of the store's cancellation [reason]s and returns the updated
+  /// order (null if Magento sent none back).
+  ///
+  /// Magento reports a refusal — cancellation disabled, something already
+  /// shipped, the order complete or on hold — in the payload, not as a
+  /// GraphQL error; it becomes a `server` [Failure] carrying the store's own
+  /// (localized) message.
+  Future<CustomerOrder?> cancelOrder({
+    required String orderId,
+    required String reason,
+  }) async {
+    final data = await _run(AccountQueries.cancelOrder, {
+      'orderId': orderId,
+      'reason': reason,
+    }, mutation: true);
+    final output = data['cancelOrder'];
+    _throwIfCancelRefused(output);
+    final order = (output as Map<String, dynamic>)['order'];
+    return order is Map<String, dynamic> ? _parseOrder(order) : null;
+  }
+
+  /// Asks Magento to cancel a guest order. Nothing is cancelled yet: the
+  /// store e-mails the order's billing address a link that confirms it.
+  Future<void> requestGuestOrderCancel({
+    required String token,
+    required String reason,
+  }) async {
+    final data = await _run(AccountQueries.requestGuestOrderCancel, {
+      'token': token,
+      'reason': reason,
+    }, mutation: true);
+    _throwIfCancelRefused(data['requestGuestOrderCancel']);
+  }
+
+  void _throwIfCancelRefused(Object? output) {
+    if (output is! Map<String, dynamic>) {
+      throw const Failure(FailureKind.unknown, detail: 'cancel: no payload');
+    }
+    final v2 = output['errorV2'];
+    final message =
+        ((v2 is Map<String, dynamic> ? v2['message'] as String? : null) ??
+                (output['error'] as String?) ??
+                '')
+            .trim();
+    if (message.isNotEmpty) throw Failure(FailureKind.server, detail: message);
+  }
+
+  /// Whether the signed-in customer is subscribed to the newsletter.
+  Future<bool> fetchNewsletterSubscription() async {
+    final data = await _run(
+      AccountQueries.newsletterStatus,
+      const {},
+      mutation: false,
+    );
+    return (data['customer'] as Map<String, dynamic>?)?['is_subscribed'] ==
+        true;
+  }
+
+  /// Subscribes or unsubscribes the signed-in customer and returns what the
+  /// store saved. With "Need to Confirm" on, a new subscription stays `false`
+  /// until the customer confirms it from the e-mail Magento sends.
+  Future<bool> setNewsletterSubscription(bool subscribed) async {
+    final data = await _run(AccountQueries.setNewsletter, {
+      'subscribed': subscribed,
+    }, mutation: true);
+    final saved =
+        ((data['updateCustomerV2'] as Map<String, dynamic>?)?['customer']
+            as Map<String, dynamic>?)?['is_subscribed'];
+    return saved is bool ? saved : subscribed;
+  }
+
+  /// Sends the Help centre contact form (core `contactUs`). Throws a
+  /// [Failure] unless the store confirms it.
+  Future<void> sendContactMessage({
+    required String name,
+    required String email,
+    required String comment,
+    String? telephone,
+  }) async {
+    final phone = telephone?.trim() ?? '';
+    final data = await _run(AccountQueries.contactUs, {
+      'input': {
+        'name': name,
+        'email': email,
+        'comment': comment,
+        if (phone.isNotEmpty) 'telephone': phone,
+      },
+    }, mutation: true);
+    final ok = (data['contactUs'] as Map<String, dynamic>?)?['status'] == true;
+    if (!ok) {
+      throw const Failure(
+        FailureKind.unknown,
+        detail: 'contactUs did not confirm the message',
+      );
+    }
   }
 
   Future<List<CustomerAddress>> fetchAddresses() async {
@@ -206,7 +304,10 @@ class AccountRepository {
     }
   }
 
-  CustomerOrder _parseOrder(Map<String, dynamic> json) {
+  CustomerOrder _parseOrder(
+    Map<String, dynamic> json, {
+    bool placedAsGuest = false,
+  }) {
     final lines = (json['items'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(
@@ -290,10 +391,19 @@ class AccountRepository {
         paymentName = first['name'] as String?;
       }
     }
+    final token = (json['token'] as String?)?.trim();
     return CustomerOrder(
       number: (json['number'] as String?) ?? '',
       status: (json['status'] as String?) ?? '',
       date: (json['order_date'] as String?) ?? '',
+      id: (json['id'] as String?) ?? '',
+      token: (token == null || token.isEmpty) ? null : token,
+      availableActions: {
+        for (final a in (json['available_actions'] as List<dynamic>?) ??
+            const <dynamic>[])
+          if (a is String) a,
+      },
+      placedAsGuest: placedAsGuest,
       total: moneyFromJson(totals?['grand_total'] as Map<String, dynamic>?),
       subtotal: moneyFromJson(totals?['subtotal'] as Map<String, dynamic>?),
       shippingAmount: moneyFromJson(

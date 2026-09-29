@@ -18,13 +18,18 @@ abstract final class AppRoutes {
   static const String orderDetail = '/order-detail';
   static const String orderTracking = '/order-tracking';
   static const String guestTrackOrder = '/track-order';
+  static const String myReviews = '/my-reviews';
   static const String addresses = '/addresses';
   static const String addressForm = '/address';
   static const String paymentMethods = '/payment-methods';
   static const String editProfile = '/profile';
   static const String notifications = '/notifications';
+  static const String notificationSettings = '/notification-settings';
   static const String help = '/help';
+  static const String helpTopic = '/help/topic';
   static const String about = '/about';
+  static const String privacyData = '/privacy-data';
+  static const String cmsPage = '/page';
   static const String settings = '/settings';
   static const String diagnostics = '/diagnostics';
   static const String webview = '/webview';
@@ -36,6 +41,23 @@ abstract final class AppRoutes {
   static String subcategories(String uid) => '/subcategories/$uid';
   static String product(String urlKey) => '/product/$urlKey';
   static String review(String sku) => '/review/$sku';
+  static String productReviews(String urlKey) => '/reviews/$urlKey';
+
+  /// A CMS page by its identifier, e.g. `about-us`.
+  static String cmsPageById(String identifier, {String? title}) =>
+      _cmsPage('id', identifier, title);
+
+  /// A CMS page by its store-relative URL path (see `storePathOf`).
+  static String cmsPageByUrl(String path, {String? title}) =>
+      _cmsPage('url', path, title);
+
+  static String _cmsPage(String key, String value, String? title) => Uri(
+    path: cmsPage,
+    queryParameters: {
+      key: value,
+      if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+    },
+  ).toString();
 }
 
 /// Persistent bottom-navigation destinations.

@@ -8,13 +8,15 @@ import '../features/account/presentation/screens/address_form_screen.dart';
 import '../features/account/presentation/screens/addresses_screen.dart';
 import '../features/account/presentation/screens/edit_profile_screen.dart';
 import '../features/account/domain/order.dart';
-import '../features/account/presentation/screens/about_screen.dart';
 import '../features/account/presentation/screens/help_screen.dart';
+import '../features/account/presentation/screens/help_topic_screen.dart';
+import '../features/account/presentation/screens/my_reviews_screen.dart';
 import '../features/account/presentation/screens/order_detail_screen.dart';
 import '../features/account/presentation/screens/order_tracking_screen.dart';
 import '../features/account/presentation/screens/guest_track_order_screen.dart';
 import '../features/account/presentation/screens/orders_screen.dart';
 import '../features/account/presentation/screens/payment_methods_screen.dart';
+import '../features/account/presentation/screens/privacy_data_screen.dart';
 import '../features/account/presentation/screens/settings_screen.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/reset_password_screen.dart';
@@ -31,14 +33,20 @@ import '../features/catalog/presentation/screens/categories_screen.dart';
 import '../features/home/presentation/hub_home_screen.dart';
 import '../features/catalog/presentation/screens/plp_screen.dart';
 import '../features/catalog/presentation/screens/product_detail_screen.dart';
+import '../features/catalog/presentation/screens/product_reviews_screen.dart';
 import '../features/catalog/presentation/screens/search_screen.dart';
 import '../features/catalog/presentation/screens/write_review_screen.dart';
+import '../features/cms/domain/cms_links.dart';
+import '../features/cms/domain/faq.dart';
+import '../features/cms/presentation/cms_page_screen.dart';
+import '../features/notifications/presentation/notification_settings_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../features/diagnostics/presentation/health_check_screen.dart';
 import '../features/onboarding/presentation/launch_splash_screen.dart';
 import '../features/onboarding/presentation/welcome_screen.dart';
 import '../core/widgets/web_view_screen.dart';
+import '../l10n/l10n.dart';
 import 'deep_link_resolver_screen.dart';
 import 'routes.dart';
 
@@ -119,6 +127,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             WriteReviewScreen(sku: state.pathParameters['sku']!),
       ),
       GoRoute(
+        path: '/reviews/:urlKey',
+        builder: (context, state) =>
+            ProductReviewsScreen(urlKey: state.pathParameters['urlKey']!),
+      ),
+      GoRoute(
         path: AppRoutes.cart,
         builder: (context, state) => const CartScreen(),
       ),
@@ -176,6 +189,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const GuestTrackOrderScreen(),
       ),
       GoRoute(
+        path: AppRoutes.myReviews,
+        builder: (context, state) => const MyReviewsScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.addresses,
         builder: (context, state) => const AddressesScreen(),
       ),
@@ -197,12 +214,39 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.notificationSettings,
+        builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.help,
         builder: (context, state) => const HelpScreen(),
       ),
       GoRoute(
+        path: AppRoutes.helpTopic,
+        redirect: (context, state) =>
+            state.extra is FaqTopic ? null : AppRoutes.help,
+        builder: (context, state) =>
+            HelpTopicScreen(topic: state.extra! as FaqTopic),
+      ),
+      // About Hub Market is the storefront's own About page (CMS `about-us`).
+      GoRoute(
         path: AppRoutes.about,
-        builder: (context, state) => const AboutScreen(),
+        builder: (context, state) => CmsPageScreen(
+          identifier: StorePages.about,
+          title: AppLocalizations.of(context).accountAbout,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.cmsPage,
+        builder: (context, state) => CmsPageScreen(
+          identifier: state.uri.queryParameters['id'],
+          url: state.uri.queryParameters['url'],
+          title: state.uri.queryParameters['title'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.privacyData,
+        builder: (context, state) => const PrivacyDataScreen(),
       ),
       GoRoute(
         path: AppRoutes.settings,
