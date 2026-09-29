@@ -88,17 +88,29 @@ void main() {
       );
     });
 
-    test('resetPasswordWithOtp calls through with the new password', () async {
+    test('a verified reset code buys the ticket the new password is set with',
+        () async {
       final s = _setup();
-      await s.container
-          .read(authControllerProvider.notifier)
-          .resetPasswordWithOtp(
-            phone: '+971501234567',
-            code: '123456',
-            newPassword: 'NewSecret1',
-          );
-      expect(s.repo.lastResetPassword, 'NewSecret1');
-      expect(s.repo.lastOtpPhone, '+971501234567');
+      final auth = s.container.read(authControllerProvider.notifier);
+
+      final ticket = await auth.verifyPasswordResetOtp(
+        '+971501234567',
+        '123456',
+      );
+      await auth.resetPassword(
+        email: ticket.email,
+        token: ticket.token,
+        newPassword: 'NewSecret1!',
+      );
+
+      expect(s.repo.calls, [
+        'verifyPasswordResetOtp:+971501234567:123456',
+        'resetPassword:layla@example.com:reset-token',
+        // A reset signs the customer in with the new password.
+        'login:layla@example.com',
+      ]);
+      expect(s.repo.lastResetPassword, 'NewSecret1!');
+      expect(s.container.read(authControllerProvider).isAuthenticated, isTrue);
     });
   });
 }

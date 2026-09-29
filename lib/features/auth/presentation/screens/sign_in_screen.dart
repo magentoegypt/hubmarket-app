@@ -3,23 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/config/backend_capabilities.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
-import '../../../../core/widgets/brand_logo.dart';
-import '../../../../core/widgets/button_spinner.dart';
-import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/otp_code_field.dart';
-import '../../../../core/widgets/phone_number_field.dart';
-import '../../../../core/widgets/resend_countdown.dart';
-import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
+import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
+import '../auth_error_text.dart';
 import '../widgets/auth_field.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_method_tabs.dart';
+import '../widgets/auth_scaffold.dart';
+import '../widgets/auth_widgets.dart';
+import 'verify_code_screen.dart';
 
+/// Figma "03 Sign in" (+ "S6 Sign-in errors").
+///
+/// Email: e-mail + password (`generateCustomerToken`). Mobile: the number gets
+/// a WhatsApp code, typed on "05 Verify WhatsApp code" (sign-in by code goes
+/// through the REST pair that answers a token). "Continue with WhatsApp code"
+/// is the shortcut to the Mobile tab.
+///
+/// Errors stay on the form (S6): the fields' own checks under each field; a
+/// refused sign-in as the red banner under the title with both fields
+/// outlined; a refused number under the mobile field.
+///
+/// The frame's Apple / Google / Facebook row is not built: the store has no
+/// social sign-in to back it.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -28,297 +38,235 @@ class SignInScreen extends ConsumerStatefulWidget {
 }
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
-  final _emailFormKey = GlobalKey<FormState>();
-  final _phoneFormKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _phone = TextEditingController();
-  final _otp = TextEditingController();
+  final _mobile = TextEditingController();
 
-  bool _phoneTab = false;
-  bool _otpSent = false;
-  String _sentPhone = '';
+  bool _mobileTab = false;
   bool _busy = false;
   bool _obscure = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _otp.addListener(_onOtpChanged);
-  }
+  /// Re-checks the fields as they change once a submit has failed on them.
+  bool _submitted = false;
+
+  /// The last refused sign-in (banner) and whether the fields still carry it.
+  AuthError? _signInError;
+  bool _credentialsFlagged = false;
+
+  /// A refused mobile number (no account, too many codes…).
+  String? _mobileError;
 
   @override
   void dispose() {
-    _otp.removeListener(_onOtpChanged);
     _email.dispose();
     _password.dispose();
-    _phone.dispose();
-    _otp.dispose();
+    _mobile.dispose();
     super.dispose();
   }
 
-  void _onOtpChanged() => setState(() {});
+  AuthController get _auth => ref.read(authControllerProvider.notifier);
 
-  AuthController get _controller => ref.read(authControllerProvider.notifier);
-
-  Future<void> _submitEmail() async {
-    if (!_emailFormKey.currentState!.validate()) return;
-    setState(() => _busy = true);
-    try {
-      await _controller.login(_email.text.trim(), _password.text);
-      if (mounted) context.go(AppRoutes.home);
-    } catch (_) {
-      if (mounted) _snack(AppLocalizations.of(context).authSignInError);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _getOtp() async {
-    if (!_phoneFormKey.currentState!.validate()) return;
-    final phone = Phone.normalizeUae(_phone.text);
-    setState(() => _busy = true);
-    try {
-      await _controller.requestLoginOtp(phone);
-      if (mounted) {
-        setState(() {
-          _sentPhone = phone;
-          _otpSent = true;
-          _otp.clear();
-        });
-      }
-    } catch (error) {
-      if (!mounted) return;
-      _snack(
-        serverMessageOr(
-          context,
-          error,
-          AppLocalizations.of(context).authOtpRequestError,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _resendOtp() async {
-    _otp.clear();
-    try {
-      await _controller.requestLoginOtp(_sentPhone);
-    } catch (error) {
-      if (!mounted) return;
-      _snack(
-        serverMessageOr(
-          context,
-          error,
-          AppLocalizations.of(context).authOtpRequestError,
-        ),
-      );
-    }
-  }
-
-  Future<void> _verifyOtp() async {
-    if (_otp.text.length != 6) return;
-    setState(() => _busy = true);
-    try {
-      await _controller.loginWithOtp(_sentPhone, _otp.text);
-      if (mounted) context.go(AppRoutes.home);
-    } catch (error) {
-      if (!mounted) return;
-      _otp.clear();
-      _snack(
-        serverMessageOr(
-          context,
-          error,
-          AppLocalizations.of(context).authOtpVerifyError,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  void _switchTab(bool phone) {
+  Future<void> _signIn() async {
+    setState(() => _submitted = true);
+    if (!_formKey.currentState!.validate()) return;
     setState(() {
-      _phoneTab = phone;
-      _otpSent = false;
-      _otp.clear();
+      _busy = true;
+      _signInError = null;
+      _credentialsFlagged = false;
+    });
+    try {
+      await _auth.login(_email.text.trim(), _password.text);
+      if (mounted) context.go(AppRoutes.home);
+    } catch (error) {
+      if (!mounted) return;
+      final authError = AuthError.from(error);
+      setState(() {
+        _signInError = authError;
+        _credentialsFlagged = authError.kind == AuthErrorKind.wrongCredentials;
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _sendCode() async {
+    setState(() => _submitted = true);
+    if (!_formKey.currentState!.validate()) return;
+    final phone = Phone.normalizeUae(_mobile.text);
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _busy = true;
+      _mobileError = null;
+    });
+    try {
+      await _auth.requestLoginOtp(phone);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      final outcome = await context.push<VerifyCodeOutcome>(
+        AppRoutes.verifyCode,
+        extra: VerifyCodeFlow.signIn(_auth, phone),
+      );
+      if (mounted && outcome == VerifyCodeOutcome.useEmail) _switchTab(false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _mobileError = AuthError.from(
+          error,
+        ).message(l10n, fallback: l10n.authOtpRequestError);
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _switchTab(bool mobile) {
+    if (mobile == _mobileTab) return;
+    setState(() {
+      _mobileTab = mobile;
+      _submitted = false;
+      _signInError = null;
+      _credentialsFlagged = false;
+      _mobileError = null;
     });
   }
 
-  void _snack(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
+  void _unflagCredentials() {
+    if (_credentialsFlagged) setState(() => _credentialsFlagged = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    // Phone sign-in needs a backend endpoint that trades a code for a token;
-    // without one the screen is e-mail + password only.
+    // Sign-in by code needs the endpoint that trades a code for a token;
+    // without it the screen is e-mail + password only.
     final phoneLogin = ref.watch(
       backendCapabilitiesProvider.select((c) => c.whatsappOtpLogin),
     );
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        toolbarHeight: 80,
-        leading: const HubBackButton(),
-        title: const BrandLogo(height: 60),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AuthHeader(
-                icon: Icons.lock_outline,
-                title: l10n.authSignInWelcome,
-                subtitle: l10n.authSignInSubtitle,
-              ),
-              const SizedBox(height: 24),
-              if (phoneLogin) ...[
-                AuthMethodTabs(
-                  emailLabel: l10n.authMethodEmail,
-                  phoneLabel: l10n.authMethodPhone,
-                  phoneSelected: _phoneTab,
-                  onChanged: _switchTab,
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (phoneLogin && _phoneTab)
-                _phoneSection(l10n)
-              else
-                _emailSection(l10n),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(l10n.authNoAccount),
-                  TextButton(
-                    onPressed: () => context.push(AppRoutes.signUp),
-                    child: Text(l10n.authSignUpLink),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _emailSection(AppLocalizations l10n) {
+    final mobileTab = phoneLogin && _mobileTab;
+    final banner = !mobileTab ? _signInError : null;
     return Form(
-      key: _emailFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AuthField(
-            controller: _email,
-            icon: Icons.mail_outline,
-            hint: l10n.authEmailHint,
-            keyboardType: TextInputType.emailAddress,
-            validator: (v) => Validators.email(context, v),
+      key: _formKey,
+      autovalidateMode: _submitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
+      child: AuthScaffold(
+        content: [
+          // S6: a refused sign-in takes the subtitle's place.
+          AuthHeader(
+            title: l10n.authSignInWelcome,
+            subtitle: banner == null ? l10n.authSignInSubtitle : null,
           ),
-          const SizedBox(height: 16),
-          AuthField(
-            controller: _password,
-            icon: Icons.lock_outline,
-            hint: l10n.fieldPassword,
-            obscureText: _obscure,
-            textInputAction: TextInputAction.done,
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscure
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: AppColors.inkFaint,
-              ),
-              onPressed: () => setState(() => _obscure = !_obscure),
+          if (banner != null) _banner(l10n, banner),
+          if (phoneLogin)
+            AuthMethodTabs(
+              emailLabel: l10n.authMethodEmail,
+              phoneLabel: l10n.authMethodPhone,
+              phoneSelected: mobileTab,
+              onChanged: _switchTab,
             ),
-            validator: (v) => Validators.required(context, v),
-            onSubmitted: (_) => _submitEmail(),
-          ),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: TextButton(
-              onPressed: () => context.push(AppRoutes.forgotPassword),
-              child: Text(l10n.authForgotLink),
-            ),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: _busy ? null : _submitEmail,
-            child: _busy
-                ? const ButtonSpinner()
-                : Text(l10n.authSignInTitle),
+          if (mobileTab)
+            ..._mobileSection(l10n)
+          else
+            ..._emailSection(l10n, phoneLogin: phoneLogin),
+        ],
+        bottom: [
+          AuthFooterPrompt(
+            prompt: l10n.authNoAccount,
+            action: l10n.authSignUpLink,
+            onTap: () => context.push(AppRoutes.signUp),
           ),
         ],
       ),
     );
   }
 
-  Widget _phoneSection(AppLocalizations l10n) {
-    return Form(
-      key: _phoneFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PhoneNumberField(
-            controller: _phone,
-            hint: l10n.authPhoneHint,
-            enabled: !_otpSent,
-            validator: (v) => Validators.uaePhone(context, v),
-            onSubmitted: (_) => _otpSent ? null : _getOtp(),
-          ),
-          if (!_otpSent) ...[
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _busy ? null : _getOtp,
-              child: _busy ? const ButtonSpinner() : Text(l10n.authGetOtp),
-            ),
-          ] else ...[
-            const SizedBox(height: 12),
-            Text(
-              l10n.authOtpSentTo(Phone.maskBidi(_sentPhone)),
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.authOtpEnter,
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            OtpCodeField(controller: _otp, onCompleted: (_) => _verifyOtp()),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: (_busy || _otp.text.length != 6) ? null : _verifyOtp,
-              child: _busy
-                  ? const ButtonSpinner()
-                  : Text(l10n.authVerifyAndSignIn),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ResendCountdown(
-                  onResend: _resendOtp,
-                  resendLabel: l10n.authResendCode,
-                  countingLabel: l10n.authResendIn,
-                ),
-                TextButton(
-                  onPressed: () => context.push(AppRoutes.forgotPassword),
-                  child: Text(l10n.authForgotLink),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
+  Widget _banner(AppLocalizations l10n, AuthError error) {
+    if (error.kind == AuthErrorKind.wrongCredentials) {
+      return AuthErrorBanner(
+        title: l10n.authErrorWrongCredentials,
+        message: l10n.authErrorWrongCredentialsHint,
+      );
+    }
+    return AuthErrorBanner(
+      title: error.message(l10n, fallback: l10n.authSignInError),
     );
   }
+
+  List<Widget> _emailSection(
+    AppLocalizations l10n, {
+    required bool phoneLogin,
+  }) => [
+    AuthField(
+      controller: _email,
+      label: l10n.authEmailHint,
+      icon: Icons.mail_outline_rounded,
+      keyboardType: TextInputType.emailAddress,
+      autofillHints: const [AutofillHints.email],
+      ltrInput: true,
+      showErrorBorder: _credentialsFlagged,
+      validator: (v) => Validators.email(context, v),
+      onChanged: (_) => _unflagCredentials(),
+    ),
+    AuthField(
+      controller: _password,
+      label: l10n.fieldPassword,
+      icon: Icons.lock_outline_rounded,
+      obscureText: _obscure,
+      textInputAction: TextInputAction.done,
+      autofillHints: const [AutofillHints.password],
+      showErrorBorder: _credentialsFlagged,
+      trailing: PasswordVisibilityToggle(
+        obscured: _obscure,
+        onPressed: () => setState(() => _obscure = !_obscure),
+      ),
+      validator: (v) => Validators.password(context, v),
+      onChanged: (_) => _unflagCredentials(),
+      onSubmitted: (_) => _signIn(),
+    ),
+    Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: AuthLink(
+        label: l10n.authForgotLink,
+        onTap: () => context.push(AppRoutes.forgotPassword),
+      ),
+    ),
+    AuthButton.primary(
+      label: l10n.authSignInAction,
+      busy: _busy,
+      onPressed: _signIn,
+    ),
+    if (phoneLogin) ...[
+      AuthOrDivider(label: l10n.authOr),
+      AuthButton.outline(
+        label: l10n.authContinueWithWhatsapp,
+        leading: const MessageCircleIcon(),
+        onPressed: _busy ? null : () => _switchTab(true),
+      ),
+    ],
+  ];
+
+  List<Widget> _mobileSection(AppLocalizations l10n) => [
+    AuthField(
+      controller: _mobile,
+      label: l10n.fieldMobileWhatsapp,
+      icon: Icons.phone_outlined,
+      hint: l10n.authPhonePlaceholder,
+      keyboardType: TextInputType.phone,
+      textInputAction: TextInputAction.done,
+      autofillHints: const [AutofillHints.telephoneNumber],
+      ltrInput: true,
+      errorText: _mobileError,
+      validator: (v) => Validators.uaePhone(context, v),
+      onChanged: (_) {
+        if (_mobileError != null) setState(() => _mobileError = null);
+      },
+      onSubmitted: (_) => _sendCode(),
+    ),
+    AuthButton.primary(
+      label: l10n.authSendWhatsappCode,
+      busy: _busy,
+      onPressed: _sendCode,
+    ),
+  ];
 }

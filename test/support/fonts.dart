@@ -57,6 +57,18 @@ File? _materialIconsFont() {
   return null;
 }
 
+/// Runs [body] with real (blurred) shadows. Widget tests draw shadows without
+/// blur for stable goldens, which makes a capture misleading next to a frame;
+/// the test binding expects the flag back on when the test ends.
+Future<void> withRealShadows(Future<void> Function() body) async {
+  debugDisableShadows = false;
+  try {
+    await body();
+  } finally {
+    debugDisableShadows = true;
+  }
+}
+
 /// Writes the [RepaintBoundary] behind [boundaryKey] to
 /// `build/test_screens/<name>.png` — a visual record for review against the
 /// Figma frames. `build/` is gitignored and nothing is asserted on the image.

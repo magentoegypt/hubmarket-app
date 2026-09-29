@@ -21,6 +21,12 @@ abstract final class AppColors {
   /// [accent] does not (prices, "See all" links, Accent buttons).
   static const Color accentStrong = Color(0xFFC2410C);
 
+  /// Accent tint (`--hm-accent-subtle`) — the reset-password badge.
+  static const Color accentSubtle = Color(0xFFFFF4EF);
+
+  /// Accent on navy (`--hm-accent-on-dark`) — actions on the offline banner.
+  static const Color accentOnDark = Color(0xFFFB923C);
+
   /// Light navy tint — section backgrounds, icon chips, empty-state circles.
   static const Color surfaceTint = Color(0xFFEEF2F8);
 
@@ -32,6 +38,18 @@ abstract final class AppColors {
 
   /// Positive states — "FREE" delivery, in-stock, unlocked thresholds.
   static const Color success = Color(0xFF16A34A);
+
+  /// Status colours (`--hm-{danger,success,warning,info}` and their `-subtle`
+  /// tints) — form errors and banners, the verify-code badge, the offline
+  /// state, notes.
+  static const Color danger = Color(0xFFC0392B);
+  static const Color dangerSubtle = Color(0xFFFBECEA);
+  static const Color successStrong = Color(0xFF0F7B3F);
+  static const Color successSubtle = Color(0xFFEAF6EF);
+  static const Color warning = Color(0xFFB45309);
+  static const Color warningSubtle = Color(0xFFFDF3E7);
+  static const Color info = Color(0xFF1D4ED8);
+  static const Color infoSubtle = Color(0xFFEAF0FD);
 
   /// WhatsApp brand green — WhatsApp code / support actions.
   static const Color whatsappGreen = Color(0xFF25D366);
@@ -47,6 +65,14 @@ abstract final class AppColors {
 
   /// Default hairline border (`border/default`) — card outlines, dividers.
   static const Color borderDefault = Color(0xFFE3E8EF);
+
+  /// Form-field outline (`--hm-default`) and the stronger checkbox outline
+  /// (`--hm-strong`).
+  static const Color borderInput = Color(0xFFCBD3E2);
+  static const Color borderStrong = Color(0xFF7D879C);
+
+  /// Faint rules (`--hm-subtle`) — the "or" divider.
+  static const Color borderSubtle = Color(0xFFE8ECF3);
 
   /// Light neutral band — section separators between sticky header and content.
   static const Color surfaceMuted = Color(0xFFF3F4F6);

@@ -283,27 +283,42 @@
   "comingSoonBody": "This section arrives in a later phase.",
   "authSignInTitle": "Sign In",
   "authSignInWelcome": "Welcome back",
-  "authSignInSubtitle": "Sign in to continue shopping",
+  "authSignInSubtitle": "Sign in to track orders, save addresses and check out faster.",
   "authSignUpTitle": "Create Account",
-  "authSignUpSubtitle": "Join Hub Market for faster checkout, order tracking & exclusive offers.",
-  "authAgreeTerms": "I agree to the Terms of Service & Privacy Policy",
-  "authForgotTitle": "Forgot Password?",
-  "authForgotSubmit": "Send Reset Link",
+  "authSignInAction": "Sign in",
+  "@authSignInAction": {
+    "description": "Sign in's button and the Register footer link (Figma 03 / 04, sentence case)."
+  },
+  "authCreateAccount": "Create account",
+  "@authCreateAccount": {
+    "description": "Register's title and button (Figma 04, sentence case)."
+  },
+  "authSignUpSubtitle": "Shop from every Hub Market store with one account.",
+  "authAgreeTerms": "I agree to the Terms of Service and Privacy Policy",
+  "authAgreeTermsRequired": "Accept the terms to create your account.",
+  "authNewsletterOptIn": "Send me offers from Hub Market stores",
+  "authForgotTitle": "Reset your password",
+  "authForgotSubmit": "Send reset link",
   "fieldEmail": "Email",
   "fieldPassword": "Password",
+  "authShowPassword": "Show password",
+  "authHidePassword": "Hide password",
   "fieldFirstName": "First name",
   "fieldLastName": "Last name",
-  "authForgotLink": "Forgot Password?",
-  "authNoAccount": "Don't have an account?",
+  "authForgotLink": "Forgot password?",
+  "authNoAccount": "New to Hub Market?",
   "authHaveAccount": "Already have an account?",
-  "authSignUpLink": "Sign Up",
-  "authForgotIntro": "No worries! Enter your email and we'll send you a link to reset your password.",
+  "authSignUpLink": "Create account",
+  "authForgotIntro": "Enter the email linked to your account and we’ll send you a reset link.",
   "authForgotSent": "If that email is registered, a reset link is on its way.",
-  "authHaveResetCode": "I have a reset code",
-  "authBackToSignIn": "Back to Sign In",
+  "authForgotLinkNote": "The link expires in 2 hours. Check your spam folder if it doesn’t arrive.",
+  "@authForgotLinkNote": {
+    "description": "Magento's Recovery Link Expiration Period — 2 hours on this store (the default)."
+  },
+  "authBackToSignIn": "Back to sign in",
   "authEmailHint": "Email address",
-  "authResetTitle": "Set a New Password",
-  "authResetIntro": "Enter the code from your reset email and choose a new password.",
+  "authResetTitle": "Set a new password",
+  "authResetIntro": "Choose a new password for your account.",
   "authResetError": "Couldn't reset your password. Check the code and try again.",
   "fieldResetCode": "Reset code",
   "authSignInError": "Couldn't sign you in. Please check your details.",
@@ -319,19 +334,21 @@
   "authErrorExpiredCode": "That code has expired. Request a new one.",
   "authErrorTooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
   "authMethodEmail": "Email",
-  "authMethodPhone": "Phone Number",
-  "authGetOtp": "Get OTP",
+  "authMethodPhone": "Mobile",
+  "fieldMobileWhatsapp": "Mobile number (WhatsApp)",
+  "authPhonePlaceholder": "+971 50 123 4567",
+  "@authPhonePlaceholder": {
+    "description": "Example number shown in an empty mobile field; digits stay Latin in Arabic."
+  },
+  "authOr": "or",
+  "authContinueWithWhatsapp": "Continue with WhatsApp code",
   "authPhoneHint": "Enter phone number",
   "authOtpEnter": "Enter the 6-digit code",
-  "authOtpSentTo": "Code sent to {phone}",
-  "@authOtpSentTo": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
   "authResendCode": "Resend code",
+  "authResendCodeIn": "Resend code in",
+  "@authResendCodeIn": {
+    "description": "Followed by the countdown, e.g. “Resend code in 00:42”."
+  },
   "authResendIn": "Resend in {seconds}s",
   "@authResendIn": {
     "placeholders": {
@@ -340,15 +357,24 @@
       }
     }
   },
-  "authVerifyAndSignIn": "Verify & Sign In",
   "authVerify": "Verify",
   "authSendWhatsappCode": "Send WhatsApp code",
   "authSignUpMobileHelp": "We'll WhatsApp a 6-digit code to confirm this number.",
   "authMobileVerified": "Mobile number verified",
   "authChangeNumber": "Change number",
-  "authForgotPhoneIntro": "No worries! Verify your phone number to reset your password.",
-  "authResetPassword": "Reset Password",
-  "authResetSuccess": "Password updated. Sign in with your new password.",
+  "authVerifyTitle": "Verify your number",
+  "authVerifyBody": "Enter the 6-digit code we sent on WhatsApp to {phone}.",
+  "@authVerifyBody": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "authVerifyContinue": "Verify & continue",
+  "authUseEmailInstead": "Use email instead",
+  "authForgotPhoneIntro": "Enter the mobile number linked to your account and we’ll send you a code on WhatsApp.",
+  "authResetPassword": "Reset password",
   "authOtpRequestError": "Couldn't send the code. Please try again.",
   "authOtpVerifyError": "Couldn't verify the code. Please try again.",
   "fieldMobileNumber": "Mobile Number",
@@ -367,6 +393,7 @@
   "validationRequired": "Required",
   "validationEmail": "Enter a valid email address",
   "validationPassword": "Password must be at least 8 characters",
+  "validationPasswordRule": "8+ characters, one number, one symbol",
   "accountGuestTitle": "Your Hub Market account",
   "accountGuestBody": "Sign in to track orders, save addresses and check out faster.",
   "accountSignOut": "Sign Out",
@@ -672,9 +699,7 @@
   "profileMobileChange": "Change",
   "profileMobileAdd": "Add",
   "profileMobileNotSet": "No mobile number added",
-  "profileMobileVerifyUpdate": "Verify & Update",
   "profileMobileUpdated": "Mobile number updated",
-  "profileMobileUpdateError": "Couldn't update your mobile number. Please try again.",
   "actionCancel": "Cancel",
   "profilePasswordSection": "Change Password",
   "fieldCurrentPassword": "Current password",

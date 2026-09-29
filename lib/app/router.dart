@@ -16,8 +16,10 @@ import '../features/account/presentation/screens/guest_track_order_screen.dart';
 import '../features/account/presentation/screens/orders_screen.dart';
 import '../features/account/presentation/screens/payment_methods_screen.dart';
 import '../features/account/presentation/screens/settings_screen.dart';
+import '../features/auth/domain/password_reset_ticket.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/reset_password_screen.dart';
+import '../features/auth/presentation/screens/verify_code_screen.dart';
 import '../features/cart/presentation/screens/cart_screen.dart';
 import '../features/checkout/presentation/screens/checkout_screen.dart';
 import '../features/checkout/presentation/screens/complete_payment_screen.dart';
@@ -144,11 +146,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.resetPassword,
-        // Deep-link friendly: hubmarket://app/reset-password?email=…&token=…
-        builder: (context, state) => ResetPasswordScreen(
-          initialEmail: state.uri.queryParameters['email'],
-          initialToken: state.uri.queryParameters['token'],
-        ),
+        // From a verified WhatsApp code: the ticket rides in `extra`. From the
+        // reset e-mail: hubmarket://app/reset-password?email=…&token=…
+        builder: (context, state) => state.extra is PasswordResetTicket
+            ? ResetPasswordScreen.fromTicket(
+                state.extra! as PasswordResetTicket,
+              )
+            : ResetPasswordScreen(
+                initialEmail: state.uri.queryParameters['email'],
+                initialToken: state.uri.queryParameters['token'],
+              ),
+      ),
+      // The flow lives in memory only; a cold start or a deep link arrives
+      // without one, so it goes to Sign in instead of throwing on the cast.
+      GoRoute(
+        path: AppRoutes.verifyCode,
+        redirect: (context, state) =>
+            state.extra is VerifyCodeFlow ? null : AppRoutes.signIn,
+        builder: (context, state) =>
+            VerifyCodeScreen(flow: state.extra! as VerifyCodeFlow),
       ),
       GoRoute(
         path: AppRoutes.orders,

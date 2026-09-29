@@ -5,6 +5,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
 import '../domain/customer.dart';
+import '../domain/password_reset_ticket.dart';
 import 'auth_queries.dart';
 import 'otp_queries.dart';
 import 'vnecoms_otp.dart';
@@ -39,14 +40,17 @@ class AuthRepository {
   /// The number goes out as `mobilenumber` on `createCustomer` — the backend
   /// requires it on every GraphQL sign-up (see [AuthQueries.createCustomer])
   /// and refuses one another account already holds. It does not re-check the
-  /// code; the sign-up screen only enables Create Account once
-  /// [verifyRegistrationOtp] has passed.
+  /// code; the sign-up screen only creates the account once
+  /// [verifyRegistrationOtp] has passed. [subscribeToNewsletter] is the
+  /// Register form's "Send me offers" box (`is_subscribed`; the store's
+  /// newsletter is enabled).
   Future<void> register({
     required String firstName,
     required String lastName,
     required String email,
     required String password,
     String? mobileNumber,
+    bool subscribeToNewsletter = false,
   }) async {
     await _mutate(AuthQueries.createCustomer, {
       'input': <String, dynamic>{
@@ -56,6 +60,7 @@ class AuthRepository {
         'password': password,
         if (mobileNumber != null && mobileNumber.isNotEmpty)
           'mobilenumber': mobileNumber,
+        if (subscribeToNewsletter) 'is_subscribed': true,
       },
     });
   }
@@ -107,13 +112,13 @@ class AuthRepository {
   }
 
   /// Exchanges the code for the account's e-mail + a reset token
-  /// (`customerForgotPasswordVerifyOtp`), then sets [newPassword] through core
-  /// `resetPassword` — so the store's password rules apply as on the website.
-  Future<void> resetPasswordWithOtp({
-    required String phone,
-    required String code,
-    required String newPassword,
-  }) async {
+  /// (`customerForgotPasswordVerifyOtp`). The new password is then set with
+  /// [resetPassword] — core `resetPassword`, so the store's password rules
+  /// apply as on the website. Throws [Failure] on a wrong / expired code.
+  Future<PasswordResetTicket> verifyPasswordResetOtp(
+    String phone,
+    String code,
+  ) async {
     final data = await _mutate(
       OtpQueries.forgotPasswordVerifyOtp,
       VnecomsOtp.verifyVariables(phone, code),
@@ -129,7 +134,7 @@ class AuthRepository {
         detail: 'customerForgotPasswordVerifyOtp returned no email/token',
       );
     }
-    await resetPassword(email: email, token: token, newPassword: newPassword);
+    return PasswordResetTicket(email: email, token: token);
   }
 
   /// Best-effort token revocation; failures are swallowed so logout always

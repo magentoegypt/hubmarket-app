@@ -195,6 +195,37 @@ void main() {
       expect(input['mobilenumber'], _mobile);
       expect(input.containsKey('custom_attributes'), isFalse);
       expect(input['email'], 'sara@example.com');
+      // The "Send me offers" box was left unticked.
+      expect(input.containsKey('is_subscribed'), isFalse);
+    });
+
+    test('the "Send me offers" box subscribes the new account', () async {
+      final gql = _GraphQl({
+        'CreateCustomer': {
+          'createCustomer': <String, dynamic>{
+            '__typename': 'CustomerOutput',
+            'customer': <String, dynamic>{
+              '__typename': 'Customer',
+              'firstname': 'Sara',
+              'lastname': 'Ali',
+              'email': 'sara@example.com',
+            },
+          },
+        },
+      });
+      final repo = AuthRepository(gql.client, _Rest().api);
+
+      await repo.register(
+        firstName: 'Sara',
+        lastName: 'Ali',
+        email: 'sara@example.com',
+        password: 'Secret123!',
+        mobileNumber: _mobile,
+        subscribeToNewsletter: true,
+      );
+
+      final input = gql.variablesOf('CreateCustomer')['input'] as Map;
+      expect(input['is_subscribed'], isTrue);
     });
   });
 
@@ -227,9 +258,12 @@ void main() {
       });
       final repo = AuthRepository(gql.client, _Rest().api);
 
-      await repo.resetPasswordWithOtp(
-        phone: _mobile,
-        code: '123456',
+      final ticket = await repo.verifyPasswordResetOtp(_mobile, '123456');
+      expect(ticket.email, 'sara@example.com');
+      expect(ticket.token, 'rp-token-1');
+      await repo.resetPassword(
+        email: ticket.email,
+        token: ticket.token,
         newPassword: 'NewSecret1!',
       );
 
@@ -259,11 +293,7 @@ void main() {
       final repo = AuthRepository(gql.client, _Rest().api);
 
       await expectLater(
-        repo.resetPasswordWithOtp(
-          phone: _mobile,
-          code: '000000',
-          newPassword: 'NewSecret1!',
-        ),
+        repo.verifyPasswordResetOtp(_mobile, '000000'),
         throwsA(
           isA<Failure>().having(
             (f) => f.detail,
