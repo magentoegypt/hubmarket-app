@@ -159,7 +159,8 @@ void main() {
       );
 
       expect(find.text('My credit'), findsOneWidget);
-      expect(find.text('AED 120.00'), findsOneWidget);
+      // In a left-to-right isolate, so it keeps its order in Arabic.
+      expect(find.text('\u2066AED 120.00\u2069'), findsOneWidget);
       await tester.ensureVisible(find.text('My credit'));
       await tester.tap(find.text('My credit'));
       await tester.pumpAndSettle();

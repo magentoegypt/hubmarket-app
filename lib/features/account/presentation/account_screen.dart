@@ -86,6 +86,10 @@ class _Authenticated extends ConsumerWidget {
     final creditBalance = creditEnabled
         ? ref.watch(storeCreditBalanceProvider).valueOrNull?.balance
         : null;
+    // "AED 120.00" in a left-to-right isolate, so it keeps its order in RTL.
+    final creditValue = creditBalance == null
+        ? null
+        : '\u2066${creditBalance.formatted()}\u2069';
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -234,7 +238,7 @@ class _Authenticated extends ConsumerWidget {
           _AccountTile(
             icon: Icons.card_giftcard_outlined,
             label: l10n.myCreditTitle,
-            value: creditBalance?.formatted(),
+            value: creditValue,
             valueColor: AppColors.successStrong,
             onTap: () => context.push(AppRoutes.myCredit),
           ),
@@ -440,7 +444,6 @@ class _AccountTile extends StatelessWidget {
             if (value != null) ...[
               Text(
                 value!,
-                textDirection: valueColor == null ? null : TextDirection.ltr,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: valueColor == null
