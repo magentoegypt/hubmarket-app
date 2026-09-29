@@ -685,16 +685,6 @@ class _CheckoutSummary extends StatelessWidget {
           valueColor: freeDelivery ? AppColors.brandPrimary : null,
           valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
         ),
-        if (totals.hasCodFee) ...[
-          const SizedBox(height: 11),
-          // Driven by the amount the server returns, never by the selected
-          // method or a hardcoded figure: the merchant can change or switch
-          // off the fee in admin and the row follows without a release.
-          SummaryRow(
-            label: l10n.checkoutCodFee,
-            value: totals.codFee!.formatted(),
-          ),
-        ],
         const SizedBox(height: 11),
         const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
         const SizedBox(height: 11),

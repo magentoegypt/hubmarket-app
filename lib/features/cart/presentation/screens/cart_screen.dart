@@ -684,17 +684,6 @@ class _OrderSummary extends StatelessWidget {
             valueColor: freeDelivery ? AppColors.brandPrimary : null,
             valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
           ),
-          if (totals.hasCodFee) ...[
-            const SizedBox(height: 11),
-            // Only ever set once a payment method is on the quote, so in the
-            // cart this normally stays hidden — it shows if the shopper comes
-            // back from checkout having chosen Cash on Delivery, where a total
-            // 10 AED above the parts would otherwise look like a mistake.
-            SummaryRow(
-              label: l10n.checkoutCodFee,
-              value: totals.codFee!.formatted(),
-            ),
-          ],
           const SizedBox(height: 11),
           const Divider(
             height: 1,

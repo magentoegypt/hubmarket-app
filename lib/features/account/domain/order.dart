@@ -69,7 +69,6 @@ class CustomerOrder {
     this.comments = const <OrderComment>[],
     this.invoiceCount = 0,
     this.shipmentCount = 0,
-    this.codFee,
   });
 
   final String number;
@@ -126,19 +125,9 @@ class CustomerOrder {
   final int invoiceCount;
   final int shipmentCount;
 
-  /// Cash-on-Delivery handling fee (`OrderTotal.cod_fee`), already counted in
-  /// [total]. Zero on any order that did not attract it — including orders
-  /// placed before the fee existed, where the backend returns 0 rather than
-  /// erroring, so history needs no special-casing.
-  final Money? codFee;
-
   bool get hasTracking => trackings.isNotEmpty;
   bool get hasInvoice => invoiceCount > 0;
   bool get hasShipment => shipmentCount > 0;
-
-  /// Whether to show the fee line. Driven by the amount, never by the payment
-  /// method: the fee is backend config and can change or be switched off.
-  bool get hasCodFee => (codFee?.amount ?? 0) > 0;
 
   /// Distinct products in the order (matches the thumbnail count / "Items (N)").
   int get itemCount => lines.length;

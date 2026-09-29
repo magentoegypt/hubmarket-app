@@ -16,18 +16,17 @@ import 'package:hubmarket_app/features/checkout/presentation/checkout_controller
 
 import '../../support/fakes.dart';
 
-/// Cash on Delivery carries a flat handling fee the server folds into
-/// `grand_total` (CL042-DEV43). The app reads that total; it must re-read it
-/// once a method is on the quote, or it quotes the shopper less than they are
-/// charged.
+/// The grand total is re-read once a payment method is on the quote. The one
+/// captured at the shipping step predates any method, so a method-dependent
+/// charge (a payment-surcharge extension) would otherwise make the summary and
+/// the Place Order button quote less than the shopper is charged.
 const _cod = PaymentMethodOption(code: 'cashondelivery', title: 'COD');
-const _card = PaymentMethodOption(code: 'ngeniusonline', title: 'Visa & MC');
+const _checkmo = PaymentMethodOption(code: 'checkmo', title: 'Check / Money order');
 
 const _aed = 'AED';
 const _subtotal = Money(amount: 69, currency: _aed);
-const _withoutFee = Money(amount: 79, currency: _aed); // 69 + 10 shipping
-const _withFee = Money(amount: 89, currency: _aed); // + 10 COD fee
-const _fee = Money(amount: 10, currency: _aed);
+const _plain = Money(amount: 79, currency: _aed); // 69 + 10 shipping
+const _surcharged = Money(amount: 84, currency: _aed); // + 5 on checkmo
 
 const _address = <String, dynamic>{
   'address': {
@@ -40,15 +39,13 @@ const _address = <String, dynamic>{
   },
 };
 
-/// A cart whose totals follow the payment method, the way the store's do:
-/// the fee appears on `cashondelivery` and is removed again on anything else.
-class _CodCartRepo extends FakeCartRepository {
+/// A cart whose grand total follows the payment method, the way a store with
+/// a surcharge on one method behaves.
+class _SurchargeCartRepo extends FakeCartRepository {
   String? method;
 
   /// Makes the totals re-read fail, as a dropped connection would.
   bool failGetCart = false;
-
-  bool get _codSelected => method == 'cashondelivery';
 
   @override
   Future<Cart> getCart(String cartId) async => failGetCart
@@ -66,21 +63,18 @@ class _CodCartRepo extends FakeCartRepository {
             ),
           ],
           totals: CartTotals(
-            grandTotal: _codSelected ? _withFee : _withoutFee,
+            grandTotal: method == 'checkmo' ? _surcharged : _plain,
             subtotal: _subtotal,
-            // Money, never null: zero when it does not apply.
-            codFee: _codSelected
-                ? _fee
-                : const Money(amount: 0, currency: _aed),
           ),
         );
 }
 
 /// Applies the method to the cart, as storing it on the quote does server-side.
-class _CodCheckoutRepo extends FakeCheckoutRepository {
-  _CodCheckoutRepo(this.cart);
+class _MethodCheckoutRepo extends FakeCheckoutRepository {
+  _MethodCheckoutRepo(this.cart)
+    : super(paymentMethods: const [_cod, _checkmo]);
 
-  final _CodCartRepo cart;
+  final _SurchargeCartRepo cart;
 
   @override
   Future<bool> setPaymentMethod(
@@ -100,8 +94,8 @@ class _CodCheckoutRepo extends FakeCheckoutRepository {
 }
 
 Future<ProviderContainer> _seeded(
-  _CodCartRepo cart,
-  _CodCheckoutRepo checkout,
+  _SurchargeCartRepo cart,
+  _MethodCheckoutRepo checkout,
 ) async {
   final container = ProviderContainer(
     overrides: [
@@ -133,47 +127,32 @@ Future<ProviderContainer> _seeded(
 }
 
 void main() {
-  group('COD fee', () {
-    test('choosing COD re-reads the total instead of quoting the stale one', () async {
-      final cart = _CodCartRepo();
-      final container = await _seeded(cart, _CodCheckoutRepo(cart));
+  group('grand total after choosing a payment method', () {
+    test('re-reads the total instead of quoting the stale one', () async {
+      final cart = _SurchargeCartRepo();
+      final container = await _seeded(cart, _MethodCheckoutRepo(cart));
       final checkout = container.read(checkoutControllerProvider.notifier);
 
-      await checkout.selectPayment(_cod);
+      await checkout.selectPayment(_checkmo);
 
-      // 89, not the 79 read before any method was on the quote. Quoting 79 is
-      // the bug: the Place Order button renders this and the shopper is
-      // charged 89.
-      expect(container.read(checkoutControllerProvider).grandTotal, _withFee);
+      // 84, not the 79 read before any method was on the quote.
+      expect(container.read(checkoutControllerProvider).grandTotal, _surcharged);
     });
 
-    test('switching away from COD drops the total back', () async {
-      final cart = _CodCartRepo();
-      final container = await _seeded(cart, _CodCheckoutRepo(cart));
+    test('switching methods follows the total back down', () async {
+      final cart = _SurchargeCartRepo();
+      final container = await _seeded(cart, _MethodCheckoutRepo(cart));
       final checkout = container.read(checkoutControllerProvider.notifier);
 
+      await checkout.selectPayment(_checkmo);
       await checkout.selectPayment(_cod);
-      await checkout.selectPayment(_card);
 
-      expect(container.read(checkoutControllerProvider).grandTotal, _withoutFee);
-    });
-
-    test('the refreshed cart carries the fee for the summary row', () async {
-      final cart = _CodCartRepo();
-      final container = await _seeded(cart, _CodCheckoutRepo(cart));
-      await container
-          .read(checkoutControllerProvider.notifier)
-          .selectPayment(_cod);
-
-      final totals = container.read(cartControllerProvider).cart.totals;
-      expect(totals.hasCodFee, isTrue);
-      expect(totals.codFee, _fee);
+      expect(container.read(checkoutControllerProvider).grandTotal, _plain);
     });
 
     test('a failed refresh keeps the method selectable', () async {
-      final cart = _CodCartRepo();
-      final checkoutRepo = _CodCheckoutRepo(cart);
-      final container = await _seeded(cart, checkoutRepo);
+      final cart = _SurchargeCartRepo();
+      final container = await _seeded(cart, _MethodCheckoutRepo(cart));
       final checkout = container.read(checkoutControllerProvider.notifier);
 
       // The charged amount comes from the server at placeOrder either way, so
@@ -183,22 +162,6 @@ void main() {
 
       expect(ok, isTrue);
       expect(container.read(checkoutControllerProvider).selectedPayment, _cod);
-    });
-  });
-
-  group('CartTotals.hasCodFee', () {
-    test('is false for the zero the server sends when it does not apply', () {
-      const totals = CartTotals(codFee: Money(amount: 0, currency: _aed));
-      expect(totals.hasCodFee, isFalse);
-    });
-
-    test('is false when the field is absent', () {
-      expect(const CartTotals().hasCodFee, isFalse);
-    });
-
-    test('is true for a real fee', () {
-      const totals = CartTotals(codFee: _fee);
-      expect(totals.hasCodFee, isTrue);
     });
   });
 }

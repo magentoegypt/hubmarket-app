@@ -354,14 +354,12 @@ class CheckoutController extends Notifier<CheckoutState> {
         publicHash: savedCardHash,
         saveCard: wantsSave,
       );
-      // The method can change the total: Cash on Delivery carries a flat
-      // handling fee the server puts inside grand_total (CL042-DEV43). Our
-      // grandTotal was read when the *shipping* method was set, before any
-      // payment method existed on the quote — and COD is the pre-selected
-      // default — so without this the summary and the Place Order button
-      // would quote a figure lower than the customer is actually charged.
-      // Re-read on every method, including switching away, since that
-      // removes the fee again.
+      // Re-read the total once a method is on the quote. Our grandTotal was
+      // read when the *shipping* method was set, before any payment method
+      // existed; a method-dependent charge (a payment surcharge extension)
+      // would otherwise leave the summary and the Place Order button quoting
+      // less than the customer is charged. Stock Hub Market has no such
+      // charge, so this normally reads back the same figure.
       final refreshed = await _refreshedGrandTotal();
       state = state.copyWith(
         selectedPayment: method,

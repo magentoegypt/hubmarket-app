@@ -185,7 +185,6 @@ class CartRepository {
         subtotal: _parseMoney(
           prices?['subtotal_including_tax'] as Map<String, dynamic>?,
         ),
-        codFee: _parseMoney(prices?['cod_fee'] as Map<String, dynamic>?),
         discount: (discounts != null && discounts.isNotEmpty)
             ? _parseMoney(
                 (discounts.first as Map<String, dynamic>)['amount']

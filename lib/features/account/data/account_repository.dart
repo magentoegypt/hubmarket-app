@@ -303,7 +303,6 @@ class AccountRepository {
       shippingAmount: moneyFromJson(
         totals?['total_shipping'] as Map<String, dynamic>?,
       ),
-      codFee: moneyFromJson(totals?['cod_fee'] as Map<String, dynamic>?),
       discount: discount,
       discountLabel: discountLabel,
       shippingMethod: json['shipping_method'] as String?,

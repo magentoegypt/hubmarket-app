@@ -32,10 +32,6 @@ fragment CartFields on Cart {
     grand_total { value currency }
     subtotal_including_tax { value currency }
     discounts { amount { value currency } label }
-    # Flat Cash-on-Delivery handling fee (MagentoEgypt_CodFee). Money, never
-    # null: 0 unless COD is the selected method on a shippable cart. Already
-    # inside grand_total — shown as its own line, never added to anything.
-    cod_fee { value currency }
   }
 }
 ''';
