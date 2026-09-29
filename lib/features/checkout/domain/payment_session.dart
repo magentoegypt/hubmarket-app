@@ -17,9 +17,11 @@ enum PaymentProvider { ngenius, tabby, tamara, unknown }
 /// Lifecycle of a gateway session as reported by the `paymentSession` resolver.
 enum PaymentSessionStatus { ready, pending, rejected, failed }
 
-/// The gateway session for an already-placed order, returned by the backend
-/// `paymentSession(order_number)` resolver (module `MagentoEgypt_PaymentGraphQl`).
-/// Mirrors `PaymentSessionOutput` — see docs/backend/payment-contract.md.
+/// The gateway session for an already-placed order, as the
+/// `paymentSession(order_number)` resolver of docs/backend/payment-contract.md
+/// returns it (`PaymentSessionOutput`). Hub Market has no such resolver yet,
+/// so no session is ever built there — see
+/// `BackendCapabilities.gatewayPaymentSessions`.
 class PaymentSession {
   const PaymentSession({
     required this.orderNumber,

@@ -1,15 +1,16 @@
 /// UAE phone-number helpers for the WhatsApp-OTP flows.
 ///
-/// The `MagentoEgypt_OtpVerification` module accepts E.164 (`+971501234567`) and
-/// also a bare local number (`0501234567`) that it normalizes with the default
-/// country (+971). We always send the **explicit E.164** form so the value stored
-/// in the `mobile_number` attribute matches the verified number regardless of how
-/// the customer typed it (see INTEGRATION.md §4).
+/// We always send the **explicit E.164** form (`+971501234567`), however the
+/// customer typed it. That is the format the website's phone field stores in
+/// the customer's `mobilenumber`, and the Vnecoms SMS GraphQL mutations
+/// (registration, password reset, change mobile) match that attribute exactly —
+/// a bare `0501234567` would miss the account. (The REST sign-in endpoint also
+/// accepts other spellings, but consistency matters for the others.)
 abstract final class Phone {
   static const String uaeDial = '971';
 
   /// UAE mobile shape after normalization: `9715` + one of `0/2/4/5/6/8` + 7
-  /// digits (INTEGRATION.md §4). Applied to the E.164 form.
+  /// digits. Applied to the E.164 form.
   static final RegExp _uaeE164 = RegExp(r'^\+9715[024568]\d{7}$');
 
   /// Normalizes user input to E.164 for a +971 store. Accepts `+971501234567`,
