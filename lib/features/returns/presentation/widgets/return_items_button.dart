@@ -47,16 +47,15 @@ class ReturnItemsButton extends ConsumerWidget {
             extra: returnable,
           ),
           icon: const Icon(Icons.replay, size: 20),
-          label: Text(l10n.returnsReturnItems),
+          label: Text(
+            l10n.returnsReturnItems,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.brandPrimary,
             side: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ),

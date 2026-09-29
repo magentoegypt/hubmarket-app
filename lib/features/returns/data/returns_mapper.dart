@@ -84,20 +84,19 @@ ReturnsPage<T> returnsPageFromJson<T>(
   );
 }
 
-ReturnSummary returnSummaryFromJson(Map<String, dynamic> json) =>
-    ReturnSummary(
-      id: _int(json['id']),
-      number: _string(json['number']),
-      orderNumber: _string(json['order_number']),
-      createdAt: _string(json['created_at']),
-      updatedAt: _string(json['updated_at']),
-      state: ReturnState.parse(json['state']),
-      statusLabel: _string(json['status_label']),
-      type: ReturnType.parse(json['type']),
-      itemCount: _int(json['item_count']),
-      seller: HmSellerSummary.fromJson(json['seller']),
-      hasUnreadReply: json['has_unread_reply'] == true,
-    );
+ReturnSummary returnSummaryFromJson(Map<String, dynamic> json) => ReturnSummary(
+  id: _int(json['id']),
+  number: _string(json['number']),
+  orderNumber: _string(json['order_number']),
+  createdAt: _string(json['created_at']),
+  updatedAt: _string(json['updated_at']),
+  state: ReturnState.parse(json['state']),
+  statusLabel: _string(json['status_label']),
+  type: ReturnType.parse(json['type']),
+  itemCount: _int(json['item_count']),
+  seller: HmSellerSummary.fromJson(json['seller']),
+  hasUnreadReply: json['has_unread_reply'] == true,
+);
 
 ReturnDetail returnDetailFromJson(Map<String, dynamic> json) => ReturnDetail(
   id: _int(json['id']),

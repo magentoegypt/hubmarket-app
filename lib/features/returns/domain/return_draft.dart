@@ -163,7 +163,11 @@ class ReturnDraft {
 
   /// Sets a ticked line's quantity, kept within what [config] allows for it
   /// (see [minQuantity]) and never above what's left.
-  ReturnDraft setQuantity(ReturnableItem item, int quantity, ReturnConfig config) {
+  ReturnDraft setQuantity(
+    ReturnableItem item,
+    int quantity,
+    ReturnConfig config,
+  ) {
     if (!quantities.containsKey(item.orderItemId)) return this;
     final min = minQuantity(item, config);
     final max = item.qtyReturnable;
@@ -175,7 +179,7 @@ class ReturnDraft {
   /// decimal separator are accepted. Null when it isn't a number.
   double? get customAmountValue {
     final western = customAmount.trim().replaceAllMapped(
-      RegExp('[٠-٩۰-۹٫,]'),
+      RegExp('[\u0660-\u0669\u06F0-\u06F9\u066B,]'),
       (m) {
         final code = m.group(0)!.codeUnitAt(0);
         if (code == 0x066B || code == 0x2C) return '.';

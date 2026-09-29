@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../auth/presentation/auth_controller.dart';
 import '../../domain/returns.dart';
 import '../returns_providers.dart';
 import '../widgets/return_widgets.dart';
@@ -72,7 +76,9 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(serverMessageOr(context, error, l10n.errorGeneric))),
+        SnackBar(
+          content: Text(serverMessageOr(context, error, l10n.errorGeneric)),
+        ),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -83,15 +89,31 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final available = ref.watch(returnsAvailableProvider);
-    final async = ref.watch(returnDetailControllerProvider(widget.returnId));
+    final signedIn = ref.watch(
+      authControllerProvider.select((s) => s.isAuthenticated),
+    );
+    // Returns are read only when they are on and the customer is signed in.
+    final async = available && signedIn
+        ? ref.watch(returnDetailControllerProvider(widget.returnId))
+        : const AsyncValue<ReturnDetail?>.data(null);
     final detail = async.valueOrNull;
 
     final Widget body;
-    if (!available) {
+    if (!available || async.error is HubAppMissing) {
       body = EmptyState(
         icon: Icons.assignment_return_outlined,
         title: l10n.returnsUnavailableTitle,
         body: l10n.returnsUnavailableBody,
+      );
+    } else if (!signedIn) {
+      body = EmptyState(
+        icon: Icons.assignment_return_outlined,
+        title: l10n.returnsMyReturns,
+        body: l10n.returnsSignIn,
+        action: FilledButton(
+          onPressed: () => context.push(AppRoutes.signIn),
+          child: Text(l10n.authSignInTitle),
+        ),
       );
     } else if (detail != null) {
       body = _thread(context, detail);
@@ -133,15 +155,13 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
       backgroundColor: groupedPageColor(context),
       appBar: subpageAppBar(
         context,
-        detail != null ? l10n.returnsTitle(detail.number) : l10n.returnsMyReturns,
+        detail != null
+            ? l10n.returnsTitle(returnNumberLabel(detail.number))
+            : l10n.returnsMyReturns,
       ),
       body: body,
       bottomNavigationBar: available && detail != null && detail.acceptsReplies
-          ? _Composer(
-              controller: _reply,
-              sending: _sending,
-              onSend: _send,
-            )
+          ? _Composer(controller: _reply, sending: _sending, onSend: _send)
           : null,
     );
   }
@@ -175,7 +195,7 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: groupCardColor(context),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.borderSubtle),
             ),
@@ -270,12 +290,14 @@ class _SummaryCard extends StatelessWidget {
       returnTypeLabel(l10n, detail.type),
       ?detail.reasonText,
     ].join(' · ');
-    final refund = detail.type == ReturnType.refund ? detail.refundAmount : null;
+    final refund = detail.type == ReturnType.refund
+        ? detail.refundAmount
+        : null;
     final tracking = detail.trackingCode;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: groupCardColor(context),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -396,28 +418,32 @@ class _FactRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 20 / 14,
-              color: returnsSubtleText,
-            ),
+        // Short fixed labels; the value takes the rest of the row.
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            height: 20 / 14,
+            color: returnsSubtleText,
           ),
         ),
         const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            value,
-            textDirection: ltrValue ? TextDirection.ltr : null,
-            textAlign: TextAlign.end,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 20 / 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.inkHeading,
+        // On the end side in either direction, the text itself LTR when it
+        // is an amount or a code.
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Text(
+              value,
+              textDirection: ltrValue ? TextDirection.ltr : null,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 20 / 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.inkHeading,
+              ),
             ),
           ),
         ),
@@ -437,7 +463,7 @@ class _EventPill extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: groupCardColor(context),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.borderSubtle),
       ),
@@ -494,7 +520,7 @@ class _Bubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: mine ? AppColors.brandPrimary : groupCardColor(context),
+            color: mine ? AppColors.brandPrimary : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: mine ? null : Border.all(color: AppColors.borderSubtle),
           ),
@@ -612,7 +638,10 @@ class _Composer extends StatelessWidget {
                 maxLength: 5000,
                 textInputAction: TextInputAction.newline,
                 keyboardType: TextInputType.multiline,
-                style: const TextStyle(fontSize: 14, color: AppColors.inkHeading),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.inkHeading,
+                ),
                 decoration: InputDecoration(
                   hintText: l10n.returnsWriteReply,
                   hintStyle: const TextStyle(color: AppColors.inkMuted),

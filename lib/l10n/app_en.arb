@@ -659,8 +659,9 @@
   "returnsSignIn": "Sign in to see your returns and request new ones.",
   "returnsUnavailableTitle": "Returns aren't available",
   "returnsUnavailableBody": "Returns can't be requested in the app right now. Contact us from the Help centre and we'll help.",
-  "returnsTitle": "Return #{number}",
+  "returnsTitle": "Return {number}",
   "@returnsTitle": {
+    "description": "number is the return number with its # sign, e.g. #R-000031, kept left to right.",
     "placeholders": {
       "number": {
         "type": "String"

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/returns.dart';
@@ -42,8 +43,16 @@ String returnDayTime(String raw, String locale, {DateTime? now}) {
   final value = returnInstant(raw);
   if (value == null) return '';
   final thisYear = (now ?? DateTime.now()).year == value.year;
-  return _format(thisYear ? 'd MMM, HH:mm' : 'd MMM yyyy, HH:mm', value, locale);
+  return _format(
+    thisYear ? 'd MMM, HH:mm' : 'd MMM yyyy, HH:mm',
+    value,
+    locale,
+  );
 }
+
+/// "#R-000031" kept in one left-to-right piece inside Arabic text (a `#`
+/// before letters would otherwise land on the far side of the number).
+String returnNumberLabel(String number) => '\u2066#$number\u2069';
 
 String returnTypeLabel(AppLocalizations l10n, ReturnType type) =>
     switch (type) {
@@ -140,11 +149,12 @@ class ReturnFieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 12,
       height: 16 / 12,
       fontWeight: FontWeight.w600,
-      color: AppColors.inkHeading,
+      // On the page itself, so it follows the theme.
+      color: context.scaffoldHeading,
     ),
   );
 }

@@ -6,6 +6,7 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
@@ -91,6 +92,13 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     final error = state.error;
+    if (error is HubAppMissing) {
+      return EmptyState(
+        icon: Icons.assignment_return_outlined,
+        title: l10n.returnsUnavailableTitle,
+        body: l10n.returnsUnavailableBody,
+      );
+    }
     if (error != null && state.items.isEmpty) {
       return Center(
         child: Padding(
@@ -169,7 +177,7 @@ class _ReturnCard extends StatelessWidget {
     ].join(' · ');
     final seller = summary.seller?.name.trim() ?? '';
     return Material(
-      color: groupCardColor(context),
+      color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -186,7 +194,7 @@ class _ReturnCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.returnsTitle(summary.number),
+                          l10n.returnsTitle(returnNumberLabel(summary.number)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -308,7 +316,12 @@ class _NewRequestButton extends StatelessWidget {
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: const Icon(Icons.add, size: 20),
-        label: Text(l10n.returnsNewRequest),
+        // Styled on the Text so it keeps the theme's font (a button's
+        // textStyle replaces it).
+        label: Text(
+          l10n.returnsNewRequest,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: AppColors.brandPrimary,
@@ -316,7 +329,6 @@ class _NewRequestButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
     );

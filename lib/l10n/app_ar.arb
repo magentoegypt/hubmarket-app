@@ -455,7 +455,7 @@
   "returnsSignIn": "سجّل الدخول لعرض مرتجعاتك وطلب إرجاع جديد.",
   "returnsUnavailableTitle": "الإرجاع غير متاح",
   "returnsUnavailableBody": "لا يمكن طلب الإرجاع من التطبيق حاليًا. تواصل معنا من مركز المساعدة وسنساعدك.",
-  "returnsTitle": "إرجاع #{number}",
+  "returnsTitle": "إرجاع {number}",
   "returnsRequestedOn": "طُلب {date}",
   "returnsTypeRefund": "استرداد",
   "returnsTypeReplace": "استبدال",

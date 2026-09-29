@@ -20,6 +20,7 @@ import '../../data/returns_repository.dart';
 import '../../domain/return_draft.dart';
 import '../../domain/returns.dart';
 import '../returns_providers.dart';
+import '../widgets/return_form_widgets.dart';
 import '../widgets/return_widgets.dart';
 
 /// Request a return (Figma 23): pick an order the server lists as returnable
@@ -54,8 +55,8 @@ class RequestReturnScreen extends ConsumerStatefulWidget {
 }
 
 class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
-  /// What the customer has changed; until then the form shows the draft of
-  /// the order it opened on ([_initialDraft]).
+  /// The form as the customer has changed it; until the first change, the
+  /// form shows a fresh draft of the order it opened on.
   ReturnDraft? _draft;
   bool _showErrors = false;
   bool _submitting = false;
@@ -64,6 +65,12 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
   final _customAmount = TextEditingController();
   final _comment = TextEditingController();
   final _tracking = TextEditingController();
+
+  /// Text in the form's fields, which stay white in the dark theme too.
+  static const _fieldText = TextStyle(
+    fontSize: 14,
+    color: AppColors.inkHeading,
+  );
 
   final _itemsKey = GlobalKey();
   final _reasonKey = GlobalKey();
@@ -120,6 +127,12 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
 
   void _update(ReturnDraft draft) => setState(() => _draft = draft);
 
+  /// Applies [change] to the latest draft — [shown] until the customer first
+  /// changes something — not to the one a callback captured when it was
+  /// built.
+  void _edit(ReturnDraft shown, ReturnDraft Function(ReturnDraft) change) =>
+      _update(change(_draft ?? shown));
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -159,9 +172,12 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
               ((orders.isLoading && orders.items.isEmpty) ||
                   _initialPending()))) {
         body = const Center(child: CircularProgressIndicator());
-      } else if (!config.requireValue.enabled || orders.error is HubAppMissing) {
+      } else if (!config.requireValue.enabled ||
+          orders.error is HubAppMissing) {
         body = _unavailable(l10n);
-      } else if (draft == null && orders.error != null && orders.items.isEmpty) {
+      } else if (draft == null &&
+          orders.error != null &&
+          orders.items.isEmpty) {
         body = _error(
           l10n,
           orders.error,
@@ -175,15 +191,16 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         );
       } else {
         body = _form(l10n, config.requireValue, orders, draft);
-        footer = _Footer(
+        footer = ReturnSubmitBar(
           submitting: _submitting,
-          onSubmit: draft == null ? null : () => _submit(config.requireValue, draft),
+          onSubmit: draft == null
+              ? null
+              : () => _submit(config.requireValue, draft),
         );
       }
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: subpageAppBar(context, l10n.returnsRequestTitle),
       body: body,
       bottomNavigationBar: footer,
@@ -225,7 +242,9 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     final locale = Localizations.localeOf(context).languageCode;
     final units = draft == null
         ? const <int, Money>{}
-        : ref.watch(returnUnitRefundsProvider(draft.order.number)).valueOrNull ??
+        : ref
+                  .watch(returnUnitRefundsProvider(draft.order.number))
+                  .valueOrNull ??
               const <int, Money>{};
     final currency = units.values.firstOrNull?.currency ?? 'AED';
     final cap = draft?.refundCap({
@@ -245,11 +264,11 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
       children: [
-        _StoreNote(seller: draft?.seller?.name),
+        ReturnStoreNote(seller: draft?.seller?.name),
         const SizedBox(height: 16),
         ReturnFieldLabel(l10n.returnsOrderLabel),
         const SizedBox(height: 6),
-        _PickerField(
+        ReturnPickerField(
           icon: Icons.inventory_2_outlined,
           text: draft == null
               ? null
@@ -272,11 +291,11 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
           const SizedBox(height: 16),
           ReturnFieldLabel(l10n.returnsRequestType),
           const SizedBox(height: 8),
-          _ChoiceChips<ReturnType>(
+          ReturnChoiceChips<ReturnType>(
             values: ReturnType.values,
             selected: draft.type,
             label: (t) => returnTypeLabel(l10n, t),
-            onSelected: (t) => _update(draft.copyWith(type: t)),
+            onSelected: (t) => _edit(draft, (d) => d.copyWith(type: t)),
           ),
           if (config.asksForReason) ...[
             const SizedBox(height: 16),
@@ -293,12 +312,13 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
               children: [
                 ReturnFieldLabel(l10n.returnsPackageOpened),
                 const SizedBox(height: 8),
-                _ChoiceChips<bool>(
+                ReturnChoiceChips<bool>(
                   values: const [true, false],
                   selected: draft.packageOpened,
                   label: (v) =>
                       v ? l10n.returnsAnswerYes : l10n.returnsAnswerNo,
-                  onSelected: (v) => _update(draft.copyWith(packageOpened: v)),
+                  onSelected: (v) =>
+                      _edit(draft, (d) => d.copyWith(packageOpened: v)),
                 ),
                 if (errors.contains(ReturnFormError.packageOpened))
                   ReturnFieldError(l10n.returnsErrorPackage),
@@ -321,6 +341,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
                 ReturnFieldLabel(l10n.returnsComment),
                 const SizedBox(height: 6),
                 TextField(
+                  style: _fieldText,
                   controller: _comment,
                   minLines: 3,
                   maxLines: 6,
@@ -330,7 +351,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
                       ReturnDraft.maxCommentLength,
                     ),
                   ],
-                  onChanged: (v) => _update(draft.copyWith(comment: v)),
+                  onChanged: (v) => _edit(draft, (d) => d.copyWith(comment: v)),
                   decoration: _decoration(hint: l10n.returnsCommentHint),
                 ),
                 if (errors.contains(ReturnFormError.comment))
@@ -349,8 +370,10 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
                 ReturnFieldLabel(l10n.returnsTracking),
                 const SizedBox(height: 6),
                 TextField(
+                  style: _fieldText,
                   controller: _tracking,
-                  onChanged: (v) => _update(draft.copyWith(trackingCode: v)),
+                  onChanged: (v) =>
+                      _edit(draft, (d) => d.copyWith(trackingCode: v)),
                   inputFormatters: [
                     LengthLimitingTextInputFormatter(
                       ReturnDraft.maxTrackingLength + 1,
@@ -401,18 +424,19 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
       children: [
         ReturnFieldLabel(l10n.returnsSelectItems),
         for (final group in groups.values) ...[
-          if (grouped) _SellerHeader(seller: group.first.seller),
+          if (grouped) ReturnSellerHeader(seller: group.first.seller),
           for (final item in group) ...[
             const SizedBox(height: 8),
-            _LineTile(
+            ReturnLineTile(
               item: item,
               availability: draft.availabilityOf(item),
               quantity: draft.quantities[item.orderItemId],
               minQuantity: ReturnDraft.minQuantity(item, config),
               blockingSeller: draft.seller?.name,
               unit: units[item.orderItemId],
-              onToggle: () => _update(draft.toggle(item)),
-              onQuantity: (q) => _update(draft.setQuantity(item, q, config)),
+              onToggle: () => _edit(draft, (d) => d.toggle(item)),
+              onQuantity: (q) =>
+                  _edit(draft, (d) => d.setQuantity(item, q, config)),
             ),
           ],
         ],
@@ -447,7 +471,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         ),
         const SizedBox(height: 6),
         if (picker)
-          _PickerField(
+          ReturnPickerField(
             icon: Icons.replay,
             text: selectedLabel,
             placeholder: l10n.returnsChooseReason,
@@ -456,14 +480,16 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         if (writing && config.otherReasonAllowed) ...[
           if (picker) const SizedBox(height: 8),
           TextField(
+            style: _fieldText,
             controller: _otherReason,
             inputFormatters: [
               LengthLimitingTextInputFormatter(
                 ReturnDraft.maxOtherReasonLength + 1,
               ),
             ],
-            onChanged: (v) => _update(
-              draft.copyWith(otherReason: v, otherReasonSelected: true),
+            onChanged: (v) => _edit(
+              draft,
+              (d) => d.copyWith(otherReason: v, otherReasonSelected: true),
             ),
             decoration: _decoration(hint: l10n.returnsOtherReasonHint),
           ),
@@ -492,27 +518,31 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
       children: [
         ReturnFieldLabel(l10n.returnsRefundAmount),
         const SizedBox(height: 8),
-        _RadioRow(
+        ReturnRadioRow(
           selected: !custom,
           label: l10n.returnsMaximumRefund,
           trailing: capText,
-          onTap: () =>
-              _update(draft.copyWith(refundAmountType: RefundAmountType.full)),
+          onTap: () => _edit(
+            draft,
+            (d) => d.copyWith(refundAmountType: RefundAmountType.full),
+          ),
         ),
         const SizedBox(height: 8),
-        _RadioRow(
+        ReturnRadioRow(
           selected: custom,
           label: l10n.returnsCustomAmount,
-          onTap: () => _update(
-            draft.copyWith(refundAmountType: RefundAmountType.custom),
+          onTap: () => _edit(
+            draft,
+            (d) => d.copyWith(refundAmountType: RefundAmountType.custom),
           ),
         ),
         if (custom) ...[
           const SizedBox(height: 8),
           TextField(
+            style: _fieldText,
             controller: _customAmount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (v) => _update(draft.copyWith(customAmount: v)),
+            onChanged: (v) => _edit(draft, (d) => d.copyWith(customAmount: v)),
             decoration: _decoration(
               hint: l10n.returnsCustomAmountHint,
               prefix: currency,
@@ -552,6 +582,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
           ? null
           : Icon(icon, size: 20, color: AppColors.inkMuted),
       prefixText: prefix == null ? null : '$prefix ',
+      prefixStyle: _fieldText,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       border: outline,
       enabledBorder: outline,
@@ -568,15 +599,12 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      builder: (_) => _OrderSheet(
-        selected: draft?.order.number,
-        extra: extra,
-      ),
+      builder: (_) => _OrderSheet(selected: draft?.order.number, extra: extra),
     );
     if (picked == null || !mounted) return;
     if (picked.number == draft?.order.number) return;
     _customAmount.clear();
-    _update(_startDraft(picked, keep: draft));
+    _update(_startDraft(picked, keep: _draft ?? draft));
   }
 
   Future<void> _pickReason(
@@ -599,16 +627,16 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
             shrinkWrap: true,
             padding: const EdgeInsets.only(bottom: 12),
             children: [
-              _SheetTitle(l10n.returnsChooseReason),
+              ReturnSheetTitle(l10n.returnsChooseReason),
               for (final reason in config.reasons)
-                _SheetOption(
+                ReturnSheetOption(
                   label: reason.label,
                   selected:
                       !draft.otherReasonSelected && draft.reasonId == reason.id,
                   onTap: () => Navigator.pop(sheetContext, reason.id),
                 ),
               if (config.otherReasonAllowed)
-                _SheetOption(
+                ReturnSheetOption(
                   label: l10n.returnsOtherReason,
                   selected: draft.otherReasonSelected,
                   onTap: () => Navigator.pop(sheetContext, other),
@@ -619,10 +647,11 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
       ),
     );
     if (picked == null || !mounted) return;
-    _update(
-      picked == other
-          ? draft.copyWith(otherReasonSelected: true, clearReason: true)
-          : draft.copyWith(reasonId: picked, otherReasonSelected: false),
+    _edit(
+      draft,
+      (d) => picked == other
+          ? d.copyWith(otherReasonSelected: true, clearReason: true)
+          : d.copyWith(reasonId: picked, otherReasonSelected: false),
     );
   }
 
@@ -641,7 +670,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
               shrinkWrap: true,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               children: [
-                _SheetTitle(l10n.returnsPolicy, padding: EdgeInsets.zero),
+                ReturnSheetTitle(l10n.returnsPolicy, padding: EdgeInsets.zero),
                 const SizedBox(height: 8),
                 CmsHtmlView(
                   blocks: CmsDocument.parse(html),
@@ -654,8 +683,10 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         ),
       );
 
-  Future<void> _submit(ReturnConfig config, ReturnDraft draft) async {
+  Future<void> _submit(ReturnConfig config, ReturnDraft shown) async {
     if (_submitting) return;
+    // The latest edit, even one made since the button was last built.
+    final draft = _draft ?? shown;
     final l10n = AppLocalizations.of(context);
     final units =
         ref.read(returnUnitRefundsProvider(draft.order.number)).valueOrNull ??
@@ -732,621 +763,6 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
   }
 }
 
-/// "Returns go to the store that sold the item (…)" (Figma 65:2812).
-class _StoreNote extends StatelessWidget {
-  const _StoreNote({required this.seller});
-
-  final String? seller;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final name = seller?.trim() ?? '';
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSubtle,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.storefront_outlined,
-            size: 18,
-            color: returnsSubtleText,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              name.isEmpty
-                  ? l10n.returnsStoreNote
-                  : l10n.returnsStoreNoteSeller(name),
-              style: const TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                color: returnsSubtleText,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A field that opens a picker (Figma input with a trailing chevron).
-class _PickerField extends StatelessWidget {
-  const _PickerField({
-    required this.icon,
-    required this.text,
-    required this.placeholder,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String? text;
-  final String placeholder;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final value = text?.trim() ?? '';
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.borderStrong),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 52),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: AppColors.inkHeading),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  value.isEmpty ? placeholder : value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
-                    color: value.isEmpty
-                        ? AppColors.inkMuted
-                        : AppColors.inkHeading,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Icon(
-                Icons.keyboard_arrow_down,
-                size: 20,
-                color: AppColors.inkMuted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// "Sold by …" above a seller's lines when the order has several sellers.
-class _SellerHeader extends StatelessWidget {
-  const _SellerHeader({required this.seller});
-
-  final HmSellerSummary? seller;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final name = seller?.name.trim() ?? '';
-    if (name.isEmpty) return const SizedBox(height: 4);
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(top: 10),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.storefront_outlined,
-            size: 14,
-            color: returnsVendorColor,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              l10n.returnsSoldBy(name),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: returnsVendorColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One order line (Figma 65:2786): tick box, thumbnail, name, options and
-/// paid price, and the quantity to return — a stepper when the customer may
-/// return part of it.
-class _LineTile extends StatelessWidget {
-  const _LineTile({
-    required this.item,
-    required this.availability,
-    required this.quantity,
-    required this.minQuantity,
-    required this.blockingSeller,
-    required this.unit,
-    required this.onToggle,
-    required this.onQuantity,
-  });
-
-  final ReturnableItem item;
-  final LineAvailability availability;
-
-  /// Units ticked, null when not ticked.
-  final int? quantity;
-  final int minQuantity;
-
-  /// The seller of the ticked lines, which blocks this one's seller.
-  final String? blockingSeller;
-  final Money? unit;
-  final VoidCallback onToggle;
-  final ValueChanged<int> onQuantity;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final selected = availability == LineAvailability.selected;
-    final enabled =
-        selected || availability == LineAvailability.available;
-    final caption = [
-      for (final o in item.options)
-        if (o.value.isNotEmpty) o.value,
-      if (unit != null) unit!.formatted(),
-    ].join(' · ');
-    final String? why = switch (availability) {
-      LineAvailability.unavailable => item.openReturnNumbers.isNotEmpty
-          ? l10n.returnsItemInReturn(
-              item.openReturnNumbers.map((n) => '#$n').join(', '),
-            )
-          : l10n.returnsItemNotReturnable,
-      LineAvailability.otherSeller =>
-        (item.seller?.name.trim() ?? '').isNotEmpty
-            ? l10n.returnsOtherSellerNote(item.seller!.name.trim())
-            : l10n.returnsOtherSellerGeneric,
-      _ => null,
-    };
-    final stepper =
-        selected && item.qtyReturnable > minQuantity && quantity != null;
-    return Semantics(
-      checked: selected,
-      enabled: enabled,
-      child: Material(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: selected ? AppColors.brandPrimary : AppColors.borderSubtle,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: enabled ? onToggle : null,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Opacity(
-              opacity: enabled ? 1 : 0.55,
-              child: Row(
-                children: [
-                  _TickBox(selected: selected, enabled: enabled),
-                  const SizedBox(width: 12),
-                  ReturnThumb(url: item.imageUrl, size: 56),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 20 / 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.inkHeading,
-                          ),
-                        ),
-                        if (caption.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              caption,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 16 / 12,
-                                color: AppColors.inkMuted,
-                              ),
-                            ),
-                          ),
-                        if (why != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              why,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 16 / 12,
-                                color: AppColors.warning,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (stepper)
-                    _Stepper(
-                      value: quantity!,
-                      min: minQuantity,
-                      max: item.qtyReturnable,
-                      onChanged: onQuantity,
-                    )
-                  else if (enabled)
-                    Text(
-                      '×${quantity ?? item.qtyReturnable}',
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 20 / 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.inkHeading,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The tick box (Figma 65:2780): navy with a white tick when ticked.
-class _TickBox extends StatelessWidget {
-  const _TickBox({required this.selected, required this.enabled});
-
-  final bool selected;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 22,
-    height: 22,
-    decoration: BoxDecoration(
-      color: selected
-          ? AppColors.brandPrimary
-          : (enabled ? Colors.white : AppColors.surfaceMuted),
-      borderRadius: BorderRadius.circular(6),
-      border: selected
-          ? null
-          : Border.all(
-              color: enabled ? AppColors.borderControl : AppColors.borderStrong,
-              width: 1.5,
-            ),
-    ),
-    child: selected
-        ? const Icon(Icons.check, size: 14, color: Colors.white)
-        : null,
-  );
-}
-
-/// − n + for a line's quantity.
-class _Stepper extends StatelessWidget {
-  const _Stepper({
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  final int value;
-  final int min;
-  final int max;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    Widget button(IconData icon, VoidCallback? onTap) => SizedBox(
-      width: 28,
-      height: 28,
-      child: IconButton(
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
-        iconSize: 16,
-        tooltip: l10n.returnsQuantity,
-        style: IconButton.styleFrom(
-          side: const BorderSide(color: AppColors.borderStrong),
-          foregroundColor: AppColors.brandPrimary,
-          disabledForegroundColor: AppColors.borderStrong,
-        ),
-        icon: Icon(icon),
-      ),
-    );
-    return Semantics(
-      label: l10n.returnsQuantity,
-      value: '$value',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          button(Icons.remove, value > min ? () => onChanged(value - 1) : null),
-          SizedBox(
-            width: 28,
-            child: Text(
-              '$value',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkHeading,
-              ),
-            ),
-          ),
-          button(Icons.add, value < max ? () => onChanged(value + 1) : null),
-        ],
-      ),
-    );
-  }
-}
-
-/// Pill chips, one selected (Figma chips: navy when selected).
-class _ChoiceChips<T> extends StatelessWidget {
-  const _ChoiceChips({
-    required this.values,
-    required this.selected,
-    required this.label,
-    required this.onSelected,
-  });
-
-  final List<T> values;
-  final T? selected;
-  final String Function(T) label;
-  final ValueChanged<T> onSelected;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: [
-      for (final value in values)
-        Semantics(
-          selected: value == selected,
-          button: true,
-          child: Material(
-            color: value == selected ? AppColors.brandPrimary : Colors.white,
-            shape: StadiumBorder(
-              side: value == selected
-                  ? BorderSide.none
-                  : const BorderSide(color: AppColors.borderStrong),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => onSelected(value),
-              child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                alignment: Alignment.center,
-                child: Text(
-                  label(value),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: value == selected
-                        ? Colors.white
-                        : AppColors.inkHeading,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-    ],
-  );
-}
-
-/// A radio choice as a bordered row (Figma 65:2795).
-class _RadioRow extends StatelessWidget {
-  const _RadioRow({
-    required this.selected,
-    required this.label,
-    required this.onTap,
-    this.trailing,
-  });
-
-  final bool selected;
-  final String label;
-  final String? trailing;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    inMutuallyExclusiveGroup: true,
-    checked: selected,
-    child: Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: selected ? AppColors.brandPrimary : AppColors.borderSubtle,
-          width: selected ? 1.5 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected
-                        ? AppColors.brandPrimary
-                        : AppColors.borderControl,
-                    width: selected ? 7 : 1.5,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
-                    color: selected ? AppColors.inkHeading : AppColors.inkMuted,
-                  ),
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                  trailing!,
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.inkHeading,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// The Submit bar (Figma 65:2875).
-class _Footer extends StatelessWidget {
-  const _Footer({required this.submitting, required this.onSubmit});
-
-  final bool submitting;
-  final VoidCallback? onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.borderSubtle)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        12,
-        16,
-        12 + MediaQuery.viewPaddingOf(context).bottom,
-      ),
-      child: FilledButton(
-        onPressed: submitting ? null : onSubmit,
-        style: FilledButton.styleFrom(
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-        child: submitting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(l10n.returnsSubmit),
-      ),
-    );
-  }
-}
-
-class _SheetTitle extends StatelessWidget {
-  const _SheetTitle(
-    this.text, {
-    this.padding = const EdgeInsets.fromLTRB(20, 0, 20, 8),
-  });
-
-  final String text;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: padding,
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppColors.inkHeading,
-      ),
-    ),
-  );
-}
-
-class _SheetOption extends StatelessWidget {
-  const _SheetOption({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.caption,
-  });
-
-  final String label;
-  final String? caption;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    onTap: onTap,
-    selected: selected,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-    title: Text(
-      label,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-        color: AppColors.inkHeading,
-      ),
-    ),
-    subtitle: caption == null
-        ? null
-        : Text(
-            caption!,
-            style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
-          ),
-    trailing: selected
-        ? const Icon(Icons.check, color: AppColors.brandPrimary, size: 20)
-        : null,
-  );
-}
-
 /// The returnable orders, newest first, with "Show more orders" while the
 /// server has more pages.
 class _OrderSheet extends ConsumerWidget {
@@ -1377,9 +793,9 @@ class _OrderSheet extends ConsumerWidget {
           shrinkWrap: true,
           padding: const EdgeInsets.only(bottom: 12),
           children: [
-            _SheetTitle(l10n.returnsChooseOrder),
+            ReturnSheetTitle(l10n.returnsChooseOrder),
             for (final order in orders)
-              _SheetOption(
+              ReturnSheetOption(
                 label: '#${order.number}',
                 caption: [
                   order.statusLabel,

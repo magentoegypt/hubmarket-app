@@ -80,10 +80,7 @@ Future<ReturnableOrder?> findReturnableOrder(
 /// items on the order detail (22), which passes the order's `order_date` so
 /// the search stops early (see [findReturnableOrder]).
 final returnableOrderProvider = FutureProvider.autoDispose
-    .family<ReturnableOrder?, ({String number, String? placedAt})>((
-      ref,
-      key,
-    ) {
+    .family<ReturnableOrder?, ({String number, String? placedAt})>((ref, key) {
       ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
       return findReturnableOrder(
         ref.watch(returnsRepositoryProvider),
