@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme.dart';
-import '../../../../app/theme/theme_x.dart';
 import '../../../../core/address/regions.dart';
 import '../../../../core/config/backend_capabilities.dart';
 import '../../../../core/config/free_shipping.dart';
@@ -378,77 +377,83 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     }
 
-    return PopScope(
-      canPop: _canLeave(state),
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && !busy) _onBack();
-      },
-      child: Scaffold(
-        backgroundColor: context.isDarkMode ? null : AppColors.surfaceSubtle,
-        appBar: AppBar(
-          toolbarHeight: 56,
-          centerTitle: false,
-          titleSpacing: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, size: 22),
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            onPressed: busy ? null : _onBack,
-          ),
-          title: Text(
-            l10n.checkoutTitle,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-        ),
-        bottomNavigationBar: _footer(
-          l10n,
-          state,
-          cart,
-          busy: busy,
-          showEditor: showEditor,
-          needsGuestOtp: needsGuestOtp,
-        ),
-        body: Column(
-          children: [
-            CheckoutStepIndicator(
-              current: state.step,
-              onTap: (step) {
-                if (!busy) _controller.goTo(step);
-              },
+    // Checkout is light cards on a light page (Figma 17–18b) in both modes:
+    // the address fields inherit the theme, and a dark one would draw white
+    // text into the white cards.
+    return Theme(
+      data: AppTheme.light(Localizations.localeOf(context).languageCode),
+      child: PopScope(
+        canPop: _canLeave(state),
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && !busy) _onBack();
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.surfaceSubtle,
+          appBar: AppBar(
+            toolbarHeight: 56,
+            centerTitle: false,
+            titleSpacing: 0,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, size: 22),
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              onPressed: busy ? null : _onBack,
             ),
-            Expanded(
-              child: Stack(
-                children: [
-                  AbsorbPointer(
-                    absorbing: busy,
-                    // Not a lazy list: every address field must stay mounted
-                    // for the form to validate it.
-                    child: SingleChildScrollView(
-                      key: ValueKey(showEditor ? 'address' : state.step.name),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      child: _stepBody(
-                        l10n,
-                        state,
-                        cart,
-                        isGuest: isGuest,
-                        guestOtp: guestOtp,
-                        showEditor: showEditor,
-                      ),
-                    ),
-                  ),
-                  // Single busy indicator over a translucent barrier —
-                  // reinforces the AbsorbPointer lock without stacking spinners.
-                  if (busy)
-                    const Positioned.fill(
-                      child: ColoredBox(
-                        color: Color(0x33000000),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                ],
+            title: Text(
+              l10n.checkoutTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+          bottomNavigationBar: _footer(
+            l10n,
+            state,
+            cart,
+            busy: busy,
+            showEditor: showEditor,
+            needsGuestOtp: needsGuestOtp,
+          ),
+          body: Column(
+            children: [
+              CheckoutStepIndicator(
+                current: state.step,
+                onTap: (step) {
+                  if (!busy) _controller.goTo(step);
+                },
               ),
-            ),
-          ],
+              Expanded(
+                child: Stack(
+                  children: [
+                    AbsorbPointer(
+                      absorbing: busy,
+                      // Not a lazy list: every address field must stay mounted
+                      // for the form to validate it.
+                      child: SingleChildScrollView(
+                        key: ValueKey(showEditor ? 'address' : state.step.name),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                        child: _stepBody(
+                          l10n,
+                          state,
+                          cart,
+                          isGuest: isGuest,
+                          guestOtp: guestOtp,
+                          showEditor: showEditor,
+                        ),
+                      ),
+                    ),
+                    // Single busy indicator over a translucent barrier —
+                    // reinforces the AbsorbPointer lock without stacking spinners.
+                    if (busy)
+                      const Positioned.fill(
+                        child: ColoredBox(
+                          color: Color(0x33000000),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -598,7 +603,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w700,
-        color: context.scaffoldHeading,
+        color: AppColors.inkHeading,
       ),
     ),
     for (final method in state.paymentMethods)
@@ -633,7 +638,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           fontFamily: isEn ? AppTheme.displayFont : null,
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          color: context.scaffoldHeading,
+          color: AppColors.inkHeading,
         ),
       ),
       ReviewShippingCard(
@@ -655,7 +660,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ),
       Text(
         l10n.checkoutTermsNote,
-        style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+        style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
       ),
     ];
   }

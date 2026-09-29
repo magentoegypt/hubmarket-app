@@ -17,6 +17,7 @@ void main() {
     String locale, {
     required double height,
     bool signedIn = false,
+    bool darkMode = false,
     String? registeredEmail,
   }) async {
     tester.view.physicalSize = Size(390, height);
@@ -28,6 +29,7 @@ void main() {
         locale: locale,
         repository: checkoutRepository(registeredEmail: registeredEmail),
         signedIn: signedIn,
+        darkMode: darkMode,
         boundary: key,
       ),
     );
@@ -101,4 +103,21 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('checkout stays light in dark mode, so the form is legible', (
+    tester,
+  ) async {
+    final key = await mount(tester, 'en', height: 1080, darkMode: true);
+    await fillGuestAddress(tester);
+    await capture(tester, key, 'checkout_17a_guest_dark');
+    final field = tester.widget<EditableText>(
+      find.descendant(
+        of: find.byType(TextFormField).first,
+        matching: find.byType(EditableText),
+      ),
+    );
+    // Ink on the white card, not the dark theme's white.
+    expect(field.style.color, isNot(Colors.white));
+    expect(tester.takeException(), isNull);
+  });
 }

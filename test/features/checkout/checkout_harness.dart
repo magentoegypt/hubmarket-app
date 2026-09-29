@@ -131,6 +131,7 @@ Widget checkoutHarness({
   required String locale,
   required FakeCheckoutRepository repository,
   bool signedIn = false,
+  bool darkMode = false,
   GlobalKey? boundary,
 }) {
   final cache = FakeLocalCache()..writeString('guest_cart_id', 'guest-1');
@@ -165,6 +166,8 @@ Widget checkoutHarness({
     routerConfig: router,
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light(locale),
+    darkTheme: AppTheme.dark(locale),
+    themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
     locale: Locale(locale),
     supportedLocales: AppLocalizations.supportedLocales,
     localizationsDelegates: const [
