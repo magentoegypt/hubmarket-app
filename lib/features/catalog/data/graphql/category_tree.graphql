@@ -1,7 +1,8 @@
-# Top-level category tree — menu / home "shop by category".
-# Confirmed live (Introspect run #4): real categories with product_count;
-# include_in_menu comes back as Int (mapper coerces). Codegen source for the
-# string currently in catalog_queries.dart (CatalogQueries.categoryTree).
+# Category tree (three levels under the root) — categories screen, PLP
+# sub-category rail, menu. Checked on Hub Market (2026-09-29): one root
+# ("Default Category") whose children are the browsable set; include_in_menu
+# comes back as Int 0/1 (the repository coerces it; 0 is hidden in navigation).
+# Codegen mirror of CatalogQueries.categoryTree.
 query CategoryTree {
   categoryList {
     uid
@@ -14,6 +15,22 @@ query CategoryTree {
       image
       include_in_menu
       product_count
+      children {
+        uid
+        name
+        url_key
+        image
+        include_in_menu
+        product_count
+        children {
+          uid
+          name
+          url_key
+          image
+          include_in_menu
+          product_count
+        }
+      }
     }
   }
 }

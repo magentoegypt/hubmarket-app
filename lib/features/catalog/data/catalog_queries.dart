@@ -1,14 +1,13 @@
-/// Hand-written Magento 2.4.8 catalogue GraphQL documents.
+/// Hand-written Magento 2.4.8 catalogue GraphQL documents, parsed by
+/// `product_mapper.dart` / `CatalogRepository`.
 ///
-/// These extend the Phase 0 bootstrap exception: until `tool/introspect.sh`
-/// produces `schema.graphql` (origin is blocked in CI), catalogue ops are
-/// hand-written + mapped. Phase 1.x migrates them to graphql_codegen.
-///
-/// The codegen sources for the browse ops now live as standalone operations in
+/// The browse ops also live as standalone codegen sources in
 /// `lib/features/catalog/data/graphql/` (`category_tree`, `products`,
-/// `product_detail` — mirrored from the strings below). Once `schema.graphql`
-/// lands, `dart run build_runner build` generates their typed Dart and this
-/// file is replaced by the generated documents. See `docs/decisions/codegen.md`.
+/// `product_detail` — keep them identical to the strings below). They are
+/// checked against Hub Market's introspected `schema.graphql`
+/// (`tool/validate_ops.py`, `dart run build_runner build`); moving the
+/// repository onto the generated types is still to do. See
+/// `docs/decisions/codegen.md`.
 abstract final class CatalogQueries {
   /// Resolves a store-relative URL (a friendly `.html` category/product path) to
   /// its entity, so a hero CTA opens the right in-app screen instead of guessing.
@@ -24,14 +23,13 @@ query ResolveUrl($url: String!) {
 
   /// Stand-in thumbnails for categories that carry no `image` of their own.
   ///
-  /// Only top-level categories have an image assigned on this store — every
-  /// second- and third-level one comes back `null` (verified live, 2026-08-27).
-  /// The storefront papers over that by showing the first product inside the
-  /// category instead (`beauty-subcats__media`), and this reproduces it: one
-  /// aliased query so N categories cost one round trip, not N.
+  /// On Hub Market most categories have none (2026-09-29: 15 of 27 top-level,
+  /// 9 of 46 second-level and none of the third-level ones carry an image), so
+  /// the first product inside the category stands in: one aliased query so N
+  /// categories cost one round trip, not N.
   ///
   /// A category with no products resolves to an empty `items` list — the caller
-  /// renders the neutral placeholder, exactly as the website does.
+  /// renders the neutral placeholder.
   static String categoryThumbnails(int count) {
     // A bare `$` so the GraphQL variable sigil survives Dart interpolation.
     const v = r'$';
