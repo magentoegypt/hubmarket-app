@@ -45,7 +45,6 @@ dependencies:
   share_plus: ^12.0.2
   cupertino_http: ^3.0.2
   http: ^1.6.0
-  video_player: ^2.11.1
   image_picker: ^1.2.3
   webview_flutter: ^4.14.1
   # Tabby BNPL checkout (official package, publisher tabby.ai). Renders Tabby's

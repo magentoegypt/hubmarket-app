@@ -97,8 +97,8 @@ void main() {
       final container = _container();
       final state = container.read(storeControllerProvider);
       expect(state.activeLocale, 'en');
-      expect(state.localeToCode, {'en': 'eg_en', 'ar': 'eg_ar'});
-      expect(state.activeStoreCode, 'eg_en');
+      expect(state.localeToCode, {'en': 'en', 'ar': 'ar'});
+      expect(state.activeStoreCode, 'en');
     });
 
     test('honours the persisted locale', () {
@@ -106,7 +106,7 @@ void main() {
       final state = container.read(storeControllerProvider);
       expect(state.activeLocale, 'ar');
       expect(state.isRtl, isTrue);
-      expect(state.activeStoreCode, 'eg_ar');
+      expect(state.activeStoreCode, 'ar');
     });
 
     test(

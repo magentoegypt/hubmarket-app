@@ -9,12 +9,12 @@ void main() {
       expect(config.flavor, 'dev');
       expect(config.defaultLocale, 'en');
       expect(config.currency, 'AED');
-      expect(config.bootstrapStoreCode, 'eg_en');
+      expect(config.bootstrapStoreCode, 'en');
       expect(config.graphqlEndpoint, 'https://hub-market.magento2.click/graphql');
     });
 
     test('exposes provisional locale -> store_code fallback', () {
-      expect(config.provisionalStoreCodes, {'en': 'eg_en', 'ar': 'eg_ar'});
+      expect(config.provisionalStoreCodes, {'en': 'en', 'ar': 'ar'});
     });
 
     test('isProd reflects the flavor', () {

@@ -19,7 +19,6 @@ import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/aggregation.dart';
 import 'package:hubmarket_app/features/catalog/domain/brand.dart';
 import 'package:hubmarket_app/features/catalog/domain/category.dart';
-import 'package:hubmarket_app/features/catalog/domain/home_config.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
@@ -596,16 +595,6 @@ const List<Category> kSampleCategories = <Category>[
   Category(uid: 'cat-makeup', name: 'Makeup', urlKey: 'makeup'),
   Category(uid: 'cat-new', name: 'New Arrivals', urlKey: 'new-arrivals'),
   Category(uid: 'cat-best', name: 'Bestsellers', urlKey: 'bestsellers'),
-];
-
-/// The home "Shop by Category" tiles (backend `shopByCategories`) — the curated
-/// grid, which is a different feed from the [kSampleCategories] menu tree and so
-/// tiles sub-categories (Lipsticks) the tree's top level never carries.
-/// imageUrl is empty so widget tests don't hit the network.
-const List<ShopByCategoryTile> kSampleShopByCategories = <ShopByCategoryTile>[
-  ShopByCategoryTile(label: 'Lipsticks', categoryUid: 'cat-lips'),
-  ShopByCategoryTile(label: 'Skincare', categoryUid: 'cat-skincare'),
-  ShopByCategoryTile(label: 'Fragrance', categoryUid: 'cat-fragrance'),
 ];
 
 // imageUrl is null so widget tests don't hit the network via CachedNetworkImage.

@@ -62,19 +62,6 @@ class AppConfig {
   /// before constructing `SamsungPayClient`, which throws on a blank id.
   final String samsungPayServiceId;
 
-  /// Whether the launch intro video plays (CL042-DEV41). The client asked for
-  /// it on every cold start, which puts a video in front of every launch — so
-  /// it is switchable rather than hardcoded.
-  ///
-  /// **This is a compile-time flag**: `--dart-define=INTRO_VIDEO_ENABLED=false`
-  /// or the flavor's `config/*.json`. Turning it off still needs a build and a
-  /// store release — it is not remote configuration. Making it switchable
-  /// without a release means serving it from the backend, which would put a
-  /// network call on the cold-start path.
-  static const bool introVideoEnabled = bool.fromEnvironment(
-    'INTRO_VIDEO_ENABLED',
-    defaultValue: false,
-  );
 
   static const AppConfig current = AppConfig(
     flavor: String.fromEnvironment('FLAVOR', defaultValue: 'dev'),

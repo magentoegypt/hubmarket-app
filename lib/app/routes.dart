@@ -10,7 +10,6 @@ abstract final class AppRoutes {
   static const String search = '/search';
   static const String brands = '/brands';
   static const String brand = '/brand';
-  static const String reviews = '/reviews';
   static const String signIn = '/signin';
   static const String signUp = '/signup';
   static const String forgotPassword = '/forgot';

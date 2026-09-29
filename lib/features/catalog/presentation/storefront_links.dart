@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -12,7 +14,6 @@ import '../../../core/widgets/web_view_screen.dart';
 import '../../../l10n/l10n.dart';
 import '../data/brands_provider.dart';
 import '../data/catalog_repository.dart';
-import '../data/hero_slides_provider.dart';
 import '../domain/brand.dart';
 
 /// Storefront-URL -> in-app-route plumbing, shared by the home CTAs and by the
@@ -256,4 +257,13 @@ bool isInternalStoreUrl(WidgetRef ref, String url) {
     }
   }
   return false;
+}
+
+/// Maps a Magento category URL to the in-app category route's UID, or null if
+/// it isn't a category URL. Magento's category UID is base64 of the numeric id,
+/// so `.../catalog/category/view/id/5/` → `base64("5")`.
+String? categoryUidFromUrl(String url) {
+  final match = RegExp(r'/category/view/id/(\d+)').firstMatch(url);
+  if (match == null) return null;
+  return base64.encode(utf8.encode(match.group(1)!));
 }
