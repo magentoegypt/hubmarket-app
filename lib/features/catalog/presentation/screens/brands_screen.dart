@@ -219,7 +219,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
   }
 }
 
-/// A–Z pill: burgundy when active, hairline-bordered white otherwise.
+/// A–Z pill: navy when active, hairline-bordered white otherwise.
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
@@ -259,7 +259,7 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-/// A lettered group: burgundy letter header + 2-column rows of brand cards.
+/// A lettered group: navy letter header + 2-column rows of brand cards.
 class _BrandGroup extends StatelessWidget {
   const _BrandGroup({required this.letter, required this.brands});
 

@@ -8,7 +8,7 @@ import '../data/notification_inbox.dart';
 import '../domain/notification_item.dart';
 
 /// Notification feed (Figma 65:53): a list of received pushes — unread rows are
-/// blush with a burgundy dot — plus "Mark all as read", backed by the local
+/// pale navy with a navy dot — plus "Mark all as read", backed by the local
 /// inbox. Notification *preferences* live in Settings.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});

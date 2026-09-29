@@ -457,7 +457,7 @@ class _CopyCodeButton extends StatelessWidget {
 }
 
 /// Promo / gift-code entry (Figma "promo" 39:3): a filled grey field with a
-/// tag icon + muted placeholder, a burgundy outlined "Apply" pill, and — when a
+/// tag icon + muted placeholder, a navy outlined "Apply" pill, and — when a
 /// coupon is live — a blush chip showing the code, the saving, and a remove ×.
 class _CouponSection extends StatelessWidget {
   const _CouponSection({
@@ -535,7 +535,7 @@ class _CouponSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // Burgundy outlined "Apply" pill (Figma 39:11).
+              // Navy outlined "Apply" pill (Figma 39:11).
               OutlinedButton(
                 onPressed: busy ? null : onApply,
                 style: OutlinedButton.styleFrom(
@@ -622,7 +622,7 @@ class _CouponSection extends StatelessWidget {
 
 /// Order Summary block (Figma 39:27): subtotal, optional promo line, the
 /// delivery line (FREE past the threshold, otherwise "calculated at
-/// checkout"), a divider, then the total in burgundy.
+/// checkout"), a divider, then the total in navy.
 class _OrderSummary extends StatelessWidget {
   const _OrderSummary({required this.cart, this.freeDeliveryThreshold});
 

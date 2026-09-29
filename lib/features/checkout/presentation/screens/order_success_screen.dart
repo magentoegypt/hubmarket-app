@@ -32,7 +32,7 @@ class OrderSuccessScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     // Awaiting-payment orders get a neutral gold "received" treatment, not the
-    // celebratory burgundy check reserved for a confirmed order.
+    // celebratory navy check reserved for a confirmed order.
     final accent = pendingPayment
         ? AppColors.accentGold
         : AppColors.brandPrimary;

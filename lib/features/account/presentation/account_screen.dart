@@ -308,7 +308,7 @@ class _TileDivider extends StatelessWidget {
   );
 }
 
-/// One quick-stat cell — bold burgundy number over a muted label (Figma 42:18).
+/// One quick-stat cell — bold navy number over a muted label (Figma 42:18).
 class _StatCell extends StatelessWidget {
   const _StatCell({required this.value, required this.label});
 

@@ -387,7 +387,7 @@ class _Timeline extends StatelessWidget {
                       Expanded(
                         child: Container(
                           width: 2.5,
-                          // Burgundy through completed segments; grey into a
+                          // Navy through completed segments; grey into a
                           // pending step.
                           color: steps[i + 1].done
                               ? AppColors.brandPrimary

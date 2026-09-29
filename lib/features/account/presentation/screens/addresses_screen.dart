@@ -63,7 +63,7 @@ class AddressesScreen extends ConsumerWidget {
   }
 }
 
-/// Saved-address card (Figma 64:11): bordered (burgundy when default), a pin +
+/// Saved-address card (Figma 64:11): bordered (navy when default), a pin +
 /// recipient name + Default badge + edit/delete icons, then phone + address.
 class _AddressCard extends StatelessWidget {
   const _AddressCard({
@@ -216,7 +216,7 @@ class _IconAction extends StatelessWidget {
   );
 }
 
-/// Burgundy outlined "Add New Address" button (Figma 64:39).
+/// Navy outlined "Add New Address" button (Figma 64:39).
 class _AddNewAddressButton extends StatelessWidget {
   const _AddNewAddressButton({required this.onTap});
 

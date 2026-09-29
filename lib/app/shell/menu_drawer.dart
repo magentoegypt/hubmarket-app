@@ -31,8 +31,8 @@ class MenuDrawer extends ConsumerWidget {
     final auth = ref.watch(authControllerProvider);
 
     return Drawer(
-      // Figma: white panel; only the profile strip is blush (Material 3 would
-      // otherwise tint the surface pink from the burgundy seed).
+      // Figma: white panel; only the profile strip is tinted (Material 3 would
+      // otherwise tint the whole surface from the navy seed).
       backgroundColor: Colors.white,
       child: SafeArea(
         child: Column(

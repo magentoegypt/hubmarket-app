@@ -66,7 +66,7 @@
 
         <!-- FCM: route system-handled (background/killed) notifications to the
              app's high-importance channel, give them a valid white small icon
-             (not the launcher icon → white square), and a burgundy accent. -->
+             (not the launcher icon → white square), and the orange accent. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="hubmarket_default" />

@@ -470,7 +470,7 @@ class _OrderCard extends ConsumerWidget {
   }
 }
 
-/// Solid status pill: gold = delivered, grey = cancelled, burgundy = in progress.
+/// Solid status pill: gold = delivered, grey = cancelled, navy = in progress.
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.order});
   final CustomerOrder order;
@@ -501,7 +501,7 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-/// Outlined burgundy action pill (Track / Reorder).
+/// Outlined navy action pill (Track / Reorder).
 class _ActionButton extends StatelessWidget {
   const _ActionButton({required this.label, required this.onTap});
   final String label;

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 
-/// Standard empty / illustration state per Figma: a burgundy icon inside a
-/// blush `surface/tint` circle, a title, and an optional body + action.
+/// Standard empty / illustration state per Figma: a navy icon inside a
+/// pale `surface/tint` circle, a title, and an optional body + action.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,

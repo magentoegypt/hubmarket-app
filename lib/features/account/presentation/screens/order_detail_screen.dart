@@ -303,7 +303,7 @@ class _AddressBlock extends StatelessWidget {
   );
 }
 
-/// One status-history entry: a burgundy dot, the message, and its time.
+/// One status-history entry: a navy dot, the message, and its time.
 class _TimelineRow extends StatelessWidget {
   const _TimelineRow({required this.message, required this.timestamp});
   final String message;
