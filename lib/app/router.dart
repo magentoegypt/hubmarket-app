@@ -44,6 +44,7 @@ import '../features/notifications/presentation/notification_settings_screen.dart
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/stores/presentation/screens/store_screen.dart';
 import '../features/stores/presentation/screens/stores_screen.dart';
+import '../features/store_credit/presentation/my_credit_screen.dart';
 import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../features/diagnostics/presentation/health_check_screen.dart';
 import '../features/onboarding/presentation/launch_splash_screen.dart';
@@ -236,6 +237,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.paymentMethods,
         builder: (context, state) => const PaymentMethodsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.myCredit,
+        builder: (context, state) => const MyCreditScreen(),
       ),
       GoRoute(
         path: AppRoutes.editProfile,

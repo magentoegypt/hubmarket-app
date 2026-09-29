@@ -119,9 +119,10 @@ class AuthController extends Notifier<AuthState> {
 
   // --- WhatsApp OTP ----------------------------------------------------------
 
-  /// Sends a passwordless-login code to [phone]. Fails (with the store's
-  /// message) when no account holds the number.
-  Future<void> requestLoginOtp(String phone) => _repo.requestLoginOtp(phone);
+  /// Sends a passwordless-login code to [phone] and returns the seconds before
+  /// another may be sent, when the backend says. Fails with the store's
+  /// message when it refuses the send (see [AuthRepository.requestLoginOtp]).
+  Future<int?> requestLoginOtp(String phone) => _repo.requestLoginOtp(phone);
 
   /// Completes a passwordless login: exchanges the code for a token and runs the
   /// same post-login flow as an email/password sign-in.

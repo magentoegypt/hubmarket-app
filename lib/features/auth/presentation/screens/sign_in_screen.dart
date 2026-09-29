@@ -22,8 +22,9 @@ import 'verify_code_screen.dart';
 ///
 /// Email: e-mail + password (`generateCustomerToken`). Mobile: the number gets
 /// a WhatsApp code, typed on "05 Verify WhatsApp code" (sign-in by code goes
-/// through the REST pair that answers a token). "Continue with WhatsApp code"
-/// is the shortcut to the Mobile tab.
+/// through a pair that answers a token: the Hub Market App's GraphQL one when
+/// the server has it, else SmsExtend's REST one). "Continue with WhatsApp
+/// code" is the shortcut to the Mobile tab.
 ///
 /// Errors stay on the form (S6): the fields' own checks under each field; a
 /// refused sign-in as the red banner under the title with both fields
@@ -101,12 +102,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       _mobileError = null;
     });
     try {
-      await _auth.requestLoginOtp(phone);
+      final resendAfter = await _auth.requestLoginOtp(phone);
       if (!mounted) return;
       setState(() => _busy = false);
       final outcome = await context.push<VerifyCodeOutcome>(
         AppRoutes.verifyCode,
-        extra: VerifyCodeFlow.signIn(_auth, phone),
+        extra: VerifyCodeFlow.signIn(
+          _auth,
+          phone,
+          resendAfterSeconds: resendAfter,
+        ),
       );
       if (mounted && outcome == VerifyCodeOutcome.useEmail) _switchTab(false);
     } catch (error) {

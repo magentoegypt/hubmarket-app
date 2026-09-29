@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
+import '../checkout_credit_controller.dart';
 
 /// Shared building blocks of the three checkout steps (Figma 17 / 18 / 18b):
 /// white cards on the muted page, the design's type scale, the step indicator,
@@ -505,9 +507,9 @@ class CheckoutAmountRow extends StatelessWidget {
   );
 }
 
-/// Subtotal, shipping, any discount and the total — "Order summary" on the
-/// payment step, "Order total" on the review step.
-class CheckoutTotalsCard extends StatelessWidget {
+/// Subtotal, shipping, any discount, store credit used and the total — "Order
+/// summary" on the payment step, "Order total" on the review step.
+class CheckoutTotalsCard extends ConsumerWidget {
   const CheckoutTotalsCard({
     super.key,
     required this.title,
@@ -529,11 +531,13 @@ class CheckoutTotalsCard extends StatelessWidget {
   final Money? grandTotal;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final totals = cart.totals;
     final discount = totals.discount;
     final shippingAmount = shipping?.amount;
+    // Cart.hm_store_credit, re-read whenever credit is used or given back.
+    final credit = ref.watch(checkoutCreditProvider.select((s) => s.applied));
     return CheckoutCard(
       title: title,
       spacing: 10,
@@ -559,6 +563,12 @@ class CheckoutTotalsCard extends StatelessWidget {
                 ? l10n.cartPromoCode(totals.appliedCoupon!)
                 : l10n.cartDiscount,
             value: '−${discount.formatted()}',
+            valueColor: AppColors.successStrong,
+          ),
+        if (credit != null)
+          CheckoutAmountRow(
+            label: l10n.checkoutStoreCredit,
+            value: '−${credit.formatted()}',
             valueColor: AppColors.successStrong,
           ),
         const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),

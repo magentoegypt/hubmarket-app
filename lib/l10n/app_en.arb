@@ -866,10 +866,28 @@
   "checkoutContinueToPayment": "Continue to payment",
   "checkoutNoPaymentMethods": "No payment method can be used for this order in the app yet.",
   "checkoutPaymentMethodTitle": "Payment method",
+  "checkoutUseCredit": "Use my credit",
+  "checkoutCreditAvailable": "{amount} available",
+  "@checkoutCreditAvailable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "checkoutCreditApplied": "{amount} used on this order",
+  "@checkoutCreditApplied": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "checkoutCodSubtitle": "Pay each store when its package arrives",
   "checkoutOrderSummaryTitle": "Order summary",
   "checkoutShippingFee": "Shipping",
   "checkoutTotalInclVat": "Total (incl. VAT)",
+  "checkoutStoreCredit": "Store credit",
   "checkoutReviewOrder": "Review order",
   "checkoutReviewTitle": "Review your order",
   "checkoutItemsCount": "Items ({count})",
@@ -894,6 +912,21 @@
   "savedCardRemoveConfirmBody": "You'll need to enter it again the next time you pay by card.",
   "savedCardRemoved": "Card removed.",
   "savedCardRemoveFailed": "We couldn't remove that card. Please try again.",
+  "myCreditTitle": "My credit",
+  "myCreditBalanceLabel": "Credit balance",
+  "myCreditUseAtCheckout": "Use it on any order at checkout — it never expires.",
+  "myCreditNotUsable": "Store credit can’t be used at checkout on your account.",
+  "myCreditTransactions": "Transactions",
+  "myCreditNoTransactions": "No transactions yet",
+  "myCreditNoTransactionsBody": "Refunds to your credit, and credit you use at checkout, show up here.",
+  "myCreditBalanceAfter": "Balance {amount}",
+  "@myCreditBalanceAfter": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "orderSuccessTitle": "Order placed!",
   "orderPlacedThanks": "Thank you. Order #{number} is confirmed — we’ve emailed your receipt.",
   "@orderPlacedThanks": {
@@ -929,6 +962,14 @@
         "type": "String"
       },
       "method": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPlacedPaidWithCredit": "{amount} paid with your store credit",
+  "@orderPlacedPaidWithCredit": {
+    "placeholders": {
+      "amount": {
         "type": "String"
       }
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
@@ -7,6 +8,7 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
+import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../../domain/checkout.dart';
 import '../widgets/checkout_parts.dart';
 import '../widgets/payment_method_tile.dart';
@@ -110,6 +112,8 @@ class OrderSuccessScreen extends StatelessWidget {
                         const SizedBox(height: 18),
                         _PaymentRow(payment: args.payment!, total: args.total),
                       ],
+                      // Store credit the order used (HubAppAccount).
+                      _StoreCreditRow(orderNumber: args.orderNumber),
                     ],
                   ),
                 ),
@@ -169,6 +173,54 @@ class _SuccessTick extends StatelessWidget {
       child: const Icon(Icons.check, size: 36, color: Colors.white),
     ),
   );
+}
+
+/// "AED 23.00 paid with your store credit" under the payment line, read from
+/// the placed order (`OrderTotal.hm_store_credit`); nothing while store credit
+/// is off or the order used none.
+class _StoreCreditRow extends ConsumerWidget {
+  const _StoreCreditRow({required this.orderNumber});
+
+  final String orderNumber;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final credit = ref.watch(orderStoreCreditProvider(orderNumber)).valueOrNull;
+    if (credit == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.isDarkMode ? Colors.white10 : AppColors.successSubtle,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.card_giftcard_outlined,
+              size: 20,
+              color: context.isDarkMode
+                  ? AppColors.success
+                  : AppColors.successStrong,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                // An isolate keeps "AED 23.00" in order inside Arabic.
+                l10n.orderPlacedPaidWithCredit(
+                  '\u2066${credit.formatted()}\u2069',
+                ),
+                style: TextStyle(fontSize: 14, color: context.scaffoldHeading),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// How the order is paid. Every method checkout offers settles on delivery or

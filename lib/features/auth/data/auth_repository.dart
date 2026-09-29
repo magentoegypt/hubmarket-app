@@ -1,24 +1,40 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
+import '../../../core/config/hubapp_account.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/hubapp/hubapp.dart';
 import '../domain/customer.dart';
 import '../domain/password_reset_ticket.dart';
 import 'auth_queries.dart';
+import 'hubapp_whatsapp_sign_in.dart';
 import 'otp_queries.dart';
 import 'vnecoms_otp.dart';
 import 'whatsapp_otp_api.dart';
 
 class AuthRepository {
-  AuthRepository(this._client, this._whatsapp);
+  AuthRepository(
+    this._client,
+    this._whatsapp, {
+    HubAppWhatsAppSignIn? graphqlSignIn,
+    void Function()? onGraphqlMissing,
+  }) : _hubAppSignIn = graphqlSignIn,
+       _onHubAppMissing = onGraphqlMissing;
 
   final GraphQLClient _client;
 
-  /// REST transport for passwordless sign-in — the only OTP path on this
-  /// backend that returns a customer token.
+  /// REST transport for passwordless sign-in (Build 1) — SmsExtend's pair,
+  /// which answers a verified code with a customer token.
   final WhatsAppOtpApi _whatsapp;
+
+  /// The Hub Market App's GraphQL pair, when the server has it and its
+  /// `whatsapp_login` switch is on; sign-in by code then goes through it.
+  final HubAppWhatsAppSignIn? _hubAppSignIn;
+
+  /// Told when the server turns out not to have the GraphQL pair after all.
+  final void Function()? _onHubAppMissing;
 
   /// Returns a customer token. Throws [Failure] (auth) on bad credentials.
   Future<String> login(String email, String password) async {
@@ -66,17 +82,44 @@ class AuthRepository {
   }
 
   // --- WhatsApp OTP ----------------------------------------------------------
-  // Sign-in: MagentoEgypt_SmsExtend REST (returns a token). Registration and
+  // Sign-in: the Hub Market App's GraphQL pair when the server has it, else
+  // MagentoEgypt_SmsExtend REST (both return a token). Registration and
   // password reset: Vnecoms SMS GraphQL, the same flows the website runs.
 
-  /// Sends a sign-in code. Throws [Failure] (`server`, with the store's
-  /// message) when no account holds the number.
-  Future<void> requestLoginOtp(String phone) => _whatsapp.sendLoginCode(phone);
+  /// Sends a sign-in code and returns the seconds before another may be sent
+  /// (null when the transport doesn't say). Throws [Failure] (`server`, with
+  /// the store's message) when the send is refused — over REST also when no
+  /// account holds the number; over GraphQL the answer is the same for every
+  /// number unless the store reveals unknown ones.
+  ///
+  /// A refusal never falls back to REST: a limit must not be dodged by
+  /// switching transport. Only a server without the GraphQL pair does.
+  Future<int?> requestLoginOtp(String phone) async {
+    final hubApp = _hubAppSignIn;
+    if (hubApp != null) {
+      try {
+        return await hubApp.sendCode(phone);
+      } on HubAppMissing {
+        _onHubAppMissing?.call();
+      }
+    }
+    await _whatsapp.sendLoginCode(phone);
+    return null;
+  }
 
   /// Verifies a sign-in code and returns the customer token. Throws [Failure]
   /// on a wrong / expired code.
-  Future<String> loginWithOtp(String phone, String code) =>
-      _whatsapp.verifyLoginCode(phone, code);
+  Future<String> loginWithOtp(String phone, String code) async {
+    final hubApp = _hubAppSignIn;
+    if (hubApp != null) {
+      try {
+        return await hubApp.signIn(phone, code);
+      } on HubAppMissing {
+        _onHubAppMissing?.call();
+      }
+    }
+    return _whatsapp.verifyLoginCode(phone, code);
+  }
 
   /// `customerRegisterSendOtp`. Throws [Failure] (`server`, with the store's
   /// message) when another account already holds the number.
@@ -226,9 +269,17 @@ class AuthRepository {
   }
 }
 
-final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => AuthRepository(
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final graphqlSignIn = ref.watch(
+    hubAppAccountFeaturesProvider.select((f) => f.whatsappSignIn),
+  );
+  return AuthRepository(
     ref.watch(graphqlClientProvider),
     ref.watch(whatsAppOtpApiProvider),
-  ),
-);
+    graphqlSignIn: graphqlSignIn
+        ? HubAppWhatsAppSignIn(ref.watch(guestGraphqlClientProvider))
+        : null,
+    onGraphqlMissing: () =>
+        ref.read(hubAppAccountMissingProvider.notifier).mark(),
+  );
+});

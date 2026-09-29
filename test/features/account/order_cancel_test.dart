@@ -7,6 +7,7 @@ import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/config/store_timezone.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -18,6 +19,7 @@ import 'package:hubmarket_app/features/account/presentation/screens/order_tracki
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 
 /// The live store's reasons (storeConfig, 29 Sep 2026).
 const _reasons = [
@@ -97,6 +99,8 @@ Future<void> _pump(
         accountRepositoryProvider.overrideWithValue(
           account ?? FakeAccountRepository(),
         ),
+        // Build 1: no Hub Market App (no store-credit lookup).
+        hubAppOverride(const HubAppState.unavailable()),
       ],
       child: MaterialApp.router(
         routerConfig: router,
