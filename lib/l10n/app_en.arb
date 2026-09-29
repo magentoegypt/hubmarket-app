@@ -166,29 +166,119 @@
       }
     }
   },
-  "searchResultsFor": "Search results for “{query}”",
-  "@searchResultsFor": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
   "searchHint": "Search for products…",
   "searchFieldHint": "Search for products, brands…",
   "searchRecentTitle": "Recent searches",
-  "searchTrendingTitle": "Trending",
+  "searchTrendingTitle": "Trending searches",
   "searchClearHistory": "Clear",
   "searchTrendingCsv": "bag,Samsung,shirt,dress,sofa,rice,perfume,milk",
-  "searchForQuery": "Search “{query}”",
-  "@searchForQuery": {
+  "searchHintExpanded": "Search for products, brands…",
+  "searchClearField": "Clear search",
+  "searchRemoveRecent": "Remove from recent searches",
+  "searchPopularCategories": "Popular categories",
+  "searchCategoryItems": "{count}+ items",
+  "@searchCategoryItems": {
+    "description": "Item count on a Popular categories tile; an open-ended floor, as on the storefront's category chips.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchAllCategories": "All categories",
+  "searchScopeTitle": "Search in",
+  "searchProductsHeading": "Products",
+  "searchInCategory": "in {category}",
+  "@searchInCategory": {
+    "description": "Under a type-ahead product: the category it is filed under.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "searchSeeProductsIn": "See products in",
+  "searchAllDepartments": "All departments",
+  "searchOrIn": "or in",
+  "searchListSeparator": ", ",
+  "searchCategoriesLabel": "Categories",
+  "searchViewAllResults": "{count, plural, =1{View 1 result} other{View all {count} results}}",
+  "@searchViewAllResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchTabProducts": "Products ({count})",
+  "@searchTabProducts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchTabCategories": "Categories ({count})",
+  "@searchTabCategories": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchResultsSummary": "{count, plural, =1{1 result for “{query}”} other{{count} results for “{query}”}}",
+  "@searchResultsSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchResultsSummaryIn": "{count, plural, =1{1 result for “{query}” in {category}} other{{count} results for “{query}” in {category}}}",
+  "@searchResultsSummaryIn": {
+    "description": "Results line when the search is scoped to one category.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "query": {
+        "type": "String"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilterAction": "Filter",
+  "searchCategoryMatches": "{count, plural, =1{1 matching product} other{{count} matching products}}",
+  "@searchCategoryMatches": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchNoCategoryMatches": "No categories match “{query}”.",
+  "@searchNoCategoryMatches": {
     "placeholders": {
       "query": {
         "type": "String"
       }
     }
   },
-  "searchHintExpanded": "Search for products, brands…",
+  "searchNoResultsTitle": "No results for “{query}”",
+  "@searchNoResultsTitle": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoResultsBody": "Check the spelling or use fewer words.",
+  "searchPopularNow": "Popular right now",
   "comingSoon": "Coming soon",
   "comingSoonBody": "This section arrives in a later phase.",
   "authSignInTitle": "Sign In",
