@@ -660,9 +660,6 @@
   "addressHintPhone": "+971 50 000 0000",
   "addressHintArea": "Jumeirah 1",
   "addressHintStreet": "Street 9",
-  "contactInformation": "Contact Information",
-  "checkoutEmailHelp": "Order updates will be sent to this email.",
-  "checkoutDeliveryAddress": "Delivery Address",
   "actionChange": "Change",
   "actionEdit": "Edit",
   "profileTitle": "Edit Profile",
@@ -696,15 +693,7 @@
   "reviewSubmit": "Submit Review",
   "reviewSubmitted": "Thank you! Your review is awaiting approval.",
   "checkoutTitle": "Checkout",
-  "checkoutContact": "Contact",
-  "checkoutShippingAddress": "Shipping Address",
   "checkoutShippingMethod": "Shipping Method",
-  "checkoutPayment": "Payment Method",
-  "checkoutSummary": "Order Summary",
-  "checkoutDeliveryFee": "Delivery fee",
-  "checkoutCodFee": "Cash on Delivery Fee",
-  "checkoutPaymentSecurityNote": "Online payments are processed securely. Cash on delivery is available.",
-  "checkoutContinue": "Continue",
   "checkoutPlaceOrder": "Place order",
   "checkoutStepShipping": "Shipping",
   "checkoutStepPayment": "Payment",
@@ -745,44 +734,8 @@
   },
   "checkoutOrderTotal": "Order total",
   "checkoutTermsNote": "By placing your order you agree to Hub Market’s Terms and each store’s return policy.",
-  "checkoutPayIn4": "or 4 interest-free payments",
-  "checkoutPayLater": "Pay later, interest-free",
-  "checkoutCardInstalments": "Pay by card in instalments",
   "checkoutFreeOrder": "No payment needed — your order total is free",
-  "checkoutApplePaySubtitle": "Pay quickly with Apple Pay",
-  "checkoutSamsungPaySubtitle": "Pay quickly with Samsung Pay",
-  "promoTabbyPayIn4": "or {count} interest-free payments of {amount}",
-  "@promoTabbyPayIn4": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "promoTabbyPayLater": "or pay later, interest-free",
-  "promoTabbyCardInstalments": "or pay by card in instalments",
-  "tabbyInfoTitle": "Pay in 4 with Tabby",
-  "tabbyInfoBody": "Split your purchase into 4 equal, interest-free payments. No fees when you pay on time.",
-  "tabbyInfoGotIt": "Got it",
-  "paymentSessionUnavailable": "This payment method is unavailable for this order. Please choose another payment method.",
   "countryUae": "United Arab Emirates",
-  "paymentDeclined": "Payment was declined. Please choose another payment method.",
-  "paymentFailed": "Payment couldn't be completed. Please try again.",
-  "paymentExpired": "Your payment session expired. Please try again.",
-  "paymentProcessing": "Your payment is still processing. Please try again in a moment.",
-  "completePaymentTitle": "Complete payment",
-  "completePaymentBody": "Order {number} is placed and awaiting payment. Choose how you'd like to pay.",
-  "@completePaymentBody": {
-    "placeholders": {
-      "number": {
-        "type": "String"
-      }
-    }
-  },
-  "completePaymentPayNow": "Pay now",
   "savedCardsTitle": "Payment Methods",
   "savedCardsSubtitle": "Cards saved at checkout",
   "savedCardsEmptyTitle": "No saved cards",
@@ -793,29 +746,7 @@
   "savedCardRemoveConfirmBody": "You'll need to enter it again the next time you pay by card.",
   "savedCardRemoved": "Card removed.",
   "savedCardRemoveFailed": "We couldn't remove that card. Please try again.",
-  "checkoutUseNewCard": "Use a new card",
-  "checkoutSaveCard": "Save this card for next time",
-  "checkoutSavedCardsLabel": "Saved cards",
-  "completePaymentPayLater": "I'll pay later",
   "orderSuccessTitle": "Order placed!",
-  "orderPendingTitle": "Order received",
-  "orderSuccessBody": "Thank you. Your order number is {number}.",
-  "@orderSuccessBody": {
-    "placeholders": {
-      "number": {
-        "type": "String"
-      }
-    }
-  },
-  "orderSuccessThanks": "Thank you! Your order is confirmed and on its way.",
-  "orderSuccessThanksNamed": "Thank you, {name}! Your order is confirmed and on its way.",
-  "@orderSuccessThanksNamed": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "orderPlacedThanks": "Thank you. Order #{number} is confirmed — we’ve emailed your receipt.",
   "@orderPlacedThanks": {
     "placeholders": {
@@ -855,10 +786,6 @@
     }
   },
   "orderPlacedTrack": "Track order",
-  "orderNumberLabel": "Order Number",
-  "orderNumberCopied": "Order number copied",
-  "paymentRedirectTitle": "Complete payment",
-  "paymentRedirectPending": "Your order is placed and awaiting payment confirmation. We'll notify you once your payment is completed.",
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",
