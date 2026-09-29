@@ -588,6 +588,23 @@
   "orderReorder": "Reorder",
   "orderReorderAdded": "Items added to your cart",
   "orderReorderFailed": "Couldn't reorder these items. Please try again.",
+  "orderCancelAction": "Cancel order",
+  "orderCancelHint": "You can cancel this order until it ships. Cancelling cancels the whole order.",
+  "orderCancelTitle": "Cancel order #{number}?",
+  "@orderCancelTitle": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "orderCancelWholeOrder": "The whole order is cancelled — every item in it.",
+  "orderCancelRefundNote": "Anything already paid is refunded.",
+  "orderCancelGuestNote": "We'll email you a link to confirm the cancellation.",
+  "orderCancelReasonTitle": "Why are you cancelling?",
+  "orderCancelKeep": "Keep my order",
+  "orderCancelDone": "Your order has been cancelled.",
+  "orderCancelEmailSent": "Check your email — we've sent you a link to confirm the cancellation.",
   "trackOrderTitle": "Track Order",
   "orderStatusTitle": "Order Status",
   "orderPlaced": "Order Placed",
