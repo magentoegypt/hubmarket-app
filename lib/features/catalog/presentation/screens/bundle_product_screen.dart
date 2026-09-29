@@ -1203,6 +1203,19 @@ class _SwapSheetState extends State<_SwapSheet> {
             child: ListView(
               shrinkWrap: true,
               children: [
+                // An optional single-choice item can be left out again.
+                if (!option.required && !many)
+                  _NoneRow(
+                    chosen: _choice.chosenIn(option).isEmpty,
+                    onTap: () {
+                      var next = _choice;
+                      for (final s in _choice.chosenIn(option)) {
+                        next = next.remove(option, s);
+                      }
+                      widget.onChanged(next);
+                      Navigator.of(context).pop();
+                    },
+                  ),
                 for (final selection in option.selections)
                   _SwapRow(
                     selection: selection,
@@ -1235,6 +1248,52 @@ class _SwapSheetState extends State<_SwapSheet> {
     final text = Money(amount: delta.abs(), currency: price.currency).formatted();
     return delta > 0 ? '+$text' : '−$text';
   }
+}
+
+/// "None" at the head of an optional single-choice item's list.
+class _NoneRow extends StatelessWidget {
+  const _NoneRow({required this.chosen, required this.onTap});
+
+  final bool chosen;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: context.hairline),
+            ),
+            child: Icon(Icons.block, color: context.scaffoldMuted),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              AppLocalizations.of(context).bundleNone,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: context.scaffoldHeading,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Icon(
+            chosen ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+            color: chosen ? AppColors.brandPrimary : context.scaffoldMuted,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _SwapRow extends StatelessWidget {

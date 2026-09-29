@@ -639,6 +639,7 @@
   "bundleOptional": "اختياري",
   "bundleSwapTitle": "استبدال {option}",
   "bundleDone": "تم",
+  "bundleNone": "بدون",
   "bundleNeedsSelection": "اختر {option} لإكمال الباقة.",
   "bundleNeedsAttribute": "اختر {attribute} لـ{item}.",
   "bundleOutOfStock": "{item} غير متوفر — استبدله للمتابعة.",

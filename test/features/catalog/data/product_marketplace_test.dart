@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/catalog/data/product_marketplace_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
@@ -49,6 +50,14 @@ void main() {
       expect(child.optionUidsFor({'size': 167}), ['Y29uZmlndXJhYmxlLzE0NC8xNjc=']);
       expect(child.optionUidsFor(const {}), isNull);
     });
+  });
+
+  test('the GET request stays well inside the URL limit', () {
+    // It goes as GET, in the query string (nginx: 8 KB request line); the
+    // client adds a __typename per selection set on top.
+    final compact = compactGraphQLDocument(ProductMarketplaceQueries.document);
+    final encoded = Uri.encodeQueryComponent(compact);
+    expect(encoded.length, lessThan(4500), reason: encoded);
   });
 
   group('ProductMarketplaceRepository', () {

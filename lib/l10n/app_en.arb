@@ -1012,6 +1012,7 @@
     }
   },
   "bundleDone": "Done",
+  "bundleNone": "None",
   "bundleNeedsSelection": "Choose {option} to complete the package.",
   "@bundleNeedsSelection": {
     "placeholders": {

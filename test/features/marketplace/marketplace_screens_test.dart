@@ -10,6 +10,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 import '../../support/bundle_fixtures.dart';
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
+import '../../support/hubapp_fakes.dart';
 import '../../support/marketplace_fakes.dart';
 import 'marketplace_harness.dart';
 
@@ -67,16 +68,20 @@ void main() {
       tester,
     ) async {
       phoneView(tester);
+      final public = fakeHubAppClient(_answer(_dressItem()));
       await tester.pumpWidget(
         marketplaceHarness(
           locale: 'en',
           location: AppRoutes.product('floral-dress'),
           catalogRepository: DetailRepository(_dress()),
-          publicAnswers: _answer(_dressItem()),
+          publicClient: public,
         ),
       );
       await tester.pumpAndSettle();
 
+      // One public (GET) read, by url_key.
+      expect(public.requests.map(operationNameOf), ['HmProductMarketplace']);
+      expect(public.requests.single.variables, {'urlKey': 'floral-dress'});
       expect(find.text(_en.pdpSoldBy), findsOneWidget);
       expect(find.text('loly store'), findsOneWidget);
       expect(find.text('4.3'), findsOneWidget);
@@ -90,17 +95,19 @@ void main() {
       tester,
     ) async {
       phoneView(tester);
+      final public = fakeHubAppClient(_answer(_dressItem()));
       await tester.pumpWidget(
         marketplaceHarness(
           locale: 'en',
           location: AppRoutes.product('floral-dress'),
           hubApp: const HubAppState.unavailable(),
           catalogRepository: DetailRepository(_dress()),
-          publicAnswers: _answer(_dressItem()),
+          publicClient: public,
         ),
       );
       await tester.pumpAndSettle();
 
+      expect(public.requests, isEmpty);
       expect(find.text(_en.pdpSoldBy), findsNothing);
       expect(find.text('Floral Print Corset-Waist Tie Dress'), findsOneWidget);
     });

@@ -77,7 +77,6 @@ class SellerLogo extends StatelessWidget {
         height: size,
         placeholder: (_) => const ColoredBox(color: Colors.white),
         error: fallback,
-        semanticLabel: seller.name,
       ),
     );
   }

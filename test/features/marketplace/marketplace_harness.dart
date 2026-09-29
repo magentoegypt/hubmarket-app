@@ -140,6 +140,7 @@ Widget marketplaceHarness({
   required String location,
   HubAppState hubApp = const HubAppState.available(kSampleHmAppConfig),
   Map<String, Object> publicAnswers = const {},
+  FakeHubAppClient? publicClient,
   CartRepository? cartRepository,
   CatalogRepository? catalogRepository,
   CustomerOrder? order,
@@ -206,7 +207,9 @@ Widget marketplaceHarness({
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(hubApp),
-      publicClientOverride(publicAnswers),
+      publicGraphqlClientProvider.overrideWithValue(
+        publicClient ?? fakeHubAppClient(publicAnswers),
+      ),
       cartRepositoryProvider.overrideWithValue(
         cartRepository ?? FakeCartRepository(),
       ),
