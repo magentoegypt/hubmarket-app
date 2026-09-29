@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/notifications/notification_service.dart';
 import '../core/store/store_controller.dart';
+import '../core/widgets/offline_state.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/cart/presentation/cart_controller.dart';
 import '../features/wishlist/presentation/wishlist_controller.dart';
@@ -125,13 +126,16 @@ class _HubAppState extends ConsumerState<HubApp>
       themeMode: themeMode,
       // The back swipe is installed once, here, above the router's Navigator so
       // it reaches every route — including the screens that build a bare
-      // Scaffold and so never had one (CL042-DEV11).
+      // Scaffold and so never had one (CL042-DEV11). The offline strip (Figma
+      // S3) is app-wide for the same reason.
       builder: (context, child) => Directionality(
         textDirection: store.isRtl ? TextDirection.rtl : TextDirection.ltr,
-        child: AppBackSwipe(
-          router: router,
-          navigatorKey: rootNavigatorKey,
-          child: child ?? const SizedBox.shrink(),
+        child: OfflineBannerHost(
+          child: AppBackSwipe(
+            router: router,
+            navigatorKey: rootNavigatorKey,
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
       ),
     );

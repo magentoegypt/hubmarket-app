@@ -20,6 +20,9 @@ dependencies:
 
   # GraphQL (primary backend transport)
   graphql_flutter: ^5.1.0
+  # The OS network state behind the S3 offline banner / state (already
+  # resolved through graphql_flutter; direct because the app reads it too).
+  connectivity_plus: ^7.1.1
 
   # Routing
   go_router: ^14.0.0
