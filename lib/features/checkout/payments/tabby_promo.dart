@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/config/backend_capabilities.dart';
 import '../../../l10n/l10n.dart';
 import '../../catalog/domain/money.dart';
 import '../data/checkout_repository.dart';
 import '../domain/tabby_config.dart';
 
 /// Backend-resolved Tabby config. Rebuilds (refetches) when the GraphQL client is
-/// reset on a store switch, since thresholds/currency are store-scoped.
-final tabbyConfigProvider = FutureProvider<TabbyConfig?>(
-  (ref) => ref.watch(checkoutRepositoryProvider).fetchTabbyConfig(),
-);
+/// reset on a store switch, since thresholds/currency are store-scoped. Null —
+/// promo hidden, no request — when the backend has no `tabbyConfig`
+/// ([BackendCapabilities.tabbyPromo]; Hub Market doesn't).
+final tabbyConfigProvider = FutureProvider<TabbyConfig?>((ref) {
+  if (!ref.watch(backendCapabilitiesProvider).tabbyPromo) return null;
+  return ref.watch(checkoutRepositoryProvider).fetchTabbyConfig();
+});
 
 /// Tabby promo ("Pay in 4" / "Pay Later"), shown on the PDP and cart **only for
 /// the products the backend enables and the price qualifies for** — one line per

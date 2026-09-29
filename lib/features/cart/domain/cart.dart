@@ -42,23 +42,12 @@ class CartTotals {
     this.subtotal,
     this.discount,
     this.appliedCoupon,
-    this.codFee,
   });
 
   final Money? grandTotal;
   final Money? subtotal;
   final Money? discount;
   final String? appliedCoupon;
-
-  /// Cash-on-Delivery handling fee (`CartPrices.cod_fee`), already counted in
-  /// [grandTotal]. The server returns 0 whenever it doesn't apply — the
-  /// merchant can switch the fee off in admin without an app release — so the
-  /// row is driven by [hasCodFee] rather than by the chosen method.
-  final Money? codFee;
-
-  /// Whether to show the fee line. Never infer this from the selected payment
-  /// method: the amount, the switch and the label all live in backend config.
-  bool get hasCodFee => (codFee?.amount ?? 0) > 0;
 }
 
 class Cart {

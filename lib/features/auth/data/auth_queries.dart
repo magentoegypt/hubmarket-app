@@ -8,9 +8,16 @@ mutation GenerateToken($email: String!, $password: String!) {
 }
 ''';
 
+  /// Deliberately the deprecated `createCustomer`, not `createCustomerV2`.
+  ///
+  /// The Vnecoms SMS module plugs into every GraphQL sign-up
+  /// (`CreateCustomerAccount`) and rejects one without a top-level
+  /// `mobilenumber` ("Required parameters are missing: Mobile Number"). Only
+  /// `CustomerInput` declares that field — `CustomerCreateInput` can't carry it,
+  /// so `createCustomerV2` cannot create an account on this backend at all.
   static const String createCustomer = r'''
-mutation CreateCustomer($input: CustomerCreateInput!) {
-  createCustomerV2(input: $input) {
+mutation CreateCustomer($input: CustomerInput!) {
+  createCustomer(input: $input) {
     customer {
       firstname
       lastname
@@ -58,17 +65,16 @@ mutation ResetPassword(
 }
 ''';
 
+  /// `mobilenumber` is the Vnecoms SMS customer attribute — the number the
+  /// website's sign-up and "change mobile" flows write and the WhatsApp OTP
+  /// flows look accounts up by.
   static const String customer = r'''
 query CurrentCustomer {
   customer {
     firstname
     lastname
     email
-    avatar_url
-    custom_attributes {
-      code
-      ... on AttributeValue { value }
-    }
+    mobilenumber
   }
 }
 ''';

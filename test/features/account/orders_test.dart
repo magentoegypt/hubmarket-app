@@ -93,9 +93,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // CL042-DEV43: the fee lives inside grand_total, so without its own row a
-    // COD order's parts sit 10 AED under the total with nothing explaining it.
-    testWidgets('itemises the COD fee when the order carried one', (
+    // Hub Market has no COD handling fee (Zoonze's `cod_fee`), so a COD
+    // order's totals are just subtotal + shipping = total, with no fee row.
+    testWidgets('a COD order shows subtotal, shipping and total only', (
       tester,
     ) async {
       await pump(
@@ -106,44 +106,12 @@ void main() {
           date: '2026-09-26',
           subtotal: Money(amount: 69, currency: 'AED'),
           shippingAmount: Money(amount: 10, currency: 'AED'),
-          codFee: Money(amount: 10, currency: 'AED'),
-          total: Money(amount: 89, currency: 'AED'),
-        ),
-      );
-      expect(find.text('Cash on Delivery Fee'), findsOneWidget);
-    });
-
-    testWidgets('hides the fee row on an order placed before the fee existed', (
-      tester,
-    ) async {
-      // The backend returns 0 for those rows rather than erroring (the column
-      // is NULL), so history needs no special-casing — the row just stays away.
-      await pump(
-        tester,
-        const CustomerOrder(
-          number: '000000301',
-          status: 'Complete',
-          date: '2026-05-02',
-          subtotal: Money(amount: 69, currency: 'AED'),
-          shippingAmount: Money(amount: 10, currency: 'AED'),
-          codFee: Money(amount: 0, currency: 'AED'),
           total: Money(amount: 79, currency: 'AED'),
+          paymentMethodName: 'Cash On Delivery',
         ),
       );
       expect(find.text('Cash on Delivery Fee'), findsNothing);
-    });
-
-    testWidgets('hides the fee row when the order was not COD', (tester) async {
-      await pump(
-        tester,
-        const CustomerOrder(
-          number: '000000302',
-          status: 'Complete',
-          date: '2026-09-26',
-          total: Money(amount: 79, currency: 'AED'),
-        ),
-      );
-      expect(find.text('Cash on Delivery Fee'), findsNothing);
+      expect(find.text('Cash On Delivery'), findsOneWidget);
     });
 
     testWidgets('shows tracking carrier + number when shipped', (tester) async {

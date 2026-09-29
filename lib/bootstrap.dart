@@ -43,13 +43,15 @@ Future<void> bootstrap() async {
   // mapping first and updates when this completes.
   unawaited(container.read(storeControllerProvider.notifier).loadStores());
 
-  // Push plumbing (no-op when no Firebase config is bundled). Apply the saved
-  // topic subscriptions once FCM is up.
+  // Push plumbing. Local notifications always; FCM only when a Firebase config
+  // is bundled — none is yet, so it stays off and never blocks startup. Apply
+  // the saved topic subscriptions once FCM is up.
   unawaited(
     NotificationService.instance.init().then((_) {
       applyNotificationTopics(cache);
       // Register this device's FCM token with the backend (launch heartbeat)
-      // and on every token rotation. No-op until FCM + the backend are live.
+      // and on every token rotation. No-op until FCM is configured and the
+      // backend has a device-token endpoint (BackendCapabilities).
       container.read(deviceTokenSyncProvider).register();
       NotificationService.instance.onTokenRefresh.listen(
         (_) => container.read(deviceTokenSyncProvider).register(),

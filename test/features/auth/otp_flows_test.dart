@@ -50,8 +50,7 @@ void main() {
       expect(s.container.read(authControllerProvider).isAuthenticated, isFalse);
     });
 
-    test('register forwards the verified mobile number as a custom attribute',
-        () async {
+    test('register forwards the verified mobile number', () async {
       final s = _setup();
       await s.container
           .read(authControllerProvider.notifier)
@@ -65,6 +64,17 @@ void main() {
       expect(s.repo.lastMobileNumber, '+971501234567');
       // Registration signs the customer in afterwards.
       expect(s.container.read(authControllerProvider).isAuthenticated, isTrue);
+    });
+
+    test('a registration resend is marked as one', () async {
+      final s = _setup();
+      final auth = s.container.read(authControllerProvider.notifier);
+
+      await auth.requestRegistrationOtp('+971501234567');
+      expect(s.repo.lastOtpResend, isFalse);
+
+      await auth.requestRegistrationOtp('+971501234567', resend: true);
+      expect(s.repo.lastOtpResend, isTrue);
     });
 
     test('verifyRegistrationOtp surfaces the backend message on a bad code',

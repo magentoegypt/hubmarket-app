@@ -4,105 +4,94 @@ abstract final class AccountQueries {
   /// The full `CustomerOrder` selection, shared by the customer order list and
   /// the two guest lookups (`guestOrder` / `guestOrderByToken`) — all three
   /// return the same `CustomerOrder` type, so they parse through `_parseOrder`.
+  ///
+  /// A real fragment rather than a string spliced into the middle of each
+  /// query: `tool/validate_ops.py` can only check complete documents, and the
+  /// spliced version hid a field the backend does not have.
   static const String _orderFields = r'''
+fragment OrderFields on CustomerOrder {
+  number
+  order_date
+  status
+  shipping_method
+  carrier
+  total {
+    subtotal { value currency }
+    total_shipping { value currency }
+    grand_total { value currency }
+    discounts { amount { value currency } label }
+  }
+  items {
+    product_name
+    product_sku
+    product_url_key
+    quantity_ordered
+    product_sale_price { value currency }
+    product { image { url } }
+  }
+  payment_methods { name type }
+  comments { message timestamp }
+  shipping_address {
+    firstname
+    lastname
+    street
+    city
+    region
+    postcode
+    telephone
+    country_code
+  }
+  billing_address {
+    firstname
+    lastname
+    street
+    city
+    region
+    postcode
+    telephone
+    country_code
+  }
+  invoices { number }
+  shipments {
     number
-    order_date
-    status
-    shipping_method
-    carrier
-    total {
-      subtotal { value currency }
-      total_shipping { value currency }
-      grand_total { value currency }
-      discounts { amount { value currency } label }
-      # Cash-on-Delivery handling fee (MagentoEgypt_CodFee), already inside
-      # grand_total. Money, never null: 0 when it does not apply, including on
-      # orders placed before the module existed, whose column is NULL.
-      cod_fee { value currency }
-    }
-    items {
-      product_name
-      product_sku
-      product_url_key
-      quantity_ordered
-      product_sale_price { value currency }
-      product { image { url } }
-    }
-    payment_methods { name type }
-    comments { message timestamp }
-    shipping_address {
-      firstname
-      lastname
-      street
-      city
-      region
-      postcode
-      telephone
-      country_code
-    }
-    billing_address {
-      firstname
-      lastname
-      street
-      city
-      region
-      postcode
-      telephone
-      country_code
-    }
-    invoices { number }
-    shipments {
-      number
-      tracking { title number carrier }
-    }
+    tracking { title number carrier }
+  }
+}
 ''';
 
-  // scope: WEBSITE unifies orders across both store views (uae-en / uae-ar share
+  static String _withOrderFields(String operation) =>
+      '$operation\n$_orderFields';
+
+  // scope: WEBSITE unifies orders across both store views (`en` / `ar` share
   // one website) — without it `orders` defaults to STORE and each language only
   // sees the orders placed under its own Store header.
-  static const String orders =
-      r'''
+  static final String orders = _withOrderFields(r'''
 query CustomerOrders($pageSize: Int!, $currentPage: Int!) {
   customer {
     orders(pageSize: $pageSize, currentPage: $currentPage, scope: WEBSITE) {
       total_count
       page_info { current_page total_pages }
-      items {
-''' +
-      _orderFields +
-      r'''
-      }
+      items { ...OrderFields }
     }
   }
-}
-''';
+}''');
 
   /// Guest order lookup by the Magento order token (`placeOrder.orderV2.token`)
   /// captured at checkout. Native Magento 2.4.8 query — no custom module.
-  static const String guestOrderByToken =
-      r'''
+  static final String guestOrderByToken = _withOrderFields(r'''
 query GuestOrderByToken($token: String!) {
-  guestOrderByToken(input: { token: $token }) {
-''' +
-      _orderFields +
-      r'''
-  }
-}
-''';
+  guestOrderByToken(input: { token: $token }) { ...OrderFields }
+}''');
 
   /// Guest order lookup by the details printed on the confirmation e-mail:
   /// order number + the billing e-mail and last name used at checkout. Lets a
   /// guest track an order placed on the website or on another device.
-  static const String guestOrder =
-      r'''
+  static final String guestOrder = _withOrderFields(r'''
 query GuestOrder($number: String!, $email: String!, $lastname: String!) {
   guestOrder(input: { number: $number, email: $email, lastname: $lastname }) {
-''' +
-      _orderFields +
-      r'''
+    ...OrderFields
   }
-}
-''';
+}''');
 
   static const String addresses = r'''
 query CustomerAddresses {
@@ -194,30 +183,14 @@ mutation ChangePassword($currentPassword: String!, $newPassword: String!) {
 }
 ''';
 
-  /// Sets the `mobile_number` custom attribute. Guarded app-side by the WhatsApp
-  /// OTP flow (the module has no dedicated change-mobile OTP endpoint; the number
-  /// is verified via the registration OTP before this runs).
-  static const String updateMobile = r'''
-mutation UpdateMobile($value: String!) {
-  updateCustomerV2(
-    input: { custom_attributes: [{ attribute_code: "mobile_number", value: $value }] }
-  ) {
-    customer { firstname }
-  }
-}
-''';
-
-  /// Uploads/replaces the signed-in customer's avatar (base64 jpg/png/webp).
-  /// MagentoEgypt_PaymentGraphQl; requires the customer bearer token.
-  static const String uploadAvatar = r'''
-mutation UploadAvatar($file: String!) {
-  uploadCustomerAvatar(input: { base64_encoded_file: $file }) { url }
-}
-''';
-
-  static const String deleteAvatar = r'''
-mutation DeleteAvatar {
-  deleteCustomerAvatar { url }
+  /// Saves a new mobile number on the signed-in customer (`mobilenumber`,
+  /// Vnecoms SMS). The resolver checks [otp] against the code
+  /// `customerRegisterSendOtp` sent to that number and fails with "The otp is
+  /// not valid." otherwise — so the editor sends the code here directly;
+  /// verifying it first with `customerRegisterVerifyOtp` would consume it.
+  static const String saveMobile = r'''
+mutation SaveMobile($input: MobileCustomerInput!) {
+  saveMobileToCustomer(input: $input) { result }
 }
 ''';
 

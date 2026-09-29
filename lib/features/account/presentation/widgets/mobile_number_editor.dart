@@ -13,13 +13,12 @@ import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../data/account_repository.dart';
 
-/// Edit-Profile mobile-number editor. Shows the current verified mobile and, on
-/// "Change", runs a WhatsApp-OTP flow (reusing the **registration** OTP, since
-/// the module exposes no dedicated change-mobile endpoint) to verify a NEW
-/// number before writing it to the `mobile_number` attribute via
-/// `updateCustomerV2`. There is no server-side change-mobile guard, so the
-/// update is a best-effort attribute write that degrades gracefully if the
-/// backend rejects it.
+/// Edit-Profile mobile-number editor. Shows the current mobile and, on
+/// "Change", sends a WhatsApp code to the NEW number (the registration send,
+/// `customerRegisterSendOtp`, which also refuses a number another account
+/// holds), then saves it with `saveMobileToCustomer` — the Vnecoms SMS change
+/// the website uses, which checks the code server-side before writing
+/// `mobilenumber`.
 class MobileNumberEditor extends ConsumerStatefulWidget {
   const MobileNumberEditor({super.key});
 
@@ -83,7 +82,7 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
     _otp.clear();
     final l10n = AppLocalizations.of(context);
     try {
-      await _auth.requestRegistrationOtp(_sentPhone);
+      await _auth.requestRegistrationOtp(_sentPhone, resend: true);
     } catch (error) {
       if (!mounted) return;
       _snack(serverMessageOr(context, error, l10n.authOtpRequestError));
@@ -94,21 +93,12 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
     if (_otp.text.length != 6) return;
     setState(() => _busy = true);
     final l10n = AppLocalizations.of(context);
-    // 1) Verify the new number owns a valid OTP challenge.
+    // One call verifies and saves: the backend checks the code against the one
+    // it sent to this number and only then writes it to the account.
     try {
-      await _auth.verifyRegistrationOtp(_sentPhone, _otp.text);
-    } catch (error) {
-      if (!mounted) return;
-      _otp.clear();
-      _snack(serverMessageOr(context, error, l10n.authOtpVerifyError));
-      setState(() => _busy = false);
-      return;
-    }
-    // 2) Persist it. No server-side change-mobile guard exists, so this is a
-    // plain attribute write; it may be rejected by the module — surface that
-    // rather than crashing.
-    try {
-      await ref.read(accountRepositoryProvider).updateMobileNumber(_sentPhone);
+      await ref
+          .read(accountRepositoryProvider)
+          .saveMobileNumber(_sentPhone, _otp.text);
       await _auth.refreshCustomer();
       if (!mounted) return;
       _snack(l10n.profileMobileUpdated);
@@ -120,6 +110,8 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
       });
     } catch (error) {
       if (!mounted) return;
+      // A wrong code is the usual cause — clear it for another try.
+      _otp.clear();
       _snack(serverMessageOr(context, error, l10n.profileMobileUpdateError));
     } finally {
       if (mounted) setState(() => _busy = false);

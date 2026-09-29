@@ -7,11 +7,17 @@ import '../../../core/graphql/graphql_client.dart';
 import '../domain/customer.dart';
 import 'auth_queries.dart';
 import 'otp_queries.dart';
+import 'vnecoms_otp.dart';
+import 'whatsapp_otp_api.dart';
 
 class AuthRepository {
-  AuthRepository(this._client);
+  AuthRepository(this._client, this._whatsapp);
 
   final GraphQLClient _client;
+
+  /// REST transport for passwordless sign-in — the only OTP path on this
+  /// backend that returns a customer token.
+  final WhatsAppOtpApi _whatsapp;
 
   /// Returns a customer token. Throws [Failure] (auth) on bad credentials.
   Future<String> login(String email, String password) async {
@@ -28,6 +34,13 @@ class AuthRepository {
     return token;
   }
 
+  /// Creates the account with its WhatsApp-verified [mobileNumber] (E.164).
+  ///
+  /// The number goes out as `mobilenumber` on `createCustomer` — the backend
+  /// requires it on every GraphQL sign-up (see [AuthQueries.createCustomer])
+  /// and refuses one another account already holds. It does not re-check the
+  /// code; the sign-up screen only enables Create Account once
+  /// [verifyRegistrationOtp] has passed.
   Future<void> register({
     required String firstName,
     required String lastName,
@@ -41,68 +54,82 @@ class AuthRepository {
         'lastname': lastName,
         'email': email,
         'password': password,
-        // The registration guard requires a verified `mobile_number` custom
-        // attribute (INTEGRATION.md §3/§7a). Send the same E.164 number that was
-        // WhatsApp-verified; `CustomerCreateInput.custom_attributes` is confirmed
-        // on the live schema.
         if (mobileNumber != null && mobileNumber.isNotEmpty)
-          'custom_attributes': <Map<String, dynamic>>[
-            {'attribute_code': 'mobile_number', 'value': mobileNumber},
-          ],
+          'mobilenumber': mobileNumber,
       },
     });
   }
 
-  // --- WhatsApp OTP (MagentoEgypt_OtpVerification) ---------------------------
+  // --- WhatsApp OTP ----------------------------------------------------------
+  // Sign-in: MagentoEgypt_SmsExtend REST (returns a token). Registration and
+  // password reset: Vnecoms SMS GraphQL, the same flows the website runs.
 
-  /// Requests a login OTP. Always succeeds server-side (anti-enumeration), so a
-  /// non-error return says nothing about whether the number has an account.
-  Future<void> requestLoginOtp(String phone) async {
-    await _mutate(OtpQueries.requestLoginOtp, {'phone': phone});
+  /// Sends a sign-in code. Throws [Failure] (`server`, with the store's
+  /// message) when no account holds the number.
+  Future<void> requestLoginOtp(String phone) => _whatsapp.sendLoginCode(phone);
+
+  /// Verifies a sign-in code and returns the customer token. Throws [Failure]
+  /// on a wrong / expired code.
+  Future<String> loginWithOtp(String phone, String code) =>
+      _whatsapp.verifyLoginCode(phone, code);
+
+  /// `customerRegisterSendOtp`. Throws [Failure] (`server`, with the store's
+  /// message) when another account already holds the number.
+  Future<void> requestRegistrationOtp(String phone, {bool resend = false}) async {
+    final data = await _mutate(
+      OtpQueries.registerSendOtp,
+      VnecomsOtp.sendVariables(phone, resend: resend),
+    );
+    VnecomsOtp.requireSuccess(data['customerRegisterSendOtp']);
   }
 
-  /// Verifies a login OTP and returns the customer token. Throws [Failure] on a
-  /// wrong/expired code (the module returns it as a GraphQL error).
-  Future<String> loginWithOtp(String phone, String code) async {
-    final data = await _mutate(OtpQueries.loginWithOtp, {
-      'phone': phone,
-      'code': code,
-    });
-    final token =
-        (data['loginWithOtp'] as Map<String, dynamic>?)?['token'] as String?;
-    if (token == null || token.isEmpty) {
-      throw const Failure(FailureKind.auth);
-    }
-    return token;
-  }
-
-  Future<void> requestRegistrationOtp(String phone) async {
-    await _mutate(OtpQueries.requestRegistrationOtp, {'phone': phone});
-  }
-
-  /// Verifies a registration OTP within the post-verify window. Throws [Failure]
-  /// on a wrong/expired code so the UI keeps Create Account disabled.
+  /// `customerRegisterVerifyOtp`. Throws [Failure] on a wrong / expired code so
+  /// the UI keeps Create Account disabled.
   Future<void> verifyRegistrationOtp(String phone, String code) async {
-    await _mutate(OtpQueries.verifyRegistrationOtp, {
-      'phone': phone,
-      'code': code,
-    });
+    final data = await _mutate(
+      OtpQueries.registerVerifyOtp,
+      VnecomsOtp.verifyVariables(phone, code),
+    );
+    VnecomsOtp.requireSuccess(data['customerRegisterVerifyOtp']);
   }
 
-  Future<void> requestPasswordResetOtp(String phone) async {
-    await _mutate(OtpQueries.requestPasswordResetOtp, {'phone': phone});
+  /// `customerForgotPasswordSendOtp`. Throws [Failure] when no account holds
+  /// the number.
+  Future<void> requestPasswordResetOtp(
+    String phone, {
+    bool resend = false,
+  }) async {
+    final data = await _mutate(
+      OtpQueries.forgotPasswordSendOtp,
+      VnecomsOtp.sendVariables(phone, resend: resend),
+    );
+    VnecomsOtp.requireSuccess(data['customerForgotPasswordSendOtp']);
   }
 
+  /// Exchanges the code for the account's e-mail + a reset token
+  /// (`customerForgotPasswordVerifyOtp`), then sets [newPassword] through core
+  /// `resetPassword` — so the store's password rules apply as on the website.
   Future<void> resetPasswordWithOtp({
     required String phone,
     required String code,
     required String newPassword,
   }) async {
-    await _mutate(OtpQueries.resetPasswordWithOtp, {
-      'phone': phone,
-      'code': code,
-      'newPassword': newPassword,
-    });
+    final data = await _mutate(
+      OtpQueries.forgotPasswordVerifyOtp,
+      VnecomsOtp.verifyVariables(phone, code),
+    );
+    final result = VnecomsOtp.requireSuccess(
+      data['customerForgotPasswordVerifyOtp'],
+    );
+    final email = (result['email'] as String?)?.trim() ?? '';
+    final token = (result['resetPasswordToken'] as String?)?.trim() ?? '';
+    if (email.isEmpty || token.isEmpty) {
+      throw const Failure(
+        FailureKind.unknown,
+        detail: 'customerForgotPasswordVerifyOtp returned no email/token',
+      );
+    }
+    await resetPassword(email: email, token: token, newPassword: newPassword);
   }
 
   /// Best-effort token revocation; failures are swallowed so logout always
@@ -195,5 +222,8 @@ class AuthRepository {
 }
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => AuthRepository(ref.watch(graphqlClientProvider)),
+  (ref) => AuthRepository(
+    ref.watch(graphqlClientProvider),
+    ref.watch(whatsAppOtpApiProvider),
+  ),
 );

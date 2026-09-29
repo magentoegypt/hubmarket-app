@@ -5,6 +5,7 @@ import '../../../core/diagnostics/payment_trace.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../auth/data/vnecoms_otp.dart';
 import '../../catalog/data/product_mapper.dart';
 import '../../catalog/domain/money.dart';
 import '../domain/checkout.dart';
@@ -141,18 +142,29 @@ class CheckoutRepository {
     }
   }
 
-  /// Sends a guest-checkout OTP to the cart's shipping phone. The address (with
-  /// a +971 telephone) must already be on the cart. Throws [Failure] (with the
-  /// localized message in `detail`) if the cart has no phone / OTP send fails.
-  Future<void> requestGuestCheckoutOtp(String cartId) =>
-      _mutate(CheckoutQueries.requestGuestCheckoutOtp, {'cartId': cartId});
+  /// Sends a guest-checkout code to [mobile] (E.164) —
+  /// `customerCheckoutSendOtp`. Throws [Failure] (`server`, with the store's
+  /// message) when the send is refused.
+  Future<void> requestGuestCheckoutOtp(
+    String mobile, {
+    bool resend = false,
+  }) async {
+    final data = await _mutate(
+      CheckoutQueries.sendCheckoutOtp,
+      VnecomsOtp.sendVariables(mobile, resend: resend),
+    );
+    VnecomsOtp.requireSuccess(data['customerCheckoutSendOtp']);
+  }
 
-  /// Verifies the guest-checkout OTP and binds the challenge to the quote so
-  /// `placeOrder` is allowed. Throws [Failure] on a wrong/expired code.
-  Future<void> verifyGuestCheckoutOtp(String cartId, String code) => _mutate(
-    CheckoutQueries.verifyGuestCheckoutOtp,
-    {'cartId': cartId, 'code': code},
-  );
+  /// Checks the guest-checkout [code] for [mobile] —
+  /// `customerCheckoutVerifyOtp`. Throws [Failure] on a wrong / expired code.
+  Future<void> verifyGuestCheckoutOtp(String mobile, String code) async {
+    final data = await _mutate(
+      CheckoutQueries.verifyCheckoutOtp,
+      VnecomsOtp.verifyVariables(mobile, code),
+    );
+    VnecomsOtp.requireSuccess(data['customerCheckoutVerifyOtp']);
+  }
 
   Future<PlaceOrderResult> placeOrder(String cartId) async {
     final data = await _mutate(CheckoutQueries.placeOrder, {'cartId': cartId});
@@ -173,75 +185,30 @@ class CheckoutRepository {
     );
   }
 
-  /// Fetches the provider session reference for a placed order. Returns null
-  /// when the backend `paymentSession` resolver is not deployed yet (Open Q §2)
-  /// or surfaces no session, so checkout shows the awaiting-payment state rather
-  /// than a fabricated payment UI.
-  /// A guest (no customer bearer) authorizes the call for the order they just
-  /// placed by **either** the Magento order [token] (`placeOrder.orderV2.token`)
-  /// **or** the billing [email] + [lastname] entered at checkout — the live
-  /// `paymentSession(... email, lastname, token)` resolver uses whichever
-  /// validates. All null for logged-in customers (the bearer authorizes).
+  // --- Gateway payment sessions / Tabby config -------------------------------
+  // The seams the gateway flows (N-Genius card + wallets, Tabby, Tamara) and
+  // the "Pay in 4" promo are written against. Hub Market has no resolver behind
+  // any of them, so they report "none" without a request; checkout never gets
+  // this far on this store, because BackendCapabilities.gatewayPaymentSessions
+  // keeps gateway methods out of the list. Restore the operations (contract:
+  // docs/backend/payment-contract.md) together with the flag.
+
+  /// The gateway session for a placed order — always null on this backend,
+  /// which the callers already treat as "awaiting payment".
   Future<PaymentSession?> fetchPaymentSession(
     String orderNumber, {
     String? email,
     String? lastname,
     String? token,
   }) async {
-    try {
-      final data = await _query(CheckoutQueries.paymentSession, {
-        'orderNumber': orderNumber,
-        'email': email,
-        'lastname': lastname,
-        'token': token,
-      });
-      final session = _parseSession(
-        data['paymentSession'] as Map<String, dynamic>?,
-        orderNumber,
-      );
-      // Which credential set went out matters: a customer order authorises by
-      // bearer, a guest order by token or email+lastname, and picking the wrong
-      // one is itself a failure mode.
-      final auth = token != null
-          ? 'guest/token'
-          : (email != null ? 'guest/email' : 'customer/bearer');
-      if (session == null) {
-        PaymentTrace.record(
-          'session: NONE for $orderNumber (auth=$auth) — resolver found no order',
-        );
-      } else {
-        // additional_data separates the two FAILED paths in the N-Genius
-        // builder: empty means no gateway row was ever stored for the order
-        // (place-order never linked one), whereas order_reference/state present
-        // means the row exists and the live order fetch failed. They look
-        // identical from the app otherwise.
-        final keys = session.additionalData.keys.toList()..sort();
-        PaymentTrace.record(
-          'session: $orderNumber ${session.gateway.name}/${session.methodCode} '
-          'status=${session.status.name} webUrl=${session.webUrl != null} '
-          '(auth=$auth) data=${keys.isEmpty ? "EMPTY" : keys.join(",")}',
-        );
-      }
-      return session;
-    } on Failure catch (failure) {
-      PaymentTrace.record(
-        'session: FAILED for $orderNumber — ${failure.kind.name}: '
-        '${failure.detail ?? "no detail"}',
-      );
-      return null;
-    } catch (error) {
-      // A malformed-but-200 response (unexpected JSON shape) must degrade to
-      // "awaiting payment", not crash the checkout flow with a cast error.
-      PaymentTrace.record(
-        'session: unparseable response for $orderNumber — $error',
-      );
-      return null;
-    }
+    PaymentTrace.record(
+      'session: none for $orderNumber — this backend has no paymentSession',
+    );
+    return null;
   }
 
-  /// Switches a placed order's payment method and returns the new session, for
-  /// the post-order retry flow. Null on error → caller keeps the user on the
-  /// complete-payment screen.
+  /// Switches a placed order to another method and returns its session —
+  /// always null here, which keeps the retry screen on "session unavailable".
   Future<PaymentSession?> setOrderPaymentMethod(
     String orderNumber,
     String methodCode, {
@@ -250,161 +217,15 @@ class CheckoutRepository {
     String? token,
     String? publicHash,
   }) async {
-    try {
-      // Two documents, because `public_hash` doesn't exist on the input type
-      // until §④ ships and an unknown field fails validation even when null.
-      final data = await _mutate(
-        publicHash == null
-            ? CheckoutQueries.setOrderPaymentMethod
-            : CheckoutQueries.setOrderPaymentMethodWithCard,
-        {
-          'orderNumber': orderNumber,
-          'methodCode': methodCode,
-          'email': email,
-          'lastname': lastname,
-          'token': token,
-          if (publicHash != null) 'publicHash': publicHash,
-        },
-      );
-      final session = _parseSession(
-        data['setOrderPaymentMethod'] as Map<String, dynamic>?,
-        orderNumber,
-      );
-      PaymentTrace.record(
-        'switch: $orderNumber → $methodCode '
-        '${session == null ? "no session returned" : "status=${session.status.name}"}',
-      );
-      return session;
-    } on Failure catch (failure) {
-      // The resolver rejects non-gateway methods outright, so this is the line
-      // that explains a "payment session unavailable" on the retry screen.
-      PaymentTrace.record(
-        'switch: $orderNumber → $methodCode FAILED — ${failure.kind.name}: '
-        '${failure.detail ?? "no detail"}',
-      );
-      return null;
-    } catch (error) {
-      PaymentTrace.record(
-        'switch: $orderNumber → $methodCode unparseable — $error',
-      );
-      return null;
-    }
-  }
-
-  PaymentSession? _parseSession(
-    Map<String, dynamic>? json,
-    String orderNumber,
-  ) {
-    if (json == null) return null;
-    return PaymentSession(
-      orderNumber: (json['order_number'] as String?) ?? orderNumber,
-      methodCode: (json['method_code'] as String?) ?? '',
-      gateway: _gateway(json['gateway'] as String?),
-      status: _sessionStatus(json['status'] as String?),
-      paymentId: json['payment_id'] as String?,
-      webUrl: json['web_url'] as String?,
-      publishableKey: json['publishable_key'] as String?,
-      additionalData: _keyValues(json['additional_data'] as List<dynamic>?),
+    PaymentTrace.record(
+      'switch: $orderNumber → $methodCode — this backend has no '
+      'setOrderPaymentMethod',
     );
+    return null;
   }
 
-  /// Maps the backend's `gateway` to something this build can present.
-  ///
-  /// Named exhaustively rather than defaulting: an unrecognised gateway used to
-  /// fall through to N-Genius, so a method enabled server-side before the app
-  /// supported it would have handed its session to the card SDK. Unknown now
-  /// stays unknown, and the caller leaves the order awaiting payment instead of
-  /// presenting the wrong screen.
-  PaymentProvider _gateway(String? raw) => switch (raw?.toUpperCase()) {
-    'TABBY' => PaymentProvider.tabby,
-    'TAMARA' => PaymentProvider.tamara,
-    'NGENIUS' => PaymentProvider.ngenius,
-    _ => PaymentProvider.unknown,
-  };
-
-  /// Fetches the backend-configured Tabby products (installments / pay later /
-  /// card instalments) with enable flags, thresholds and promo toggles. Returns
-  /// null when the resolver isn't deployed or Tabby is unconfigured.
-  Future<TabbyConfig?> fetchTabbyConfig() async {
-    try {
-      final data = await _query(CheckoutQueries.tabbyConfig, const {});
-      final json = data['tabbyConfig'] as Map<String, dynamic>?;
-      if (json == null) return null;
-      final products =
-          (json['products'] as List<dynamic>?)
-              ?.whereType<Map<String, dynamic>>()
-              .map(_tabbyProduct)
-              .whereType<TabbyProduct>()
-              .toList() ??
-          const <TabbyProduct>[];
-      return TabbyConfig(
-        enabled: (json['enabled'] as bool?) ?? false,
-        currency: (json['currency'] as String?) ?? 'AED',
-        publishableKey: json['publishable_key'] as String?,
-        merchantCode: json['merchant_code'] as String?,
-        products: products,
-      );
-    } on Failure {
-      return null;
-    } catch (_) {
-      // Malformed-but-200 response → hide the promo rather than crash.
-      return null;
-    }
-  }
-
-  TabbyProduct? _tabbyProduct(Map<String, dynamic> json) {
-    final type = _tabbyType(json['type'] as String?);
-    if (type == null) return null;
-    return TabbyProduct(
-      type: type,
-      methodCode: (json['method_code'] as String?) ?? '',
-      enabled: (json['enabled'] as bool?) ?? false,
-      promoEnabled: (json['promo_enabled'] as bool?) ?? false,
-      minAmount: (json['min_amount'] as num?)?.toDouble(),
-      maxAmount: (json['max_amount'] as num?)?.toDouble(),
-    );
-  }
-
-  /// Normalises Tabby's many type spellings (case-insensitive) per the contract.
-  TabbyProductType? _tabbyType(String? raw) {
-    switch (raw?.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_')) {
-      case 'installments':
-      case 'installment':
-      case 'pay_in_4':
-      case 'split':
-        return TabbyProductType.installments;
-      case 'pay_later':
-      case 'paylater':
-      case 'pay_in_14':
-      case 'tabby_checkout':
-        return TabbyProductType.payLater;
-      case 'credit_card_installments':
-      case 'cc_installments':
-      case 'creditcard_installments':
-        return TabbyProductType.creditCardInstallments;
-      default:
-        return null;
-    }
-  }
-
-  PaymentSessionStatus _sessionStatus(String? raw) {
-    switch (raw?.toUpperCase()) {
-      case 'READY':
-        return PaymentSessionStatus.ready;
-      case 'REJECTED':
-        return PaymentSessionStatus.rejected;
-      case 'FAILED':
-        return PaymentSessionStatus.failed;
-      default:
-        return PaymentSessionStatus.pending;
-    }
-  }
-
-  Map<String, String> _keyValues(List<dynamic>? list) => <String, String>{
-    for (final e in (list ?? const []).whereType<Map<String, dynamic>>())
-      if (e['key'] is String)
-        (e['key'] as String): (e['value'] as String?) ?? '',
-  };
+  /// Tabby products + promo thresholds — always null here (promo hidden).
+  Future<TabbyConfig?> fetchTabbyConfig() async => null;
 
   ShippingMethodOption _parseShipping(Map<String, dynamic> json) =>
       ShippingMethodOption(
@@ -424,29 +245,6 @@ class CheckoutRepository {
     try {
       final result = await _client.mutate(
         MutationOptions(
-          document: gql(document),
-          variables: variables,
-          fetchPolicy: FetchPolicy.networkOnly,
-        ),
-      );
-      if (result.hasException) {
-        throw mapOperationException(result.exception!);
-      }
-      return result.data ?? const <String, dynamic>{};
-    } on Failure {
-      rethrow;
-    } catch (error) {
-      throw Failure(FailureKind.unknown, detail: error.toString());
-    }
-  }
-
-  Future<Map<String, dynamic>> _query(
-    String document,
-    Map<String, dynamic> variables,
-  ) async {
-    try {
-      final result = await _client.query(
-        QueryOptions(
           document: gql(document),
           variables: variables,
           fetchPolicy: FetchPolicy.networkOnly,

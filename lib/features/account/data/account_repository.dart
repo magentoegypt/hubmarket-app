@@ -156,26 +156,22 @@ class AccountRepository {
     mutation: true,
   );
 
-  /// Writes the verified [mobileNumber] (E.164) to the `mobile_number` custom
-  /// attribute. The caller must OTP-verify the number first (see the Edit
-  /// Profile mobile editor).
-  Future<void> updateMobileNumber(String mobileNumber) => _run(
-    AccountQueries.updateMobile,
-    {'value': mobileNumber},
-    mutation: true,
-  );
-
-  /// Uploads/replaces the customer avatar. [base64File] is the raw base64 of a
-  /// jpg/png/webp (no data: prefix). Caller refetches the customer afterwards to
-  /// pick up the new `avatar_url`.
-  Future<void> uploadAvatar(String base64File) => _run(
-    AccountQueries.uploadAvatar,
-    {'file': base64File},
-    mutation: true,
-  );
-
-  Future<void> deleteAvatar() =>
-      _run(AccountQueries.deleteAvatar, const {}, mutation: true);
+  /// Replaces the customer's mobile with [mobileNumber] (E.164), proving it
+  /// with the WhatsApp [code] that `requestRegistrationOtp` sent to it. Throws
+  /// [Failure] (`server`, with the store's message) on a wrong code.
+  Future<void> saveMobileNumber(String mobileNumber, String code) async {
+    final data = await _run(AccountQueries.saveMobile, {
+      'input': {'mobile': mobileNumber, 'otp': code},
+    }, mutation: true);
+    final saved =
+        (data['saveMobileToCustomer'] as Map<String, dynamic>?)?['result'];
+    if (saved != true) {
+      throw const Failure(
+        FailureKind.unknown,
+        detail: 'saveMobileToCustomer did not confirm the change',
+      );
+    }
+  }
 
   /// Discovers the `address_label` select options (id + store-scoped label) so
   /// the "Save as" chips map to option ids without hardcoding. Empty on error.
@@ -303,7 +299,6 @@ class AccountRepository {
       shippingAmount: moneyFromJson(
         totals?['total_shipping'] as Map<String, dynamic>?,
       ),
-      codFee: moneyFromJson(totals?['cod_fee'] as Map<String, dynamic>?),
       discount: discount,
       discountLabel: discountLabel,
       shippingMethod: json['shipping_method'] as String?,
@@ -368,6 +363,9 @@ class AccountRepository {
         .whereType<String>()
         .toList();
     final region = json['region'] as Map<String, dynamic>?;
+    // A free-text region (a store without regions for the country) comes back
+    // with region_id 0 — not an id to preselect or send back.
+    final regionId = (region?['region_id'] as num?)?.toInt();
     final label = _addressLabel(json['custom_attributesV2']);
     return CustomerAddress(
       id: (json['id'] as num?)?.toInt(),
@@ -379,7 +377,7 @@ class AccountRepository {
       city: (json['city'] as String?) ?? '',
       postcode: (json['postcode'] as String?) ?? '',
       region: (region?['region'] as String?) ?? '',
-      regionId: (region?['region_id'] as num?)?.toInt(),
+      regionId: (regionId != null && regionId > 0) ? regionId : null,
       countryCode: (json['country_code'] as String?) ?? 'AE',
       defaultShipping: (json['default_shipping'] as bool?) ?? false,
       defaultBilling: (json['default_billing'] as bool?) ?? false,

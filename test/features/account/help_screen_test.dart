@@ -23,7 +23,18 @@ const _testContact = StoreContact(
   website: 'https://hub-market.magento2.click',
 );
 
-Future<void> _pump(WidgetTester tester, {String locale = 'en'}) async {
+/// What Hub Market publishes today: a WhatsApp link (from the footer CMS block)
+/// and nothing else.
+const _whatsappOnly = StoreContact(
+  website: 'https://hub-market.magento2.click',
+  whatsapp: 'https://wa.me/971500000000',
+);
+
+Future<void> _pump(
+  WidgetTester tester, {
+  String locale = 'en',
+  StoreContact contact = _testContact,
+}) async {
   await tester.binding.setSurfaceSize(const Size(450, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -41,7 +52,7 @@ Future<void> _pump(WidgetTester tester, {String locale = 'en'}) async {
         localCacheProvider.overrideWithValue(FakeLocalCache()),
         localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
         secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
-        storeContactProvider.overrideWithValue(_testContact),
+        storeContactProvider.overrideWithValue(contact),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -60,34 +71,44 @@ Future<void> _pump(WidgetTester tester, {String locale = 'en'}) async {
 }
 
 void main() {
+  // FAQ copy is content (ARB) and changes with the brand, so assert against the
+  // localizations rather than hardcoded text.
+  final en = lookupAppLocalizations(const Locale('en'));
+  final ar = lookupAppLocalizations(const Locale('ar'));
+
   testWidgets('renders search, contact actions and FAQ (EN)', (tester) async {
     await _pump(tester);
 
     // Help search + the three contact cards.
-    expect(find.text('Search for help…'), findsOneWidget);
-    expect(find.text('Live Chat'), findsOneWidget);
-    expect(find.text('Call Us'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text(en.helpSearchHint), findsOneWidget);
+    expect(find.text(en.helpLiveChat), findsOneWidget);
+    expect(find.text(en.helpCallUs), findsOneWidget);
+    expect(find.text(en.helpEmailLabel), findsOneWidget);
 
     // First FAQ is expanded by default → its answer is visible.
-    expect(
-      find.text('How does Hub Market guarantee 100% authentic products?'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('trusted suppliers'), findsOneWidget);
+    expect(find.text(en.helpQ1), findsOneWidget);
+    expect(find.text(en.helpA1), findsOneWidget);
 
     // A collapsed FAQ expands on tap.
-    expect(find.textContaining('within 3 hours'), findsNothing);
-    await tester.tap(find.text('How fast is Hub Market delivery?'));
+    expect(find.text(en.helpA5), findsNothing);
+    await tester.tap(find.text(en.helpQ5));
     await tester.pumpAndSettle();
-    expect(find.textContaining('within 3 hours'), findsOneWidget);
+    expect(find.text(en.helpA5), findsOneWidget);
+  });
+
+  testWidgets('offers only the channels the store publishes', (tester) async {
+    await _pump(tester, contact: _whatsappOnly);
+
+    expect(find.text(en.helpLiveChat), findsOneWidget);
+    expect(find.text(en.helpCallUs), findsNothing);
+    expect(find.text(en.helpEmailLabel), findsNothing);
   });
 
   testWidgets('renders translated + RTL in Arabic', (tester) async {
     await _pump(tester, locale: 'ar');
-    expect(find.text('ما سرعة التوصيل في زونزي؟'), findsOneWidget); // helpQ5
+    expect(find.text(ar.helpQ5), findsOneWidget);
     expect(
-      Directionality.of(tester.element(find.text('ما سرعة التوصيل في زونزي؟'))),
+      Directionality.of(tester.element(find.text(ar.helpQ5))),
       TextDirection.rtl,
     );
   });

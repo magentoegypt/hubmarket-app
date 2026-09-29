@@ -14,8 +14,9 @@ import '../../../../l10n/l10n.dart';
 
 /// About Hub Market — brand intro, company + contact details, social links,
 /// accepted payment methods, and the app version. Contact details + social
-/// links come from admin config ([storeContactProvider]). Reached from
-/// Account → About Hub Market.
+/// links come from the backend ([storeContactProvider]); each row appears only
+/// when the store publishes that detail, and the card only when it has a row.
+/// Reached from Account → About Hub Market.
 class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
 
@@ -26,6 +27,44 @@ class AboutScreen extends ConsumerWidget {
     final version = ref
         .watch(appVersionProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
+    final company = c.company;
+    final address = c.address;
+    final phone = c.phone;
+    final whatsapp = c.whatsapp;
+    final email = c.email;
+    final rows = <Widget>[
+      if (address != null)
+        _InfoRow(
+          icon: Icons.location_on_outlined,
+          text: address,
+          onTap: () => _open(
+            context,
+            Uri.parse(
+              'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}',
+            ),
+          ),
+        ),
+      if (phone != null)
+        _InfoRow(
+          icon: Icons.call_outlined,
+          text: c.phoneDisplay ?? phone,
+          onTap: () => _open(context, Uri(scheme: 'tel', path: phone)),
+        ),
+      if (whatsapp != null)
+        _InfoRow(
+          icon: Icons.chat_outlined,
+          text: 'WhatsApp',
+          onTap: () => _open(context, Uri.parse(whatsapp)),
+        ),
+      if (email != null)
+        _InfoRow(
+          icon: Icons.mail_outline,
+          text: email,
+          onTap: () => _open(context, mailtoUri(email)),
+        ),
+      if (c.hours.isNotEmpty)
+        _InfoRow(icon: Icons.schedule_outlined, text: c.hours),
+    ];
 
     return HubScaffold(
       currentTab: AppTab.account,
@@ -63,71 +102,45 @@ class AboutScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Company + contact card.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderDefault),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        c.company,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: AppColors.inkHeading,
+          // Company + contact card — only what the store publishes.
+          if (company != null || rows.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderDefault),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    if (company != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            company,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: AppColors.inkHeading,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
-                  _InfoRow(
-                    icon: Icons.location_on_outlined,
-                    text: c.address,
-                    onTap: () => _open(
-                      context,
-                      Uri.parse(
-                        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(c.address)}',
-                      ),
-                    ),
-                  ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
-                  _InfoRow(
-                    icon: Icons.call_outlined,
-                    text: c.phoneDisplay,
-                    onTap: () =>
-                        _open(context, Uri(scheme: 'tel', path: c.phone)),
-                  ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
-                  _InfoRow(
-                    icon: Icons.chat_outlined,
-                    text: 'WhatsApp',
-                    onTap: () => _open(context, Uri.parse(c.whatsapp)),
-                  ),
-                  const Divider(height: 1, color: AppColors.borderDefault),
-                  _InfoRow(
-                    icon: Icons.mail_outline,
-                    text: c.email,
-                    onTap: () => _open(context, mailtoUri(c.email)),
-                  ),
-                  if (c.hours.isNotEmpty) ...[
-                    const Divider(height: 1, color: AppColors.borderDefault),
-                    _InfoRow(icon: Icons.schedule_outlined, text: c.hours),
+                    for (var i = 0; i < rows.length; i++) ...[
+                      if (i > 0 || company != null)
+                        const Divider(height: 1, color: AppColors.borderDefault),
+                      rows[i],
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
+          ],
 
           // Follow us — admin-configured social links (hidden when none set).
           if (c.socials.isNotEmpty) ...[
@@ -266,7 +279,8 @@ class _Social extends StatelessWidget {
   );
 }
 
-/// Accepted payment marks (Visa · Mastercard · tabby · Cash on delivery).
+/// Accepted payment marks (Visa · Mastercard · Cash on delivery) — the list the
+/// storefront footer shows ("Accepted Payments", CMS block `hm_footer_brand`).
 class _PaymentBadges extends StatelessWidget {
   const _PaymentBadges();
 
@@ -290,17 +304,6 @@ class _PaymentBadges extends StatelessWidget {
         ),
         _PayCard(child: _MastercardMark()),
         _PayCard(
-          color: Color(0xFF3BE6C4),
-          child: Text(
-            'tabby',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-        ),
-        _PayCard(
           child: Icon(
             Icons.payments_outlined,
             size: 20,
@@ -313,9 +316,8 @@ class _PaymentBadges extends StatelessWidget {
 }
 
 class _PayCard extends StatelessWidget {
-  const _PayCard({required this.child, this.color});
+  const _PayCard({required this.child});
   final Widget child;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -323,7 +325,7 @@ class _PayCard extends StatelessWidget {
     height: 34,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: color ?? Colors.white,
+      color: Colors.white,
       borderRadius: BorderRadius.circular(6),
       border: Border.all(color: AppColors.borderDefault),
     ),

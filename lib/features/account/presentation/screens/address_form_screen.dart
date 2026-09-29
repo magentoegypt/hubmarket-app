@@ -9,6 +9,7 @@ import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/account_repository.dart';
 import '../../domain/customer_address.dart';
+import '../widgets/postcode_field.dart';
 
 class AddressFormScreen extends ConsumerStatefulWidget {
   const AddressFormScreen({super.key, this.initial});
@@ -22,6 +23,7 @@ class AddressFormScreen extends ConsumerStatefulWidget {
 class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final AddressFormController _address;
+  late final TextEditingController _postcode;
   bool _busy = false;
   String? _selectedLabelId;
 
@@ -29,6 +31,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   void initState() {
     super.initState();
     final a = widget.initial;
+    _postcode = TextEditingController(text: a?.postcode ?? '');
     _address = AddressFormController(
       fullName: a?.fullName ?? '',
       phone: a?.telephone ?? '',
@@ -45,6 +48,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   @override
   void dispose() {
     _address.dispose();
+    _postcode.dispose();
     super.dispose();
   }
 
@@ -52,6 +56,12 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     final name = _address.splitName();
+    // The store's region_id when it has UAE regions, else the emirate's name.
+    final region = regionInput(
+      regionId: _address.regionId.value,
+      regions: ref.read(regionsProvider).valueOrNull ?? const [],
+      fallbackName: _address.region.text,
+    );
     final address = CustomerAddress(
       id: widget.initial?.id,
       firstName: name.first,
@@ -60,8 +70,9 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       street: _address.street.text.trim(),
       apartment: _address.apartment.text.trim(),
       city: _address.area.text.trim(),
-      region: _address.region.text.trim(),
-      regionId: _address.regionId.value,
+      postcode: _postcode.text.trim(),
+      region: (region['region'] as String?) ?? '',
+      regionId: region['region_id'] as int?,
       countryCode: addressCountryCode,
       defaultShipping: _address.isDefault.value,
       labelOptionId: _selectedLabelId,
@@ -105,6 +116,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 AddressForm(controller: _address),
+                PostcodeField(controller: _postcode),
                 const SizedBox(height: 16),
                 // Save as: Home / Office / Other (the `address_label` select).
                 // Options + ids come from the backend; nothing hardcoded.

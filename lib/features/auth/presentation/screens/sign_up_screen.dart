@@ -108,7 +108,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   Future<void> _resendCode() async {
     _otp.clear();
     try {
-      await _controller.requestRegistrationOtp(_sentPhone);
+      await _controller.requestRegistrationOtp(_sentPhone, resend: true);
     } catch (error) {
       if (!mounted) return;
       _snack(
@@ -143,8 +143,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _submit() async {
-    // Create Account is gated on terms + a verified mobile; the guard also
-    // enforces the verified number server-side.
+    // Create Account is gated on terms + a verified mobile. The backend
+    // requires the number on sign-up (and refuses one already in use) but
+    // does not re-check the code, so this gate is what enforces verification.
     if (!_agreedToTerms || !_phoneVerified) return;
     if (!_formKey.currentState!.validate()) return;
     final name = _splitName();

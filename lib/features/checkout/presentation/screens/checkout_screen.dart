@@ -7,6 +7,7 @@ import '../../../../app/shell/marketing_footer.dart';
 import '../../../../app/shell/hub_bottom_nav.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/address/regions.dart';
+import '../../../../core/config/backend_capabilities.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/address_form.dart';
@@ -20,6 +21,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../account/data/account_repository.dart';
 import '../../../account/domain/customer_address.dart';
 import '../../../account/domain/saved_card.dart';
+import '../../../account/presentation/widgets/postcode_field.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../cart/presentation/cart_controller.dart';
@@ -44,6 +46,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   late final AddressFormController _address;
+
+  /// Only shown (and sent) when the store requires a postcode for the UAE.
+  final _postcode = TextEditingController();
 
   /// Re-entrancy guard for the place-order → redirect handoff.
   bool _placing = false;
@@ -91,17 +96,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void dispose() {
     _email.dispose();
     _address.dispose();
+    _postcode.dispose();
     super.dispose();
   }
 
   CheckoutController get _controller =>
       ref.read(checkoutControllerProvider.notifier);
 
-  /// Magento `CartAddressInput`. AE has system regions, so a valid `region_id`
-  /// is posted (from the emirate picker); the single Full Name is split into
-  /// firstname/lastname and the apartment line becomes `street[1]`.
+  /// Magento `CartAddressInput`. The emirate goes out as the store's
+  /// `region_id` when it has UAE regions, otherwise as the free-text `region`
+  /// name (Hub Market has none — see [regionInput]); the single Full Name is
+  /// split into firstname/lastname and the apartment line becomes `street[1]`.
   Map<String, dynamic> _addressInput() {
     final name = _address.splitName();
+    final postcode = _postcode.text.trim();
     return <String, dynamic>{
       'firstname': name.first,
       'lastname': name.last,
@@ -109,12 +117,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       'street': _address.streetLines(),
       'city': _address.area.text.trim(),
       'country_code': addressCountryCode,
-      if (_address.regionId.value != null)
-        'region_id': _address.regionId.value
-      else if (_address.region.text.trim().isNotEmpty)
-        'region': _address.region.text.trim(),
+      ...regionInput(
+        regionId: _address.regionId.value,
+        regions: ref.read(regionsProvider).valueOrNull ?? const [],
+        fallbackName: _address.region.text,
+      ),
+      if (postcode.isNotEmpty) 'postcode': postcode,
     };
   }
+
+  /// The new-address form: the shared fields plus, when the store requires
+  /// one for the UAE, a postcode.
+  Widget _newAddressForm() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      AddressForm(controller: _address),
+      PostcodeField(controller: _postcode),
+    ],
+  );
 
   /// Default shipping address id (or the first) from the saved list.
   int? _defaultId(List<CustomerAddress> list) {
@@ -180,12 +200,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// (default auto-selected) or opens the new-address form; guests / customers
   /// with no saved addresses get the form directly.
   Widget _addressSection(AppLocalizations l10n, bool isGuest) {
-    if (isGuest) return AddressForm(controller: _address);
+    if (isGuest) return _newAddressForm();
     return ref
         .watch(addressesProvider)
         .maybeWhen(
           data: (list) {
-            if (list.isEmpty) return AddressForm(controller: _address);
+            if (list.isEmpty) return _newAddressForm();
             final selectedId =
                 _useNewAddress ? null : (_selectedAddressId ?? _defaultId(list));
             return Column(
@@ -210,12 +230,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 if (_useNewAddress) ...[
                   const SizedBox(height: 12),
-                  AddressForm(controller: _address),
+                  _newAddressForm(),
                 ],
               ],
             );
           },
-          orElse: () => AddressForm(controller: _address),
+          orElse: _newAddressForm,
         );
   }
 
@@ -362,9 +382,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // _placing spans the whole place-order → session → present flow; state.isBusy
     // covers the individual address/shipping/payment mutations.
     final busy = state.isBusy || _placing;
-    // A guest must verify the delivery-phone OTP before the order can be placed
-    // (server-enforced). Gates the Place Order button below.
-    final needsGuestOtp = isGuest && !state.guestOtpVerified;
+    // Guest delivery-phone verification is a backend switch — off on Hub
+    // Market, as on its website. When on, the guest must verify the code
+    // before Place Order is enabled.
+    final guestOtp = ref.watch(
+      backendCapabilitiesProvider.select((c) => c.guestCheckoutOtp),
+    );
+    final needsGuestOtp = guestOtp && isGuest && !state.guestOtpVerified;
 
     return Scaffold(
       appBar: AppBar(
@@ -440,13 +464,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   onPressed: busy ? null : _submitAddress,
                   child: Text(l10n.checkoutContinue),
                 ),
-                // Guest checkout verifies the delivery-address phone by OTP
-                // before the order can be placed (server-enforced). The card
-                // sits directly under Delivery Address (Figma) and gates Place
-                // Order below. Keyed by the *submitted* phone so a changed
-                // number remounts it (re-requesting the code); shown only after
-                // a real submit this session so it never auto-sends on re-entry.
-                if (isGuest && _addressSubmitted && state.addressDone)
+                // When the backend asks for it, guest checkout verifies the
+                // delivery-address phone by OTP before the order can be placed.
+                // The card sits directly under Delivery Address (Figma) and
+                // gates Place Order below. Keyed by the *submitted* phone so a
+                // changed number remounts it (re-requesting the code); shown
+                // only after a real submit this session so it never auto-sends
+                // on re-entry.
+                if (guestOtp && isGuest && _addressSubmitted && state.addressDone)
                   Padding(
                     padding: const EdgeInsets.only(top: 20),
                     child: _GuestVerifyCard(
@@ -685,16 +710,6 @@ class _CheckoutSummary extends StatelessWidget {
           valueColor: freeDelivery ? AppColors.brandPrimary : null,
           valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
         ),
-        if (totals.hasCodFee) ...[
-          const SizedBox(height: 11),
-          // Driven by the amount the server returns, never by the selected
-          // method or a hardcoded figure: the merchant can change or switch
-          // off the fee in admin and the row follows without a release.
-          SummaryRow(
-            label: l10n.checkoutCodFee,
-            value: totals.codFee!.formatted(),
-          ),
-        ],
         const SizedBox(height: 11),
         const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
         const SizedBox(height: 11),
@@ -878,8 +893,9 @@ class _NewAddressTile extends StatelessWidget {
   );
 }
 
-/// Guest-checkout "Verify Mobile Number" card (Figma): auto-requests a WhatsApp
-/// OTP to the cart's delivery phone on appear, then 6 boxes → Verify + Resend.
+/// Guest-checkout "Verify Mobile Number" card (Figma), shown only when
+/// `BackendCapabilities.guestCheckoutOtp` is on: auto-requests a WhatsApp OTP
+/// to the submitted delivery phone on appear, then 6 boxes → Verify + Resend.
 /// On success the checkout controller flips `guestOtpVerified`, which both
 /// re-renders this card to the verified state and unlocks Place Order.
 class _GuestVerifyCard extends ConsumerStatefulWidget {
@@ -924,7 +940,7 @@ class _GuestVerifyCardState extends ConsumerState<_GuestVerifyCard> {
     _requested = true;
     if (!initial) _otp.clear();
     try {
-      await _controller.requestGuestOtp();
+      await _controller.requestGuestOtp(resend: !initial);
     } catch (error) {
       if (!mounted) return;
       _snack(

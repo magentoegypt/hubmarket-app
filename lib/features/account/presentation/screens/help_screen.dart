@@ -10,9 +10,10 @@ import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 
-/// Help & FAQ (Figma `66:2`): a help search, three contact actions (Live Chat /
-/// Call Us / Email), and a searchable FAQ accordion. FAQ content lives in ARB;
-/// contact channels come from admin config ([storeContactProvider]).
+/// Help & FAQ (Figma `66:2`): a help search, up to three contact actions (Live
+/// Chat / Call Us / Email), and a searchable FAQ accordion. FAQ content lives in
+/// ARB; contact channels come from the backend ([storeContactProvider]) and a
+/// channel the store doesn't publish has no card.
 class HelpScreen extends ConsumerStatefulWidget {
   const HelpScreen({super.key});
 
@@ -27,6 +28,29 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = ref.watch(storeContactProvider);
+    final whatsapp = c.whatsapp;
+    final phone = c.phone;
+    final email = c.email;
+    final channels = <Widget>[
+      if (whatsapp != null)
+        _ContactCard(
+          icon: Icons.headset_mic_outlined,
+          label: l10n.helpLiveChat,
+          onTap: () => _open(Uri.parse(whatsapp)),
+        ),
+      if (phone != null)
+        _ContactCard(
+          icon: Icons.call_outlined,
+          label: l10n.helpCallUs,
+          onTap: () => _open(Uri(scheme: 'tel', path: phone)),
+        ),
+      if (email != null)
+        _ContactCard(
+          icon: Icons.mail_outline,
+          label: l10n.helpEmailLabel,
+          onTap: () => _open(mailtoUri(email)),
+        ),
+    ];
     final faqs = <(String, String)>[
       (l10n.helpQ1, l10n.helpA1),
       (l10n.helpQ2, l10n.helpA2),
@@ -87,38 +111,21 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             ),
           ),
           const _Band(),
-          // Contact actions.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ContactCard(
-                    icon: Icons.headset_mic_outlined,
-                    label: l10n.helpLiveChat,
-                    onTap: () => _open(Uri.parse(c.whatsapp)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ContactCard(
-                    icon: Icons.call_outlined,
-                    label: l10n.helpCallUs,
-                    onTap: () => _open(Uri(scheme: 'tel', path: c.phone)),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _ContactCard(
-                    icon: Icons.mail_outline,
-                    label: l10n.helpEmailLabel,
-                    onTap: () => _open(mailtoUri(c.email)),
-                  ),
-                ),
-              ],
+          // Contact actions — only the channels the store publishes.
+          if (channels.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  for (var i = 0; i < channels.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 12),
+                    Expanded(child: channels[i]),
+                  ],
+                ],
+              ),
             ),
-          ),
-          const _Band(),
+            const _Band(),
+          ],
           // Frequently Asked.
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),

@@ -32,10 +32,12 @@ class CustomerAddress {
   final String city;
   final String postcode;
 
-  /// Free-text region label (fallback / display).
+  /// Region name — the emirate. Sent as free text when [regionId] is unset,
+  /// which is always the case on a store without UAE regions (Hub Market).
   final String region;
 
-  /// Magento system region id (a UAE emirate). Required for AE addresses.
+  /// The store's system region id for the emirate, when it defines UAE
+  /// regions; null otherwise.
   final int? regionId;
   final String countryCode;
   final bool defaultShipping;
@@ -65,8 +67,10 @@ class CustomerAddress {
     ].where((p) => p.isNotEmpty).join(', ');
   }
 
-  /// Magento `CustomerAddressInput`. AE has system regions, so a valid
-  /// `region_id` is sent (nested under `region`) rather than free-text.
+  /// Magento `CustomerAddressInput`. The emirate is the store's `region_id`
+  /// (nested under `region`) when it has UAE regions, otherwise its name as
+  /// free text — Hub Market defines no AE regions, and Magento rejects a
+  /// `region_id` the country doesn't have.
   Map<String, dynamic> toInput() => <String, dynamic>{
     'firstname': firstName,
     'lastname': lastName,
@@ -75,7 +79,7 @@ class CustomerAddress {
     'city': city,
     if (postcode.isNotEmpty) 'postcode': postcode,
     'country_code': countryCode,
-    if (regionId != null)
+    if (regionId != null && regionId! > 0)
       'region': <String, dynamic>{'region_id': regionId}
     else if (region.isNotEmpty)
       'region': <String, dynamic>{'region': region},

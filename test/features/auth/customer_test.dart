@@ -2,52 +2,46 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/features/auth/domain/customer.dart';
 
 void main() {
-  group('Customer.fromJson mobile_number', () {
-    test('extracts mobile_number from custom_attributes', () {
+  group('Customer.fromJson mobilenumber', () {
+    test('reads the Vnecoms `mobilenumber` field', () {
       final c = Customer.fromJson(const {
         'firstname': 'Sara',
         'lastname': 'Ali',
         'email': 'sara@example.com',
-        'custom_attributes': [
-          {'code': 'some_other', 'value': 'x'},
-          {'code': 'mobile_number', 'value': '+971501234567'},
-        ],
+        'mobilenumber': '+971501234567',
       });
       expect(c.mobileNumber, '+971501234567');
     });
 
-    test('is null when the attribute is absent', () {
+    test('is null when missing or blank', () {
+      expect(
+        Customer.fromJson(const {
+          'firstname': 'Sara',
+          'lastname': 'Ali',
+          'email': 'sara@example.com',
+        }).mobileNumber,
+        isNull,
+      );
+      expect(
+        Customer.fromJson(const {
+          'firstname': 'Sara',
+          'lastname': 'Ali',
+          'email': 'sara@example.com',
+          'mobilenumber': '  ',
+        }).mobileNumber,
+        isNull,
+      );
+    });
+
+    test('has no avatar — the backend serves none', () {
       final c = Customer.fromJson(const {
         'firstname': 'Sara',
         'lastname': 'Ali',
         'email': 'sara@example.com',
-        'custom_attributes': [
-          {'code': 'some_other', 'value': 'x'},
-        ],
+        // A stray field from another backend must not light up a photo.
+        'avatar_url': 'https://example.com/a.jpg',
       });
-      expect(c.mobileNumber, isNull);
-    });
-
-    test('is null when custom_attributes is missing or empty value', () {
-      expect(
-        Customer.fromJson(const {
-          'firstname': 'Sara',
-          'lastname': 'Ali',
-          'email': 'sara@example.com',
-        }).mobileNumber,
-        isNull,
-      );
-      expect(
-        Customer.fromJson(const {
-          'firstname': 'Sara',
-          'lastname': 'Ali',
-          'email': 'sara@example.com',
-          'custom_attributes': [
-            {'code': 'mobile_number', 'value': ''},
-          ],
-        }).mobileNumber,
-        isNull,
-      );
+      expect(c.avatarUrl, isNull);
     });
   });
 }
