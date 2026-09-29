@@ -42,7 +42,7 @@ bool isSameSite(String host, String site) {
 /// Without this the WebView is an unrestricted browser: a CMS page can link
 /// anywhere and the user follows it under our app bar. That's a poor
 /// experience, and to Apple it is an app with "unrestricted web access", which
-/// forces a 17+ age rating (docs/appstore/app-information.md).
+/// forces a 17+ age rating (docs/zoonze-reference/appstore/app-information.md).
 ///
 /// Sub-frame requests always pass: embedded maps and video players inside a CMS
 /// page are not the user navigating away, and blocking them renders the page

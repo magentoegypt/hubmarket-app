@@ -37,7 +37,7 @@
             </intent-filter>
             <!-- Deep links: custom scheme (hubmarket://app/...) + https app links.
                  App-links require an assetlinks.json on the domain — see
-                 docs/decisions/release.md. -->
+                 docs/zoonze-reference/decisions/release.md. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

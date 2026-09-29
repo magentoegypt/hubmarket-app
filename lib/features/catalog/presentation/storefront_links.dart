@@ -34,7 +34,7 @@ import '../domain/brand.dart';
 /// trip) or — while `assetlinks.json` is unpublished — dumps the user in Chrome.
 /// On iOS, with no associated-domains entitlement, it always ejected to Safari.
 /// That was CL042-DEV19: every banner whose CTA wasn't a catalogue entity.
-/// See `docs/decisions/deep-links.md`.
+/// See `docs/zoonze-reference/decisions/deep-links.md`.
 ///
 /// Shared by the hero carousel, Shop by Category, the Limited-Time Offer, the
 /// editorial banners and the Exclusive Offers rail so every home CTA behaves

@@ -58,7 +58,7 @@ class Product {
   /// resolve to the same generated cache file, because the theme's view.xml
   /// defines no per-role dimensions (checked on Hub Market 2026-09-29).
   /// The field exists so the switch is a one-line mapper change once the
-  /// backend adds the presets — see docs/decisions/performance.md.
+  /// backend adds the presets — see docs/zoonze-reference/decisions/performance.md.
   final String? thumbUrl;
 
   /// Catalogue (struck-through) price.

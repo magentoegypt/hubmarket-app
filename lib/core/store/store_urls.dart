@@ -10,7 +10,7 @@ import 'store_view.dart';
 /// hands to a user — a share link, a "view on web" link — must therefore come
 /// from here, not from an ad-hoc concatenation.
 ///
-/// See `docs/decisions/deep-links.md`.
+/// See `docs/zoonze-reference/decisions/deep-links.md`.
 
 /// The active store view's public base, always `https://`, always with a
 /// trailing slash. Empty when store config hasn't loaded yet.

@@ -6,7 +6,7 @@ name: Release · iOS
 #   - testflight → App Store IPA (Hub Market Shop AppStore profile) → TestFlight
 #   - adhoc      → ad-hoc IPA (device UDIDs in the ad-hoc profile) → artifact / Loadly
 #
-# testflight needs the APP_STORE_CONNECT_* secrets (see docs/decisions/ci.md) and
+# testflight needs the APP_STORE_CONNECT_* secrets (see docs/zoonze-reference/decisions/ci.md) and
 # an existing App Store Connect app record for com.hubmarket.app. adhoc needs only
 # IOS_P12_PASSWORD (installs on the ad-hoc profile's registered device UDIDs).
 on:

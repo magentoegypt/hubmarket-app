@@ -11,7 +11,7 @@ import '../../../core/storage/local_cache.dart';
 ///
 /// **Hub Market has no endpoint for this yet.** The app this one started from
 /// used custom `registerDeviceToken` / `removeDeviceToken` mutations (contract:
-/// `docs/backend/notifications-contract.md`); Hub Market's schema has neither.
+/// `docs/zoonze-reference/backend/notifications-contract.md`); Hub Market's schema has neither.
 /// Its `MagentoEgypt_PushNotification` module (storefront branch
 /// `claude/add-pushnotification-fcm`) stores devices and sends through FCM but
 /// exposes no API for an app to register one. Until it does, both calls are

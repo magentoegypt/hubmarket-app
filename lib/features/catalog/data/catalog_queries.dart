@@ -8,7 +8,7 @@
 /// checked against Hub Market's introspected `schema.graphql`
 /// (`tool/validate_ops.py`, `dart run build_runner build`); moving the
 /// repository onto the generated types is still to do. See
-/// `docs/decisions/codegen.md`.
+/// `docs/zoonze-reference/decisions/codegen.md`.
 abstract final class CatalogQueries {
   /// Resolves a store-relative URL (a friendly `.html` category/product path) to
   /// its entity, so a hero CTA opens the right in-app screen instead of guessing.
