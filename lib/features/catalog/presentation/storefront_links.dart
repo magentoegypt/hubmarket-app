@@ -12,6 +12,7 @@ import '../../../core/store/store_urls.dart';
 import '../../../core/util/launch.dart';
 import '../../../core/widgets/web_view_screen.dart';
 import '../../../l10n/l10n.dart';
+import '../../cms/domain/cms_links.dart';
 import '../data/brands_provider.dart';
 import '../data/catalog_repository.dart';
 import '../domain/brand.dart';
@@ -24,9 +25,10 @@ import '../domain/brand.dart';
 /// URL maps straight to the PLP; a `shopbrand` URL opens the app's own brand
 /// listing; a store-relative or same-domain friendly URL (`clearance.html`,
 /// `fragrance/for-her.html`) is resolved via `urlResolver` so a CATEGORY opens
-/// the PLP and a PRODUCT the PDP; anything else of ours (CMS pages, the blog)
-/// opens in the in-app [WebViewScreen]. Only a genuinely foreign host or a
-/// non-web scheme leaves the app.
+/// the PLP, a PRODUCT the PDP and a CMS_PAGE the native content page; anything
+/// else of ours (marketplace pages, the blog) opens in the in-app
+/// [WebViewScreen]. Only a genuinely foreign host or a non-web scheme leaves
+/// the app.
 ///
 /// **Our own domain never goes to the platform browser.** The Android manifest
 /// claims `hub-market.magento2.click`, so launching one of our links externally either bounces
@@ -100,6 +102,12 @@ Future<void> openStorefrontUrl(
     }
     if (resolved.type == 'PRODUCT' && resolved.urlKey != null) {
       context.push(AppRoutes.product(resolved.urlKey!));
+      return;
+    }
+    // A CMS page (About, policies, customer service) renders natively.
+    final path = storePathOf(url);
+    if (resolved.type == 'CMS_PAGE' && path.isNotEmpty) {
+      context.push(AppRoutes.cmsPageByUrl(path, title: title));
       return;
     }
   }

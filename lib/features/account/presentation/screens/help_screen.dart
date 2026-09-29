@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/routes.dart';
+import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
+import '../../../../core/app_info.dart';
 import '../../../../core/config/store_contact.dart';
+import '../../../../core/config/store_features.dart';
 import '../../../../core/util/launch.dart';
-import '../../../../core/widgets/hub_back_button.dart';
+import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../cms/domain/faq.dart';
+import '../../../cms/presentation/cms_navigation.dart';
+import '../../../cms/presentation/cms_providers.dart';
+import '../help_faq.dart';
+import '../widgets/contact_form_card.dart';
+import '../widgets/faq_tile.dart';
 
-/// Help & FAQ (Figma `66:2`): a help search, up to three contact actions (Live
-/// Chat / Call Us / Email), and a searchable FAQ accordion. FAQ content lives in
-/// ARB; contact channels come from the backend ([storeContactProvider]) and a
-/// channel the store doesn't publish has no card.
+/// Help centre (Figma 27): a search over the FAQ, the contact channels the
+/// store publishes, the FAQ topics, the contact form and the About & legal
+/// pages.
+///
+/// Everything is backend-driven: the FAQ comes from the CMS block
+/// `hm_app_faq` (the storefront has no FAQ page) with the bundled FAQ as the
+/// fallback; channels from [storeContactProvider]; the form from core
+/// `contactUs` when `contact_enabled` is on; the legal rows from the footer
+/// block `hm_footer_legal`.
 class HelpScreen extends ConsumerStatefulWidget {
   const HelpScreen({super.key});
 
@@ -21,283 +36,269 @@ class HelpScreen extends ConsumerStatefulWidget {
 }
 
 class _HelpScreenState extends ConsumerState<HelpScreen> {
+  final _search = TextEditingController();
   String _query = '';
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final c = ref.watch(storeContactProvider);
-    final whatsapp = c.whatsapp;
-    final phone = c.phone;
-    final email = c.email;
-    final channels = <Widget>[
-      if (whatsapp != null)
-        _ContactCard(
-          icon: Icons.headset_mic_outlined,
-          label: l10n.helpLiveChat,
-          onTap: () => _open(Uri.parse(whatsapp)),
-        ),
-      if (phone != null)
-        _ContactCard(
-          icon: Icons.call_outlined,
-          label: l10n.helpCallUs,
-          onTap: () => _open(Uri(scheme: 'tel', path: phone)),
-        ),
-      if (email != null)
-        _ContactCard(
-          icon: Icons.mail_outline,
-          label: l10n.helpEmailLabel,
-          onTap: () => _open(mailtoUri(email)),
-        ),
-    ];
-    final faqs = <(String, String)>[
-      (l10n.helpQ1, l10n.helpA1),
-      (l10n.helpQ2, l10n.helpA2),
-      (l10n.helpQ3, l10n.helpA3),
-      (l10n.helpQ4, l10n.helpA4),
-      (l10n.helpQ5, l10n.helpA5),
-      (l10n.helpQ6, l10n.helpA6),
-      (l10n.helpQ7, l10n.helpA7),
-      (l10n.helpQ8, l10n.helpA8),
-      (l10n.helpQPayments, l10n.helpAPayments),
-      (l10n.helpQOrders, l10n.helpAOrders),
-      (l10n.helpQ9, l10n.helpA9),
-      (l10n.helpQ10, l10n.helpA10),
-    ];
-    final filtered = _query.isEmpty
-        ? faqs
-        : faqs
-              .where(
-                (f) =>
-                    f.$1.toLowerCase().contains(_query) ||
-                    f.$2.toLowerCase().contains(_query),
-              )
-              .toList();
-
-    return HubScaffold(
-      currentTab: AppTab.account,
-      appBar: AppBar(
-        centerTitle: true,
-        leading: const HubBackButton(),
-        title: Text(l10n.accountHelp),
-      ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const _Band(),
-          // Help search.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: TextField(
-              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-              decoration: InputDecoration(
-                hintText: l10n.helpSearchHint,
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white10
-                    : AppColors.surfaceMuted,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const _Band(),
-          // Contact actions — only the channels the store publishes.
-          if (channels.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  for (var i = 0; i < channels.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 12),
-                    Expanded(child: channels[i]),
-                  ],
-                ],
-              ),
-            ),
-            const _Band(),
-          ],
-          // Frequently Asked.
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),
-            child: Text(
-              l10n.helpFrequentlyAsked,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : AppColors.inkHeading,
-              ),
-            ),
-          ),
-          if (filtered.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(child: Text(l10n.stateEmpty)),
-            )
-          else
-            for (var i = 0; i < filtered.length; i++)
-              _FaqTile(
-                key: ValueKey(filtered[i].$1),
-                question: filtered[i].$1,
-                answer: filtered[i].$2,
-                // First item open by default when not searching (Figma).
-                initiallyExpanded: _query.isEmpty && i == 0,
-                showDivider: i != filtered.length - 1,
-              ),
-        ],
-      ),
-    );
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   Future<void> _open(Uri uri) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
-    final ok = await launchExternalUri(uri);
-    if (!ok) {
+    if (!await launchExternalUri(uri)) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
     }
   }
-}
 
-/// 8px light section separator (Figma).
-class _Band extends StatelessWidget {
-  const _Band();
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 8,
-    child: ColoredBox(
-      color: Theme.of(context).brightness == Brightness.dark
-          ? Colors.white10
-          : AppColors.surfaceMuted,
-    ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final contact = ref.watch(storeContactProvider);
+    final features =
+        ref.watch(storeFeaturesProvider).valueOrNull ?? StoreFeatures.none;
+    final legal = ref.watch(legalLinksProvider).valueOrNull ?? const [];
+    final version = ref
+        .watch(appVersionProvider)
+        .maybeWhen(data: (v) => v, orElse: () => null);
+    final topics =
+        ref.watch(cmsFaqProvider).valueOrNull ?? bundledHelpFaq(l10n);
+
+    final channels = <Widget>[
+      if (contact.whatsapp != null)
+        _ContactTile(
+          icon: Icons.chat_bubble_outline,
+          tint: const Color(0xFFE8F7EE),
+          color: const Color(0xFF15803D),
+          label: l10n.helpWhatsApp,
+          caption: l10n.helpWhatsAppCaption,
+          onTap: () => _open(Uri.parse(contact.whatsapp!)),
+        ),
+      if (contact.phone != null)
+        _ContactTile(
+          icon: Icons.call_outlined,
+          tint: AppColors.surfaceTint,
+          color: const Color(0xFF1D4ED8),
+          label: l10n.helpCallUs,
+          caption: contact.phoneDisplay ?? contact.phone!,
+          onTap: () => _open(Uri(scheme: 'tel', path: contact.phone)),
+        ),
+      if (contact.email != null)
+        _ContactTile(
+          icon: Icons.mail_outline,
+          tint: const Color(0xFFFFF1E6),
+          color: AppColors.accentStrong,
+          label: l10n.helpEmailUs,
+          caption: contact.email!,
+          onTap: () => _open(mailtoUri(contact.email!)),
+        ),
+    ];
+
+    final titled = topics.where((t) => t.title != null).toList();
+    final loose = [
+      for (final t in topics)
+        if (t.title == null) ...t.items,
+    ];
+    final results = _query.isEmpty
+        ? const <FaqItem>[]
+        : [
+            for (final t in topics)
+              for (final item in t.items)
+                if (item.matches(_query)) item,
+          ];
+
+    return HubScaffold(
+      currentTab: AppTab.account,
+      appBar: subpageAppBar(context, l10n.helpCentreTitle),
+      body: ColoredBox(
+        color: groupedPageColor(context),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+          children: [
+            Text(
+              l10n.helpHowCanWeHelp,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: context.scaffoldHeading,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _search,
+              onChanged: (v) =>
+                  setState(() => _query = v.trim().toLowerCase()),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: l10n.helpSearchHint,
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: l10n.searchClearField,
+                        onPressed: () {
+                          _search.clear();
+                          setState(() => _query = '');
+                        },
+                      ),
+                filled: true,
+                fillColor: groupCardColor(context),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: _fieldBorder(context),
+                enabledBorder: _fieldBorder(context),
+              ),
+            ),
+            if (channels.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < channels.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(child: channels[i]),
+                  ],
+                ],
+              ),
+            ],
+            if (_query.isNotEmpty) ...[
+              GroupLabel(l10n.helpFrequentlyAsked),
+              if (results.isEmpty)
+                GroupCard(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text(
+                      l10n.helpNoResults,
+                      style: TextStyle(color: context.scaffoldMuted),
+                    ),
+                  ],
+                )
+              else
+                FaqAccordion(items: results),
+            ] else ...[
+              if (titled.isNotEmpty) ...[
+                GroupLabel(l10n.helpPopularTopics),
+                GroupCard(
+                  children: [
+                    for (final topic in titled)
+                      GroupRow(
+                        icon: faqTopicIcon(topic.icon),
+                        label: topic.title!,
+                        onTap: () =>
+                            context.push(AppRoutes.helpTopic, extra: topic),
+                      ),
+                  ],
+                ),
+              ],
+              if (loose.isNotEmpty) ...[
+                GroupLabel(l10n.helpFrequentlyAsked),
+                FaqAccordion(items: loose),
+              ],
+            ],
+            if (features.contactEnabled) ...[
+              const SizedBox(height: 20),
+              const ContactFormCard(),
+            ],
+            GroupLabel(l10n.helpAboutLegal),
+            GroupCard(
+              children: [
+                GroupRow(
+                  icon: Icons.info_outline,
+                  label: l10n.accountAbout,
+                  onTap: () => context.push(AppRoutes.about),
+                ),
+                for (final link in legal)
+                  GroupRow(
+                    icon: legalLinkIcon(link),
+                    label: link.label,
+                    onTap: () => openStorePageLink(context, ref, link),
+                  ),
+              ],
+            ),
+            if (version != null) ...[
+              const SizedBox(height: 18),
+              Center(
+                child: Text(
+                  l10n.helpAppVersion(version),
+                  style: TextStyle(fontSize: 12, color: context.scaffoldFaint),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  OutlineInputBorder _fieldBorder(BuildContext context) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(color: context.hairline),
   );
 }
 
-/// A bordered contact card: blush circular icon chip + label.
-class _ContactCard extends StatelessWidget {
-  const _ContactCard({
+/// One contact channel card: a tinted icon chip, the channel and a caption.
+class _ContactTile extends StatelessWidget {
+  const _ContactTile({
     required this.icon,
+    required this.tint,
+    required this.color,
     required this.label,
+    required this.caption,
     required this.onTap,
   });
 
   final IconData icon;
+  final Color tint;
+  final Color color;
   final String label;
+  final String caption;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: dark ? const Color(0xFF243244) : Colors.white,
+      color: groupCardColor(context),
+      borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: dark ? Colors.white24 : AppColors.borderDefault,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.fromLTRB(6, 12, 6, 12),
           child: Column(
             children: [
               Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  color: AppColors.surfaceTint,
-                  shape: BoxShape.circle,
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 22, color: AppColors.brandPrimary),
+                child: Icon(icon, size: 20, color: color),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 8),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontWeight: FontWeight.w600,
                   fontSize: 13,
-                  color: dark ? Colors.white : AppColors.inkHeading,
+                  fontWeight: FontWeight.w600,
+                  color: context.scaffoldHeading,
                 ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                caption,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: context.scaffoldMuted),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-/// A flat, divider-separated FAQ row that expands to reveal its answer.
-class _FaqTile extends StatelessWidget {
-  const _FaqTile({
-    super.key,
-    required this.question,
-    required this.answer,
-    required this.initiallyExpanded,
-    required this.showDivider,
-  });
-
-  final String question;
-  final String answer;
-  final bool initiallyExpanded;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) {
-    // Dark mode: the question text was AppColors.inkHeading (#1F2937) on the
-    // #1F2937 dark scaffold — invisible. Branch the text/divider for dark only,
-    // leaving light mode unchanged.
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      children: [
-        ExpansionTile(
-          initiallyExpanded: initiallyExpanded,
-          shape: const Border(),
-          collapsedShape: const Border(),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-          expandedCrossAxisAlignment: CrossAxisAlignment.start,
-          iconColor: dark ? Colors.white70 : AppColors.inkMuted,
-          collapsedIconColor: dark ? Colors.white70 : AppColors.inkMuted,
-          title: Text(
-            question,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color: dark ? Colors.white : AppColors.inkHeading,
-            ),
-          ),
-          children: [
-            Text(
-              answer,
-              style: TextStyle(
-                color: dark ? Colors.white70 : AppColors.inkMuted,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
-        if (showDivider)
-          Divider(
-            height: 1,
-            thickness: 1,
-            indent: 16,
-            endIndent: 16,
-            color: dark ? Colors.white12 : AppColors.borderDefault,
-          ),
-      ],
     );
   }
 }
