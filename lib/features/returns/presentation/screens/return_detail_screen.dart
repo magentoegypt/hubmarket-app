@@ -503,7 +503,9 @@ class _Bubble extends StatelessWidget {
     final mine = message.author == ReturnActor.customer;
     final name = switch (message.author) {
       ReturnActor.customer => l10n.returnsYou,
-      _ => message.authorName,
+      ReturnActor.seller => message.authorName,
+      // Staff are never named, whatever the server sends.
+      ReturnActor.hubMarket => kReturnsStaffName,
     };
     final nameColor = switch (message.author) {
       ReturnActor.customer => AppColors.borderStrong,

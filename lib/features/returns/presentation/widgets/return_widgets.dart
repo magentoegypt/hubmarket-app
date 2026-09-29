@@ -13,6 +13,10 @@ import '../../domain/returns.dart';
 /// (Figma `--hm-vendor`).
 const Color returnsVendorColor = AppColors.info;
 
+/// Who Hub Market's staff are in a return's thread — the brand in Latin in
+/// both languages, as the server and the storefront write it.
+const String kReturnsStaffName = 'Hub Market';
+
 /// Muted body text on the returns cards (Figma `--hm-subtle`).
 const Color returnsSubtleText = Color(0xFF535D70);
 

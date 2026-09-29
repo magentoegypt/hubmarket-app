@@ -149,6 +149,32 @@ void main() {
       expect(find.textContaining('courier will collect'), findsOneWidget);
     });
 
+    testWidgets('staff are Hub Market whatever name comes back', (
+      tester,
+    ) async {
+      await pumpReturns(
+        tester,
+        location: AppRoutes.returnDetail(31),
+        returns: FakeReturnsRepository(
+          details: {
+            31: sampleReturnDetail(
+              messages: const [
+                ReturnMessage(
+                  id: 5,
+                  author: ReturnActor.hubMarket,
+                  authorName: 'Ahmed from support',
+                  bodyText: 'We are on it.',
+                  createdAt: '2026-09-25T09:40:00Z',
+                ),
+              ],
+            ),
+          },
+        ),
+      );
+      expect(find.text('Hub Market'), findsOneWidget);
+      expect(find.text('Ahmed from support'), findsNothing);
+    });
+
     testWidgets('an open return takes a reply', (tester) async {
       final repo = FakeReturnsRepository(details: {31: sampleReturnDetail()});
       await pumpReturns(
