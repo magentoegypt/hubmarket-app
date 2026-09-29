@@ -42,10 +42,13 @@ import '../features/cms/domain/faq.dart';
 import '../features/cms/presentation/cms_page_screen.dart';
 import '../features/notifications/presentation/notification_settings_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
+import '../features/stores/presentation/screens/store_screen.dart';
+import '../features/stores/presentation/screens/stores_screen.dart';
 import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../features/diagnostics/presentation/health_check_screen.dart';
 import '../features/onboarding/presentation/launch_splash_screen.dart';
 import '../features/onboarding/presentation/welcome_screen.dart';
+import '../core/hubapp/hubapp.dart';
 import '../core/widgets/web_view_screen.dart';
 import '../l10n/l10n.dart';
 import 'deep_link_resolver_screen.dart';
@@ -121,6 +124,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.brand,
         builder: (context, state) =>
             SearchScreen(brand: state.extra as Brand?),
+      ),
+      GoRoute(
+        path: AppRoutes.stores,
+        builder: (context, state) => const StoresScreen(),
+      ),
+      GoRoute(
+        path: '/store/:code',
+        builder: (context, state) => StoreScreen(
+          code: state.pathParameters['code']!,
+          // Present only when a list pushed us here; a deep link has none.
+          preview: state.extra is HmStoreCard
+              ? state.extra! as HmStoreCard
+              : null,
+        ),
       ),
       GoRoute(
         path: '/review/:sku',

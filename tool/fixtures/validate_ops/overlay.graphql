@@ -1,0 +1,51 @@
+# A contract in the Magento style of lib/core/graphql/hubapp.graphql: types
+# that exist live are re-declared to add fields, directives everywhere.
+
+type Query {
+    hmThings(
+        pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
+        kind: HmKind @doc(description: "Only this kind.")
+    ): HmThingPage! @resolver(class: "Vendor\\Module\\Model\\Resolver\\Things") @doc(description: "Things. Public; send as GET.") @cache(cacheIdentity: "Vendor\\Module\\Model\\Resolver\\Identity\\Things")
+}
+
+enum HmKind @doc(description: "Kind.") {
+    ONE @doc(description: "One.")
+    TWO
+}
+
+"Block descriptions are skipped too."
+type HmThingPage @doc(description: "Page.") {
+    items: [HmThing!]! @doc(description: "Things.")
+}
+
+type HmThing @doc(description: "Thing.") {
+    code: String! @doc(description: "Code.")
+    products: [ProductInterface!] @resolver(class: "X") @doc(description: "Products.")
+}
+
+input HmThingInput @doc(description: "Input.") {
+    code: String! @doc(description: "Code.")
+    size: Int = 1
+}
+
+type Mutation {
+    hmSaveThing(input: HmThingInput! @doc(description: "Thing.")): HmThing! @resolver(class: "Y")
+}
+
+interface ProductInterface {
+    hm_seller: HmSeller @resolver(class: "Z") @doc(description: "Seller.") @cache(cacheIdentity: "W")
+}
+
+type HmSeller @doc(description: "Seller.") {
+    name: String!
+}
+
+# A second module extends a type the first one declared.
+type HmThing {
+    seller: HmSeller @doc(description: "Seller.")
+}
+
+# Re-declaring a live field never replaces it.
+type Products {
+    items: String @doc(description: "Ignored: Products.items stays a list.")
+}

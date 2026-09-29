@@ -1,6 +1,7 @@
 import 'package:cupertino_http/cupertino_http.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gql/ast.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:http/http.dart' as http;
 
@@ -89,22 +90,27 @@ rawTransportProbe(AppConfig config, String storeCode) async {
   }
 }
 
-/// Builds the GraphQL client with the link chain:
-///   AuthLink (bearer when present) → StoreHeaderLink (dynamic `Store` header)
-///   → ResilienceLink (retry transient queries + mid-session logout)
-///   → HttpLink (terminating).
+/// Builds a GraphQL client with the link chain:
+///   AuthLink (bearer, only when [token] is given) → StoreHeaderLink (dynamic
+///   `Store` header) → ResilienceLink (retry transient queries + mid-session
+///   logout) → HttpLink (terminating).
 ///
-/// [withAuth] false drops the [AuthLink] (and the mid-session logout hook),
-/// producing an otherwise byte-identical **guest** client — see
-/// [guestGraphqlClientProvider].
+/// Without [token] no `Authorization` header can ever be sent — the guest and
+/// public clients. [getForQueries] sends queries as HTTP GET (mutations stay
+/// POST) with a compacted document, so Magento's full-page cache / Varnish can
+/// serve public reads — see [publicGraphqlClientProvider].
 ///
 /// Exception → [Failure] mapping happens at the repository layer
-/// (see `graphql_failure_mapper.dart`). Invalidate the provider on a
-/// language/store switch to reset the cache and refetch with the new header.
-GraphQLClient _buildClient(Ref ref, {required bool withAuth}) {
-  final config = ref.watch(appConfigProvider);
-  final tokenStore = ref.watch(secureTokenStoreProvider);
-
+/// (see `graphql_failure_mapper.dart`). A plain function (the providers below
+/// wire it) so tests can drive the real link chain over a fake [httpClient].
+GraphQLClient buildGraphQLClient({
+  required AppConfig config,
+  required String Function() storeCode,
+  Future<String?> Function()? token,
+  void Function()? onAuthError,
+  bool getForQueries = false,
+  http.Client? httpClient,
+}) {
   // Set the stable User-Agent at the transport level too (not only via
   // StoreHeaderLink) so it is guaranteed on every request — without it, the
   // default `Dart/<ver> (dart:io)` UA goes out, which AWS WAF/bot rules are
@@ -118,38 +124,23 @@ GraphQLClient _buildClient(Ref ref, {required bool withAuth}) {
       'User-Agent': config.userAgent,
       'Accept': 'application/json',
     },
-    httpClient: _platformHttpClient(config.userAgent),
-  );
-
-  final authLink = AuthLink(
-    getToken: () async {
-      final token = await tokenStore.read();
-      return token == null ? null : 'Bearer $token';
-    },
-  );
-
-  final storeLink = StoreHeaderLink(
-    storeCode: () => ref.read(storeControllerProvider).activeStoreCode,
-    userAgent: config.userAgent,
-  );
-
-  final resilienceLink = ResilienceLink(
-    // Defer to a microtask so logout (which invalidates this very provider)
-    // runs after the current response stream settles, never mid-emit.
-    //
-    // The guest client sends no bearer, so an auth error there says nothing
-    // about the customer's session — it must never drop them to guest.
-    onAuthError: withAuth
-        ? () => Future.microtask(
-            () => ref.read(authControllerProvider.notifier).handleSessionExpired(),
-          )
-        : () {},
+    httpClient: httpClient ?? _platformHttpClient(config.userAgent),
+    useGETForQueries: getForQueries,
+    serializer: getForQueries
+        ? const CompactRequestSerializer()
+        : const RequestSerializer(),
   );
 
   final link = Link.from(<Link>[
-    if (withAuth) authLink,
-    storeLink,
-    resilienceLink,
+    if (token != null)
+      AuthLink(
+        getToken: () async {
+          final value = await token();
+          return value == null ? null : 'Bearer $value';
+        },
+      ),
+    StoreHeaderLink(storeCode: storeCode, userAgent: config.userAgent),
+    ResilienceLink(onAuthError: onAuthError ?? () {}),
     httpLink,
   ]);
 
@@ -168,17 +159,166 @@ GraphQLClient _buildClient(Ref ref, {required bool withAuth}) {
   );
 }
 
-final graphqlClientProvider = Provider<GraphQLClient>(
-  (ref) => _buildClient(ref, withAuth: true),
-);
+/// The client for everything that may carry the customer's bearer. Invalidate
+/// it on a language/store switch to reset the cache and refetch with the new
+/// header.
+final graphqlClientProvider = Provider<GraphQLClient>((ref) {
+  final tokenStore = ref.watch(secureTokenStoreProvider);
+  return buildGraphQLClient(
+    config: ref.watch(appConfigProvider),
+    storeCode: () => ref.read(storeControllerProvider).activeStoreCode,
+    token: tokenStore.read,
+    // Defer to a microtask so logout (which invalidates this very provider)
+    // runs after the current response stream settles, never mid-emit.
+    onAuthError: () => Future.microtask(
+      () => ref.read(authControllerProvider.notifier).handleSessionExpired(),
+    ),
+  );
+});
 
-/// A **token-less** twin of [graphqlClientProvider]: same endpoint, transport,
-/// `Store` header and retry behaviour, but no `Authorization` header.
+/// A **token-less** twin of [graphqlClientProvider]: same endpoint, transport
+/// (POST), `Store` header and retry behaviour, but no `Authorization` header.
 ///
 /// Exists so the app can answer *"is the stored bearer the reason this request
 /// failed?"* **without destroying the token to find out**. Browsing GraphQL
 /// needs no token, so a guest retry that succeeds where the authenticated one
 /// failed is proof the token is at fault — see `StoreController._load()`.
+/// Deliberately POST like the authenticated client: a GET could be answered
+/// from the full-page cache while the edge is refusing requests, which would
+/// look like proof against a perfectly good token.
+///
+/// The guest client sends no bearer, so an auth error there says nothing about
+/// the customer's session — it never drops them to guest.
 final guestGraphqlClientProvider = Provider<GraphQLClient>(
-  (ref) => _buildClient(ref, withAuth: false),
+  (ref) => buildGraphQLClient(
+    config: ref.watch(appConfigProvider),
+    storeCode: () => ref.read(storeControllerProvider).activeStoreCode,
+  ),
 );
+
+/// The token-less client for **public reads**, with queries sent as HTTP GET
+/// so Magento's GraphQL full-page cache (Varnish / built-in FPC — it caches
+/// GET only) can answer them: `hmAppConfig`, `hmAppHome`, `hmDeals`,
+/// `hmBestSellers`, `hmBundleDeals`, `hmBrands`, `hmStores`, `hmStore` and the
+/// catalogue `products` lists they lead to.
+///
+/// * Keeps the `Store` header (the cache varies on it) and never sends an
+///   `Authorization` header — a bearer would make the response private and
+///   uncacheable, and none of these reads needs one.
+/// * The document travels in the URL, compacted by
+///   [CompactRequestSerializer]; keep public documents under ~6 KB (nginx's
+///   default request-line limit is 8 KB).
+/// * Mutations sent through it still go as POST, but nothing that needs the
+///   customer belongs here.
+final publicGraphqlClientProvider = Provider<GraphQLClient>(
+  (ref) => buildGraphQLClient(
+    config: ref.watch(appConfigProvider),
+    storeCode: () => ref.read(storeControllerProvider).activeStoreCode,
+    getForQueries: true,
+  ),
+);
+
+/// Serializes requests for a GET transport: the query printed without
+/// insignificant whitespace (it becomes part of the URL), the operation name
+/// (taken from the document when the caller gave none), and no empty
+/// `variables`.
+///
+/// gql_http_link JSON-encodes every non-string value into its query
+/// parameter, so a null operation name would travel as the literal `null` —
+/// which Magento reads as an operation called "null".
+class CompactRequestSerializer extends RequestSerializer {
+  const CompactRequestSerializer();
+
+  @override
+  Map<String, dynamic> serializeRequest(Request request) {
+    final body = super.serializeRequest(request);
+    final query = body['query'];
+    if (query is String) body['query'] = compactGraphQLDocument(query);
+    final name =
+        request.operation.operationName ??
+        request.operation.document.definitions
+            .whereType<OperationDefinitionNode>()
+            .firstOrNull
+            ?.name
+            ?.value;
+    if (name == null || name.isEmpty) {
+      body.remove('operationName');
+    } else {
+      body['operationName'] = name;
+    }
+    final variables = body['variables'];
+    if (variables == null || (variables is Map && variables.isEmpty)) {
+      body.remove('variables');
+    }
+    return body;
+  }
+}
+
+/// [document] with comments dropped and whitespace (commas included) kept
+/// only where two names or numbers would otherwise run together; string
+/// literals are copied verbatim.
+String compactGraphQLDocument(String document) {
+  final out = StringBuffer();
+  var i = 0;
+  var pendingSpace = false;
+  var previous = -1;
+  bool isWordChar(int c) =>
+      (c >= 0x30 && c <= 0x39) || // 0-9
+      (c >= 0x41 && c <= 0x5a) || // A-Z
+      (c >= 0x61 && c <= 0x7a) || // a-z
+      c == 0x5f; // _
+
+  void write(String s) {
+    // Two words (`query Home`, `on Product`, `10 after`) need their separator,
+    // and so do two strings (`"" ""` must not read as a `"""` block string);
+    // everything else in GraphQL is delimited by punctuation.
+    final next = s.codeUnitAt(0);
+    if (pendingSpace &&
+        ((isWordChar(previous) && isWordChar(next)) ||
+            (previous == 0x22 && next == 0x22))) {
+      out.write(' ');
+    }
+    pendingSpace = false;
+    out.write(s);
+    previous = s.codeUnitAt(s.length - 1);
+  }
+
+  while (i < document.length) {
+    final c = document[i];
+    if (c == '#') {
+      while (i < document.length && document[i] != '\n') {
+        i++;
+      }
+      pendingSpace = true;
+      continue;
+    }
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ',' ||
+        c == '﻿') {
+      pendingSpace = true;
+      i++;
+      continue;
+    }
+    if (c == '"') {
+      final block = document.startsWith('"""', i);
+      final start = i;
+      if (block) {
+        i += 3;
+        while (i < document.length && !document.startsWith('"""', i)) {
+          i += document[i] == r'\' ? 2 : 1;
+        }
+        i = (i + 3).clamp(0, document.length);
+      } else {
+        i++;
+        while (i < document.length && document[i] != '"') {
+          i += document[i] == r'\' ? 2 : 1;
+        }
+        i = (i + 1).clamp(0, document.length);
+      }
+      write(document.substring(start, i));
+      continue;
+    }
+    write(c);
+    i++;
+  }
+  return out.toString();
+}

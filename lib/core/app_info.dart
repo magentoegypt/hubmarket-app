@@ -12,3 +12,15 @@ final appVersionProvider = FutureProvider<String?>((ref) async {
     return null;
   }
 });
+
+/// The build's semantic version alone, e.g. "1.0.0" — what the backend's
+/// version policy (`hmAppConfig.version`) compares against. Null when the
+/// platform plugin is unavailable, which never triggers an update prompt.
+final appSemverProvider = FutureProvider<String?>((ref) async {
+  try {
+    final version = (await PackageInfo.fromPlatform()).version.trim();
+    return version.isEmpty ? null : version;
+  } catch (_) {
+    return null;
+  }
+});

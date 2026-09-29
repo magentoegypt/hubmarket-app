@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp_providers.dart';
 import 'package:hubmarket_app/core/error/failure.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
@@ -19,6 +20,7 @@ import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 import '../../support/fonts.dart';
 
 // Live CMS markup (hub-market.magento2.click, store `en`, 29 Sep 2026).
@@ -71,6 +73,7 @@ Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false}) {
       localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      hubAppOverride(const HubAppState.unavailable()),
       homeCmsBlocksProvider.overrideWith((ref) async => _cms),
       homeCategoriesProvider.overrideWith(
         (ref) async => storeDown

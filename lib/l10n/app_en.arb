@@ -31,6 +31,19 @@
   "offlineBody": "Check your Wi-Fi or mobile data. Your cart is saved on this device.",
   "offlineTryAgain": "Try again",
   "offlineBanner": "No internet connection",
+  "maintenanceTitle": "We’ll be right back",
+  "maintenanceBody": "Hub Market is being updated. Your cart is safe — please check back soon.",
+  "maintenanceRetryAfter": "{minutes, plural, =1{Please try again in about a minute.} other{Please try again in about {minutes} minutes.}}",
+  "@maintenanceRetryAfter": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "updateRequiredTitle": "Time to update",
+  "updateRequiredBody": "This version of Hub Market is no longer supported. Update the app to keep shopping.",
+  "updateRequiredAction": "Update now",
   "healthCheckTitle": "Store health check",
   "healthCheckSubtitle": "Live storeConfig for the active store view",
   "settingsConnectionTest": "Connection test",
@@ -91,6 +104,67 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "storesTitle": "Stores",
+  "storesSearchHint": "Search stores",
+  "storesFeaturedBadge": "FEATURED STORE",
+  "storesVisit": "Visit",
+  "storesAllTitle": "All stores",
+  "storesSortTopRated": "Top rated",
+  "storesSortNewest": "Newest",
+  "storesSortMostProducts": "Most products",
+  "storesEmpty": "No stores found",
+  "storesNoMatch": "No store matches “{query}”.",
+  "@storesNoMatch": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "storeVerified": "Verified seller",
+  "storeReviewCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@storeReviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storeNoReviews": "No reviews yet",
+  "storeStatProducts": "Products",
+  "storeStatSellingSince": "Selling since",
+  "storeTabProducts": "Products",
+  "storeTabAbout": "About",
+  "storeTabPolicies": "Policies",
+  "storeSearchHint": "Search {store} products",
+  "@storeSearchHint": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storeAboutTitle": "About the store",
+  "storeStatProductsListed": "Products listed",
+  "storeStatDispatch": "Typical dispatch",
+  "storeStatAverageRating": "Average rating",
+  "storeStatCustomerReviews": "Customer reviews",
+  "storePoliciesTitle": "Store policies",
+  "storeShippingPolicy": "Shipping policy",
+  "storeRefundPolicy": "Refund & exchange policy",
+  "storeCategoriesTitle": "Categories in this store",
+  "storeNotFoundTitle": "Store not found",
+  "storeNotFoundBody": "This store isn't on Hub Market right now.",
+  "storeNoProducts": "This store has no products yet.",
+  "storeNoMatches": "No products match your search.",
+  "storeShare": "{store} on Hub Market",
+  "@storeShare": {
+    "placeholders": {
+      "store": {
+        "type": "String"
       }
     }
   },
@@ -195,6 +269,15 @@
       }
     }
   },
+  "searchTabVendors": "Vendors ({count})",
+  "@searchTabVendors": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchVendorsLabel": "Vendors",
   "searchTabCategories": "Categories ({count})",
   "@searchTabCategories": {
     "placeholders": {
@@ -246,6 +329,15 @@
       }
     }
   },
+  "searchNoVendorMatches": "No stores match “{query}”.",
+  "@searchNoVendorMatches": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "searchVendorView": "View",
   "searchNoResultsTitle": "No results for “{query}”",
   "@searchNoResultsTitle": {
     "placeholders": {
@@ -255,6 +347,8 @@
     }
   },
   "searchNoResultsBody": "Check the spelling or use fewer words.",
+  "searchNoResultsBodyStores": "Check the spelling or use fewer words. You can also browse our stores.",
+  "searchBrowseStores": "Browse stores",
   "searchPopularNow": "Popular right now",
   "comingSoon": "Coming soon",
   "comingSoonBody": "This section arrives in a later phase.",

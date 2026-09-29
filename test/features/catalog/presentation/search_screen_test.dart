@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_colors.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp_providers.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
@@ -27,6 +28,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/algolia_fakes.dart';
 import '../../../support/fakes.dart';
+import '../../../support/hubapp_fakes.dart';
 import '../../../support/search_fixtures.dart';
 
 // ---------------------------------------------------------------- GraphQL
@@ -166,6 +168,7 @@ Widget _harness({
   _Cart? cart,
   String locale = 'en',
   String? initialQuery,
+  HubAppState hubApp = const HubAppState.unavailable(),
 }) {
   final router = GoRouter(
     initialLocation: '/search',
@@ -216,6 +219,7 @@ Widget _harness({
       catalogRepositoryProvider.overrideWithValue(catalog ?? _SearchCatalog()),
       cartRepositoryProvider.overrideWithValue(cart ?? _Cart()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      hubAppOverride(hubApp),
       algoliaHttpClientProvider.overrideWithValue(
         (algolia ?? FakeAlgoliaBackend(pageStatus: 503)).client,
       ),
@@ -352,6 +356,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('PLP $kFurnitureUid'), findsOneWidget);
     });
+
+    testWidgets(
+      'the Hub Market App settings give the hint and the trending list',
+      (tester) async {
+        await _phone(tester);
+        await tester.pumpWidget(
+          _harness(hubApp: const HubAppState.available(kSampleHmAppConfig)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Search 20,000+ products'), findsOneWidget);
+        expect(find.text('iphone'), findsOneWidget);
+        expect(find.text('abaya'), findsOneWidget);
+        expect(find.text('3'), findsOneWidget);
+        // The app's own list only stands in when the admin has none.
+        expect(find.text('Samsung'), findsNothing);
+      },
+    );
 
     testWidgets('a trending search runs and lands in history', (tester) async {
       await _phone(tester);
@@ -907,6 +929,7 @@ void main() {
           secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
           catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
           graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+          hubAppOverride(const HubAppState.unavailable()),
           algoliaHttpClientProvider.overrideWithValue(
             FakeAlgoliaBackend(pageStatus: 503).client,
           ),

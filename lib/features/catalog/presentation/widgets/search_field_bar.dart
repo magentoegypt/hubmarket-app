@@ -24,6 +24,7 @@ class SearchFieldBar extends StatelessWidget {
     this.onCancel,
     this.autofocus = false,
     this.emphasised = true,
+    this.hint,
   });
 
   final TextEditingController controller;
@@ -44,6 +45,10 @@ class SearchFieldBar extends StatelessWidget {
   /// The navy 1.5 pt outline of a search being typed; the results page draws a
   /// quieter 1 pt grey one.
   final bool emphasised;
+
+  /// The placeholder — the admin's (`hmAppConfig.search.hint`) when set,
+  /// else the app's own wording.
+  final String? hint;
 
   /// The 46 pt field plus 6 above and 10 below.
   static const double height = 62;
@@ -81,7 +86,7 @@ class SearchFieldBar extends StatelessWidget {
               focusNode: focusNode,
               autofocus: autofocus,
               emphasised: emphasised,
-              hint: l10n.searchFieldHint,
+              hint: hint ?? l10n.searchFieldHint,
               clearLabel: l10n.searchClearField,
               onChanged: onChanged,
               onSubmitted: onSubmitted,

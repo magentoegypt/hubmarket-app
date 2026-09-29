@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/app.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp_providers.dart';
 import 'package:hubmarket_app/app/router.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
@@ -10,6 +11,7 @@ import 'package:hubmarket_app/features/diagnostics/data/store_config_repository.
 import 'package:hubmarket_app/features/diagnostics/presentation/health_check_screen.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 
 const _config = StoreConfigData(
   storeCode: 'eg_en',
@@ -25,6 +27,7 @@ Widget _harness(String locale) => ProviderScope(
     localCacheProvider.overrideWithValue(FakeLocalCache()),
     localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
     storeConfigProvider.overrideWith((ref) async => _config),
+    hubAppOverride(const HubAppState.unavailable()),
     // Boot the app directly on the diagnostics screen (the real router
     // starts at /splash).
     routerProvider.overrideWithValue(
