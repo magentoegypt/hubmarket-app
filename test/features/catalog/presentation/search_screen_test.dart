@@ -10,65 +10,40 @@ import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
+import 'package:hubmarket_app/features/cart/domain/cart.dart';
+import 'package:hubmarket_app/features/catalog/data/algolia/algolia_settings_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/aggregation.dart';
 import 'package:hubmarket_app/features/catalog/domain/brand.dart';
-import 'package:hubmarket_app/features/catalog/domain/category.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_page.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/search_screen.dart';
+import 'package:hubmarket_app/features/catalog/presentation/widgets/product_card.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/search_style.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/search_type_ahead.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
+import '../../../support/algolia_fakes.dart';
 import '../../../support/fakes.dart';
+import '../../../support/search_fixtures.dart';
 
-// The live shape of a Hub Market search (checked 2026-09-29): hits filed under
-// a top-level category and a deeper one, a hidden "All" category, and a
-// `category_uid` aggregation that also lists categories no hit reveals.
-const _furnitureUid = 'NzQ=';
-const _homeFurnitureUid = 'NzU=';
-const _livingRoomUid = 'Nzc=';
-
-const List<Category> _tree = <Category>[
-  Category(
-    uid: _furnitureUid,
-    name: 'Furniture',
-    urlKey: 'furniture',
-    productCount: 7,
-    children: <Category>[
-      Category(
-        uid: _homeFurnitureUid,
-        name: 'Home Furniture',
-        urlKey: 'home-furniture',
-        productCount: 5,
-      ),
-      Category(
-        uid: _livingRoomUid,
-        name: 'Living Room Sets',
-        urlKey: 'living-room-sets',
-        productCount: 3,
-      ),
-    ],
-  ),
-  Category(uid: 'MTQw', name: 'Fashion', urlKey: 'fashion', productCount: 19),
-  // Empty scaffolding category: neither a popular tile nor a scope choice.
-  Category(uid: 'OTk=', name: 'Promotions', urlKey: 'promotions'),
-];
+// ---------------------------------------------------------------- GraphQL
 
 const _furniture = ProductCategoryRef(
-  uid: _furnitureUid,
+  uid: kFurnitureUid,
   name: 'Furniture',
   level: 2,
 );
 const _homeFurniture = ProductCategoryRef(
-  uid: _homeFurnitureUid,
+  uid: kHomeFurnitureUid,
   name: 'Home Furniture',
   level: 3,
 );
 
-const List<Product> _hits = <Product>[
+/// What GraphQL `products(search:)` answers — the fallback.
+const List<Product> _graphqlHits = <Product>[
   Product(
     sku: 'sofabed123',
     name: 'Corner Sofa Bed',
@@ -78,7 +53,7 @@ const List<Product> _hits = <Product>[
     categories: <ProductCategoryRef>[
       _furniture,
       ProductCategoryRef(
-        uid: _livingRoomUid,
+        uid: kLivingRoomUid,
         name: 'Living Room Sets',
         level: 3,
       ),
@@ -106,22 +81,22 @@ const List<Product> _hits = <Product>[
   ),
 ];
 
-const List<Aggregation> _aggregations = <Aggregation>[
+const List<Aggregation> _graphqlAggregations = <Aggregation>[
   Aggregation(
     attributeCode: 'category_uid',
     label: 'Category',
     options: <AggregationOption>[
-      AggregationOption(label: 'Furniture', value: _furnitureUid, count: 3),
+      AggregationOption(label: 'Furniture', value: kFurnitureUid, count: 3),
       // Filed on a hit with include_in_menu 0 — never offered.
       AggregationOption(label: 'All', value: 'MTY4', count: 3),
       AggregationOption(
         label: 'Home Furniture',
-        value: _homeFurnitureUid,
+        value: kHomeFurnitureUid,
         count: 2,
       ),
       AggregationOption(
         label: 'Living Room Sets',
-        value: _livingRoomUid,
+        value: kLivingRoomUid,
         count: 1,
       ),
       // Neither on a loaded hit nor in the menu tree — unknown, so dropped.
@@ -130,10 +105,14 @@ const List<Aggregation> _aggregations = <Aggregation>[
   ),
 ];
 
-/// The catalogue fake, recording what each search asked for.
+/// The GraphQL catalogue, recording what each search asked for.
 class _SearchCatalog extends FakeCatalogRepository {
-  _SearchCatalog({super.products = _hits})
-    : super(categories: _tree, aggregations: _aggregations);
+  _SearchCatalog()
+    : super(
+        products: _graphqlHits,
+        categories: kSearchTree,
+        aggregations: _graphqlAggregations,
+      );
 
   final List<({String? search, String? categoryUid})> calls = [];
 
@@ -162,9 +141,29 @@ class _SearchCatalog extends FakeCatalogRepository {
   }
 }
 
+/// The cart, recording what went in by SKU.
+class _Cart extends FakeCartRepository {
+  final List<String> added = [];
+
+  @override
+  Future<Cart> addProducts(
+    String cartId,
+    List<Map<String, dynamic>> items, {
+    bool throwOnUserError = true,
+  }) {
+    added.addAll(items.map((item) => item['sku'] as String));
+    return super.addProducts(cartId, items, throwOnUserError: throwOnUserError);
+  }
+}
+
+/// The search screen with routes for everything it opens. [algolia] null
+/// means Algolia can't answer (its settings page is down): the GraphQL
+/// fallback searches.
 Widget _harness({
-  required FakeCatalogRepository catalog,
+  FakeAlgoliaBackend? algolia,
+  _SearchCatalog? catalog,
   FakeLocalCache? cache,
+  _Cart? cart,
   String locale = 'en',
   String? initialQuery,
 }) {
@@ -184,13 +183,25 @@ Widget _harness({
       ),
       GoRoute(
         path: '/product/:urlKey',
-        builder: (_, state) =>
-            Scaffold(body: Text('PDP ${state.pathParameters['urlKey']}')),
+        builder: (_, state) => Scaffold(
+          appBar: AppBar(),
+          body: Text('PDP ${state.pathParameters['urlKey']}'),
+        ),
+      ),
+      GoRoute(
+        path: '/page',
+        builder: (_, state) => Scaffold(
+          body: Text(
+            'CMS ${state.uri.queryParameters['url']} · '
+            '${state.uri.queryParameters['title']}',
+          ),
+        ),
       ),
       for (final p in [
         '/home',
         '/categories',
         '/cart',
+        '/checkout',
         '/wishlist',
         '/account',
       ])
@@ -202,8 +213,12 @@ Widget _harness({
       localCacheProvider.overrideWithValue(cache ?? FakeLocalCache()),
       localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
-      catalogRepositoryProvider.overrideWithValue(catalog),
+      catalogRepositoryProvider.overrideWithValue(catalog ?? _SearchCatalog()),
+      cartRepositoryProvider.overrideWithValue(cart ?? _Cart()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      algoliaHttpClientProvider.overrideWithValue(
+        (algolia ?? FakeAlgoliaBackend(pageStatus: 503)).client,
+      ),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -218,6 +233,18 @@ Widget _harness({
     ),
   );
 }
+
+FakeAlgoliaBackend _algolia({
+  bool products = true,
+  bool suggestions = true,
+  String store = 'en',
+}) => FakeAlgoliaBackend(
+  answer: sofaAnswers(
+    products: products,
+    suggestions: suggestions,
+    store: store,
+  ),
+);
 
 /// The typed query as the copy embeds it: wrapped in Unicode isolates so it
 /// keeps its order inside right-to-left sentences.
@@ -251,6 +278,17 @@ List<TextSpan> _spansOf(WidgetTester tester, String text) {
   return leaves;
 }
 
+/// The products searches Algolia was asked (not the count-only ones).
+List<RecordedQuery> _productSearches(FakeAlgoliaBackend algolia) => [
+  for (final q in algolia.queries)
+    if (q.indexName.contains('_products') && q.params['hitsPerPage'] != '0') q,
+];
+
+Finder _chip(String label) => find.descendant(
+  of: find.byType(SearchOutlinedChip),
+  matching: find.text(label),
+);
+
 void main() {
   group('landing (Figma 09b)', () {
     testWidgets('recent searches: a row\'s (x) removes just that entry', (
@@ -263,9 +301,7 @@ void main() {
         jsonEncode(['sofa bed', 'office desk', 'juhayna milk']),
       );
 
-      await tester.pumpWidget(
-        _harness(catalog: _SearchCatalog(), cache: cache),
-      );
+      await tester.pumpWidget(_harness(cache: cache));
       await tester.pumpAndSettle();
 
       expect(find.text('Recent searches'), findsOneWidget);
@@ -295,7 +331,7 @@ void main() {
       tester,
     ) async {
       await _phone(tester);
-      await tester.pumpWidget(_harness(catalog: _SearchCatalog()));
+      await tester.pumpWidget(_harness());
       await tester.pumpAndSettle();
 
       // No history yet → no Recent section.
@@ -314,74 +350,114 @@ void main() {
 
       await tester.tap(find.text('Furniture'));
       await tester.pumpAndSettle();
-      expect(find.text('PLP $_furnitureUid'), findsOneWidget);
+      expect(find.text('PLP $kFurnitureUid'), findsOneWidget);
     });
 
     testWidgets('a trending search runs and lands in history', (tester) async {
       await _phone(tester);
       final cache = FakeLocalCache();
-      await tester.pumpWidget(
-        _harness(catalog: _SearchCatalog(), cache: cache),
-      );
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia, cache: cache));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('bag'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Products (3)'), findsOneWidget);
+      expect(find.text('Products (12)'), findsOneWidget);
       expect(jsonDecode(cache.readString('search_history')!), ['bag']);
+      expect(_productSearches(algolia).last.query, 'bag');
     });
-  });
 
-  group('type-ahead (Figma 09)', () {
-    testWidgets(
-      'hits with the typed word highlighted, "in <category>", prices',
-      (tester) async {
-        await _phone(tester);
-        await tester.pumpWidget(_harness(catalog: _SearchCatalog()));
-        await tester.pumpAndSettle();
-        await _type(tester, 'sofa');
-
-        expect(find.text('All categories'), findsOneWidget);
-        expect(find.text('PRODUCTS'), findsOneWidget);
-        expect(find.byType(SearchHighlightedText), findsNWidgets(3));
-
-        final spans = _spansOf(tester, 'Corner Sofa Bed');
-        final match = spans.singleWhere((s) => s.text == 'Sofa');
-        expect(match.style?.fontWeight, FontWeight.w700);
-        expect(match.style?.color, AppColors.accentStrong);
-        expect(spans.map((s) => s.text), ['Corner ', 'Sofa', ' Bed']);
-
-        // The deepest menu category the hit is filed under.
-        expect(find.text('in Living Room Sets'), findsOneWidget);
-        expect(find.text('in Home Furniture'), findsNWidgets(2));
-        // Final price, and the regular one struck through when discounted.
-        expect(find.text('AED 425.00'), findsOneWidget);
-        expect(find.text('AED 500.00'), findsOneWidget);
-        expect(find.text('AED 180.00'), findsOneWidget);
-      },
-    );
-
-    testWidgets('pinned bar: category chips from the aggregation, View all N', (
+    testWidgets('opening search loads the store view\'s Algolia settings', (
       tester,
     ) async {
       await _phone(tester);
-      await tester.pumpWidget(_harness(catalog: _SearchCatalog()));
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia));
+      await tester.pumpAndSettle();
+
+      expect(algolia.pageRequests.single.url.path, '/en/');
+      expect(algolia.algoliaRequests, isEmpty);
+    });
+  });
+
+  group('type-ahead (Figma 09) on Algolia', () {
+    testWidgets('hits with Algolia\'s highlight, "in <category>", prices', (
+      tester,
+    ) async {
+      await _phone(tester);
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia));
       await tester.pumpAndSettle();
       await _type(tester, 'sofa');
 
-      final chips = find.byType(SearchOutlinedChip);
-      String chipLabel(int i) =>
-          tester.widget<SearchOutlinedChip>(chips.at(i)).label;
-      // Match count first, deeper first on a tie; the hidden "All" and the
-      // unknown "Gear" are left out.
-      expect(chips, findsNWidgets(3));
+      // One round trip: products, categories and pages of the EN store.
+      expect(algolia.algoliaRequests, hasLength(1));
+      expect(algolia.lastCall.map((q) => q.indexName), [
+        'hubmarket_en_products',
+        'hubmarket_en_categories',
+        'hubmarket_en_pages',
+      ]);
+      expect(algolia.lastCall.first.query, 'sofa');
+
+      expect(find.text('All categories'), findsOneWidget);
+      expect(find.text('PRODUCTS'), findsOneWidget);
+      expect(find.byType(SearchHighlightedText), findsNWidgets(4));
+
+      final spans = _spansOf(tester, 'Corner Sofa Bed');
+      final match = spans.singleWhere((s) => s.text == 'Sofa');
+      expect(match.style?.fontWeight, FontWeight.w700);
+      expect(match.style?.color, AppColors.accentStrong);
+      expect(spans.map((s) => s.text), ['Corner ', 'Sofa', ' Bed']);
+
+      // The deepest category of each record.
+      expect(find.text('in Living Room Sets'), findsNWidgets(2));
+      expect(find.text('in Home Furniture'), findsNWidgets(2));
+      // Price in AED, the original struck through when there is one.
+      expect(find.text('AED 425.00'), findsOneWidget);
+      expect(find.text('AED 500.00'), findsOneWidget);
+      expect(find.text('AED 180.00'), findsOneWidget);
+      final struck = tester.widget<Text>(find.text('AED 500.00'));
+      expect(struck.style?.decoration, TextDecoration.lineThrough);
+    });
+
+    testWidgets('categories and pages suggestions, View all N, attribution', (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(_harness(algolia: _algolia()));
+      await tester.pumpAndSettle();
+      await _type(tester, 'sofa');
+
+      // The top two categories of the matches, from the categoryIds facet.
       expect(
-        [chipLabel(0), chipLabel(1), chipLabel(2)],
-        ['Furniture', 'Home Furniture', 'Living Room Sets'],
+        find.text(
+          'See products in All departments (12) or in Furniture, '
+          'Living Room Sets',
+        ),
+        findsOneWidget,
       );
-      expect(find.text('All'), findsNothing);
-      expect(find.text('Gear'), findsNothing);
+      // Each chip row carries its label (the tab bar says "Categories" too).
+      Finder rowOf(String chip) =>
+          find.ancestor(of: _chip(chip), matching: find.byType(Row)).last;
+      expect(
+        find.descendant(
+          of: rowOf('Living Room Sets'),
+          matching: find.text('Categories'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: rowOf('Shipping & delivery'),
+          matching: find.text('Pages'),
+        ),
+        findsOneWidget,
+      );
+      expect(_chip('Living Room Sets'), findsOneWidget);
+      expect(_chip('Shipping & delivery'), findsOneWidget);
+      expect(_chip('Return policy'), findsOneWidget);
+      expect(find.text('View all 12 results'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byType(SearchByAlgolia),
@@ -390,72 +466,72 @@ void main() {
         findsOneWidget,
       );
 
-      // The top two categories are linked in the line under the hits.
-      expect(
-        find.text(
-          'See products in All departments (3) or in Furniture, Home Furniture',
-        ),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text('View all 3 results'));
+      await tester.tap(find.text('View all 12 results'));
       await tester.pumpAndSettle();
-
-      expect(find.text('Products (3)'), findsOneWidget);
-      expect(find.text('Categories (3)'), findsOneWidget);
-      expect(find.text('3 results for “${_typed('sofa')}”'), findsOneWidget);
+      expect(find.text('Products (12)'), findsOneWidget);
+      expect(find.text('12 results for “${_typed('sofa')}”'), findsOneWidget);
     });
 
-    testWidgets('"All departments (N)" opens the results, a category its PLP', (
+    testWidgets('a product opens its PDP by the url_key of its URL', (
       tester,
     ) async {
       await _phone(tester);
-      await tester.pumpWidget(_harness(catalog: _SearchCatalog()));
+      await tester.pumpWidget(_harness(algolia: _algolia()));
       await tester.pumpAndSettle();
       await _type(tester, 'sofa');
 
-      final line = find.textContaining('See products in');
-      await tester.tapOnText(
-        find.textRange.ofSubstring('Home Furniture', descendentOf: line),
-      );
+      await tester.tap(find.text('Burgundy Rocking Chair'));
       await tester.pumpAndSettle();
-      expect(find.text('PLP $_homeFurnitureUid'), findsOneWidget);
+      expect(find.text('PDP chairs126'), findsOneWidget);
+    });
+
+    testWidgets('a category chip opens its listing by the id\'s uid', (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(_harness(algolia: _algolia()));
+      await tester.pumpAndSettle();
+      await _type(tester, 'sofa');
+
+      await tester.tap(_chip('Living Room Sets'));
+      await tester.pumpAndSettle();
+      expect(find.text('PLP $kLivingRoomUid'), findsOneWidget);
 
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await tester.tapOnText(find.textRange.ofSubstring('All departments (3)'));
-      await tester.pumpAndSettle();
-      expect(find.text('Products (3)'), findsOneWidget);
-    });
-
-    testWidgets('a category chip opens that category\'s listing', (
-      tester,
-    ) async {
-      await _phone(tester);
-      await tester.pumpWidget(_harness(catalog: _SearchCatalog()));
-      await tester.pumpAndSettle();
-      await _type(tester, 'sofa');
-
-      await tester.tap(
-        find.descendant(
-          of: find.byType(SearchOutlinedChip),
-          matching: find.text('Home Furniture'),
-        ),
+      final line = find.textContaining('See products in');
+      await tester.tapOnText(
+        find.textRange.ofSubstring('Furniture', descendentOf: line),
       );
       await tester.pumpAndSettle();
-
-      expect(find.text('PLP $_homeFurnitureUid'), findsOneWidget);
+      expect(find.text('PLP $kFurnitureUid'), findsOneWidget);
     });
 
-    testWidgets('the scope chip narrows the search to one top-level category', (
+    testWidgets('a page chip opens the native CMS page by its path', (
       tester,
     ) async {
       await _phone(tester);
-      final catalog = _SearchCatalog();
-      await tester.pumpWidget(_harness(catalog: catalog));
+      await tester.pumpWidget(_harness(algolia: _algolia()));
       await tester.pumpAndSettle();
       await _type(tester, 'sofa');
-      expect(catalog.calls.last, (search: 'sofa', categoryUid: null));
+
+      await tester.tap(_chip('Shipping & delivery'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('CMS shipping-delivery · Shipping & delivery'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the scope chip narrows the products to one category', (
+      tester,
+    ) async {
+      await _phone(tester);
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia));
+      await tester.pumpAndSettle();
+      await _type(tester, 'sofa');
+      expect(algolia.lastCall.first.json('facetFilters'), isNull);
 
       await tester.tap(find.text('All categories'));
       await tester.pumpAndSettle();
@@ -464,44 +540,24 @@ void main() {
         find.descendant(of: sheet, matching: find.text('Search in')),
         findsOneWidget,
       );
-      expect(
-        find.descendant(of: sheet, matching: find.text('Fashion')),
-        findsOneWidget,
-      );
       // Only top-level categories that hold products are offered.
       expect(find.text('Promotions'), findsNothing);
-      expect(
-        find.descendant(of: sheet, matching: find.text('Living Room Sets')),
-        findsNothing,
-      );
       await tester.tap(
         find.descendant(of: sheet, matching: find.text('Furniture')),
       );
       await tester.pumpAndSettle();
 
-      expect(catalog.calls.last, (search: 'sofa', categoryUid: _furnitureUid));
-      // The chip and the first link name the scope, which the category chips
-      // then leave out.
-      expect(find.text('All categories'), findsNothing);
+      expect(algolia.lastCall.first.json('facetFilters'), ['categoryIds:74']);
       expect(
-        find.textContaining('See products in Furniture (3)'),
+        find.textContaining('See products in Furniture (12)'),
         findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(SearchOutlinedChip),
-          matching: find.text('Furniture'),
-        ),
-        findsNothing,
       );
     });
 
-    testWidgets('no results shows S2 (Popular right now is Build 2)', (
-      tester,
-    ) async {
+    testWidgets('nothing matches: the S2 page', (tester) async {
       await _phone(tester);
       await tester.pumpWidget(
-        _harness(catalog: _SearchCatalog(products: const <Product>[])),
+        _harness(algolia: _algolia(products: false, suggestions: false)),
       );
       await tester.pumpAndSettle();
       await _type(tester, 'sofa bed velvet green');
@@ -515,37 +571,55 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Popular right now'), findsNothing);
-      expect(find.text('View all 0 results'), findsNothing);
+      expect(find.textContaining('View all'), findsNothing);
     });
 
-    testWidgets('Arabic is right-to-left with the AR frame\'s copy', (
+    testWidgets('no product, but pages match: S2 keeps the pages', (
       tester,
     ) async {
       await _phone(tester);
-      await tester.pumpWidget(
-        _harness(catalog: _SearchCatalog(), locale: 'ar'),
+      await tester.pumpWidget(_harness(algolia: _algolia(products: false)));
+      await tester.pumpAndSettle();
+      await _type(tester, 'shipping');
+
+      expect(
+        find.text('No results for “${_typed('shipping')}”'),
+        findsOneWidget,
       );
+      expect(_chip('Shipping & delivery'), findsOneWidget);
+      expect(find.textContaining('View all'), findsNothing);
+    });
+
+    testWidgets('Arabic searches the AR indices, right to left', (
+      tester,
+    ) async {
+      await _phone(tester);
+      final algolia = _algolia(store: 'ar');
+      await tester.pumpWidget(_harness(algolia: algolia, locale: 'ar'));
       await tester.pumpAndSettle();
 
       expect(find.text('الأكثر بحثًا'), findsOneWidget);
-      expect(find.text('إلغاء'), findsOneWidget);
-      final direction = Directionality.of(
-        tester.element(find.text('الأكثر بحثًا')),
+      expect(
+        Directionality.of(tester.element(find.text('الأكثر بحثًا'))),
+        TextDirection.rtl,
       );
-      expect(direction, TextDirection.rtl);
 
-      await _type(tester, 'sofa');
+      await _type(tester, 'كنبة');
+      expect(algolia.pageRequests.single.url.path, '/ar/');
+      expect(algolia.lastCall.map((q) => q.indexName), [
+        'hubmarket_ar_products',
+        'hubmarket_ar_categories',
+        'hubmarket_ar_pages',
+      ]);
       expect(find.text('كل الأقسام'), findsOneWidget);
       expect(find.text('المنتجات'), findsOneWidget);
-      // Category names come from the store view's data.
-      expect(find.text('في Home Furniture'), findsNWidgets(2));
-      expect(
-        find.text(
-          'اعرض المنتجات في كل الأقسام (3) أو في Furniture، Home Furniture',
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('عرض كل النتائج (3)'), findsOneWidget);
+      expect(find.text('في أطقم غرف المعيشة'), findsNWidgets(2));
+      expect(find.text('الصفحات'), findsOneWidget);
+      expect(_chip('سياسة الإرجاع'), findsOneWidget);
+      expect(find.text('عرض كل النتائج (12)'), findsOneWidget);
+      final spans = _spansOf(tester, 'كنبة سرير ركنه');
+      expect(spans.first.text, 'كنبة');
+      expect(spans.first.style?.fontWeight, FontWeight.w700);
       // The attribution stays an English, left-to-right lockup.
       final lockup = find.descendant(
         of: find.byType(SearchByAlgolia),
@@ -555,59 +629,201 @@ void main() {
     });
   });
 
-  group('results (Figma 09c)', () {
-    testWidgets('Products and Categories tabs; a category row opens its PLP', (
+  group('type-ahead fallback (Algolia unavailable)', () {
+    testWidgets('GraphQL answers; no pages, no attribution', (tester) async {
+      await _phone(tester);
+      final catalog = _SearchCatalog();
+      await tester.pumpWidget(_harness(catalog: catalog));
+      await tester.pumpAndSettle();
+      await _type(tester, 'sofa');
+
+      expect(catalog.calls.last, (search: 'sofa', categoryUid: null));
+      expect(find.byType(SearchHighlightedText), findsNWidgets(3));
+      expect(_spansOf(tester, 'Corner Sofa Bed').map((s) => s.text), [
+        'Corner ',
+        'Sofa',
+        ' Bed',
+      ]);
+      expect(find.text('in Living Room Sets'), findsOneWidget);
+      expect(find.text('in Home Furniture'), findsNWidgets(2));
+      // The result's categories as chips, as before Algolia.
+      expect(_chip('Furniture'), findsOneWidget);
+      expect(_chip('Home Furniture'), findsOneWidget);
+      expect(find.text('Pages'), findsNothing);
+      expect(find.text('View all 3 results'), findsOneWidget);
+      expect(find.byType(SearchByAlgolia), findsNothing);
+
+      await tester.tap(find.text('View all 3 results'));
+      await tester.pumpAndSettle();
+      expect(find.text('Products (3)'), findsOneWidget);
+      expect(find.text('Categories (3)'), findsOneWidget);
+    });
+
+    testWidgets('a refused key also falls back', (tester) async {
+      await _phone(tester);
+      final algolia = FakeAlgoliaBackend(algoliaStatus: 403);
+      await tester.pumpWidget(_harness(algolia: algolia));
+      await tester.pumpAndSettle();
+      await _type(tester, 'sofa');
+
+      // Algolia refused twice (the second time with a fresh key).
+      expect(algolia.algoliaRequests, hasLength(2));
+      expect(find.text('View all 3 results'), findsOneWidget);
+      expect(find.byType(SearchByAlgolia), findsNothing);
+    });
+  });
+
+  group('results (Figma 09c) on Algolia', () {
+    testWidgets('tabs, count, Relevance; Categories tab opens a listing', (
       tester,
     ) async {
       await _phone(tester);
       await tester.pumpWidget(
-        _harness(catalog: _SearchCatalog(), initialQuery: 'sofa'),
+        _harness(algolia: _algolia(), initialQuery: 'sofa'),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Products (3)'), findsOneWidget);
+      expect(find.text('Products (12)'), findsOneWidget);
       expect(find.text('Categories (3)'), findsOneWidget);
-      expect(find.text('3 results for “${_typed('sofa')}”'), findsOneWidget);
+      expect(find.text('12 results for “${_typed('sofa')}”'), findsOneWidget);
       expect(find.text('Relevance'), findsOneWidget);
       expect(find.text('Filter'), findsOneWidget);
       expect(find.text('Corner Sofa Bed'), findsOneWidget);
-      // The results page has a back arrow and no Cancel.
+      // AED 425 of 500, 255 of 300, 34 of 40.
+      expect(find.text('-15%'), findsNWidgets(3));
       expect(find.text('Cancel'), findsNothing);
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
       await tester.tap(find.text('Categories (3)'));
       await tester.pumpAndSettle();
-
       expect(find.text('Furniture'), findsOneWidget);
-      expect(find.text('3 matching products'), findsOneWidget);
-      expect(find.text('Home Furniture'), findsOneWidget);
-      expect(find.text('2 matching products'), findsOneWidget);
-      expect(find.text('1 matching product'), findsOneWidget);
-
+      expect(find.text('12 matching products'), findsOneWidget);
+      expect(find.text('5 matching products'), findsOneWidget);
       await tester.tap(find.text('Living Room Sets'));
       await tester.pumpAndSettle();
-      expect(find.text('PLP $_livingRoomUid'), findsOneWidget);
+      expect(find.text('PLP $kLivingRoomUid'), findsOneWidget);
     });
 
-    testWidgets('sort and filter open the shared sheets', (tester) async {
+    testWidgets('Algolia paging: scrolling asks for the next page', (
+      tester,
+    ) async {
       await _phone(tester);
-      await tester.pumpWidget(
-        _harness(catalog: _SearchCatalog(), initialQuery: 'sofa'),
-      );
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia, initialQuery: 'sofa'));
+      await tester.pumpAndSettle();
+      expect(_productSearches(algolia).single.params['page'], '0');
+      expect(_productSearches(algolia).single.params['hitsPerPage'], '20');
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));
+      await tester.pumpAndSettle();
+
+      expect(_productSearches(algolia).last.params['page'], '1');
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));
+      await tester.pumpAndSettle();
+      expect(find.text('Velvet Sofa'), findsOneWidget);
+      // The last page: no more requests.
+      final asked = _productSearches(algolia).length;
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -900));
+      await tester.pumpAndSettle();
+      expect(_productSearches(algolia), hasLength(asked));
+    });
+
+    testWidgets('sorts are the configured replicas, Relevance first', (
+      tester,
+    ) async {
+      await _phone(tester);
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia, initialQuery: 'sofa'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Relevance'));
       await tester.pumpAndSettle();
       expect(find.text('Price: Low to High'), findsOneWidget);
-      await tester.tap(find.text('Price: Low to High'));
+      expect(find.text('Price: High to Low'), findsOneWidget);
+      expect(find.text('Newest First'), findsOneWidget);
+      // No replica sorts by name, so neither does the app on Algolia.
+      expect(find.text('Name: A–Z'), findsNothing);
+
+      await tester.tap(find.text('Newest First'));
       await tester.pumpAndSettle();
-      // The action names the active sort.
-      expect(find.text('Price: Low to High'), findsOneWidget);
+      expect(
+        _productSearches(algolia).last.indexName,
+        'hubmarket_en_products_created_at_desc',
+      );
+      expect(find.text('Newest First'), findsOneWidget);
       expect(find.text('Relevance'), findsNothing);
+    });
+
+    testWidgets('filters are the index\'s facets, with its labels', (
+      tester,
+    ) async {
+      await _phone(tester);
+      final algolia = _algolia();
+      await tester.pumpWidget(_harness(algolia: algolia, initialQuery: 'sofa'));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Filter'));
       await tester.pumpAndSettle();
-      expect(find.text('Apply Filters'), findsOneWidget);
+      expect(find.text('Price Range'), findsOneWidget);
+      expect(find.text('Categories'), findsWidgets);
+      expect(find.text('Brand'), findsOneWidget);
+      expect(find.text('Seller'), findsOneWidget);
+      // rating_summary is a facet, so "N★ & above" is offered.
+      expect(find.text('Rating'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Grey'),
+        100,
+        scrollable: find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(find.text('Grey'));
+      await tester.pump();
+      await tester.tap(find.text('Apply Filters'));
+      await tester.pumpAndSettle();
+
+      final main = _productSearches(algolia).last;
+      expect(main.json('facetFilters'), [
+        ['color:Grey'],
+      ]);
+      // The color facet is counted without its own filter too.
+      final counts = algolia.lastCall.where(
+        (q) => q.params['hitsPerPage'] == '0',
+      );
+      expect(counts.single.json('facets'), ['color']);
+      expect(find.text('Filter (1)'), findsOneWidget);
+    });
+
+    testWidgets('add to cart: a simple product by SKU, a configurable opens '
+        'its PDP', (tester) async {
+      await _phone(tester);
+      final cart = _Cart();
+      await tester.pumpWidget(
+        _harness(algolia: _algolia(), initialQuery: 'sofa', cart: cart),
+      );
+      await tester.pumpAndSettle();
+
+      Finder plusOf(String name) => find.descendant(
+        of: find.ancestor(
+          of: find.text(name),
+          matching: find.byType(ProductCard),
+        ),
+        matching: find.byTooltip('Add to Cart'),
+      );
+
+      await tester.tap(plusOf('3-Piece Living Room Set'));
+      await tester.pumpAndSettle();
+      expect(cart.added, ['3-piece-set']);
+      expect(find.text('Added to cart'), findsOneWidget);
+
+      await tester.tapAt(const Offset(195, 40));
+      await tester.pumpAndSettle();
+      await tester.tap(plusOf('Corner Sofa Bed'));
+      await tester.pumpAndSettle();
+      expect(find.text('PDP sofabed123'), findsOneWidget);
+      expect(cart.added, ['3-piece-set']);
     });
 
     testWidgets(
@@ -615,20 +831,49 @@ void main() {
       (tester) async {
         await _phone(tester);
         await tester.pumpWidget(
-          _harness(catalog: _SearchCatalog(), initialQuery: 'sofa'),
+          _harness(algolia: _algolia(), initialQuery: 'sofa'),
         );
         await tester.pumpAndSettle();
 
         await tester.tap(find.byType(TextField));
         await tester.pumpAndSettle();
-        expect(find.text('View all 3 results'), findsOneWidget);
+        expect(find.text('View all 12 results'), findsOneWidget);
         expect(find.text('Cancel'), findsOneWidget);
 
         await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
-        expect(find.text('Products (3)'), findsOneWidget);
+        expect(find.text('Products (12)'), findsOneWidget);
       },
     );
+  });
+
+  group('results fallback (Algolia unavailable)', () {
+    testWidgets('GraphQL results with its own sorts and filters', (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(_harness(initialQuery: 'sofa'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Products (3)'), findsOneWidget);
+      expect(find.text('Categories (3)'), findsOneWidget);
+      expect(find.text('3 results for “${_typed('sofa')}”'), findsOneWidget);
+
+      await tester.tap(find.text('Relevance'));
+      await tester.pumpAndSettle();
+      expect(find.text('Price: Low to High'), findsOneWidget);
+      expect(find.text('Name: A–Z'), findsOneWidget);
+      expect(find.text('Newest First'), findsNothing);
+      await tester.tap(find.text('Price: Low to High'));
+      await tester.pumpAndSettle();
+      expect(find.text('Price: Low to High'), findsOneWidget);
+      expect(find.text('Relevance'), findsNothing);
+
+      await tester.tap(find.text('Filter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Apply Filters'), findsOneWidget);
+      expect(find.text('Rating'), findsNothing);
+    });
   });
 
   testWidgets('a brand landing still lists the brand\'s products', (
@@ -662,6 +907,9 @@ void main() {
           secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
           catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
           graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+          algoliaHttpClientProvider.overrideWithValue(
+            FakeAlgoliaBackend(pageStatus: 503).client,
+          ),
         ],
         child: MaterialApp.router(
           routerConfig: router,

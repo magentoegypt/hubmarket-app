@@ -8,12 +8,12 @@ import '../../../../core/store/store_controller.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../l10n/l10n.dart';
-import '../../data/catalog_repository.dart';
+import '../../data/algolia/algolia_search.dart' show kAlgoliaCategoryIds;
+import '../../domain/aggregation.dart';
 import '../../domain/search_facets.dart';
-import '../plp_controller.dart';
+import '../../domain/search_results.dart';
 import '../product_navigation.dart';
 import '../search_controller.dart';
-import '../search_providers.dart';
 import 'filter_sheet.dart';
 import 'product_card.dart';
 import 'product_skeletons.dart';
@@ -23,9 +23,13 @@ import 'search_type_ahead.dart' show openSearchCategory;
 import 'sort_sheet.dart';
 
 /// Full results of a submitted search (Figma 09c): "Products (N)" and
-/// "Categories (M)" tabs. Products carries the result count, the Relevance sort
-/// and Filter sheets and the paged grid; Categories lists the categories the
+/// "Categories (M)" tabs. Products carries the result count, the Sort and
+/// Filter sheets and the paged grid; Categories lists the categories the
 /// results fall into, each opening its listing.
+///
+/// On Algolia the pages are Algolia's, the sorts are the replicas configured
+/// in Magento (relevance first) and the filters are the index's facets with
+/// their store-view labels; on the GraphQL fallback they are GraphQL's.
 ///
 /// The frame's Vendors tab and matching-vendor card need a public vendor API,
 /// which is Build 2, so both are left out. A search that finds nothing at all
@@ -41,8 +45,7 @@ class SearchResultsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(searchControllerProvider(request));
-    final categories = ref.watch(searchResultCategoriesProvider(request));
+    final state = ref.watch(searchResultsProvider(request));
 
     // Emptied by its own filters, a search keeps its tabs so the filters can
     // be changed back; one that found nothing at all gets the S2 page.
@@ -50,7 +53,7 @@ class SearchResultsView extends ConsumerWidget {
         !state.isLoading &&
         state.error == null &&
         state.products.isEmpty &&
-        state.activeFilterCount == 0;
+        state.filters.isEmpty;
     if (foundNothing) return SearchNoResults(query: request.query);
 
     final counted = !state.isLoading || state.products.isNotEmpty;
@@ -65,14 +68,17 @@ class SearchResultsView extends ConsumerWidget {
                 ? l10n.searchTabProducts(state.totalCount)
                 : l10n.searchProductsHeading,
             categories: counted
-                ? l10n.searchTabCategories(categories.length)
+                ? l10n.searchTabCategories(state.categories.length)
                 : l10n.searchCategoriesLabel,
           ),
           Expanded(
             child: TabBarView(
               children: [
                 _ProductsTab(request: request, scopeName: scopeName),
-                _CategoriesTab(query: request.query, categories: categories),
+                _CategoriesTab(
+                  query: request.query,
+                  categories: state.categories,
+                ),
               ],
             ),
           ),
@@ -80,6 +86,20 @@ class SearchResultsView extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The name of a sort in the app's words, or the admin's label for a replica
+/// the app has no wording for.
+String searchSortLabel(AppLocalizations l10n, SearchSortOption option) {
+  final sort = option.sort;
+  if (sort.isRelevance) return l10n.sortRelevance;
+  return switch ((sort.attribute, sort.descending)) {
+    ('price', false) => l10n.sortPriceLowHigh,
+    ('price', true) => l10n.sortPriceHighLow,
+    ('created_at', true) => l10n.sortNewest,
+    ('name', false) => l10n.sortNameAz,
+    _ => option.label.isNotEmpty ? option.label : sort.attribute,
+  };
 }
 
 /// The underlined tab row: orange 3 pt indicator under the active label.
@@ -116,8 +136,8 @@ class _ResultTabs extends StatelessWidget {
   }
 }
 
-/// Products tab: "N results for “q”" with the Relevance sort and Filter
-/// actions, then the product grid, paging on scroll.
+/// Products tab: "N results for “q”" with the Sort and Filter actions, then
+/// the product grid, paging on scroll.
 class _ProductsTab extends ConsumerStatefulWidget {
   const _ProductsTab({required this.request, this.scopeName});
 
@@ -137,7 +157,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
   bool get wantKeepAlive => true;
 
   SearchResultsController get _notifier =>
-      ref.read(searchControllerProvider(widget.request).notifier);
+      ref.read(searchResultsProvider(widget.request).notifier);
 
   @override
   void initState() {
@@ -157,41 +177,74 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
     }
   }
 
-  Future<void> _openFilters(PlpState state) async {
+  /// The facets as the Filter sheet shows them: a section Magento sent
+  /// without a label gets the app's name for it.
+  List<Aggregation> _sheetFacets(
+    AppLocalizations l10n,
+    List<Aggregation> facets,
+  ) => [
+    for (final facet in facets)
+      facet.label.trim().isNotEmpty
+          ? facet
+          : Aggregation(
+              attributeCode: facet.attributeCode,
+              label: switch (facet.attributeCode) {
+                kAlgoliaCategoryIds ||
+                kCategoryAggregationCode => l10n.searchCategoriesLabel,
+                'price' => l10n.filterPriceLabel,
+                _ => facet.attributeCode,
+              },
+              options: facet.options,
+            ),
+  ];
+
+  Future<void> _openFilters(SearchResultsState state) async {
+    final l10n = AppLocalizations.of(context);
     final currency = ref.read(storeControllerProvider).currency;
+    final filters = state.filters;
     final result = await showModalBottomSheet<FilterResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Colors.white,
       builder: (_) => FilterSheet(
-        aggregations: state.aggregations,
-        initial: state.selectedFilters,
+        aggregations: _sheetFacets(l10n, state.facets),
+        initial: filters.attributes,
         currency: currency,
-        initialPriceFrom: state.priceFrom,
-        initialPriceTo: state.priceTo,
-        initialMinDiscount: state.minDiscount,
-        initialMinRating: state.minRating,
+        initialPriceFrom: filters.priceFrom,
+        initialPriceTo: filters.priceTo,
+        initialMinRating: filters.minRating,
+        showDiscount: false,
+        showRating: state.ratingFilter,
       ),
     );
     if (result == null || !mounted) return;
     _notifier.applyFilters(
-      result.attributes,
-      priceFrom: result.priceFrom,
-      priceTo: result.priceTo,
-      minDiscount: result.minDiscount,
-      minRating: result.minRating,
+      SearchFilters(
+        attributes: result.attributes,
+        priceFrom: result.priceFrom,
+        priceTo: result.priceTo,
+        minRating: state.ratingFilter ? result.minRating : null,
+      ),
     );
   }
 
-  Future<void> _openSort(PlpState state) async {
+  Future<void> _openSort(SearchResultsState state) async {
     final l10n = AppLocalizations.of(context);
-    final selected = await showModalBottomSheet<ProductSortField>(
+    final options = state.sorts.isNotEmpty
+        ? state.sorts
+        : const [SearchSortOption(SearchSort.relevance)];
+    final selected = await showModalBottomSheet<SearchSort>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,
-      builder: (_) =>
-          SortSheet(current: state.sort, relevanceLabel: l10n.sortRelevance),
+      builder: (_) => SortChoiceSheet<SearchSort>(
+        current: state.sort,
+        choices: [
+          for (final option in options)
+            (value: option.sort, label: searchSortLabel(l10n, option)),
+        ],
+      ),
     );
     if (selected != null && mounted) _notifier.setSort(selected);
   }
@@ -200,12 +253,13 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
   Widget build(BuildContext context) {
     super.build(context);
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(searchControllerProvider(widget.request));
+    final state = ref.watch(searchResultsProvider(widget.request));
+    final activeFilters = state.filters.count;
     final meta = _MetaRow(
       summary: _summary(l10n, state.totalCount),
-      sortLabel: _sortLabel(l10n, state.sort),
-      filterLabel: state.activeFilterCount > 0
-          ? '${l10n.searchFilterAction} (${state.activeFilterCount})'
+      sortLabel: _sortLabel(l10n, state),
+      filterLabel: activeFilters > 0
+          ? '${l10n.searchFilterAction} ($activeFilters)'
           : l10n.searchFilterAction,
       onSort: () => _openSort(state),
       onFilter: () => _openFilters(state),
@@ -268,6 +322,8 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
               ),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final product = state.products[index];
+                // The card's "+" adds a simple product by SKU; for a
+                // configurable it opens the product page, as a tap does.
                 return ProductCard(
                   product: product,
                   onTap: () => openProduct(context, product),
@@ -292,13 +348,12 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
   }
 
   /// The active sort, named — "Relevance" until the shopper picks another.
-  String _sortLabel(AppLocalizations l10n, ProductSortField sort) =>
-      switch (sort) {
-        ProductSortField.relevance => l10n.sortRelevance,
-        ProductSortField.priceAsc => l10n.sortPriceLowHigh,
-        ProductSortField.priceDesc => l10n.sortPriceHighLow,
-        ProductSortField.nameAsc => l10n.sortNameAz,
-      };
+  String _sortLabel(AppLocalizations l10n, SearchResultsState state) {
+    for (final option in state.sorts) {
+      if (option.sort == state.sort) return searchSortLabel(l10n, option);
+    }
+    return searchSortLabel(l10n, SearchSortOption(state.sort));
+  }
 }
 
 /// "12 results for “sofa”" · ⇅ Relevance · Filter.

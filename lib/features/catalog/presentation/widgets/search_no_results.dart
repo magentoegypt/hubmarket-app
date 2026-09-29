@@ -11,9 +11,10 @@ import 'search_style.dart';
 /// The frame's "Popular right now" rail is Build 2: the store has no
 /// best-seller data to rank "popular" by, and Today's Deals (the other
 /// candidate) waits for the Hub Market App module too. The "Try" suggestions
-/// and "Browse … stores" button are left out as well: Magento's
-/// `products.suggestions` comes back empty behind the Algolia adapter, and
-/// vendor pages need the public vendor API (Build 2).
+/// and "Browse … stores" button are left out as well: the store's Algolia has
+/// no query-suggestions index (autocomplete suggestions are off and
+/// `popularQueries` is empty, checked 29 Sep 2026), and vendor pages need the
+/// public vendor API (Build 2).
 class SearchNoResults extends StatelessWidget {
   const SearchNoResults({super.key, required this.query});
 
