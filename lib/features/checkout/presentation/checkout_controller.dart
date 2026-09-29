@@ -5,6 +5,7 @@ import '../../../core/storage/secure_token_store.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../core/validation/phone.dart';
 import '../../account/data/guest_order_store.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/cart_controller.dart';
 import '../../catalog/domain/money.dart';
 import '../data/checkout_repository.dart';
@@ -24,6 +25,7 @@ class CheckoutState {
     this.selectedPayment,
     this.grandTotal,
     this.submittedPhone = '',
+    this.guestOtpSentTo = '',
     this.guestOtpVerified = false,
     this.isBusy = false,
     this.error,
@@ -59,6 +61,11 @@ class CheckoutState {
   /// sent to …" caption and the verify-card key so they track the *submitted*
   /// number, not the live (possibly-edited) address field.
   final String submittedPhone;
+
+  /// The phone a guest-checkout code was last sent to. The verify card sends
+  /// one on its own only for a number that has had none, so leaving step 1
+  /// and coming back doesn't send another.
+  final String guestOtpSentTo;
 
   /// Guest-checkout OTP has been verified for [submittedPhone]. Gates the
   /// payment step for guests — only when `BackendCapabilities.guestCheckoutOtp`
@@ -97,6 +104,7 @@ class CheckoutState {
     Object? selectedPayment = _keep,
     Object? grandTotal = _keep,
     String? submittedPhone,
+    String? guestOtpSentTo,
     bool? guestOtpVerified,
     bool? isBusy,
     Object? error = _keep,
@@ -121,6 +129,7 @@ class CheckoutState {
         ? this.grandTotal
         : grandTotal as Money?,
     submittedPhone: submittedPhone ?? this.submittedPhone,
+    guestOtpSentTo: guestOtpSentTo ?? this.guestOtpSentTo,
     guestOtpVerified: guestOtpVerified ?? this.guestOtpVerified,
     isBusy: isBusy ?? this.isBusy,
     error: identical(error, _keep) ? this.error : error,
@@ -143,6 +152,15 @@ class CheckoutController extends Notifier<CheckoutState> {
         if (prev != null && prev != next) state = const CheckoutState();
       },
     );
+    // Signing in or out mid-checkout swaps the cart (a guest cart merges into
+    // the customer's), and nothing set on the old one carries over: start over
+    // rather than place an order against a cart with no address or method.
+    ref.listen<bool>(authControllerProvider.select((a) => a.isAuthenticated), (
+      prev,
+      next,
+    ) {
+      if (prev != null && prev != next) state = const CheckoutState();
+    });
     return const CheckoutState();
   }
 
@@ -378,6 +396,7 @@ class CheckoutController extends Notifier<CheckoutState> {
       throw const Failure(FailureKind.unknown);
     }
     await _repo.requestGuestCheckoutOtp(phone, resend: resend);
+    state = state.copyWith(guestOtpSentTo: phone);
   }
 
   /// Checks the guest-checkout [code] for the submitted phone and marks it

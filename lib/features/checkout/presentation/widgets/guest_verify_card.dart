@@ -56,6 +56,15 @@ class _GuestVerifyCardState extends ConsumerState<GuestVerifyCard> {
     if (!mounted) return;
     // Send the code once automatically; a manual Resend re-sends and clears.
     if (initial && _requested) return;
+    // The card is rebuilt whenever the shopper comes back to step 1; a number
+    // already verified, or already sent a code, gets no new one on its own.
+    if (initial) {
+      final state = ref.read(checkoutControllerProvider);
+      if (state.guestOtpVerified || state.guestOtpSentTo == widget.phone) {
+        _requested = true;
+        return;
+      }
+    }
     _requested = true;
     if (!initial) _otp.clear();
     try {
@@ -118,11 +127,13 @@ class _GuestVerifyCardState extends ConsumerState<GuestVerifyCard> {
     children: [
       const Icon(Icons.check_circle, color: AppColors.successStrong, size: 20),
       const SizedBox(width: 10),
-      Text(
-        l10n.authMobileVerified,
-        style: const TextStyle(
-          color: AppColors.successStrong,
-          fontWeight: FontWeight.w700,
+      Expanded(
+        child: Text(
+          l10n.authMobileVerified,
+          style: const TextStyle(
+            color: AppColors.successStrong,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     ],

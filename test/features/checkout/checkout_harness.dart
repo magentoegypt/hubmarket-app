@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
 import 'package:hubmarket_app/core/address/regions.dart';
+import 'package:hubmarket_app/core/config/backend_capabilities.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
@@ -132,6 +133,7 @@ Widget checkoutHarness({
   required FakeCheckoutRepository repository,
   bool signedIn = false,
   bool darkMode = false,
+  BackendCapabilities capabilities = BackendCapabilities.hubMarket,
   GlobalKey? boundary,
 }) {
   final cache = FakeLocalCache()..writeString('guest_cart_id', 'guest-1');
@@ -187,6 +189,7 @@ Widget checkoutHarness({
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       cartRepositoryProvider.overrideWithValue(CheckoutCartRepository()),
       checkoutRepositoryProvider.overrideWithValue(repository),
+      backendCapabilitiesProvider.overrideWithValue(capabilities),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       regionsProvider.overrideWith((ref) async => uaeFallbackRegions),
       postcodeRequiredProvider.overrideWith((ref) async => false),

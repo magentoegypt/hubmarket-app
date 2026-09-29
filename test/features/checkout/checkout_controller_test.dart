@@ -348,6 +348,26 @@ void main() {
       );
     });
 
+    test('signing in mid-checkout starts it over on the customer cart', () async {
+      // The guest cart merges into the customer's, so the address and methods
+      // set on it are gone; keeping them would place an order against a cart
+      // with no shipping address.
+      final container = await _seededContainer(FakeCheckoutRepository());
+      final checkout = container.read(checkoutControllerProvider.notifier);
+      await submit(checkout);
+      checkout.continueToPayment();
+      expect(container.read(checkoutControllerProvider).addressDone, isTrue);
+
+      await container
+          .read(authControllerProvider.notifier)
+          .login('layla@example.com', 'password1');
+
+      final state = container.read(checkoutControllerProvider);
+      expect(state.step, CheckoutStep.shipping);
+      expect(state.addressDone, isFalse);
+      expect(state.selectedPayment, isNull);
+    });
+
     test('checkGuestEmail flags an email the store knows, only while it is '
         'the one typed', () async {
       final repo = FakeCheckoutRepository()
@@ -403,6 +423,11 @@ void main() {
       await checkout.requestGuestOtp();
       expect(repo.guestOtpPhone, '+971500000000');
       expect(repo.guestOtpResend, isFalse);
+      // Remembered, so the verify card sends no second code on its own.
+      expect(
+        container.read(checkoutControllerProvider).guestOtpSentTo,
+        '+971500000000',
+      );
 
       await checkout.requestGuestOtp(resend: true);
       expect(repo.guestOtpResend, isTrue);

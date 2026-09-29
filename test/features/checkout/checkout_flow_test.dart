@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/config/backend_capabilities.dart';
 import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
 import 'package:hubmarket_app/features/checkout/presentation/screens/order_success_screen.dart';
 import 'package:hubmarket_app/features/checkout/presentation/widgets/checkout_parts.dart';
+import 'package:hubmarket_app/features/checkout/presentation/widgets/guest_verify_card.dart';
 
 import '../../support/fakes.dart';
 import 'checkout_harness.dart';
@@ -14,12 +16,18 @@ void main() {
     WidgetTester tester,
     FakeCheckoutRepository repo, {
     bool signedIn = false,
+    BackendCapabilities capabilities = BackendCapabilities.hubMarket,
   }) async {
     tester.view.physicalSize = const Size(390, 1300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      checkoutHarness(locale: 'en', repository: repo, signedIn: signedIn),
+      checkoutHarness(
+        locale: 'en',
+        repository: repo,
+        signedIn: signedIn,
+        capabilities: capabilities,
+      ),
     );
     await tester.pumpAndSettle();
   }
@@ -150,6 +158,46 @@ void main() {
       ),
     );
     expect(button.onPressed, isNull);
+  });
+
+  testWidgets('with guest OTP on, the code is sent once per number and gates '
+      'payment until verified', (tester) async {
+    final repo = checkoutRepository();
+    await mount(
+      tester,
+      repo,
+      capabilities: const BackendCapabilities(guestCheckoutOtp: true),
+    );
+    await throughAddress(tester);
+    int sent() =>
+        repo.calls.where((c) => c == 'requestGuestCheckoutOtp').length;
+
+    expect(sent(), 1);
+    FilledButton continueButton() => tester.widget<FilledButton>(
+      find.ancestor(
+        of: find.text('Continue to payment'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(continueButton().onPressed, isNull);
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(GuestVerifyCard),
+        matching: find.byType(TextField),
+      ),
+      '123456',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Mobile number verified'), findsOneWidget);
+    expect(continueButton().onPressed, isNotNull);
+
+    // Payment and back rebuild the card; it must not send another code.
+    await tapText(tester, 'Continue to payment');
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('Mobile number verified'), findsOneWidget);
+    expect(sent(), 1);
   });
 
   testWidgets('"Change" reopens the address, and back returns to Ship to', (
