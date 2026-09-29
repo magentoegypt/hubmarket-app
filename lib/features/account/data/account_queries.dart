@@ -10,7 +10,10 @@ abstract final class AccountQueries {
   /// spliced version hid a field the backend does not have.
   static const String _orderFields = r'''
 fragment OrderFields on CustomerOrder {
+  id
   number
+  token
+  available_actions
   order_date
   status
   shipping_method
@@ -93,6 +96,31 @@ query GuestOrder($number: String!, $email: String!, $lastname: String!) {
   }
 }''');
 
+  /// Core order cancellation (Magento_OrderCancellationGraphQl). `order_id`
+  /// is `CustomerOrder.id`; `reason` must be one of storeConfig
+  /// `order_cancellation_reasons`. Refusals come back in `errorV2`, not as
+  /// GraphQL errors.
+  static final String cancelOrder = _withOrderFields(r'''
+mutation CancelOrder($orderId: ID!, $reason: String!) {
+  cancelOrder(input: { order_id: $orderId, reason: $reason }) {
+    error
+    errorV2 { code message }
+    order { ...OrderFields }
+  }
+}''');
+
+  /// A guest's cancellation request: Magento e-mails the billing address a
+  /// link that confirms it (`confirmCancelOrder`); nothing is cancelled yet.
+  /// `token` is the order's `CustomerOrder.token`.
+  static const String requestGuestOrderCancel = r'''
+mutation RequestGuestOrderCancel($token: String!, $reason: String!) {
+  requestGuestOrderCancel(input: { token: $token, reason: $reason }) {
+    error
+    errorV2 { code message }
+  }
+}
+''';
+
   static const String addresses = r'''
 query CustomerAddresses {
   customer {
@@ -169,6 +197,29 @@ mutation UpdateProfile($input: CustomerUpdateInput!) {
   updateCustomerV2(input: $input) {
     customer { firstname lastname email }
   }
+}
+''';
+
+  /// The newsletter opt-in on the customer account (Customers › Newsletter).
+  static const String newsletterStatus = r'''
+query CustomerNewsletter {
+  customer { is_subscribed }
+}
+''';
+
+  static const String setNewsletter = r'''
+mutation SetNewsletter($subscribed: Boolean!) {
+  updateCustomerV2(input: { is_subscribed: $subscribed }) {
+    customer { is_subscribed }
+  }
+}
+''';
+
+  /// The store's contact form (core `contactUs`): Magento e-mails the message
+  /// to the store's contact address. Gated by storeConfig `contact_enabled`.
+  static const String contactUs = r'''
+mutation ContactUs($input: ContactUsInput!) {
+  contactUs(input: $input) { status }
 }
 ''';
 
