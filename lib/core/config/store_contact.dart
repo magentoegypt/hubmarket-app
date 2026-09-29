@@ -3,28 +3,34 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../graphql/graphql_client.dart';
 import '../store/store_controller.dart';
+import 'app_config.dart';
 
 /// Store contact details + social links — a single source of truth consumed by
 /// the About screen, Help & FAQ, and the marketing footer.
 ///
-/// Sourced from **admin config**: `MagentoEgypt_Beauty` exposes the whole
-/// `magentoegypt_beauty/*` section on `StoreConfig` as a generic
-/// `magentoegypt_beauty_config { path value }` list (store-scoped, so the
-/// Arabic store returns Arabic footer text). The relevant paths are
-/// `footer/business_{name,address,phone,email,hours}`, `footer/{facebook,
-/// instagram,tiktok,pinterest,youtube,twitter}_url`, and `whatsapp/phone`.
-/// Falls back to the live store's verified values while loading or if the
-/// backend doesn't return them.
+/// Every channel is optional. A null field means the backend doesn't publish
+/// it, and the screens leave that button or row out instead of showing a
+/// placeholder — or another store's details. What Hub Market publishes today:
+///
+/// * **WhatsApp** — the `wa.me` link in the `hm_footer_customer` CMS block (the
+///   website footer's "Customer" column), read through core `cmsBlocks`. CMS
+///   blocks are store-scoped, so each language reads its own block.
+/// * **website** — the storefront origin (the GraphQL endpoint's host).
+///
+/// Nothing else. Core `StoreConfig` has no business name / address / phone /
+/// e-mail / social fields; the app's first client served all of them from a
+/// custom `magentoegypt_beauty_config` field that this backend doesn't have.
+/// Wire a channel in here once the backend exposes it.
 class StoreContact {
   const StoreContact({
-    required this.company,
-    required this.address,
-    required this.phone,
-    required this.phoneDisplay,
-    required this.email,
-    required this.hours,
-    required this.whatsapp,
     required this.website,
+    this.company,
+    this.address,
+    this.phone,
+    this.phoneDisplay,
+    this.email,
+    this.hours = '',
+    this.whatsapp,
     this.facebook,
     this.instagram,
     this.tiktok,
@@ -33,21 +39,21 @@ class StoreContact {
     this.twitter,
   });
 
-  final String company;
-  final String address;
+  final String? company;
+  final String? address;
 
   /// E.164 number for `tel:` links.
-  final String phone;
+  final String? phone;
 
   /// Human-formatted number for display.
-  final String phoneDisplay;
-  final String email;
+  final String? phoneDisplay;
+  final String? email;
 
   /// Business hours (admin text), empty when unset.
   final String hours;
 
   /// Full `https://wa.me/...` URL.
-  final String whatsapp;
+  final String? whatsapp;
   final String website;
 
   /// Social profile URLs — null when the store has no presence there.
@@ -70,89 +76,71 @@ class StoreContact {
   ];
 }
 
-/// Verified live values, used until the admin config loads / if it's absent.
-const StoreContact _fallback = StoreContact(
-  company: 'Hub Market Perfume & Cosmetics Trading LLC',
-  address:
-      'HHHR Tower, Sheikh Zayed Road, Trade Center First, Dubai, United Arab Emirates',
-  phone: '+971505104167',
-  phoneDisplay: '+971 50 510 4167',
-  email: 'info@hub-market.magento2.click',
-  hours: '',
-  whatsapp: 'https://wa.me/971505104167',
-  website: 'https://hub-market.magento2.click',
-  facebook: 'https://www.facebook.com/share/1UYpE6ebzx/?mibextid=wwXIfr',
-  instagram: 'https://www.instagram.com/zoon.ze/',
-);
+/// The CMS block carrying the store's WhatsApp support link.
+const String supportCmsBlockId = 'hm_footer_customer';
 
-const String _query = r'''
-query StoreContactConfig {
-  storeConfig {
-    magentoegypt_beauty_config { path value }
+const String _supportBlockQuery = r'''
+query StoreSupportBlock($identifiers: [String]) {
+  cmsBlocks(identifiers: $identifiers) {
+    items { identifier content }
   }
 }
 ''';
 
-/// The admin `magentoegypt_beauty/*` section as a `path -> value` map. Isolated
-/// so an unknown field can't break the rest of the app; refetches on store /
-/// language switch. Empty on error/absence (fallback contact applies).
-final beautyConfigProvider = FutureProvider.autoDispose<Map<String, String>>((
+/// HTML of [supportCmsBlockId] for the active store view; null when the block
+/// is missing (Magento answers with an error) or the request fails. Refetches
+/// on a store / language switch.
+final _supportBlockHtmlProvider = FutureProvider.autoDispose<String?>((
   ref,
 ) async {
   ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
   final client = ref.watch(graphqlClientProvider);
   try {
     final result = await client.query(
-      QueryOptions(document: gql(_query), fetchPolicy: FetchPolicy.networkOnly),
+      QueryOptions(
+        document: gql(_supportBlockQuery),
+        variables: const {
+          'identifiers': [supportCmsBlockId],
+        },
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
     );
-    if (result.hasException) return const {};
-    final list =
-        (result.data?['storeConfig']
-                as Map<String, dynamic>?)?['magentoegypt_beauty_config']
+    if (result.hasException) return null;
+    final items =
+        (result.data?['cmsBlocks'] as Map<String, dynamic>?)?['items']
             as List<dynamic>?;
-    if (list == null) return const {};
-    final map = <String, String>{};
-    for (final e in list) {
-      if (e is Map<String, dynamic>) {
-        final p = e['path'] as String?;
-        final v = e['value'] as String?;
-        if (p != null && v != null) map[p] = v;
+    for (final item in items ?? const <dynamic>[]) {
+      if (item is Map<String, dynamic> &&
+          item['identifier'] == supportCmsBlockId) {
+        return item['content'] as String?;
       }
     }
-    return map;
+    return null;
   } catch (_) {
-    return const {};
+    return null;
   }
 });
 
-/// Store contact + social links from admin config, with verified fallbacks.
+final RegExp _whatsappLink = RegExp(
+  r'https?://(?:api\.)?(?:wa\.me/|whatsapp\.com/send/?\?phone=)\+?(\d{6,15})',
+  caseSensitive: false,
+);
+
+/// The first WhatsApp chat link in [html], normalised to
+/// `https://wa.me/<digits>`, or null when there is none.
+String? whatsappLinkFromHtml(String? html) {
+  if (html == null || html.isEmpty) return null;
+  final match = _whatsappLink.firstMatch(html);
+  return match == null ? null : 'https://wa.me/${match.group(1)}';
+}
+
+/// The store's published contact channels (see [StoreContact]). Until the CMS
+/// block loads — or when it has no link — WhatsApp is null too, so the screens
+/// simply show fewer channels.
 final storeContactProvider = Provider.autoDispose<StoreContact>((ref) {
-  final cfg = ref.watch(beautyConfigProvider).valueOrNull;
-  // Not loaded yet / failed → the known values (so screens never look empty).
-  if (cfg == null || cfg.isEmpty) return _fallback;
-
-  String? v(String path) {
-    final s = cfg[path]?.trim();
-    // Treat blank / nbsp placeholder as unset.
-    return (s == null || s.isEmpty || s == ' ') ? null : s;
-  }
-
-  final waPhone = v('whatsapp/phone');
+  final html = ref.watch(_supportBlockHtmlProvider).valueOrNull;
   return StoreContact(
-    company: v('footer/business_name') ?? _fallback.company,
-    address: v('footer/business_address') ?? _fallback.address,
-    phoneDisplay: v('footer/business_phone') ?? _fallback.phoneDisplay,
-    phone: waPhone != null ? '+$waPhone' : _fallback.phone,
-    email: v('footer/business_email') ?? _fallback.email,
-    hours: v('footer/business_hours') ?? '',
-    whatsapp: waPhone != null ? 'https://wa.me/$waPhone' : _fallback.whatsapp,
-    website: _fallback.website,
-    // Socials come straight from config once loaded (null = admin left blank).
-    facebook: v('footer/facebook_url'),
-    instagram: v('footer/instagram_url'),
-    tiktok: v('footer/tiktok_url'),
-    pinterest: v('footer/pinterest_url'),
-    youtube: v('footer/youtube_url'),
-    twitter: v('footer/twitter_url'),
+    website: Uri.parse(ref.watch(appConfigProvider).graphqlEndpoint).origin,
+    whatsapp: whatsappLinkFromHtml(html),
   );
 });

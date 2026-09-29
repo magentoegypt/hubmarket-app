@@ -166,10 +166,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     final cart = state.cart;
     final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
-    // Free-shipping threshold comes from Magento's Free Shipping "Minimum Order
-    // Amount" (storeConfig.free_shipping_subtotal) — never hardcoded. Null while
-    // loading or when unconfigured, in which case the promo/summary hide the
-    // free-shipping story and the delivery line falls back to "at checkout".
+    // Free-shipping threshold comes from the backend (Magento's Free Shipping
+    // "Minimum Order Amount") — never hardcoded. Null while loading or when the
+    // store doesn't publish one (Hub Market doesn't yet), in which case the
+    // banner/summary hide the free-shipping story and the delivery line falls
+    // back to "at checkout".
     final freeShipThreshold = ref
         .watch(freeShippingThresholdProvider)
         .valueOrNull;

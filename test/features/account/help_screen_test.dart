@@ -23,7 +23,18 @@ const _testContact = StoreContact(
   website: 'https://hub-market.magento2.click',
 );
 
-Future<void> _pump(WidgetTester tester, {String locale = 'en'}) async {
+/// What Hub Market publishes today: a WhatsApp link (from the footer CMS block)
+/// and nothing else.
+const _whatsappOnly = StoreContact(
+  website: 'https://hub-market.magento2.click',
+  whatsapp: 'https://wa.me/971500000000',
+);
+
+Future<void> _pump(
+  WidgetTester tester, {
+  String locale = 'en',
+  StoreContact contact = _testContact,
+}) async {
   await tester.binding.setSurfaceSize(const Size(450, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -41,7 +52,7 @@ Future<void> _pump(WidgetTester tester, {String locale = 'en'}) async {
         localCacheProvider.overrideWithValue(FakeLocalCache()),
         localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
         secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
-        storeContactProvider.overrideWithValue(_testContact),
+        storeContactProvider.overrideWithValue(contact),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -81,6 +92,14 @@ void main() {
     await tester.tap(find.text('How fast is Hub Market delivery?'));
     await tester.pumpAndSettle();
     expect(find.textContaining('within 3 hours'), findsOneWidget);
+  });
+
+  testWidgets('offers only the channels the store publishes', (tester) async {
+    await _pump(tester, contact: _whatsappOnly);
+
+    expect(find.text('Live Chat'), findsOneWidget);
+    expect(find.text('Call Us'), findsNothing);
+    expect(find.text('Email'), findsNothing);
   });
 
   testWidgets('renders translated + RTL in Arabic', (tester) async {
