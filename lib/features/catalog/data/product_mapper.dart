@@ -41,7 +41,34 @@ Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
     ),
     inStock: (json['stock_status'] as String?) != 'OUT_OF_STOCK',
     badge: badgeFromJson(json, now: now),
+    categories: productCategoriesFromJson(json['categories']),
   );
+}
+
+/// `items.categories` of the search query → [ProductCategoryRef]s. Entries with
+/// no uid or name are dropped. `include_in_menu` is an Int (0/1) on the wire,
+/// like the category tree's, and an absent flag counts as shown.
+List<ProductCategoryRef> productCategoriesFromJson(Object? json) {
+  if (json is! List) return const <ProductCategoryRef>[];
+  final refs = <ProductCategoryRef>[];
+  for (final item in json.whereType<Map<String, dynamic>>()) {
+    final uid = (item['uid'] as String?) ?? '';
+    final name = ((item['name'] as String?) ?? '').trim();
+    if (uid.isEmpty || name.isEmpty) continue;
+    refs.add(
+      ProductCategoryRef(
+        uid: uid,
+        name: name,
+        level: (item['level'] as num?)?.toInt() ?? 0,
+        inMenu: switch (item['include_in_menu']) {
+          final bool flag => flag,
+          final num flag => flag != 0,
+          _ => true,
+        },
+      ),
+    );
+  }
+  return List.unmodifiable(refs);
 }
 
 /// The merchandising badge the catalogue can actually back.

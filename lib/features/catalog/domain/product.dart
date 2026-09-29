@@ -8,6 +8,27 @@ import 'money.dart';
 /// has no bestseller attribute to back it (see `badgeFromJson`).
 enum ProductBadge { none, isNew, bestseller }
 
+/// A category a product is filed under (`items.categories`). Only the search
+/// query asks for these — every other listing leaves [Product.categories]
+/// empty.
+class ProductCategoryRef {
+  const ProductCategoryRef({
+    required this.uid,
+    required this.name,
+    this.level = 0,
+    this.inMenu = true,
+  });
+
+  final String uid;
+  final String name;
+
+  /// Depth as Magento counts it: 1 is the store root, 2 a top-level category.
+  final int level;
+
+  /// The category's own `include_in_menu` flag.
+  final bool inMenu;
+}
+
 /// A catalogue product as needed for listing (home / PLP / search) and the PDP
 /// summary. Richer PDP data (gallery, configurable options, variants) is added
 /// in the PDP slice.
@@ -23,6 +44,7 @@ class Product {
     this.finalPrice,
     this.inStock = true,
     this.badge = ProductBadge.none,
+    this.categories = const <ProductCategoryRef>[],
   });
 
   final String sku;
@@ -47,6 +69,24 @@ class Product {
 
   final bool inStock;
   final ProductBadge badge;
+
+  /// The categories the product is filed under — search results only.
+  final List<ProductCategoryRef> categories;
+
+  /// The category a search hit names in its "in Home Furniture" line: the
+  /// deepest one shown in the menu, else the deepest of any. Null without
+  /// categories.
+  ProductCategoryRef? get primaryCategory {
+    ProductCategoryRef? best;
+    for (final category in categories) {
+      if (best == null ||
+          (category.inMenu && !best.inMenu) ||
+          (category.inMenu == best.inMenu && category.level > best.level)) {
+        best = category;
+      }
+    }
+    return best;
+  }
 
   /// The best URL for a small surface (cart line, order row, search row):
   /// the thumbnail derivative when one exists, otherwise the main image.

@@ -3,7 +3,8 @@
 ///
 /// The browse ops also live as standalone codegen sources in
 /// `lib/features/catalog/data/graphql/` (`category_tree`, `products`,
-/// `product_detail` — keep them identical to the strings below). They are
+/// `search_products`, `product_detail` — keep them identical to the strings
+/// below). They are
 /// checked against Hub Market's introspected `schema.graphql`
 /// (`tool/validate_ops.py`, `dart run build_runner build`); moving the
 /// repository onto the generated types is still to do. See
@@ -127,6 +128,78 @@ query Products(
             currency
           }
         }
+      }
+    }
+    aggregations {
+      attribute_code
+      label
+      options {
+        label
+        value
+        count
+      }
+    }
+  }
+}
+''';
+
+  /// Product search — [products] plus each hit's `categories`, which the
+  /// type-ahead names ("in Home Furniture") and ranks its category links by.
+  /// Kept separate so the PLP and Home rails don't pay for the category lists
+  /// (a bag on Hub Market sits in eleven).
+  ///
+  /// `products(search:)` is answered by Algolia through the storefront's
+  /// adapter, so the ranking, `total_count` and the `category_uid` aggregation
+  /// match the website's search.
+  static const String searchProducts = r'''
+query SearchProducts(
+  $search: String!
+  $filter: ProductAttributeFilterInput
+  $sort: ProductAttributeSortInput
+  $pageSize: Int!
+  $currentPage: Int!
+) {
+  products(
+    search: $search
+    filter: $filter
+    sort: $sort
+    pageSize: $pageSize
+    currentPage: $currentPage
+  ) {
+    total_count
+    page_info {
+      current_page
+      total_pages
+      page_size
+    }
+    items {
+      sku
+      name
+      url_key
+      stock_status
+      new_from_date
+      new_to_date
+      image {
+        url
+        label
+      }
+      price_range {
+        minimum_price {
+          regular_price {
+            value
+            currency
+          }
+          final_price {
+            value
+            currency
+          }
+        }
+      }
+      categories {
+        uid
+        name
+        level
+        include_in_menu
       }
     }
     aggregations {

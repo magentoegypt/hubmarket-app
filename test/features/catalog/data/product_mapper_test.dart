@@ -341,4 +341,95 @@ void main() {
       expect(detail.discountPercent, 25);
     });
   });
+
+  group('search hit categories (items.categories)', () {
+    // A Hub Market bag as the search query returns it (2026-09-29): the
+    // top-level "Bags" is out of the menu; include_in_menu is an Int.
+    Map<String, dynamic> category(
+      String uid,
+      String name,
+      int level,
+      Object? inMenu,
+    ) => {
+      'uid': uid,
+      'name': name,
+      'level': level,
+      'include_in_menu': inMenu,
+    };
+
+    test('parses uid, name, level and the Int menu flag', () {
+      final product = productFromJson(
+        _json(
+          extra: {
+            'categories': [
+              category('MTI5', 'Bags', 2, 0),
+              category('MTMw', "Women's Bags", 3, 1),
+              category('MTMy', 'Shoulder Bag', 4, 1),
+            ],
+          },
+        ),
+      );
+
+      expect(
+        [for (final c in product.categories) (c.uid, c.name, c.level, c.inMenu)],
+        [
+          ('MTI5', 'Bags', 2, false),
+          ('MTMw', "Women's Bags", 3, true),
+          ('MTMy', 'Shoulder Bag', 4, true),
+        ],
+      );
+      expect(product.primaryCategory?.name, 'Shoulder Bag');
+    });
+
+    test('the "in …" category is the deepest shown in the menu', () {
+      final product = productFromJson(
+        _json(
+          extra: {
+            'categories': [
+              category('NzQ=', 'Furniture', 2, 1),
+              category('Mzk=', 'Clearance', 4, 0),
+              category('NzU=', 'Home Furniture', 3, 1),
+            ],
+          },
+        ),
+      );
+      expect(product.primaryCategory?.name, 'Home Furniture');
+    });
+
+    test('with none in the menu, the deepest of any', () {
+      final product = productFromJson(
+        _json(
+          extra: {
+            'categories': [
+              category('MTY4', 'All', 2, 0),
+              category('MzU=', 'Performance Fabrics', 3, 0),
+            ],
+          },
+        ),
+      );
+      expect(product.primaryCategory?.name, 'Performance Fabrics');
+    });
+
+    test('drops entries with no uid or name; listings carry none', () {
+      final product = productFromJson(
+        _json(
+          extra: {
+            'categories': [
+              {'uid': '', 'name': 'Nameless uid'},
+              {'uid': 'NzQ=', 'name': '  '},
+              null,
+              category('NzU=', 'Home Furniture', 3, null),
+            ],
+          },
+        ),
+      );
+      expect(product.categories.map((c) => c.name), ['Home Furniture']);
+      // An absent flag counts as shown, as in the category tree.
+      expect(product.categories.single.inMenu, isTrue);
+
+      final listing = productFromJson(_json());
+      expect(listing.categories, isEmpty);
+      expect(listing.primaryCategory, isNull);
+    });
+  });
 }
