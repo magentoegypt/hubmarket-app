@@ -11,6 +11,7 @@ import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
 import '../auth_error_text.dart';
+import '../auth_navigation.dart';
 import '../widgets/auth_field.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_widgets.dart';
@@ -101,7 +102,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         mobileNumber: phone,
         subscribeToNewsletter: _newsletter,
       );
-      if (mounted) context.go(AppRoutes.home);
+      if (mounted) completeAuthFlow(context);
     } catch (error) {
       if (!mounted) return;
       final authError = AuthError.from(error);

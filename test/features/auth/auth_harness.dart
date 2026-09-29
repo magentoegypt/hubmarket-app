@@ -22,6 +22,10 @@ import '../../support/fakes.dart';
 /// Route of the stub that hosts the Edit-Profile mobile editor.
 const String editMobileRoute = '/edit-mobile';
 
+/// A screen that opens Sign in the way checkout / account do (`push`) and
+/// records what the push completes with.
+const String callerRoute = '/caller';
+
 /// The auth screens on their real routes (sign in, register, forgot, verify,
 /// reset) over fakes, with stub Home / Edit-Profile hosts — so a test can walk
 /// a whole flow: form → "05 Verify WhatsApp code" → where it lands.
@@ -40,6 +44,9 @@ class AuthHarness {
   final bool signedIn;
   late final GoRouter router;
 
+  /// What Sign in's `push` completed with, on the caller / Welcome stubs.
+  final List<Object?> signInResults = [];
+
   Widget build({
     required String initialLocation,
     Object? initialExtra,
@@ -53,6 +60,23 @@ class AuthHarness {
           path: AppRoutes.home,
           builder: (_, _) => const Scaffold(body: Center(child: Text('HOME'))),
         ),
+        for (final (path, label) in [
+          (callerRoute, 'CALLER'),
+          (AppRoutes.welcome, 'WELCOME'),
+        ])
+          GoRoute(
+            path: path,
+            builder: (context, _) => Scaffold(
+              body: Center(
+                child: TextButton(
+                  onPressed: () => context
+                      .push<Object?>(AppRoutes.signIn)
+                      .then(signInResults.add),
+                  child: Text(label),
+                ),
+              ),
+            ),
+          ),
         GoRoute(
           path: AppRoutes.signIn,
           builder: (_, _) => const SignInScreen(),

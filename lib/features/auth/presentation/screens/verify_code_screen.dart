@@ -11,6 +11,7 @@ import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
 import '../auth_error_text.dart';
+import '../auth_navigation.dart';
 import '../widgets/auth_field.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_scaffold.dart';
@@ -42,7 +43,8 @@ class VerifyCodeFlow {
   });
 
   /// Sign in by code — the WhatsApp REST pair of `MagentoEgypt_SmsExtend`,
-  /// the only route that answers a customer token. Lands on Home.
+  /// the only route that answers a customer token. Then back to whatever
+  /// opened Sign in ([completeAuthFlow]).
   factory VerifyCodeFlow.signIn(AuthController auth, String phone) =>
       VerifyCodeFlow(
         phone: phone,
@@ -50,7 +52,7 @@ class VerifyCodeFlow {
         resend: () => auth.requestLoginOtp(phone),
         verify: (code) async {
           await auth.loginWithOtp(phone, code);
-          return (BuildContext context) => context.go(AppRoutes.home);
+          return completeAuthFlow;
         },
       );
 

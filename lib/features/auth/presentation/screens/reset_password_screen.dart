@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/routes.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
 import '../../domain/password_reset_ticket.dart';
 import '../auth_controller.dart';
 import '../auth_error_text.dart';
+import '../auth_navigation.dart';
 import '../widgets/auth_field.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_scaffold.dart';
@@ -89,7 +88,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             token: _token.text.trim(),
             newPassword: _password.text,
           );
-      if (mounted) context.go(AppRoutes.home);
+      if (mounted) completeAuthFlow(context);
     } catch (error) {
       if (!mounted) return;
       final authError = AuthError.from(error);

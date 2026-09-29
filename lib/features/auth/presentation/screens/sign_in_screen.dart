@@ -10,6 +10,7 @@ import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
 import '../auth_error_text.dart';
+import '../auth_navigation.dart';
 import '../widgets/auth_field.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_method_tabs.dart';
@@ -77,7 +78,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
     try {
       await _auth.login(_email.text.trim(), _password.text);
-      if (mounted) context.go(AppRoutes.home);
+      if (mounted) completeAuthFlow(context);
     } catch (error) {
       if (!mounted) return;
       final authError = AuthError.from(error);
