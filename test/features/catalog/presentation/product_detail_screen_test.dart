@@ -8,13 +8,23 @@ import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
+import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:hubmarket_app/features/checkout/payments/tabby_promo.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/fakes.dart';
 
-Widget _harness(String locale) {
+/// Serves one canned [ProductDetail] instead of the shared sample.
+class _DetailRepository extends FakeCatalogRepository {
+  _DetailRepository(this.detail);
+  final ProductDetail detail;
+
+  @override
+  Future<ProductDetail?> fetchProductDetail(String urlKey) async => detail;
+}
+
+Widget _harness(String locale, {CatalogRepository? repository}) {
   final router = GoRouter(
     initialLocation: '/product/coco-mademoiselle',
     routes: [
@@ -38,7 +48,9 @@ Widget _harness(String locale) {
       localCacheProvider.overrideWithValue(FakeLocalCache()),
       localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
-      catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
+      catalogRepositoryProvider.overrideWithValue(
+        repository ?? FakeCatalogRepository(),
+      ),
       // Keep the PDP test network-free; the Tabby promo is covered separately.
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       tabbyConfigProvider.overrideWith((ref) => null),
@@ -89,5 +101,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No reviews yet'), findsOneWidget);
+  });
+
+  testWidgets('"You may also like" hides when the product links nothing', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 3600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_harness('en'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('You may also like'), findsNothing);
+  });
+
+  testWidgets('"You may also like" lists the linked products', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 3600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _harness(
+        'en',
+        repository: _DetailRepository(
+          ProductDetail(
+            sku: kSampleDetail.sku,
+            name: kSampleDetail.name,
+            urlKey: kSampleDetail.urlKey,
+            regularPrice: kSampleDetail.regularPrice,
+            finalPrice: kSampleDetail.finalPrice,
+            alsoLike: [kSampleProducts[1]],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('You may also like'), findsOneWidget);
+    expect(find.text('Sauvage EDT'), findsOneWidget);
   });
 }

@@ -145,7 +145,9 @@ query Products(
 ''';
 
   /// Single product by url_key for the PDP, including configurable options +
-  /// variants, gallery, description, and review metadata.
+  /// variants, gallery, description, reviews, and the "You may also like"
+  /// candidates (core `related_products` + `upsell_products`; merged,
+  /// de-duplicated and capped app-side by `alsoLikeFromJson`).
   static const String productDetail = r'''
 query ProductDetail($urlKey: String!) {
   products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
@@ -164,26 +166,11 @@ query ProductDetail($urlKey: String!) {
         count
         percent
       }
-      also_like_products(pageSize: 8) {
-        sku
-        name
-        url_key
-        stock_status
-        image {
-          url
-        }
-        price_range {
-          minimum_price {
-            regular_price {
-              value
-              currency
-            }
-            final_price {
-              value
-              currency
-            }
-          }
-        }
+      related_products {
+        ...LinkedProductFields
+      }
+      upsell_products {
+        ...LinkedProductFields
       }
       reviews(pageSize: 20) {
         items {
@@ -271,6 +258,31 @@ query ProductDetail($urlKey: String!) {
             }
           }
         }
+      }
+    }
+  }
+}
+
+# "You may also like" card: the same small field set as a listing card.
+fragment LinkedProductFields on ProductInterface {
+  sku
+  name
+  url_key
+  stock_status
+  new_from_date
+  new_to_date
+  image {
+    url
+  }
+  price_range {
+    minimum_price {
+      regular_price {
+        value
+        currency
+      }
+      final_price {
+        value
+        currency
       }
     }
   }

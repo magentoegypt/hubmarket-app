@@ -227,9 +227,9 @@ class _Content extends StatelessWidget {
   }
 }
 
-/// "You may also like" horizontal rail (Figma), driven by Magento
-/// `also_like_products`. Hidden entirely when the field is empty (no
-/// fabricated recommendations).
+/// "You may also like" horizontal rail (Figma), driven by the product's core
+/// Magento related + upsell links ([ProductDetail.alsoLike]). Hidden entirely
+/// when the product links nothing (no fabricated recommendations).
 class _RelatedProducts extends StatefulWidget {
   const _RelatedProducts({required this.products});
   final List<Product> products;

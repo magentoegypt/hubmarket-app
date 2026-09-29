@@ -170,8 +170,9 @@ class ProductDetail {
   /// computed server-side; empty when the store has no reviews.
   final List<RatingBar> ratingHistogram;
 
-  /// "You may also like" — Magento `also_like_products` (related links, with a
-  /// same-category newest-in-stock fallback applied server-side).
+  /// "You may also like" — Magento's core `related_products` then
+  /// `upsell_products`, de-duplicated by SKU (without the product itself) and
+  /// capped at 8. Empty when the catalogue links nothing; the rail then hides.
   final List<Product> alsoLike;
 
   bool get isConfigurable => options.isNotEmpty;

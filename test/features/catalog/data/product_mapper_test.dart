@@ -31,6 +31,24 @@ Map<String, dynamic> _json({
 ProductBadge _badge(Map<String, dynamic> json) =>
     productFromJson(json, now: _today).badge;
 
+/// A `related_products` / `upsell_products` entry as the PDP query selects it.
+Map<String, dynamic> _linked(String sku, {String? urlKey}) => {
+  'sku': sku,
+  'name': 'Product $sku',
+  'url_key': urlKey ?? 'product-${sku.toLowerCase()}',
+  'stock_status': 'IN_STOCK',
+  'image': {'url': 'http://hub-market.magento2.click/media/$sku.jpg'},
+  'price_range': {
+    'minimum_price': {
+      'regular_price': {'value': 100, 'currency': 'AED'},
+      'final_price': {'value': 80, 'currency': 'AED'},
+    },
+  },
+};
+
+List<String> _skus(List<Product> products) =>
+    products.map((p) => p.sku).toList();
+
 void main() {
   group('NEW badge from new_from_date / new_to_date', () {
     test('no window => no badge', () {
@@ -118,6 +136,91 @@ void main() {
         now: _today,
       );
       expect(detail.badge, ProductBadge.isNew);
+    });
+  });
+
+  group('"You may also like" from related_products + upsell_products', () {
+    test('related first, then upsell, de-duplicated by sku', () {
+      final json = {
+        'sku': 'MH09',
+        'related_products': [_linked('A'), _linked('B')],
+        'upsell_products': [_linked('B'), _linked('C')],
+      };
+      expect(_skus(alsoLikeFromJson(json)), ['A', 'B', 'C']);
+    });
+
+    test('never recommends the product itself (the live catalogue does)', () {
+      final json = {
+        'sku': 'MH09',
+        'related_products': [_linked('MH09'), _linked('A')],
+        'upsell_products': [_linked('MH09')],
+      };
+      expect(_skus(alsoLikeFromJson(json)), ['A']);
+    });
+
+    test('caps the merged list at 8', () {
+      final json = {
+        'sku': 'SELF',
+        'related_products': [for (var i = 0; i < 6; i++) _linked('R$i')],
+        'upsell_products': [for (var i = 0; i < 6; i++) _linked('U$i')],
+      };
+      expect(_skus(alsoLikeFromJson(json)), [
+        'R0',
+        'R1',
+        'R2',
+        'R3',
+        'R4',
+        'R5',
+        'U0',
+        'U1',
+      ]);
+    });
+
+    test('skips null entries and entries that cannot open a PDP', () {
+      final json = {
+        'sku': 'SELF',
+        'related_products': [
+          null,
+          _linked(''),
+          _linked('NOKEY', urlKey: ''),
+          _linked('D'),
+        ],
+      };
+      expect(_skus(alsoLikeFromJson(json)), ['D']);
+    });
+
+    test('nothing linked => empty, so the rail hides', () {
+      expect(alsoLikeFromJson({'sku': 'SELF'}), isEmpty);
+      expect(
+        alsoLikeFromJson({
+          'sku': 'SELF',
+          'related_products': <dynamic>[],
+          'upsell_products': null,
+        }),
+        isEmpty,
+      );
+    });
+
+    test('cards use the listing mapping (https image, prices, NEW)', () {
+      final card = alsoLikeFromJson({
+        'sku': 'SELF',
+        'related_products': [
+          {..._linked('A'), 'new_from_date': '2026-09-20 00:00:00'},
+        ],
+      }, now: _today).single;
+      expect(card.urlKey, 'product-a');
+      expect(card.imageUrl, 'https://hub-market.magento2.click/media/A.jpg');
+      expect(card.discountPercent, 20);
+      expect(card.badge, ProductBadge.isNew);
+    });
+
+    test('the PDP detail carries the merged list', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'related_products': [_linked('A')],
+        'upsell_products': [_linked('B'), _linked('A')],
+      });
+      expect(_skus(detail.alsoLike), ['A', 'B']);
     });
   });
 

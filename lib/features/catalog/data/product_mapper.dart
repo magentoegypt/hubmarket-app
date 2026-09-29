@@ -220,10 +220,7 @@ ProductDetail productDetailFromJson(
           ),
         )
         .toList(growable: false),
-    alsoLike: (json['also_like_products'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(productFromJson)
-        .toList(growable: false),
+    alsoLike: alsoLikeFromJson(json, now: now),
     reviews:
         ((json['reviews'] as Map<String, dynamic>?)?['items']
                     as List<dynamic>? ??
@@ -240,6 +237,33 @@ ProductDetail productDetailFromJson(
             )
             .toList(),
   );
+}
+
+/// Most "You may also like" cards the PDP shows.
+const int _alsoLikeLimit = 8;
+
+/// "You may also like" for the PDP: Magento's core `related_products` first,
+/// then `upsell_products`, de-duplicated by SKU and capped at 8.
+///
+/// The product itself is skipped — the live catalogue links some products to
+/// themselves — and so is any entry without a SKU or url_key, which could not
+/// open a PDP. Empty when neither list has anything, which hides the rail.
+List<Product> alsoLikeFromJson(Map<String, dynamic> json, {DateTime? now}) {
+  final seen = <String>{};
+  final ownSku = json['sku'];
+  if (ownSku is String && ownSku.isNotEmpty) seen.add(ownSku);
+  final picks = <Product>[];
+  for (final source in const ['related_products', 'upsell_products']) {
+    for (final item in json[source] as List<dynamic>? ?? const []) {
+      if (item is! Map<String, dynamic>) continue;
+      final product = productFromJson(item, now: now);
+      if (product.sku.isEmpty || product.urlKey.isEmpty) continue;
+      if (!seen.add(product.sku)) continue;
+      picks.add(product);
+      if (picks.length == _alsoLikeLimit) return List.unmodifiable(picks);
+    }
+  }
+  return List.unmodifiable(picks);
 }
 
 /// Decodes the HTML entities Page Builder ships — including entity-*encoded*
