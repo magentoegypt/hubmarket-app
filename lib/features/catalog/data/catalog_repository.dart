@@ -206,14 +206,20 @@ class CatalogRepository {
     if (kRatingFilterSupported && minRating != null) {
       filter['rating'] = <String, dynamic>{'from': minRating.toString()};
     }
+    final isSearch = search != null && search.isNotEmpty;
     final variables = <String, dynamic>{
       'pageSize': pageSize,
       'currentPage': currentPage,
-      if (search != null && search.isNotEmpty) 'search': search,
+      if (isSearch) 'search': search,
       if (filter.isNotEmpty) 'filter': filter,
       if (sortInput != null) 'sort': sortInput,
     };
-    final data = await _query(CatalogQueries.products, variables);
+    // A search also asks for each hit's categories (the type-ahead's "in …"
+    // line); plain listings keep the lighter document.
+    final data = await _query(
+      isSearch ? CatalogQueries.searchProducts : CatalogQueries.products,
+      variables,
+    );
     final products = data['products'] as Map<String, dynamic>?;
     return products == null ? ProductPage.empty : _parseProductPage(products);
   }

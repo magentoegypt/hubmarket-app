@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/storage/local_cache.dart';
 
 /// Persisted recent search terms (most-recent first, de-duped, capped), backed
-/// by [LocalCache] (Hive). Drives the idle search screen's "Recent" list.
+/// by [LocalCache] (Hive). Drives the search landing's "Recent searches".
 class SearchHistory extends Notifier<List<String>> {
   static const String _key = 'search_history';
   static const int _max = 8;
@@ -34,6 +34,17 @@ class SearchHistory extends Notifier<List<String>> {
       t,
       ...state.where((e) => e.toLowerCase() != t.toLowerCase()),
     ].take(_max).toList();
+    state = next;
+    await _cache.writeString(_key, jsonEncode(next));
+  }
+
+  /// Drops one term — the × on a recent-search row. Matches case-insensitively,
+  /// the same way [add] de-dupes.
+  Future<void> remove(String term) async {
+    final t = term.trim().toLowerCase();
+    final next = state.where((e) => e.toLowerCase() != t).toList();
+    if (next.length == state.length) return;
+    if (next.isEmpty) return clear();
     state = next;
     await _cache.writeString(_key, jsonEncode(next));
   }

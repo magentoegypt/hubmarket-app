@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gql/ast.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 
@@ -11,10 +12,18 @@ class _RecordingClient {
 
   final Map<String, dynamic> data;
   final List<Map<String, dynamic>> variables = [];
+  final List<String?> operations = [];
 
   GraphQLClient get client => GraphQLClient(
     link: Link.function((request, [forward]) {
       variables.add(request.variables);
+      operations.add(
+        request.operation.document.definitions
+            .whereType<OperationDefinitionNode>()
+            .first
+            .name
+            ?.value,
+      );
       return Stream<Response>.value(
         Response(data: data, response: const {}, context: const Context()),
       );
@@ -73,6 +82,92 @@ void main() {
       expect(recorder.variables.single['filter'], {
         'category_uid': {'eq': 'MTAx'},
       });
+    });
+  });
+
+  group('CatalogRepository.fetchProducts for search', () {
+    const searchPage = {
+      '__typename': 'Query',
+      'products': {
+        '__typename': 'Products',
+        'total_count': 23,
+        'page_info': {
+          '__typename': 'SearchResultPageInfo',
+          'current_page': 1,
+          'total_pages': 2,
+          'page_size': 20,
+        },
+        'items': [
+          {
+            '__typename': 'SimpleProduct',
+            'sku': 'bag-1',
+            'name': 'Square Shoulder Bag',
+            'url_key': 'square-shoulder-bag',
+            'stock_status': 'IN_STOCK',
+            'new_from_date': null,
+            'new_to_date': null,
+            'image': null,
+            'price_range': null,
+            'categories': [
+              {
+                '__typename': 'CategoryTree',
+                'uid': 'MTI5',
+                'name': 'Bags',
+                'level': 2,
+                'include_in_menu': 0,
+              },
+              {
+                '__typename': 'CategoryTree',
+                'uid': 'MTMw',
+                'name': "Women's Bags",
+                'level': 3,
+                'include_in_menu': 1,
+              },
+            ],
+          },
+        ],
+        'aggregations': [
+          {
+            '__typename': 'Aggregation',
+            'attribute_code': 'category_uid',
+            'label': 'Category',
+            'options': [
+              {
+                '__typename': 'AggregationOption',
+                'label': "Women's Bags",
+                'value': 'MTMw',
+                'count': 12,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    test('a search asks for each hit\'s categories', () async {
+      final recorder = _RecordingClient(searchPage);
+      final page = await CatalogRepository(recorder.client).fetchProducts(
+        search: 'bag',
+        categoryUid: 'MTI5',
+      );
+
+      expect(recorder.operations.single, 'SearchProducts');
+      expect(recorder.variables.single['search'], 'bag');
+      expect(recorder.variables.single['filter'], {
+        'category_uid': {'eq': 'MTI5'},
+      });
+      expect(page.totalCount, 23);
+      expect(page.items.single.primaryCategory?.name, "Women's Bags");
+      expect(page.aggregations.single.options.single.count, 12);
+    });
+
+    test('a plain listing keeps the lighter Products document', () async {
+      final recorder = _RecordingClient(_emptyPage);
+      await CatalogRepository(recorder.client).fetchProducts(
+        categoryUid: 'MTAx',
+      );
+
+      expect(recorder.operations.single, 'Products');
     });
   });
 

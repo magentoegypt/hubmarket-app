@@ -1,22 +1,50 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/store/store_controller.dart';
 import '../data/catalog_repository.dart';
 import 'plp_controller.dart';
 
-/// Owns one search query's results — mirrors [PlpController] (paged load,
-/// append-on-scroll, aggregation-driven filters + sort) but fetches via
-/// `products(search:)` instead of a category. Reuses [PlpState] so the search
-/// screen shares the same header/filter UI as the PLP. Reloads on store switch.
-class SearchResultsController
-    extends AutoDisposeFamilyNotifier<PlpState, String> {
-  static const int _pageSize = 20;
+/// What one search asks for: the text, and optionally the top-level category
+/// the type-ahead's "All categories" chip narrowed it to. Keys
+/// [searchControllerProvider], so the type-ahead and the full results share one
+/// load — "View all N results" opens on data that is already there.
+@immutable
+class SearchRequest {
+  const SearchRequest(this.query, {this.categoryUid});
 
-  String get _query => arg.trim();
+  final String query;
+  final String? categoryUid;
 
   @override
-  PlpState build(String arg) {
+  bool operator ==(Object other) =>
+      other is SearchRequest &&
+      other.query == query &&
+      other.categoryUid == categoryUid;
+
+  @override
+  int get hashCode => Object.hash(query, categoryUid);
+}
+
+/// Owns one search's results — mirrors [PlpController] (paged load,
+/// append-on-scroll, aggregation-driven filters + sort) but fetches via
+/// `products(search:)` instead of a category. Reuses [PlpState] so the search
+/// screen shares the same filter/sort sheets as the PLP. Reloads on store
+/// switch.
+class SearchResultsController
+    extends AutoDisposeFamilyNotifier<PlpState, SearchRequest> {
+  static const int _pageSize = 20;
+
+  /// Bumped on every first-page load, so a slow answer to an older filter or
+  /// sort can't land on top of a newer one.
+  int _generation = 0;
+
+  String get _query => arg.query.trim();
+
+  @override
+  PlpState build(SearchRequest arg) {
     ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
+    _generation++;
     if (_query.isEmpty) return const PlpState();
     Future.microtask(_loadFirst);
     return const PlpState(isLoading: true);
@@ -26,10 +54,12 @@ class SearchResultsController
 
   Future<void> _loadFirst() async {
     if (_query.isEmpty) return;
+    final generation = ++_generation;
     state = state.copyWith(isLoading: true, error: null);
     try {
       final page = await _repo.fetchProducts(
         search: _query,
+        categoryUid: arg.categoryUid,
         attributeFilters: state.selectedFilters,
         priceFrom: state.priceFrom,
         priceTo: state.priceTo,
@@ -39,6 +69,7 @@ class SearchResultsController
         pageSize: _pageSize,
         currentPage: 1,
       );
+      if (generation != _generation) return;
       state = state.copyWith(
         products: page.items,
         aggregations: page.aggregations.isNotEmpty
@@ -50,16 +81,19 @@ class SearchResultsController
         isLoading: false,
       );
     } catch (error) {
+      if (generation != _generation) return;
       state = state.copyWith(isLoading: false, error: error);
     }
   }
 
   Future<void> loadMore() async {
     if (state.isLoading || state.isLoadingMore || !state.hasMore) return;
+    final generation = _generation;
     state = state.copyWith(isLoadingMore: true);
     try {
       final page = await _repo.fetchProducts(
         search: _query,
+        categoryUid: arg.categoryUid,
         attributeFilters: state.selectedFilters,
         priceFrom: state.priceFrom,
         priceTo: state.priceTo,
@@ -69,6 +103,7 @@ class SearchResultsController
         pageSize: _pageSize,
         currentPage: state.currentPage + 1,
       );
+      if (generation != _generation) return;
       state = state.copyWith(
         products: [...state.products, ...page.items],
         currentPage: page.currentPage,
@@ -77,6 +112,7 @@ class SearchResultsController
         isLoadingMore: false,
       );
     } catch (_) {
+      if (generation != _generation) return;
       state = state.copyWith(isLoadingMore: false);
     }
   }
@@ -99,6 +135,7 @@ class SearchResultsController
       products: const [],
       currentPage: 0,
       totalPages: 0,
+      isLoadingMore: false,
     );
     _loadFirst();
   }
@@ -110,6 +147,7 @@ class SearchResultsController
       products: const [],
       currentPage: 0,
       totalPages: 0,
+      isLoadingMore: false,
     );
     _loadFirst();
   }
@@ -118,6 +156,6 @@ class SearchResultsController
 }
 
 final searchControllerProvider = NotifierProvider.autoDispose
-    .family<SearchResultsController, PlpState, String>(
+    .family<SearchResultsController, PlpState, SearchRequest>(
       SearchResultsController.new,
     );

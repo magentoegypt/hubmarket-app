@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/routes.dart';
+import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/store/store_controller.dart';
@@ -11,26 +12,48 @@ import '../../../../core/widgets/brand_logo.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/network_image.dart';
-import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/catalog_repository.dart';
 import '../../domain/brand.dart';
+import '../../domain/category.dart';
 import '../brand_results_controller.dart';
 import '../plp_controller.dart';
 import '../product_navigation.dart';
 import '../search_controller.dart';
 import '../search_history.dart';
 import '../widgets/filter_sheet.dart';
-import '../widgets/sort_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
+import '../widgets/search_field_bar.dart';
+import '../widgets/search_landing.dart';
+import '../widgets/search_results_view.dart';
+import '../widgets/search_type_ahead.dart';
+import '../widgets/sort_sheet.dart';
 
-/// Native catalogue search (`products(search:)`). If Live Search is later
-/// confirmed (Open Q §4), swap the provider to the productSearch schema.
+/// Which of the search designs is on screen.
+enum _SearchMode {
+  /// Nothing typed (Figma 09b).
+  landing,
+
+  /// Typing, with live suggestions (Figma 09).
+  typeAhead,
+
+  /// A submitted search's full results (Figma 09c).
+  results,
+}
+
+/// Catalogue search (QA01, "search behaves like the website"). The field drives
+/// three states — landing, type-ahead and results — and a search with no
+/// results shows the S2 page in either of the last two. Every result comes from
+/// `products(search:)`, which Hub Market answers through Algolia, the same
+/// engine and ranking as the website's search.
+///
+/// With [brand] set this is instead a brand landing: the brand's image + name
+/// over its products, with no search field.
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key, this.initialQuery, this.brand});
 
-  /// Optional pre-filled query.
+  /// Opens straight onto the results for this query.
   final String? initialQuery;
 
   /// When set, this renders a brand landing: a brand image + name header (no
@@ -46,65 +69,136 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final FocusNode _focus = FocusNode();
   Timer? _debounce;
 
-  /// Submitted query — drives the results grid.
+  /// Suggestions wait this long after the last keystroke.
+  static const Duration _debounceDelay = Duration(milliseconds: 250);
+
+  /// The submitted query — what the results page shows. Empty until a search
+  /// is submitted.
   String _query = '';
 
-  /// Live (debounced) field text — drives the type-ahead suggestions.
+  /// The field's text once typing pauses — what the type-ahead searches.
   String _typed = '';
+
+  /// True while the field is being edited. Kept apart from focus, so hiding
+  /// the keyboard with a scroll doesn't swap the type-ahead for the results.
+  bool _editing = true;
+
+  /// The top-level category the search is narrowed to; null for all.
+  Category? _scope;
 
   @override
   void initState() {
     super.initState();
     final initial = widget.initialQuery?.trim() ?? '';
     if (initial.isNotEmpty) {
-      _controller.text = initial;
+      _setText(initial);
       _query = initial;
+      _typed = initial;
+      _editing = false;
     }
+    _focus.addListener(_onFocusChange);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _focus.removeListener(_onFocusChange);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
   }
 
-  void _onChanged(String value) {
-    // Debounce the suggestion query; refresh the clear (X) affordance now.
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _typed = value.trim());
+  _SearchMode get _mode {
+    if (_query.isNotEmpty && !_editing) return _SearchMode.results;
+    if (_controller.text.trim().isEmpty) return _SearchMode.landing;
+    return _SearchMode.typeAhead;
+  }
+
+  void _setText(String text) {
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  /// Tapping into the field on the results page goes back to editing, starting
+  /// from the suggestions for what is already there.
+  void _onFocusChange() {
+    if (!_focus.hasFocus || _editing) return;
+    setState(() {
+      _editing = true;
+      _typed = _controller.text.trim();
     });
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    final text = value.trim();
+    if (text.isEmpty) {
+      setState(() => _typed = '');
+      return;
+    }
+    _debounce = Timer(_debounceDelay, () {
+      if (mounted) setState(() => _typed = text);
+    });
+    // Landing → type-ahead switches on the first character.
     setState(() {});
   }
 
   void _submit(String term) {
-    final t = term.trim();
-    if (t.isEmpty) return;
+    final text = term.trim();
+    if (text.isEmpty) return;
     _debounce?.cancel();
-    _controller.text = t;
-    _controller.selection = TextSelection.collapsed(offset: t.length);
-    ref.read(searchHistoryProvider.notifier).add(t);
+    _setText(text);
+    ref.read(searchHistoryProvider.notifier).add(text);
     _focus.unfocus();
     setState(() {
-      _query = t;
-      _typed = '';
+      _query = text;
+      _typed = text;
+      _editing = false;
     });
   }
 
-  void _clear() {
+  void _clearField() {
     _debounce?.cancel();
     _controller.clear();
     setState(() {
-      _query = '';
       _typed = '';
+      _editing = true;
     });
+    _focus.requestFocus();
+  }
+
+  /// Cancel leaves search — unless the field is being edited over results,
+  /// which it then returns to unchanged.
+  void _cancel() {
+    if (_query.isEmpty) {
+      Navigator.maybePop(context);
+      return;
+    }
+    _debounce?.cancel();
+    _setText(_query);
+    _focus.unfocus();
+    setState(() {
+      _typed = _query;
+      _editing = false;
+    });
+  }
+
+  Future<void> _pickScope() async {
+    final picked = await showModalBottomSheet<SearchScopePick>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (_) => SearchScopeSheet(selectedUid: _scope?.uid),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _scope = picked.category);
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final brand = widget.brand;
     // Brand landing: no search field; the brand header sits above the results.
     if (brand != null) {
@@ -118,151 +212,54 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         body: _Results(query: brand.title, brand: brand),
       );
     }
-    return Scaffold(
+
+    final mode = _mode;
+    final initial = widget.initialQuery?.trim() ?? '';
+    return HubScaffold(
+      currentTab: AppTab.categories,
       appBar: AppBar(
-        leading: const HubBackButton(),
+        automaticallyImplyLeading: false,
+        centerTitle: false,
         titleSpacing: 0,
-        title: TextField(
+        toolbarHeight: SearchFieldBar.height,
+        scrolledUnderElevation: 0,
+        title: SearchFieldBar(
           controller: _controller,
           focusNode: _focus,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: l10n.searchFieldHint,
-            border: InputBorder.none,
-          ),
+          autofocus: initial.isEmpty,
+          emphasised: mode != _SearchMode.results,
+          onBack: mode == _SearchMode.results
+              ? () => Navigator.maybePop(context)
+              : null,
+          onCancel: mode == _SearchMode.results ? null : _cancel,
           onChanged: _onChanged,
           onSubmitted: _submit,
+          onClear: _clearField,
         ),
-        actions: [
-          if (_controller.text.isNotEmpty)
-            IconButton(icon: const Icon(Icons.close), onPressed: _clear),
-        ],
       ),
-      body: _query.isNotEmpty
-          ? _Results(query: _query)
-          : _typed.isNotEmpty
-          ? _Suggestions(query: _typed, onPick: _submit)
-          : _IdleState(onPick: _submit),
-    );
-  }
-}
-
-/// Type-ahead suggestions while typing (before submit): a "search this term"
-/// action plus the top matching products (tap → PDP). Driven by the same
-/// per-query search controller as the results grid (debounced upstream).
-class _Suggestions extends ConsumerWidget {
-  const _Suggestions({required this.query, required this.onPick});
-  final String query;
-  final ValueChanged<String> onPick;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final state = ref.watch(searchControllerProvider(query));
-    final products = state.products.take(6).toList();
-    return ListView(
-      children: [
-        ListTile(
-          leading: const Icon(Icons.search, color: AppColors.inkMuted),
-          title: Text(l10n.searchForQuery(query)),
-          onTap: () => onPick(query),
+      body: switch (mode) {
+        _SearchMode.landing => SearchLanding(onPick: _submit),
+        _SearchMode.typeAhead => SearchTypeAhead(
+          query: _typed,
+          scope: _scope,
+          onScopeTap: _pickScope,
+          onViewAll: () => _submit(_controller.text),
         ),
-        if (state.isLoading && products.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        for (final p in products)
-          ListTile(
-            leading: HubImage(
-              url: p.thumbnail,
-              width: 44,
-              height: 44,
-              borderRadius: BorderRadius.circular(8),
-              error: (_) => const ColoredBox(color: AppColors.surfaceTint),
-            ),
-            title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            onTap: () => openProduct(context, p),
-          ),
-      ],
-    );
-  }
-}
-
-/// Idle search screen (no query yet): persisted recent searches + trending
-/// chips, both tap-to-search.
-class _IdleState extends ConsumerWidget {
-  const _IdleState({required this.onPick});
-  final ValueChanged<String> onPick;
-
-  static const _sectionStyle = TextStyle(
-    fontWeight: FontWeight.w700,
-    fontSize: 15,
-    color: AppColors.inkHeading,
-  );
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final history = ref.watch(searchHistoryProvider);
-    final trending = l10n.searchTrendingCsv
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (history.isNotEmpty) ...[
-          Row(
-            children: [
-              Expanded(
-                child: Text(l10n.searchRecentTitle, style: _sectionStyle),
-              ),
-              TextButton(
-                onPressed: () =>
-                    ref.read(searchHistoryProvider.notifier).clear(),
-                child: Text(l10n.searchClearHistory),
-              ),
-            ],
-          ),
-          for (final term in history)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: const Icon(Icons.history, color: AppColors.inkMuted),
-              title: Text(term),
-              trailing: const Icon(
-                Icons.north_west,
-                size: 16,
-                color: AppColors.inkMuted,
-              ),
-              onTap: () => onPick(term),
-            ),
-          const SizedBox(height: 20),
-        ],
-        Text(l10n.searchTrendingTitle, style: _sectionStyle),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final term in trending)
-              ActionChip(label: Text(term), onPressed: () => onPick(term)),
-          ],
+        _SearchMode.results => SearchResultsView(
+          request: SearchRequest(_query, categoryUid: _scope?.uid),
+          scopeName: _scope?.name,
         ),
-      ],
+      },
     );
   }
 }
 
-/// Search results grid with a "Search results for …" header and the shared
-/// aggregation-driven Filters + Sort sheet (same engine as the PLP).
+/// A brand landing's product grid under the brand header, with the shared
+/// aggregation-driven Filters + Sort sheets (same engine as the PLP).
 class _Results extends ConsumerStatefulWidget {
-  const _Results({required this.query, this.brand});
+  const _Results({required this.query, required this.brand});
   final String query;
-  final Brand? brand;
+  final Brand brand;
 
   @override
   ConsumerState<_Results> createState() => _ResultsState();
@@ -290,23 +287,25 @@ class _ResultsState extends ConsumerState<_Results> {
     super.dispose();
   }
 
-  /// A brand landing (brand with a linked manufacturer option) lists that
-  /// brand's products via the [BrandResultsController]; a plain query uses the
-  /// [SearchResultsController]. Both expose the same PlpState + action surface.
-  bool get _isBrand => widget.brand?.optionId != null;
-  int get _brandId => widget.brand!.optionId!;
+  /// A brand with a linked manufacturer option lists that brand's products via
+  /// the [BrandResultsController]; one without falls back to a search for its
+  /// name ([SearchResultsController]). Both expose the same PlpState + action
+  /// surface.
+  bool get _isBrand => widget.brand.optionId != null;
+  int get _brandId => widget.brand.optionId!;
+  SearchRequest get _search => SearchRequest(widget.query);
 
   PlpState _watchState() => _isBrand
       ? ref.watch(brandResultsControllerProvider(_brandId))
-      : ref.watch(searchControllerProvider(widget.query));
+      : ref.watch(searchControllerProvider(_search));
 
   void _loadMore() => _isBrand
       ? ref.read(brandResultsControllerProvider(_brandId).notifier).loadMore()
-      : ref.read(searchControllerProvider(widget.query).notifier).loadMore();
+      : ref.read(searchControllerProvider(_search).notifier).loadMore();
 
   Future<void> _refresh() => _isBrand
       ? ref.read(brandResultsControllerProvider(_brandId).notifier).refresh()
-      : ref.read(searchControllerProvider(widget.query).notifier).refresh();
+      : ref.read(searchControllerProvider(_search).notifier).refresh();
 
   void _applyResult(FilterResult result) {
     if (_isBrand) {
@@ -321,7 +320,7 @@ class _ResultsState extends ConsumerState<_Results> {
           );
     } else {
       ref
-          .read(searchControllerProvider(widget.query).notifier)
+          .read(searchControllerProvider(_search).notifier)
           .applyFilters(
             result.attributes,
             priceFrom: result.priceFrom,
@@ -333,8 +332,10 @@ class _ResultsState extends ConsumerState<_Results> {
   }
 
   void _setSort(ProductSortField sort) => _isBrand
-      ? ref.read(brandResultsControllerProvider(_brandId).notifier).setSort(sort)
-      : ref.read(searchControllerProvider(widget.query).notifier).setSort(sort);
+      ? ref
+            .read(brandResultsControllerProvider(_brandId).notifier)
+            .setSort(sort)
+      : ref.read(searchControllerProvider(_search).notifier).setSort(sort);
 
   void _onScroll() {
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 400) {
@@ -385,7 +386,6 @@ class _ResultsState extends ConsumerState<_Results> {
       return ListView(
         children: [
           _Header(
-            query: widget.query,
             state: state,
             onFilters: () => _openFilters(state),
             onSort: () => _openSort(state),
@@ -411,10 +411,7 @@ class _ResultsState extends ConsumerState<_Results> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _refresh,
-                child: Text(l10n.actionRetry),
-              ),
+              FilledButton(onPressed: _refresh, child: Text(l10n.actionRetry)),
             ],
           ),
         ),
@@ -426,7 +423,6 @@ class _ResultsState extends ConsumerState<_Results> {
       slivers: [
         SliverToBoxAdapter(
           child: _Header(
-            query: widget.query,
             state: state,
             onFilters: () => _openFilters(state),
             onSort: () => _openSort(state),
@@ -468,78 +464,60 @@ class _ResultsState extends ConsumerState<_Results> {
   }
 }
 
-/// "Search results for …" title + the result count and the Filters/Sort pill.
+/// The brand's logo + name, then the result count and the Filters/Sort pills.
 class _Header extends StatelessWidget {
   const _Header({
-    required this.query,
     required this.state,
     required this.onFilters,
     required this.onSort,
-    this.brand,
+    required this.brand,
   });
 
-  final String query;
   final PlpState state;
   final VoidCallback onFilters;
   final VoidCallback onSort;
-  final Brand? brand;
+  final Brand brand;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final b = brand;
     final filtersLabel = state.activeFilterCount > 0
         ? '${l10n.filtersLabel} (${state.activeFilterCount})'
         : l10n.filtersLabel;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (b != null)
-          // Brand landing header: logo + name above the product count.
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
-            child: Column(
-              children: [
-                if (b.imageUrl.isNotEmpty) ...[
-                  HubImage(
-                    url: b.imageUrl,
-                    height: 60,
-                    fit: BoxFit.contain,
-                    placeholder: (_) => const SizedBox.shrink(),
-                    error: (_) => const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Text(
-                  b.title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+          child: Column(
+            children: [
+              if (brand.imageUrl.isNotEmpty) ...[
+                HubImage(
+                  url: brand.imageUrl,
+                  height: 60,
+                  fit: BoxFit.contain,
+                  placeholder: (_) => const SizedBox.shrink(),
+                  error: (_) => const SizedBox.shrink(),
                 ),
+                const SizedBox(height: 8),
               ],
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),
-            child: Text(
-              l10n.searchResultsFor(query),
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-            ),
+              Text(
+                brand.title,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
+        ),
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 12),
           child: Row(
             children: [
               Text(
                 l10n.resultsCount(state.totalCount),
-                style: TextStyle(
-                  color: context.scaffoldMuted,
-                  fontSize: 12.5,
-                ),
+                style: TextStyle(color: context.scaffoldMuted, fontSize: 12.5),
               ),
               const Spacer(),
               _PillButton(
