@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../domain/store.dart';
 
 /// Opens [store]'s page, handing over the card so the header paints at once.
@@ -186,6 +188,77 @@ class StoreRatingLine extends StatelessWidget {
 
 /// A rating out of 5 with one decimal, Western digits in both languages.
 String formatStoreRating(double rating) => rating.toStringAsFixed(1);
+
+/// "4.8 ★" — or "★ 4.8" with [starFirst] — with the star drawn as an icon, so
+/// it shows whatever the font (Tajawal and DM Sans have no ★).
+InlineSpan ratingSpan(
+  double rating, {
+  required double size,
+  required Color color,
+  bool starFirst = false,
+}) {
+  final star = WidgetSpan(
+    alignment: PlaceholderAlignment.middle,
+    child: Icon(Icons.star_rounded, size: size, color: color),
+  );
+  final value = TextSpan(text: formatStoreRating(rating));
+  return TextSpan(
+    children: starFirst
+        ? [star, const TextSpan(text: ' '), value]
+        : [value, const TextSpan(text: ' '), star],
+  );
+}
+
+/// A 36 pt pill (Figma "Chip"): navy when [selected], outlined otherwise.
+/// As wide as its label, in a row or a wrap.
+class StorePill extends StatelessWidget {
+  const StorePill({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = StadiumBorder(
+      side: selected
+          ? BorderSide.none
+          : BorderSide(color: SearchStyle.chipBorder(context)),
+    );
+    return Material(
+      color: selected
+          ? AppColors.brandPrimary
+          : (context.isDarkMode ? Colors.transparent : Colors.white),
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 14,
+                height: 20 / 14,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : context.scaffoldHeading,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// One seller in a list (Figma 12 "Store card", and 09c's Vendors tab): logo,
 /// name with the verified mark, a detail line, the rating, a chevron. White

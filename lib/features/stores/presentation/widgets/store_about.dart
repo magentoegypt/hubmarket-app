@@ -8,7 +8,6 @@ import '../../../../core/config/app_config.dart';
 import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/search_facets.dart';
-import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../../cms/domain/cms_document.dart';
 import '../../../cms/presentation/cms_navigation.dart';
 import '../../../cms/presentation/widgets/cms_html_view.dart';
@@ -63,27 +62,21 @@ class StoreAboutTab extends ConsumerWidget {
         ref.watch(storeCategoriesProvider(store.vendorEntityId)).valueOrNull ??
         const <SearchCategory>[];
 
-    final stats = <({String value, String label})>[
-      (
-        value: storeCount(store.productCount),
-        label: l10n.storeStatProductsListed,
-      ),
+    final stats = <StoreStat>[
+      StoreStat(storeCount(store.productCount), l10n.storeStatProductsListed),
       if (store.dispatchTime case final dispatch?)
-        (value: dispatch.label, label: l10n.storeStatDispatch),
+        StoreStat(dispatch.label, l10n.storeStatDispatch),
       if (store.isRated)
-        (
-          value: '${formatStoreRating(store.rating!)} ★',
-          label: l10n.storeStatAverageRating,
-        ),
+        StoreStat.rating(store.rating!, l10n.storeStatAverageRating),
       if (store.reviewCount > 0)
-        (
-          value: storeCount(store.reviewCount),
-          label: l10n.storeStatCustomerReviews,
+        StoreStat(
+          storeCount(store.reviewCount),
+          l10n.storeStatCustomerReviews,
         ),
       if (store.joinedAt case final joined?)
-        (
-          value: storeJoinedLabel(context, joined.toLocal()),
-          label: l10n.storeStatSellingSince,
+        StoreStat(
+          storeJoinedLabel(context, joined.toLocal()),
+          l10n.storeStatSellingSince,
         ),
     ];
 
@@ -130,7 +123,7 @@ class StoreAboutTab extends ConsumerWidget {
               runSpacing: 8,
               children: [
                 for (final category in categories)
-                  SearchOutlinedChip(
+                  StorePill(
                     label: category.name,
                     onTap: () => onCategory(category),
                   ),
@@ -354,11 +347,40 @@ class _PolicySummary extends StatelessWidget {
   }
 }
 
+/// One figure of a store: its value (a rating gets the star) and label.
+class StoreStat {
+  const StoreStat(this.value, this.label) : rating = null;
+
+  const StoreStat.rating(double this.rating, this.label) : value = '';
+
+  final String value;
+  final String label;
+  final double? rating;
+
+  /// The value, in [style] — a rating as "4.8 ★".
+  Widget valueText(TextStyle style, {int maxLines = 1}) => rating == null
+      ? Text(
+          value,
+          maxLines: maxLines,
+          overflow: TextOverflow.ellipsis,
+          style: style,
+        )
+      : Text.rich(
+          ratingSpan(
+            rating!,
+            size: (style.fontSize ?? 16) * 0.9,
+            color: style.color ?? AppColors.inkHeading,
+          ),
+          maxLines: 1,
+          style: style,
+        );
+}
+
 /// The About tab's figures as white tiles, two to a row.
 class _StatsGrid extends StatelessWidget {
   const _StatsGrid({required this.stats});
 
-  final List<({String value, String label})> stats;
+  final List<StoreStat> stats;
 
   @override
   Widget build(BuildContext context) {
@@ -389,7 +411,7 @@ class _StatsGrid extends StatelessWidget {
 class _StatTile extends StatelessWidget {
   const _StatTile({required this.stat});
 
-  final ({String value, String label}) stat;
+  final StoreStat stat;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -401,16 +423,14 @@ class _StatTile extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          stat.value,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+        stat.valueText(
+          TextStyle(
             fontSize: 16,
             height: 22 / 16,
             fontWeight: FontWeight.w600,
             color: context.scaffoldHeading,
           ),
+          maxLines: 2,
         ),
         const SizedBox(height: 2),
         Text(

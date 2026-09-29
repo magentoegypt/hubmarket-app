@@ -426,54 +426,6 @@ class _CategoryChips extends StatelessWidget {
   }
 }
 
-/// A 36 pt pill (Figma "Chip"): navy when [selected], outlined otherwise.
-class StorePill extends StatelessWidget {
-  const StorePill({
-    super.key,
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final shape = StadiumBorder(
-      side: selected
-          ? BorderSide.none
-          : BorderSide(color: SearchStyle.chipBorder(context)),
-    );
-    return Material(
-      color: selected
-          ? AppColors.brandPrimary
-          : (context.isDarkMode ? Colors.transparent : Colors.white),
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            maxLines: 1,
-            style: TextStyle(
-              fontSize: 14,
-              height: 20 / 14,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : context.scaffoldHeading,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// "All stores" with the sort action (⇅ Top rated).
 class _ListHeading extends StatelessWidget {
   const _ListHeading({
@@ -553,10 +505,7 @@ class FeaturedStoreBanner extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final store = profile.card;
     final banner = profile.bannerUrl ?? '';
-    final meta = [
-      if (store.isRated) '★ ${formatStoreRating(store.rating!)}',
-      l10n.categoryProductCount(store.productCount),
-    ].join(' · ');
+    final products = l10n.categoryProductCount(store.productCount);
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
@@ -635,8 +584,22 @@ class FeaturedStoreBanner extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              meta,
+                            // "★ 4.8 · 38 products"
+                            Text.rich(
+                              TextSpan(
+                                children: [
+                                  if (store.isRated) ...[
+                                    ratingSpan(
+                                      store.rating!,
+                                      size: 12,
+                                      color: AppColors.borderStrong,
+                                      starFirst: true,
+                                    ),
+                                    const TextSpan(text: ' · '),
+                                  ],
+                                  TextSpan(text: products),
+                                ],
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

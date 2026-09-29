@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/routes.dart';
@@ -118,6 +119,16 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       final pinned = _tabsPinnedAt;
       if (_scroll.offset > pinned) _scroll.jumpTo(pinned);
     });
+  }
+
+  /// Back to where the page was opened from; Home when it was the first
+  /// screen (a deep link).
+  void _back() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.home);
+    }
   }
 
   void _focusSearch() {
@@ -286,7 +297,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     currentTab: AppTab.home,
     appBar: AppBar(
       automaticallyImplyLeading: false,
-      leading: const HubBackButton(),
+      leading: HubBackButton(onPressed: _back),
     ),
     body: body,
   );
@@ -389,12 +400,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       scrolledUnderElevation: 0,
       elevation: 0,
       automaticallyImplyLeading: false,
+      centerTitle: false,
       leadingWidth: 64,
       leading: Center(
         child: _CircleButton(
           icon: Icons.arrow_back,
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          onTap: () => Navigator.maybePop(context),
+          onTap: _back,
         ),
       ),
       titleSpacing: 0,
@@ -612,17 +624,32 @@ class _Banner extends StatelessWidget {
         PositionedDirectional(
           start: 16,
           top: bannerHeight - 46,
-          child: StoreLogo(
-            store: profile.card,
-            size: 80,
-            borderWidth: 4,
-            borderColor: Colors.white,
-            shadow: true,
+          // Gone by half-way up, before it can reach the bar's buttons.
+          child: Opacity(
+            opacity: _logoOpacity(context),
+            child: StoreLogo(
+              store: profile.card,
+              size: 80,
+              borderWidth: 4,
+              borderColor: Colors.white,
+              shadow: true,
+            ),
           ),
         ),
       ],
     );
   }
+}
+
+/// 1 with the header open, 0 from half-way collapsed.
+double _logoOpacity(BuildContext context) {
+  final settings = context
+      .dependOnInheritedWidgetOfExactType<FlexibleSpaceBarSettings>();
+  if (settings == null || settings.maxExtent <= settings.minExtent) return 1;
+  final open =
+      (settings.currentExtent - settings.minExtent) /
+      (settings.maxExtent - settings.minExtent);
+  return ((open - 0.5) * 2).clamp(0.0, 1.0);
 }
 
 /// A white 40 pt round button over the banner; on the collapsed white bar it
@@ -671,15 +698,15 @@ class _StoreInfo extends StatelessWidget {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     final joined = store.joinedAt;
     final short = profile.shortDescription;
-    final stats = <({String value, String label})>[
+    final stats = <StoreStat>[
       if (store.isRated)
-        (
-          value: '${formatStoreRating(store.rating!)} ★',
-          label: l10n.storeReviewCount(store.reviewCount),
+        StoreStat.rating(
+          store.rating!,
+          l10n.storeReviewCount(store.reviewCount),
         ),
-      (value: storeCount(store.productCount), label: l10n.storeStatProducts),
+      StoreStat(storeCount(store.productCount), l10n.storeStatProducts),
       if (joined != null)
-        (value: '${joined.toLocal().year}', label: l10n.storeStatSellingSince),
+        StoreStat('${joined.toLocal().year}', l10n.storeStatSellingSince),
     ];
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 14),
@@ -730,7 +757,7 @@ class _StoreInfo extends StatelessWidget {
 class _HeaderStat extends StatelessWidget {
   const _HeaderStat({required this.stat});
 
-  final ({String value, String label}) stat;
+  final StoreStat stat;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -741,11 +768,8 @@ class _HeaderStat extends StatelessWidget {
     ),
     child: Column(
       children: [
-        Text(
-          stat.value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+        stat.valueText(
+          TextStyle(
             fontSize: 16,
             height: 22 / 16,
             fontWeight: FontWeight.w600,
@@ -806,19 +830,23 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
         color: background,
         border: Border(bottom: BorderSide(color: hairline)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < tabs.length; i++) ...[
-            if (i > 0) const SizedBox(width: 20),
-            _TabLabel(
-              label: labels[tabs[i]]!,
-              selected: tabs[i] == selected,
-              onTap: () => onSelect(tabs[i]),
-            ),
+      // Scrolls sideways rather than overflowing with large text.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < tabs.length; i++) ...[
+              if (i > 0) const SizedBox(width: 20),
+              _TabLabel(
+                label: labels[tabs[i]]!,
+                selected: tabs[i] == selected,
+                onTap: () => onSelect(tabs[i]),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

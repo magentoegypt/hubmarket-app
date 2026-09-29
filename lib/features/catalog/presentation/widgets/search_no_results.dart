@@ -109,7 +109,8 @@ class SearchNoResults extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                textStyle: const TextStyle(
+                // From the theme, so the label keeps the app's typeface.
+                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                   fontSize: 15,
                   height: 20 / 15,
                   fontWeight: FontWeight.w700,
