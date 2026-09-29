@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/core/config/store_contact.dart';
+import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -12,6 +13,7 @@ import 'package:hubmarket_app/features/account/presentation/account_screen.dart'
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
+import 'package:hubmarket_app/features/notifications/presentation/notification_settings_controller.dart';
 import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
@@ -28,7 +30,12 @@ const _testContact = StoreContact(
   website: 'https://hub-market.magento2.click',
 );
 
-Widget _harness({String? token, String locale = 'en'}) {
+Widget _harness({
+  String? token,
+  String locale = 'en',
+  bool push = false,
+  bool newsletter = true,
+}) {
   final router = GoRouter(
     initialLocation: '/account',
     routes: [
@@ -57,6 +64,10 @@ Widget _harness({String? token, String locale = 'en'}) {
       customerOrderCountProvider.overrideWith((ref) => 0),
       cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
       wishlistRepositoryProvider.overrideWithValue(FakeWishlistRepository()),
+      pushNotificationsAvailableProvider.overrideWithValue(push),
+      storeFeaturesProvider.overrideWith(
+        (ref) async => StoreFeatures(newsletterEnabled: newsletter),
+      ),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -97,6 +108,38 @@ void main() {
     expect(find.text('Layla Hassan'), findsOneWidget);
     expect(find.text('layla@example.com'), findsOneWidget);
     expect(find.text('Log Out'), findsOneWidget);
+  });
+
+  testWidgets('links reviews, newsletter, privacy, help and about', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_harness(token: 'persisted'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('My product reviews'), findsOneWidget);
+    expect(find.text('Newsletter'), findsOneWidget);
+    // Push has no Firebase behind it yet: no Notifications row.
+    expect(find.text('Notifications'), findsNothing);
+    // Deletion stays findable by its name on the Account screen.
+    expect(find.text('Privacy & data'), findsOneWidget);
+    expect(find.text('Delete account'), findsOneWidget);
+    expect(find.text('Help centre'), findsOneWidget);
+    expect(find.text('About Hub Market'), findsOneWidget);
+  });
+
+  testWidgets('rows follow the store switches and FCM', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _harness(token: 'persisted', push: true, newsletter: false),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.text('Newsletter'), findsNothing);
   });
 
   testWidgets('renders translated + RTL in Arabic', (tester) async {

@@ -39,6 +39,7 @@ import '../features/catalog/presentation/screens/write_review_screen.dart';
 import '../features/cms/domain/cms_links.dart';
 import '../features/cms/domain/faq.dart';
 import '../features/cms/presentation/cms_page_screen.dart';
+import '../features/notifications/presentation/notification_settings_screen.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/wishlist/presentation/screens/wishlist_screen.dart';
 import '../features/diagnostics/presentation/health_check_screen.dart';
@@ -211,6 +212,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.notifications,
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notificationSettings,
+        builder: (context, state) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: AppRoutes.help,

@@ -7,10 +7,12 @@ import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/theme_x.dart';
 import '../../../core/app_info.dart';
+import '../../../core/config/store_features.dart';
 import '../../../core/widgets/customer_avatar.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../l10n/l10n.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../notifications/presentation/notification_settings_controller.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
 
@@ -75,6 +77,10 @@ class _Authenticated extends ConsumerWidget {
     final languageLabel = activeLocale == 'ar'
         ? l10n.languageArabic
         : l10n.languageEnglish;
+    final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
+    final newsletterEnabled =
+        ref.watch(storeFeaturesProvider).valueOrNull?.newsletterEnabled ??
+        false;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -222,6 +228,25 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.myReviewsTitle,
           onTap: () => context.push(AppRoutes.myReviews),
         ),
+        // Both open Notification settings (Figma 20h); each row only when
+        // there is something behind it — push needs FCM, the newsletter the
+        // store's newsletter switch.
+        if (pushAvailable) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.notifications_none,
+            label: l10n.notificationsTitle,
+            onTap: () => context.push(AppRoutes.notificationSettings),
+          ),
+        ],
+        if (newsletterEnabled) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.mail_outline,
+            label: l10n.newsletterTitle,
+            onTap: () => context.push(AppRoutes.notificationSettings),
+          ),
+        ],
         const _AccountBand(),
         // Preferences group (Figma 43:3 …).
         _AccountTile(

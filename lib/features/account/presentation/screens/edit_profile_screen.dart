@@ -5,14 +5,16 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/config/store_features.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/validation/validators.dart';
+import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../notifications/presentation/notification_settings_controller.dart';
 import '../../data/account_repository.dart';
-import '../email_offers_controller.dart';
+import '../newsletter_controller.dart';
 import '../widgets/mobile_number_editor.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -103,6 +105,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  /// Saves the newsletter opt-in on the account at once, like the push
+  /// switch beside it.
+  Future<void> _setEmailOffers(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final saved = await ref
+          .read(newsletterProvider.notifier)
+          .setSubscribed(value);
+      if (value && !saved) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.footerSubscribeConfirm)),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(serverMessageOr(context, error, l10n.errorGeneric)),
+        ),
+      );
+    }
+  }
+
   String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
     final letters = parts.take(2).map((p) => p.substring(0, 1).toUpperCase());
@@ -118,7 +144,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ref.watch(storeControllerProvider.select((s) => s.activeLocale)) ==
         'ar';
     final pushEnabled = ref.watch(notificationSettingsProvider);
-    final emailOffers = ref.watch(emailOffersProvider);
+    // Push only exists with FCM; e-mail offers are the account's newsletter
+    // flag (is_subscribed), shown while the store has the newsletter on.
+    final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
+    final newsletterEnabled =
+        ref.watch(storeFeaturesProvider).valueOrNull?.newsletterEnabled ??
+        false;
+    final emailOffers = ref.watch(newsletterProvider);
 
     return HubScaffold(
       currentTab: AppTab.account,
@@ -193,21 +225,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                _PrefToggleRow(
-                  label: l10n.profilePushNotifications,
-                  value: pushEnabled,
-                  onChanged: (v) => ref
-                      .read(notificationSettingsProvider.notifier)
-                      .setPromotions(v),
-                ),
-                const SizedBox(height: 12),
-                _PrefToggleRow(
-                  label: l10n.profileEmailOffers,
-                  value: emailOffers,
-                  onChanged: (v) =>
-                      ref.read(emailOffersProvider.notifier).set(v),
-                ),
+                if (pushAvailable) ...[
+                  const SizedBox(height: 12),
+                  _PrefToggleRow(
+                    label: l10n.profilePushNotifications,
+                    value: pushEnabled,
+                    onChanged: (v) => ref
+                        .read(notificationSettingsProvider.notifier)
+                        .setPromotions(v),
+                  ),
+                ],
+                if (newsletterEnabled) ...[
+                  const SizedBox(height: 12),
+                  _PrefToggleRow(
+                    label: l10n.profileEmailOffers,
+                    value: emailOffers.valueOrNull ?? false,
+                    onChanged: emailOffers.isLoading
+                        ? null
+                        : (v) => _setEmailOffers(v),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 _PrefRow(
                   label: l10n.profilePasswordSection,
@@ -438,7 +475,7 @@ class _PrefToggleRow extends StatelessWidget {
 
   final String label;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
