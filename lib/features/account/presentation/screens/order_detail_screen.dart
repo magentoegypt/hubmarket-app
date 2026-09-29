@@ -7,10 +7,12 @@ import '../../../../core/config/store_timezone.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
+import '../../../marketplace/domain/seller_groups.dart';
 import '../../domain/order.dart';
 import '../order_actions.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
+import '../widgets/order_packages.dart';
 
 /// Full detail for a single placed order, navigated to with the [CustomerOrder]
 /// via go_router `extra` (the list already holds every field, so no extra
@@ -64,49 +66,17 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           const SizedBox(height: 24),
 
           _SectionTitle(l10n.orderItemsSection),
-          for (final line in order.lines)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DetailThumb(url: line.imageUrl),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(line.name),
-                        const SizedBox(height: 2),
-                        if (line.sku != null && line.sku!.isNotEmpty)
-                          Text(
-                            '${l10n.specSku}: ${line.sku}',
-                            style: const TextStyle(
-                              color: AppColors.inkMuted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        Text(
-                          l10n.orderQty(line.quantity.toInt()),
-                          style: const TextStyle(
-                            color: AppColors.inkMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (line.price != null) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      line.price!.formatted(),
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(color: AppColors.inkMuted),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+          // Figma 22: with HubApp, one package per store.
+          if (groupBySeller<OrderLine>(order.lines, (l) => l.seller)
+              case final packages?)
+            for (var i = 0; i < packages.length; i++)
+              OrderPackageCard(
+                index: i + 1,
+                package: packages[i],
+                line: (line) => _OrderLineRow(line: line),
+              )
+          else
+            for (final line in order.lines) _OrderLineRow(line: line),
 
           const Divider(height: 32),
           if (order.subtotal != null)
@@ -214,6 +184,60 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             order: order,
             onCancelled: (updated) => setState(() => _order = updated),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// An order line: thumbnail, name, SKU, quantity and price.
+class _OrderLineRow extends StatelessWidget {
+  const _OrderLineRow({required this.line});
+
+  final OrderLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DetailThumb(url: line.imageUrl),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(line.name),
+                const SizedBox(height: 2),
+                if (line.sku != null && line.sku!.isNotEmpty)
+                  Text(
+                    '${l10n.specSku}: ${line.sku}',
+                    style: const TextStyle(
+                      color: AppColors.inkMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                Text(
+                  l10n.orderQty(line.quantity.toInt()),
+                  style: const TextStyle(
+                    color: AppColors.inkMuted,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (line.price != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              line.price!.formatted(),
+              textDirection: TextDirection.ltr,
+              style: const TextStyle(color: AppColors.inkMuted),
+            ),
+          ],
         ],
       ),
     );

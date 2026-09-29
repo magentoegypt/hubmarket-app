@@ -4,23 +4,32 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../core/util/media.dart';
 import '../../catalog/data/product_mapper.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../catalog/domain/money.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../domain/customer_address.dart';
 import '../domain/order.dart';
 import '../domain/saved_card.dart';
 import 'account_queries.dart';
 
 class AccountRepository {
-  AccountRepository(this._client);
+  AccountRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
 
+  /// Whether order documents may ask for each line's seller (HubApp); asked
+  /// at request time.
+  final MarketplaceGate _marketplace;
+
   Future<OrderPage> fetchOrders({int pageSize = 10, int currentPage = 1}) async {
-    final data = await _run(AccountQueries.orders, {
+    final data = await _orderRun(AccountQueries.orders, {
       'pageSize': pageSize,
       'currentPage': currentPage,
     }, mutation: false);
@@ -45,7 +54,7 @@ class AccountRepository {
   /// (`placeOrder.orderV2.token`). Native Magento query — returns the same
   /// `CustomerOrder` type as the customer list, so it parses identically.
   Future<CustomerOrder> fetchGuestOrderByToken(String token) async {
-    final data = await _run(AccountQueries.guestOrderByToken, {
+    final data = await _orderRun(AccountQueries.guestOrderByToken, {
       'token': token,
     }, mutation: false);
     return _parseGuestOrder(data['guestOrderByToken']);
@@ -58,7 +67,7 @@ class AccountRepository {
     required String email,
     required String lastname,
   }) async {
-    final data = await _run(AccountQueries.guestOrder, {
+    final data = await _orderRun(AccountQueries.guestOrder, {
       'number': number,
       'email': email,
       'lastname': lastname,
@@ -88,7 +97,7 @@ class AccountRepository {
     required String orderId,
     required String reason,
   }) async {
-    final data = await _run(AccountQueries.cancelOrder, {
+    final data = await _orderRun(AccountQueries.cancelOrder, {
       'orderId': orderId,
       'reason': reason,
     }, mutation: true);
@@ -323,6 +332,7 @@ class AccountRepository {
             ),
             sku: l['product_sku'] as String?,
             urlKey: l['product_url_key'] as String?,
+            seller: HmSellerSummary.fromJson(l['hm_seller']),
           ),
         )
         .toList();
@@ -517,10 +527,38 @@ class AccountRepository {
     return null;
   }
 
+  /// Runs an order [document], asking for each line's seller while HubApp
+  /// serves `hm_seller`. A server that turns the seller selection down
+  /// ("Cannot query field") ran nothing — validation comes first — so the
+  /// plain [document] goes out instead, and the gate stops asking.
+  Future<Map<String, dynamic>> _orderRun(
+    String document,
+    Map<String, dynamic> variables, {
+    required bool mutation,
+  }) async {
+    if (!_marketplace.features.sellers) {
+      return _run(document, variables, mutation: mutation);
+    }
+    try {
+      return await _run(
+        AccountQueries.withSellers(document),
+        variables,
+        mutation: mutation,
+        throwMissing: true,
+      );
+    } on HubAppMissing {
+      _marketplace.sellersMissing();
+      return _run(document, variables, mutation: mutation);
+    }
+  }
+
+  /// [throwMissing]: a "Cannot query field" answer throws [HubAppMissing]
+  /// rather than a [Failure].
   Future<Map<String, dynamic>> _run(
     String document,
     Map<String, dynamic> variables, {
     required bool mutation,
+    bool throwMissing = false,
   }) async {
     try {
       final result = mutation
@@ -539,10 +577,18 @@ class AccountRepository {
               ),
             );
       if (result.hasException) {
-        throw mapOperationException(result.exception!);
+        final exception = result.exception!;
+        if (throwMissing && isHubAppMissing(exception)) {
+          throw HubAppMissing(
+            exception.graphqlErrors.firstOrNull?.message ?? 'hm_seller',
+          );
+        }
+        throw mapOperationException(exception);
       }
       return result.data ?? const <String, dynamic>{};
     } on Failure {
+      rethrow;
+    } on HubAppMissing {
       rethrow;
     } catch (error) {
       throw Failure(FailureKind.unknown, detail: error.toString());
@@ -551,7 +597,10 @@ class AccountRepository {
 }
 
 final accountRepositoryProvider = Provider<AccountRepository>(
-  (ref) => AccountRepository(ref.watch(graphqlClientProvider)),
+  (ref) => AccountRepository(
+    ref.watch(graphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );
 
 /// Paginated orders list state for the signed-in customer.

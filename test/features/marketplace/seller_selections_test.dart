@@ -93,41 +93,59 @@ void main() {
   });
 
   group('SellerSelections.beside', () {
-    test('adds the spread beside every anchor, once', () {
-      const document = r'''
-query Two($a: String!) {
-  first: cart(cart_id: $a) { ...CartFields }
-  second: cart(cart_id: $a) { ...CartFields ...Extra }
+    // Valid on the live schema too: tool/validate_ops.py reads these.
+    const document = r'''
+query SellerSelectionsTwo($a: String!) {
+  first: cart(cart_id: $a) {
+    ...SellerSelectionsAnchor
+  }
+  second: cart(cart_id: $a) {
+    ...SellerSelectionsAnchor
+    ...SellerSelectionsExtra
+  }
 }
-fragment CartFields on Cart { id }
 ''';
+    const anchor = r'''
+fragment SellerSelectionsAnchor on Cart {
+  id
+}
+''';
+    const extra = r'''
+fragment SellerSelectionsExtra on Cart {
+  total_quantity
+}
+''';
+
+    test('adds the spread beside every anchor, once', () {
       final twin = SellerSelections.beside(
-        document,
-        anchor: 'CartFields',
-        spread: 'Extra',
-        fragments: 'fragment Extra on Cart { total_quantity }',
+        '$document\n$anchor',
+        anchor: 'SellerSelectionsAnchor',
+        spread: 'SellerSelectionsExtra',
+        fragments: extra,
       );
 
-      expect(RegExp(r'\.\.\.Extra').allMatches(twin), hasLength(2));
       expect(
-        RegExp('fragment Extra on Cart').allMatches(twin),
+        RegExp(r'\.\.\.SellerSelectionsExtra').allMatches(twin),
+        hasLength(2),
+      );
+      expect(
+        RegExp('fragment SellerSelectionsExtra on Cart').allMatches(twin),
         hasLength(1),
       );
     });
 
     test("doesn't define a fragment the document already has", () {
-      const document =
-          'query Q { cart(cart_id: "x") { ...CartFields } } '
-          'fragment CartFields on Cart { id } '
-          'fragment Shared on Cart { id }';
       final twin = SellerSelections.beside(
-        document,
-        anchor: 'CartFields',
-        spread: 'Shared',
-        fragments: 'fragment Shared on Cart { email }',
+        '$document\n$anchor\n$extra',
+        anchor: 'SellerSelectionsAnchor',
+        spread: 'SellerSelectionsExtra',
+        fragments: extra,
       );
 
-      expect(_fragments(twin).defined, ['CartFields', 'Shared']);
+      expect(_fragments(twin).defined, [
+        'SellerSelectionsAnchor',
+        'SellerSelectionsExtra',
+      ]);
     });
   });
 }

@@ -135,6 +135,7 @@ Widget checkoutHarness({
   bool darkMode = false,
   BackendCapabilities capabilities = BackendCapabilities.hubMarket,
   GlobalKey? boundary,
+  CartRepository? cartRepository,
 }) {
   final cache = FakeLocalCache()..writeString('guest_cart_id', 'guest-1');
   final router = GoRouter(
@@ -187,7 +188,9 @@ Widget checkoutHarness({
         FakeSecureTokenStore(signedIn ? 'customer-token' : null),
       ),
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-      cartRepositoryProvider.overrideWithValue(CheckoutCartRepository()),
+      cartRepositoryProvider.overrideWithValue(
+        cartRepository ?? CheckoutCartRepository(),
+      ),
       checkoutRepositoryProvider.overrideWithValue(repository),
       backendCapabilitiesProvider.overrideWithValue(capabilities),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
