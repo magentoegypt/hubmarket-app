@@ -92,6 +92,20 @@ void main() {
       expect(RatingBar.histogramOf([_review(0)]), isEmpty);
     });
 
+    test('no bars when the PDP holds only some of the reviews', () {
+      // 21+ reviews: the PDP loads 20, which say nothing about the rest.
+      final detail = ProductDetail(
+        sku: 'S',
+        name: 'N',
+        urlKey: 'u',
+        reviewCount: 3,
+        reviews: [_review(100), _review(40)],
+      );
+      expect(detail.ratingHistogram, isEmpty);
+      expect(RatingBar.exactHistogram([_review(100)], 1), hasLength(5));
+      expect(RatingBar.exactHistogram(const [], 0), isEmpty);
+    });
+
     test('the PDP derives its histogram from its loaded reviews', () {
       final detail = ProductDetail(
         sku: 'S',

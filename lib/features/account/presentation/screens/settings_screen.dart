@@ -66,22 +66,21 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(height: 32),
 
-          _SectionHeader(l10n.notificationsTitle),
-          SwitchListTile.adaptive(
-            value: promoEnabled,
-            onChanged: (v) =>
-                ref.read(notificationSettingsProvider.notifier).setPromotions(v),
-            title: Text(l10n.notificationsPromoTitle),
-            subtitle: Text(l10n.notificationsPromoBody),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              l10n.notificationsOrdersNote,
-              style: TextStyle(color: context.scaffoldMuted),
+          // Push only exists with FCM (no Firebase config ships yet), and
+          // order pushes need backend device tokens — so no promise about
+          // them either.
+          if (ref.watch(pushNotificationsAvailableProvider)) ...[
+            _SectionHeader(l10n.notificationsTitle),
+            SwitchListTile.adaptive(
+              value: promoEnabled,
+              onChanged: (v) => ref
+                  .read(notificationSettingsProvider.notifier)
+                  .setPromotions(v),
+              title: Text(l10n.notificationsPromoTitle),
+              subtitle: Text(l10n.notificationsPromoBody),
             ),
-          ),
-          const Divider(height: 32),
+            const Divider(height: 32),
+          ],
 
           ListTile(
             leading: const Icon(Icons.help_outline),

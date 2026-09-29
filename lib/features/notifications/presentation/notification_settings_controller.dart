@@ -40,6 +40,14 @@ class NotificationSettings extends Notifier<bool> {
 final notificationSettingsProvider =
     NotifierProvider<NotificationSettings, bool>(NotificationSettings.new);
 
+/// Whether push can be delivered at all: FCM initialised from a bundled
+/// Firebase config. Hub Market ships none yet, so every push toggle stays
+/// hidden rather than switching something that can't arrive. A provider so
+/// tests can turn it on.
+final pushNotificationsAvailableProvider = Provider<bool>(
+  (ref) => NotificationService.instance.fcmAvailable,
+);
+
 /// Applies the persisted topic subscriptions at startup (after FCM init). A
 /// no-op when FCM is unavailable.
 Future<void> applyNotificationTopics(LocalCache cache) async {

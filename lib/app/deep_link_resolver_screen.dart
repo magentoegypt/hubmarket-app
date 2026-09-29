@@ -8,6 +8,7 @@ import '../core/widgets/empty_state.dart';
 import '../core/widgets/web_view_screen.dart';
 import '../features/catalog/data/catalog_repository.dart';
 import '../features/catalog/presentation/storefront_links.dart';
+import '../features/cms/domain/cms_links.dart';
 import '../l10n/l10n.dart';
 import 'routes.dart';
 import 'theme/app_colors.dart';
@@ -24,9 +25,10 @@ import 'theme/app_colors.dart';
 /// Resolution order:
 ///  1. an Arabic/English store segment (`/uae-ar/`) switches the app language,
 ///     so a shared Arabic link opens in Arabic;
-///  2. `urlResolver` maps the path to a PRODUCT (PDP) or CATEGORY (PLP);
-///  3. anything else on our own domain (CMS pages, `shopbrand`, the blog) opens
-///     in the in-app [WebViewScreen] rather than dead-ending;
+///  2. `urlResolver` maps the path to a PRODUCT (PDP), CATEGORY (PLP) or
+///     CMS_PAGE (the native content page);
+///  3. anything else on our own domain (`shopbrand`, the blog) opens in the
+///     in-app [WebViewScreen] rather than dead-ending;
 ///  4. only a foreign host or an unparseable URL falls through to a branded
 ///     not-found. It deliberately does **not** hand the URL back to the browser:
 ///     the app claims the domain, so that can bounce straight back here.
@@ -115,6 +117,11 @@ class _DeepLinkResolverScreenState
         resolved.type == 'CATEGORY' &&
         resolved.uid.isNotEmpty) {
       path = AppRoutes.category(resolved.uid);
+    } else if (resolved != null &&
+        resolved.type == 'CMS_PAGE' &&
+        storePathOf(url).isNotEmpty) {
+      // A CMS page renders natively instead of in the in-app browser.
+      path = AppRoutes.cmsPageByUrl(storePathOf(url));
     } else if (brand != null) {
       // A `shopbrand` link is a brand landing, not a catalogue entity, so
       // `urlResolver` returns null for it. Open the app's own brand listing —

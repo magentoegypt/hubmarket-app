@@ -40,7 +40,17 @@ Future<bool> confirmAndDeleteAccount(BuildContext context, WidgetRef ref) async 
     ),
   );
   if (confirmed != true || !context.mounted) return false;
+  return deleteAccountNow(context, ref);
+}
 
+/// Deletes the account without asking again — for a caller that has already
+/// taken an explicit confirmation (Privacy & data's "I understand this can't
+/// be undone"). Only clears local state after Magento confirms the delete; a
+/// failure leaves the customer signed in rather than pretending it worked.
+///
+/// Returns true when the account was deleted.
+Future<bool> deleteAccountNow(BuildContext context, WidgetRef ref) async {
+  final l10n = AppLocalizations.of(context);
   try {
     await ref.read(authControllerProvider.notifier).deleteAccount();
     // The account is gone, so the server-side cart went with it.

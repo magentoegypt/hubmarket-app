@@ -27,6 +27,17 @@ abstract final class AppColors {
   /// Discount badges (e.g. `-24%`).
   static const Color accentSale = Color(0xFFE5484D);
 
+  /// Destructive actions — "Cancel order", "Delete account" — as text and
+  /// icons; AA on white and on [dangerSurface].
+  static const Color danger = Color(0xFFC0392B);
+
+  /// Fill of a destructive button, and the tint of its card's border.
+  static const Color dangerSurface = Color(0xFFFCEBEA);
+
+  /// Orange notice box behind [accentStrong] text (cancellation and deletion
+  /// notes).
+  static const Color accentSurface = Color(0xFFFDF3E7);
+
   /// Rank / "#1" badges and review stars.
   static const Color accentGold = Color(0xFFF5B700);
 
