@@ -220,7 +220,8 @@ ProductDetail productDetailFromJson(
     badge: badgeFromJson(json, now: now),
     options: options,
     variants: variants,
-    ratingSummary: (json['rating_summary'] as int?) ?? 0,
+    // `Float!` in the schema; integral on the wire today, so tolerate both.
+    ratingSummary: (json['rating_summary'] as num?)?.round() ?? 0,
     reviewCount: (json['review_count'] as int?) ?? 0,
     alsoLike: alsoLikeFromJson(json, now: now),
     reviews:

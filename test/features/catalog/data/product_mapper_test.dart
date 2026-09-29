@@ -248,6 +248,15 @@ void main() {
     test('no reviews => no bars', () {
       expect(productDetailFromJson(_json()).ratingHistogram, isEmpty);
     });
+
+    test('rating_summary is a Float in the schema — fractional is tolerated', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'rating_summary': 93.3,
+        'review_count': 3,
+      });
+      expect(detail.ratingSummary, 93);
+    });
   });
 
   group('PDP "More Information" attributes', () {
