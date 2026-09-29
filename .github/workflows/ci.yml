@@ -1,0 +1,30 @@
+name: CI
+
+# Runs on every pull request (analyze + tests) to catch regressions before
+# merge. On push to main the same checks run as a gate inside the "Build · main
+# (APK + IPA)" workflow, so they aren't duplicated here. Still dispatchable by
+# hand from the Actions tab.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  analyze-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          # Matches the project's Dart SDK constraint (^3.12). Bump if you move
+          # the pinned Flutter version.
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Generate typed Dart from the .graphql operations against the committed
+      # schema.graphql. Also guards against schema/operation drift — a field
+      # that no longer exists fails codegen here.
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter gen-l10n
+      - run: flutter analyze
+      - run: flutter test

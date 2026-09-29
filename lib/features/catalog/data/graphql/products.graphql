@@ -1,0 +1,59 @@
+# Product listing — drives home featured, PLP, and search results.
+# `search`/`filter` are individually optional but Magento needs at least one.
+# `aggregations` builds the PLP filter panel dynamically. Confirmed live
+# (Introspect run #4): real SKUs with AED price_range + stock_status.
+query Products(
+  $search: String
+  $filter: ProductAttributeFilterInput
+  $sort: ProductAttributeSortInput
+  $pageSize: Int!
+  $currentPage: Int!
+) {
+  products(
+    search: $search
+    filter: $filter
+    sort: $sort
+    pageSize: $pageSize
+    currentPage: $currentPage
+  ) {
+    total_count
+    page_info {
+      current_page
+      total_pages
+      page_size
+    }
+    items {
+      sku
+      name
+      url_key
+      stock_status
+      is_new_arrival
+      is_bestseller
+      image {
+        url
+        label
+      }
+      price_range {
+        minimum_price {
+          regular_price {
+            value
+            currency
+          }
+          final_price {
+            value
+            currency
+          }
+        }
+      }
+    }
+    aggregations {
+      attribute_code
+      label
+      options {
+        label
+        value
+        count
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# build_runner configuration.
+#
+# graphql_codegen turns the `.graphql` files in the repo into typed Dart:
+#   - lib/core/graphql/schema.graphql   ← the live-introspected SDL (type system),
+#     produced by tool/introspect.sh → tool/json_to_sdl.mjs (CI commits it).
+#   - lib/<feature>/data/graphql/*.graphql  ← executable operations (Phase 1+).
+# Output: a `<name>.graphql.dart` next to each operation file (gitignored).
+#
+# Run: dart run build_runner build --delete-conflicting-outputs
+#
+# State management stays plain Riverpod (no riverpod_generator).
+targets:
+  $default:
+    builders:
+      graphql_codegen:
+        options:
+          # Generate graphql_flutter-flavoured helpers (Query/Mutation widgets,
+          # Options classes) alongside the typed data classes.
+          clients:
+            - graphql_flutter
+          # Add __typename to selection sets so the normalized cache can dedupe.
+          addTypename: true
+          # Map Magento custom scalars to Dart types as they surface in the
+          # schema (most are plain String/Float). Extend per scalar, e.g.:
+          #   scalars:
+          #     EmailAddress: { type: String }
+          scalars: {}

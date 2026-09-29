@@ -1,0 +1,10 @@
+# Android release signing — copy to `android/key.properties` (git-ignored) and fill in.
+# Generate a keystore first:
+#   keytool -genkey -v -keystore ~/hubmarket-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias hubmarket
+#
+# storeFile is resolved relative to android/app (use an absolute path to be safe).
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=hubmarket
+storeFile=/absolute/path/to/hubmarket-release.jks

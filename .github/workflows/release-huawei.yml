@@ -1,0 +1,202 @@
+name: Release · Huawei AppGallery
+
+# Builds a signed Android artifact and uploads it to AppGallery Connect.
+#
+# Signing is the SAME upload keystore as the Play lane — the four ANDROID_*
+# secrets serve both stores, so setting them up once unblocks Google Play and
+# AppGallery together. Without them the build falls back to the debug key and
+# this workflow refuses to upload, because AppGallery rejects a debug-signed
+# artifact exactly as Play does.
+#
+# `submit` defaults to false: the artifact is uploaded and bound to the app
+# record as a draft, and a human presses submit in the AGC console. Set it true
+# only when you intend to send the build to Huawei's review queue.
+#
+# Secrets:
+#   ANDROID_KEYSTORE_BASE64 / ANDROID_STORE_PASSWORD /
+#   ANDROID_KEY_PASSWORD / ANDROID_KEY_ALIAS   — shared with release-android.yml
+#   HUAWEI_AGC_CLIENT_ID / HUAWEI_AGC_CLIENT_SECRET
+#       AGC → Users and permissions → API client (Connect API role)
+#   HUAWEI_AGC_APP_ID
+#       AGC → My apps → <app> → App information → "App ID" (numeric, NOT the
+#       package name)
+#
+# ⚠ The AGC Publishing API v2 sequence below (token → upload-url → upload →
+# app-file-info → app-submit) is written from Huawei's published API docs and
+# has NOT been executed against a real app record. Treat the first run as a
+# dry-run and read the step output; see docs/appstore/appgallery-submission.md.
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: "Flutter flavor"
+        type: choice
+        default: prod
+        options: [prod, staging, dev]
+      format:
+        description: "Artifact to upload (apk = widest device support, aab = smaller download)"
+        type: choice
+        default: apk
+        options: [apk, aab]
+      submit:
+        description: "Submit to Huawei review after upload? (false = leave as a draft)"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Generate GraphQL typed Dart (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # Same keystore as the Play lane. Unlike that lane this one FAILS without
+      # it: a debug-signed artifact is rejected by AppGallery, so continuing
+      # would only waste a review cycle.
+      - name: Write keystore + key.properties
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. AppGallery rejects debug-signed artifacts — add the four ANDROID_* secrets (they are shared with release-android.yml)."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=release.jks
+          EOF
+
+      - name: Build APK
+        if: ${{ inputs.format == 'apk' }}
+        env:
+          FLAVOR: ${{ inputs.flavor }}
+        run: >
+          flutter build apk --release
+          --flavor "$FLAVOR"
+          -t "lib/main_$FLAVOR.dart"
+          --dart-define-from-file="config/$FLAVOR.json"
+
+      - name: Build app bundle
+        if: ${{ inputs.format == 'aab' }}
+        env:
+          FLAVOR: ${{ inputs.flavor }}
+        run: >
+          flutter build appbundle --release
+          --flavor "$FLAVOR"
+          -t "lib/main_$FLAVOR.dart"
+          --dart-define-from-file="config/$FLAVOR.json"
+
+      - name: Locate the artifact
+        id: artifact
+        env:
+          FORMAT: ${{ inputs.format }}
+          FLAVOR: ${{ inputs.flavor }}
+        run: |
+          if [ "$FORMAT" = "apk" ]; then
+            path="$(ls build/app/outputs/flutter-apk/*-release.apk | head -n1)"
+          else
+            path="$(ls build/app/outputs/bundle/${FLAVOR}Release/*.aab | head -n1)"
+          fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+          echo "suffix=$FORMAT" >> "$GITHUB_OUTPUT"
+          ls -la "$path"
+
+      # Keep a copy on the run regardless of whether the upload works, so a
+      # failed AGC call never means rebuilding.
+      - name: Upload artifact to the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: appgallery-${{ inputs.flavor }}-${{ inputs.format }}
+          path: ${{ steps.artifact.outputs.path }}
+          if-no-files-found: error
+
+      # ---- AppGallery Connect Publishing API v2 ----
+      # Four calls: obtain a token, ask for an upload slot, PUT the bytes, then
+      # bind the uploaded file to the app record. Submission is separate and
+      # opt-in.
+      - name: Publish to AppGallery Connect
+        env:
+          CLIENT_ID: ${{ secrets.HUAWEI_AGC_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.HUAWEI_AGC_CLIENT_SECRET }}
+          APP_ID: ${{ secrets.HUAWEI_AGC_APP_ID }}
+          ARTIFACT: ${{ steps.artifact.outputs.path }}
+          SUFFIX: ${{ steps.artifact.outputs.suffix }}
+          SUBMIT: ${{ inputs.submit }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLIENT_ID:-}" ] || [ -z "${CLIENT_SECRET:-}" ] || [ -z "${APP_ID:-}" ]; then
+            echo "::error::HUAWEI_AGC_CLIENT_ID / HUAWEI_AGC_CLIENT_SECRET / HUAWEI_AGC_APP_ID are required. See docs/appstore/appgallery-submission.md."
+            exit 1
+          fi
+          API=https://connect-api.cloud.huawei.com/api
+
+          echo "→ token"
+          TOKEN="$(curl -sS -X POST "$API/oauth2/v1/token" \
+            -H 'Content-Type: application/json' \
+            -d "{\"grant_type\":\"client_credentials\",\"client_id\":\"$CLIENT_ID\",\"client_secret\":\"$CLIENT_SECRET\"}" \
+            | jq -r '.access_token')"
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::Could not obtain an AGC access token — check the API client credentials and that it holds the Connect API role."
+            exit 1
+          fi
+          AUTH=(-H "client_id: $CLIENT_ID" -H "Authorization: Bearer $TOKEN")
+
+          echo "→ upload slot"
+          SLOT="$(curl -sS -G "$API/publish/v2/upload-url" "${AUTH[@]}" \
+            --data-urlencode "appId=$APP_ID" --data-urlencode "suffix=$SUFFIX")"
+          UPLOAD_URL="$(echo "$SLOT" | jq -r '.uploadUrl')"
+          AUTH_CODE="$(echo "$SLOT" | jq -r '.authCode')"
+          if [ -z "$UPLOAD_URL" ] || [ "$UPLOAD_URL" = "null" ]; then
+            echo "::error::No upload URL returned. Response: $SLOT"
+            exit 1
+          fi
+
+          echo "→ upload $(basename "$ARTIFACT")"
+          UP="$(curl -sS -X POST "$UPLOAD_URL" \
+            -F "authCode=$AUTH_CODE" -F "fileCount=1" -F "parseType=1" \
+            -F "file=@$ARTIFACT")"
+          DEST="$(echo "$UP" | jq -r '.result.UploadFileRsp.fileInfoList[0].fileDestUlr')"
+          if [ -z "$DEST" ] || [ "$DEST" = "null" ]; then
+            echo "::error::Upload did not return a file destination. Response: $UP"
+            exit 1
+          fi
+
+          echo "→ bind file to the app record"
+          BIND="$(curl -sS -X PUT "$API/publish/v2/app-file-info?appId=$APP_ID" \
+            "${AUTH[@]}" -H 'Content-Type: application/json' \
+            -d "{\"fileType\":5,\"files\":[{\"fileName\":\"$(basename "$ARTIFACT")\",\"fileDestUrl\":\"$DEST\",\"size\":$(stat -c%s "$ARTIFACT")}]}")"
+          echo "$BIND"
+          if [ "$(echo "$BIND" | jq -r '.ret.code')" != "0" ]; then
+            echo "::error::Binding the uploaded file failed. Response above."
+            exit 1
+          fi
+
+          if [ "$SUBMIT" = "true" ]; then
+            echo "→ submit for review"
+            SUB="$(curl -sS -X POST "$API/publish/v2/app-submit?appId=$APP_ID" "${AUTH[@]}")"
+            echo "$SUB"
+            if [ "$(echo "$SUB" | jq -r '.ret.code')" != "0" ]; then
+              echo "::error::Submit failed. The build is uploaded — submit from the AGC console instead."
+              exit 1
+            fi
+            echo "Submitted to Huawei review."
+          else
+            echo "Uploaded as a draft. Submit from the AGC console when ready (or re-run with submit = true)."
+          fi

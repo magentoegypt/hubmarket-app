@@ -1,0 +1,80 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Firebase client config (google-services.json / GoogleService-Info.plist) is
+# intentionally committed for this private repo + CI. Real signing secrets stay
+# out of git:
+android/key.properties
+**/*.jks
+**/*.keystore
+*.p8
+*.p12
+*.mobileprovision
+# Raw signing private keys from tool/ios_make_csr.sh — never commit. The CSR
+# (*.certSigningRequest) is a transient upload artifact; keep it out of git too.
+*.key
+*.certSigningRequest
+
+# Exception: the iOS ad-hoc signing material lives in ios/signing/ for CI
+# (manual signing without fastlane match). The .p12 is password-protected and
+# its password is a GitHub secret (IOS_P12_PASSWORD), never committed.
+!ios/signing/
+!ios/signing/*.p12
+!ios/signing/*.mobileprovision
+
+
+# GraphQL codegen: schema.graphql (SDL) IS committed (codegen input, from CI);
+# the raw introspection JSON and generated *.graphql.dart are not.
+lib/core/graphql/schema.introspection.json
+**/*.graphql.dart
+*.g.dart
+
+# gen-l10n output. The ARB files (lib/l10n/*.arb) ARE the source and stay
+# committed; AppLocalizations is build output. `flutter pub get` regenerates it,
+# so every workflow gets it for free — nothing needs an explicit `gen-l10n`
+# step. Tracking it only produced diff noise on every build.
+lib/l10n/app_localizations.dart
+lib/l10n/app_localizations_*.dart

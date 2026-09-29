@@ -1,0 +1,48 @@
+name: Screenshots · iOS
+
+# Captures App Store product-page screenshots on an iOS Simulator and uploads
+# them as an artifact to drag into App Store Connect. Simulator work is
+# macOS-only, so this can't run on the Windows dev machine.
+#
+# Runs against the LIVE hub-market.magento2.click backend, so the shots show real catalog
+# content (real products, real AED prices) — not placeholder data.
+on:
+  workflow_dispatch:
+    inputs:
+      locale:
+        description: "Store locale to capture (en = LTR, ar = RTL)"
+        type: choice
+        default: en
+        options: [en, ar]
+
+jobs:
+  capture:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+
+      - name: Pre-create SPM SourcePackages dir (flutter/flutter rsync workaround)
+        run: mkdir -p build/ios/SourcePackages
+      - run: flutter pub get
+      - name: Generate GraphQL typed Dart (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Capture screenshots
+        env:
+          SHOT_LOCALE: ${{ inputs.locale }}
+        run: bash tool/ios_screenshots.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appstore-screenshots-ios-${{ inputs.locale }}
+          path: build/screenshots/ios/*.png
+          if-no-files-found: error

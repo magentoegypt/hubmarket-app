@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["544Y9RU66L.com.zoonze.shop"],
+        "components": [
+          { "/": "/media/*",  "exclude": true, "comment": "product images" },
+          { "/": "/static/*", "exclude": true, "comment": "theme assets" },
+          { "/": "/pub/*",    "exclude": true, "comment": "pub/media, pub/static" },
+          { "/": "/rest/*",   "exclude": true, "comment": "Magento REST" },
+          { "/": "/graphql",  "exclude": true, "comment": "GraphQL endpoint" },
+          { "/": "/",         "comment": "storefront root -> app Home" },
+          { "/": "/uae-en*",  "comment": "English store view" },
+          { "/": "/uae-ar*",  "comment": "Arabic store view" },
+          { "/": "/*.html",   "comment": "root-level product/category rewrites" }
+        ]
+      }
+    ]
+  }
+}

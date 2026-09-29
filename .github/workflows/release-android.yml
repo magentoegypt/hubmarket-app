@@ -1,0 +1,158 @@
+name: Release · Android
+
+# Builds an Android APK and/or Play app bundle. Run from the Actions tab.
+#   - apk → a single installable .apk (for Diawi / direct install / testing)
+#   - aab → the Play Store app bundle (.aab; NOT installable directly / on Diawi)
+#
+# Publishing: set play_track (internal/alpha/beta) to push the .aab to Play, the
+# Android counterpart to the iOS lane's fastlane-pilot upload to TestFlight.
+# Default is `none` — build the artifact and stop — so existing runs are
+# unchanged. Requires the PLAY_SERVICE_ACCOUNT_JSON secret, and the app must
+# already have one bundle published manually: Play refuses API uploads for a
+# package that has never been released.
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: "Flutter flavor"
+        type: choice
+        default: prod
+        options: [prod, staging, dev]
+      format:
+        description: "Output (apk = Diawi/install, aab = Play Store)"
+        type: choice
+        default: apk
+        options: [apk, aab, both]
+      play_track:
+        description: "Publish the .aab to Play? (none = build the artifact only)"
+        type: choice
+        default: none
+        options: [none, internal, alpha, beta]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Generate GraphQL typed Dart (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # google-services.json is committed; only the keystore is injected. When
+      # no keystore secret is set, this step is skipped and the Gradle config
+      # falls back to the debug key, so the pipeline still builds (the AAB is
+      # NOT Play-uploadable until the ANDROID_* secrets are added).
+      - name: Write keystore + key.properties (when configured)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 not set — building with the debug key (not Play-uploadable). Add the ANDROID_* secrets to produce a signed bundle."
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=release.jks
+          EOF
+
+      # APK — a single installable file for Diawi / direct install.
+      - name: Build APK
+        if: ${{ inputs.format == 'apk' || inputs.format == 'both' }}
+        env:
+          FLAVOR: ${{ inputs.flavor }}
+        run: >
+          flutter build apk --release
+          --flavor "$FLAVOR"
+          -t "lib/main_$FLAVOR.dart"
+          --dart-define-from-file="config/$FLAVOR.json"
+
+      - name: Upload APK
+        if: ${{ inputs.format == 'apk' || inputs.format == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ inputs.flavor }}
+          path: build/app/outputs/flutter-apk/*-release.apk
+          if-no-files-found: error
+
+      # OTA-distribute the APK to Loadly. Skips when LOADLY_API_KEY is unset
+      # (see tool/loadly_upload.sh). AAB is a Play bundle, not installable, so
+      # only the APK path uploads.
+      - name: Distribute APK to Loadly (when configured)
+        if: ${{ inputs.format == 'apk' || inputs.format == 'both' }}
+        env:
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+        run: |
+          apk="$(ls build/app/outputs/flutter-apk/*-release.apk | head -n1)"
+          bash tool/loadly_upload.sh "$apk" "${{ inputs.flavor }} release"
+
+      # AAB — Play Store app bundle (not installable directly / on Diawi).
+      - name: Build app bundle
+        if: ${{ inputs.format == 'aab' || inputs.format == 'both' }}
+        env:
+          FLAVOR: ${{ inputs.flavor }}
+        run: >
+          flutter build appbundle --release
+          --flavor "$FLAVOR"
+          -t "lib/main_$FLAVOR.dart"
+          --dart-define-from-file="config/$FLAVOR.json"
+
+      - name: Upload app bundle
+        if: ${{ inputs.format == 'aab' || inputs.format == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: appbundle-${{ inputs.flavor }}
+          path: build/app/outputs/bundle/${{ inputs.flavor }}Release/*.aab
+          if-no-files-found: error
+
+      # ---- Play Store publish (opt-in) --------------------------------------
+      # Off by default: play_track=none still just produces the artifact, which
+      # is what every existing run does. This is the Android counterpart to the
+      # iOS lane's `fastlane pilot` upload to TestFlight; `internal` is the
+      # closest analogue to a TestFlight build.
+      #
+      # Only prod may publish. dev/staging carry applicationIdSuffix .dev/.staging,
+      # so their package name is not the listed app and Play would reject them —
+      # better to fail loudly here than to get a confusing 404 from the API.
+      - name: Refuse to publish a non-prod flavor
+        if: ${{ inputs.play_track != 'none' && inputs.flavor != 'prod' }}
+        run: |
+          echo "::error::play_track=${{ inputs.play_track }} requires flavor=prod —           ${{ inputs.flavor }} builds com.hubmarket.app.${{ inputs.flavor }}, which is not the listed app."
+          exit 1
+
+      - name: Require an .aab to publish
+        if: ${{ inputs.play_track != 'none' && inputs.format == 'apk' }}
+        run: |
+          echo "::error::play_track=${{ inputs.play_track }} needs format=aab or both — Play does not accept an APK for this app."
+          exit 1
+
+      - name: Publish to Play (${{ inputs.play_track }})
+        if: ${{ inputs.play_track != 'none' && inputs.flavor == 'prod' && inputs.format != 'apk' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          # Play "Release manager" service-account JSON. Set it in repo secrets;
+          # never commit it. Absent → this step fails with an auth error rather
+          # than silently skipping, which is the behaviour we want.
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.hubmarket.app
+          releaseFiles: build/app/outputs/bundle/prodRelease/*.aab
+          track: ${{ inputs.play_track }}
+          status: completed
+          # Play rejects an upload whose versionCode is not higher than the
+          # highest already on the track, so bump pubspec's +N before dispatching
+          # (same rule as the iOS build number).
+          changesNotSentForReview: false

@@ -1,0 +1,51 @@
+name: Figma export
+
+# Manual run. The Actions runner can reach api.figma.com (unlike the agent
+# sandbox), so this exports every app screen from the Figma design file as a PNG
+# into docs/figma/ and commits them back to main.
+#
+# Secret: FIGMA_TOKEN (a Figma personal access token — Figma → Settings →
+# Account → Personal access tokens).
+on:
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: "Export scale (1–4)"
+        required: false
+        default: "2"
+
+permissions:
+  contents: write   # to commit the exported screenshots back to main
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export screens from Figma
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          FIGMA_SCALE: ${{ inputs.scale }}
+        run: bash tool/figma_export.sh
+
+      - name: Upload screenshots artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: figma-screens
+          path: docs/figma/*.png
+          if-no-files-found: warn
+
+      # [skip ci] keeps the commit from triggering build-on-push.
+      - name: Commit screenshots (if changed)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/figma
+          if git diff --cached --quiet; then
+            echo "Screenshots unchanged — nothing to commit."
+          else
+            git commit -m "docs(figma): export screen screenshots [skip ci]"
+            git push origin HEAD:main
+          fi

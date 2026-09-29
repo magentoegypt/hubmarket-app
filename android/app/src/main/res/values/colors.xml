@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#9E1B3F</color>
+    <!-- FCM/notification accent (brand burgundy). -->
+    <color name="notification_color">#9E1B3F</color>
+</resources>

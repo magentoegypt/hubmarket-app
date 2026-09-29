@@ -1,0 +1,110 @@
+name: hubmarket_app
+description: "Hub Market — Flutter storefront client for Magento Open Source (hub-market.magento2.click), UAE, bilingual EN/AR, AED."
+publish_to: "none"
+version: 1.0.2+125
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+  # State management + DI
+  flutter_riverpod: ^2.5.0
+
+  # GraphQL (primary backend transport)
+  graphql_flutter: ^5.1.0
+
+  # Routing
+  go_router: ^14.0.0
+
+  # Storage
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.0
+  hive_ce: ^2.0.0
+  hive_ce_flutter: ^2.0.0
+
+  # Networking (non-GraphQL) + images
+  dio: ^5.4.0
+  cached_network_image: ^3.3.0
+  # Direct (not just transitive via cached_network_image): HubImage installs a
+  # dedicated CacheManager — see lib/core/util/image_cache_config.dart.
+  flutter_cache_manager: ^3.4.1
+  flutter_local_notifications: ^22.0.1
+  firebase_core: ^4.11.0
+  firebase_messaging: ^16.4.1
+  gql: ^1.0.1
+  url_launcher: ^6.3.2
+  package_info_plus: ^9.0.1
+  share_plus: ^12.0.2
+  cupertino_http: ^3.0.2
+  http: ^1.6.0
+  video_player: ^2.11.1
+  image_picker: ^1.2.3
+  webview_flutter: ^4.14.1
+  # Tabby BNPL checkout (official package, publisher tabby.ai). Renders Tabby's
+  # hosted session in an embedded WebView, so Tabby needs no native module —
+  # only N-Genius does. See lib/features/checkout/payments/tabby_payment_gateway.dart
+  tabby_flutter_inapp_sdk: ^2.1.0
+  timezone: ^0.11.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Drives the App Store screenshot capture (integration_test/screenshots_test.dart
+  # + test_driver/screenshot_driver.dart, run by tool/ios_screenshots.sh).
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+  # GraphQL codegen (Phase 1): typed Dart from .graphql operation files against
+  # the live-introspected lib/core/graphql/schema.graphql (produced by
+  # tool/introspect.sh → tool/json_to_sdl.mjs). State stays plain Riverpod, so
+  # no riverpod_generator. Run: dart run build_runner build --delete-conflicting-outputs
+  build_runner: ^2.4.0
+  graphql_codegen: ^0.14.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/branding/
+    - assets/images/
+    # Official Apple Pay / Samsung Pay marks. See assets/payments/README.md —
+    # the licensed artwork is dropped in by hand; the checkout row falls back to
+    # a Material icon while the directory holds only the README.
+    - assets/payments/
+    # First-launch intro (assets/video/README.md). Re-encoded from the 4K
+    # master to 1080x1920 and stripped of its silent audio track — ~1 MB, which
+    # every user downloads, so keep any replacement to the same budget. Listed
+    # as a file, not a directory, so the README beside it isn't shipped too.
+    - assets/video/app_intro.mp4
+  fonts:
+    # Variable fonts (all weights in a single file). Inter + Playfair Display for
+    # Latin/EN; Cairo for Arabic/AR. See docs/FIGMA_DESIGN.md.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo.ttf
+    - family: Playfair Display
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay.ttf
+
+# App launcher icons — generated from the brand logo's Z-monogram (white on
+# brand burgundy) by `dart run tool/icon_gen.dart`, then `dart run
+# flutter_launcher_icons`. app_icon.png = full (iOS/legacy);
+# app_icon_foreground.png = padded transparent (Android adaptive).
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  image_path: "assets/branding/app_icon.png"
+  adaptive_icon_background: "#9E1B3F"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"

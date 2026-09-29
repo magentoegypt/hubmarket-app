@@ -1,0 +1,3 @@
+app_identifier("com.zoonze.shop")
+# apple_id / team_id are resolved from the App Store Connect API key, so they
+# aren't hardcoded here.

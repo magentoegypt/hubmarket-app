@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Ad-hoc: installs over-the-air (Diawi / direct) on devices whose UDIDs
+	     are registered in the Apple Developer portal and included in the
+	     `match adhoc` provisioning profile. -->
+	<key>method</key>
+	<string>ad-hoc</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<!-- TODO: your 10-char Apple Developer Team ID. -->
+	<key>teamID</key>
+	<string>YOUR_TEAM_ID</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<!-- `match adhoc` creates a profile with this exact name. -->
+		<key>com.hubmarket.app</key>
+		<string>match AdHoc com.hubmarket.app</string>
+	</dict>
+	<key>uploadSymbols</key>
+	<true/>
+	<!-- Thin to a single device-installable IPA (no app-thinning variants). -->
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+</dict>
+</plist>

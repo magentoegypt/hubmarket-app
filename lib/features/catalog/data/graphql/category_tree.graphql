@@ -1,0 +1,19 @@
+# Top-level category tree — menu / home "shop by category".
+# Confirmed live (Introspect run #4): real categories with product_count;
+# include_in_menu comes back as Int (mapper coerces). Codegen source for the
+# string currently in catalog_queries.dart (CatalogQueries.categoryTree).
+query CategoryTree {
+  categoryList {
+    uid
+    name
+    url_key
+    children {
+      uid
+      name
+      url_key
+      image
+      include_in_menu
+      product_count
+    }
+  }
+}
