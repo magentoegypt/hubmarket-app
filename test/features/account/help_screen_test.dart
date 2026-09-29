@@ -71,42 +71,44 @@ Future<void> _pump(
 }
 
 void main() {
+  // FAQ copy is content (ARB) and changes with the brand, so assert against the
+  // localizations rather than hardcoded text.
+  final en = lookupAppLocalizations(const Locale('en'));
+  final ar = lookupAppLocalizations(const Locale('ar'));
+
   testWidgets('renders search, contact actions and FAQ (EN)', (tester) async {
     await _pump(tester);
 
     // Help search + the three contact cards.
-    expect(find.text('Search for help…'), findsOneWidget);
-    expect(find.text('Live Chat'), findsOneWidget);
-    expect(find.text('Call Us'), findsOneWidget);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text(en.helpSearchHint), findsOneWidget);
+    expect(find.text(en.helpLiveChat), findsOneWidget);
+    expect(find.text(en.helpCallUs), findsOneWidget);
+    expect(find.text(en.helpEmailLabel), findsOneWidget);
 
     // First FAQ is expanded by default → its answer is visible.
-    expect(
-      find.text('How does Hub Market guarantee 100% authentic products?'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('trusted suppliers'), findsOneWidget);
+    expect(find.text(en.helpQ1), findsOneWidget);
+    expect(find.text(en.helpA1), findsOneWidget);
 
     // A collapsed FAQ expands on tap.
-    expect(find.textContaining('within 3 hours'), findsNothing);
-    await tester.tap(find.text('How fast is Hub Market delivery?'));
+    expect(find.text(en.helpA5), findsNothing);
+    await tester.tap(find.text(en.helpQ5));
     await tester.pumpAndSettle();
-    expect(find.textContaining('within 3 hours'), findsOneWidget);
+    expect(find.text(en.helpA5), findsOneWidget);
   });
 
   testWidgets('offers only the channels the store publishes', (tester) async {
     await _pump(tester, contact: _whatsappOnly);
 
-    expect(find.text('Live Chat'), findsOneWidget);
-    expect(find.text('Call Us'), findsNothing);
-    expect(find.text('Email'), findsNothing);
+    expect(find.text(en.helpLiveChat), findsOneWidget);
+    expect(find.text(en.helpCallUs), findsNothing);
+    expect(find.text(en.helpEmailLabel), findsNothing);
   });
 
   testWidgets('renders translated + RTL in Arabic', (tester) async {
     await _pump(tester, locale: 'ar');
-    expect(find.text('ما سرعة التوصيل في زونزي؟'), findsOneWidget); // helpQ5
+    expect(find.text(ar.helpQ5), findsOneWidget);
     expect(
-      Directionality.of(tester.element(find.text('ما سرعة التوصيل في زونزي؟'))),
+      Directionality.of(tester.element(find.text(ar.helpQ5))),
       TextDirection.rtl,
     );
   });
