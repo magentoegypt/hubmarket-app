@@ -30,7 +30,7 @@ backend modules as Hub Market facts.
 ## 2. Tooling
 
 - `python tool/introspect_to_sdl.py` — refresh `lib/core/graphql/schema.graphql` from the live endpoint.
-- `python tool/validate_ops.py` (set `PYTHONIOENCODING=utf-8`) — checks **every** GraphQL operation (`.graphql` files and inline Dart query strings) against the live schema. Run it before every push; it must report 0 problems.
+- `python tool/validate_ops.py` (set `PYTHONIOENCODING=utf-8`) — checks **every** GraphQL operation (`.graphql` files and inline Dart query strings) against the live schema **plus** the Hub Market App contract `lib/core/graphql/hubapp.graphql` (merged the Magento way; `--live-only` checks the live schema alone). Run it before every push; it must report 0 problems. Its own tests: `python -m unittest discover -s tool -p "test_*.py"`.
 - `dart run build_runner build --delete-conflicting-outputs` — graphql_codegen for `lib/**/data/graphql/*.graphql`.
 - `flutter analyze` · `flutter test` · `dart run flutter_launcher_icons` (icons from `assets/branding/`).
 - Never send a GraphQL **mutation** to the live server from tooling or tests — queries and introspection only.
