@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/hubapp/hm_app_config.dart';
 
 /// A facet configured for the storefront's search (Magento › Stores ›
 /// Configuration › Algolia Search › Instant Search Results Page › Facets),
@@ -229,20 +230,60 @@ class AlgoliaSettings {
       searchKey: config.algoliaSearchKey.trim(),
       indexName: indexName,
       validUntil: securedKeyValidUntil(config.algoliaSearchKey.trim()),
-      facets: const <AlgoliaFacet>[
-        AlgoliaFacet(attribute: 'price', type: 'slider'),
-        AlgoliaFacet(attribute: 'categories', type: 'conjunctive'),
-        AlgoliaFacet(attribute: 'rating_summary', type: 'slider'),
-      ],
-      sorts: [
-        for (final suffix in config.algoliaSortReplicaSuffixes)
-          if (sortIndexFromSuffix('${indexName}_products', suffix)
-              case final sort?)
-            sort,
-      ],
+      facets: basicFacets,
+      sorts: _configuredSorts(config, indexName),
       fromBackend: false,
     );
   }
+
+  /// Settings from the Hub Market App API (`hmAppConfig.algolia`): its
+  /// application, secured key, `valid_until` and index names. That API
+  /// carries no facets or sorts, so those come from [layout] — the settings
+  /// the storefront page gave last — or, without one, the basic facets and
+  /// the configured sort replicas.
+  factory AlgoliaSettings.fromHubApp(
+    HmAlgoliaConfig hub, {
+    required AppConfig config,
+    required String storeCode,
+    AlgoliaSettings? layout,
+  }) {
+    const suffix = '_products';
+    final indexName = hub.productIndex.endsWith(suffix)
+        ? hub.productIndex.substring(0, hub.productIndex.length - suffix.length)
+        : '${hub.indexPrefix}$storeCode';
+    return AlgoliaSettings(
+      appId: hub.applicationId,
+      searchKey: hub.searchApiKey,
+      indexName: indexName,
+      validUntil: hub.validUntil ?? securedKeyValidUntil(hub.searchApiKey),
+      facets: layout?.facets ?? basicFacets,
+      sorts: layout?.sorts ?? _configuredSorts(config, indexName),
+      currencyCode: layout?.currencyCode ?? 'AED',
+      priceGroup: layout?.priceGroup ?? 'default',
+      productSuggestions: layout?.productSuggestions ?? 8,
+      categorySuggestions: layout?.categorySuggestions ?? 2,
+      pageSuggestions: layout?.pageSuggestions ?? 2,
+      maxValuesPerFacet: layout?.maxValuesPerFacet ?? 10,
+      categorySeparator: layout?.categorySeparator ?? ' /// ',
+      categoriesOutsideMenu: layout?.categoriesOutsideMenu ?? false,
+    );
+  }
+
+  /// The facets every store view has, with no labels of their own.
+  static const List<AlgoliaFacet> basicFacets = <AlgoliaFacet>[
+    AlgoliaFacet(attribute: 'price', type: 'slider'),
+    AlgoliaFacet(attribute: 'categories', type: 'conjunctive'),
+    AlgoliaFacet(attribute: 'rating_summary', type: 'slider'),
+  ];
+
+  static List<AlgoliaSortIndex> _configuredSorts(
+    AppConfig config,
+    String indexName,
+  ) => [
+    for (final suffix in config.algoliaSortReplicaSuffixes)
+      if (sortIndexFromSuffix('${indexName}_products', suffix) case final sort?)
+        sort,
+  ];
 
   /// The subset of `algoliaConfig` these settings came from, for
   /// [fromStorefrontConfig] to read back (the offline cache).
