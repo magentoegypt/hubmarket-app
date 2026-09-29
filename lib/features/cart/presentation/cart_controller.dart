@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/storage/local_cache.dart';
 import '../../../core/store/store_controller.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/cart_repository.dart';
+import '../domain/bundle_cart_request.dart';
 import '../domain/cart.dart';
 
 class CartState {
@@ -158,6 +160,43 @@ class CartController extends Notifier<CartState> {
       state = state.copyWith(isMutating: false, error: error);
       rethrow;
     }
+  }
+
+  /// Adds a bundle with its chosen selections (`hmAddBundleToCart`), into the
+  /// same cart [addToCart] uses — created on first use, the customer's own
+  /// when signed in.
+  ///
+  /// Only a cached cart the server no longer knows (consumed by an order,
+  /// expired) is replaced and the add retried; any other refusal, such as a
+  /// selection out of stock, leaves the cart alone and rethrows.
+  Future<void> addBundleToCart(BundleCartRequest request) async {
+    state = state.copyWith(isMutating: true, error: null);
+    try {
+      final hadCachedId = _cartId != null;
+      Cart cart;
+      try {
+        cart = await _repo.addBundle(await _ensureCartId(), request);
+      } on Failure catch (error) {
+        if (!hadCachedId || !_isStaleCart(error)) rethrow;
+        await _resetCart();
+        cart = await _repo.addBundle(await _ensureCartId(), request);
+      }
+      state = state.copyWith(cart: cart, isMutating: false);
+    } catch (error) {
+      state = state.copyWith(isMutating: false, error: error);
+      rethrow;
+    }
+  }
+
+  /// Magento's answers for a cart id that is gone: consumed by an order,
+  /// expired, or another customer's.
+  static bool _isStaleCart(Failure error) {
+    final detail = (error.detail ?? '').toLowerCase();
+    return error.kind == FailureKind.server &&
+        (detail.contains('could not find a cart') ||
+            detail.contains("cart isn't active") ||
+            detail.contains('cart is not active') ||
+            detail.contains('does not have an active cart'));
   }
 
   /// Batch add (one round-trip) — used by the wishlist "Add all to Bag" so it's
