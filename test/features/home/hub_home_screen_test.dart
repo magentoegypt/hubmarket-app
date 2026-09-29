@@ -51,11 +51,6 @@ Product _p(String name, double price, [double? was]) => Product(
   finalPrice: Money(amount: price, currency: 'AED'),
 );
 
-final _deals = <Product>[
-  _p('Egyptian Rice 1 kg', 25, 35),
-  _p('Modern Executive Desk 160 cm', 263, 350),
-  _p('Dolphin Tuna Chunks 185 g', 43, 48),
-];
 final _rail = <Product>[
   _p('Corner Sofa Bed', 425, 500),
   _p('3-Piece Living Room Set', 255, 300),
@@ -103,7 +98,6 @@ Widget _harness(String locale, GlobalKey boundary) {
       homeCmsBlocksProvider.overrideWith((ref) async => _cms),
       homeCategoriesProvider.overrideWith((ref) async => _categories),
       categoryThumbnailsProvider.overrideWith((ref, key) async => const <String, String>{}),
-      homeDealsProvider.overrideWith((ref) async => _deals),
       homeCategoryRailProvider.overrideWith((ref, uid) async => _rail),
     ],
     child: RepaintBoundary(
@@ -156,8 +150,8 @@ void main() {
     await _render(tester, 'en');
     expect(find.text('Free delivery on qualifying orders · Fast nationwide shipping'), findsOneWidget);
     expect(find.text('Shop by category'), findsOneWidget);
-    expect(find.text("Today's Deals"), findsOneWidget);
     expect(find.text('Super Market'), findsWidgets); // tile + rail title
+    expect(find.text('Corner Sofa Bed'), findsWidgets); // rail products
     expect(find.text('Up to 50% Off'), findsOneWidget);
     expect(find.text('Trusted Sellers'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -165,7 +159,7 @@ void main() {
 
   testWidgets('Home renders right-to-left in Arabic without overflow', (tester) async {
     await _render(tester, 'ar');
-    expect(find.text('عروض اليوم'), findsOneWidget);
+    expect(find.text('Corner Sofa Bed'), findsWidgets);
     expect(
       Directionality.of(tester.element(find.byType(HubHomeScreen))),
       TextDirection.rtl,

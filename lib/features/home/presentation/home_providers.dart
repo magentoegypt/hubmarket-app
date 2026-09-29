@@ -52,24 +52,15 @@ final homeCategoriesProvider = FutureProvider.autoDispose<List<Category>>((
   return categories.where((c) => c.productCount > 0).toList(growable: false);
 });
 
-/// Today's Deals: products with a live special price anywhere in the
-/// catalogue, deepest discount first. Special prices and their dates are set
-/// per product in Catalog › Products (Advanced Pricing), as on the website.
-final homeDealsProvider = FutureProvider.autoDispose<List<Product>>((ref) async {
-  ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
-  final root = await ref.watch(homeContentRepositoryProvider).fetchRootCategoryUid();
-  if (root == null) return const <Product>[];
-  final page = await ref
-      .watch(catalogRepositoryProvider)
-      .fetchProducts(categoryUid: root, pageSize: 60);
-  final deals = page.items.where((p) => p.discountPercent != null).toList()
-    ..sort((a, b) => (b.discountPercent ?? 0).compareTo(a.discountPercent ?? 0));
-  return deals.take(12).toList(growable: false);
-});
-
 /// Products for one category rail.
+///
+/// Kept alive for the session: Home builds its rails lazily, so a rail that
+/// scrolls far out of view is disposed and would otherwise refetch — and each
+/// rail is a full product query on a slow backend. Pull-to-refresh and a store
+/// switch still reload it.
 final homeCategoryRailProvider = FutureProvider.autoDispose
     .family<List<Product>, String>((ref, categoryUid) async {
+      ref.keepAlive();
       ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
       final page = await ref
           .watch(catalogRepositoryProvider)

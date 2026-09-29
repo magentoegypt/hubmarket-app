@@ -24,12 +24,6 @@ query HomeCmsBlocks($ids: [String]) {
 }
 ''';
 
-const String _rootCategoryQuery = r'''
-query HomeRootCategory {
-  storeConfig { root_category_uid }
-}
-''';
-
 /// Reads the admin-managed content of the Home screen. Returns raw values;
 /// parsing into typed content lives in the domain layer.
 class HomeContentRepository {
@@ -50,14 +44,6 @@ class HomeContentRepository {
         if ((item['identifier'] as String?) != null)
           item['identifier'] as String: (item['content'] as String?) ?? '',
     };
-  }
-
-  /// The store's root category uid — the catalogue-wide scope for "all
-  /// products" queries such as Today's Deals.
-  Future<String?> fetchRootCategoryUid() async {
-    final data = await _query(_rootCategoryQuery, const <String, dynamic>{});
-    final uid = (data['storeConfig'] as Map<String, dynamic>?)?['root_category_uid'];
-    return uid is String && uid.isNotEmpty ? uid : null;
   }
 
   Future<Map<String, dynamic>> _query(

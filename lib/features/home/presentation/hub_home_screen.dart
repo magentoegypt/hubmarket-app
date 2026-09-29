@@ -28,11 +28,18 @@ const double _kRailHeight = 292;
 /// categories and products from the catalogue, the promise strip, promo cards
 /// and trust row from the storefront's own CMS blocks. A section whose source
 /// is empty collapses — nothing is hard-coded or invented.
+///
+/// Today's Deals is Build 2: the website ranks live special prices with SQL,
+/// and core GraphQL can neither filter nor sort by them — scanning the whole
+/// catalogue for discounts is far too slow on this backend. It returns with
+/// the Hub Market App module's Home feed.
 class HubHomeScreen extends ConsumerWidget {
   const HubHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final categories =
+        ref.watch(homeCategoriesProvider).valueOrNull ?? const <Category>[];
     return HubScaffold(
       currentTab: AppTab.home,
       showSearch: false,
@@ -43,7 +50,6 @@ class HubHomeScreen extends ConsumerWidget {
           ref
             ..invalidate(homeCmsBlocksProvider)
             ..invalidate(categoryTreeProvider)
-            ..invalidate(homeDealsProvider)
             ..invalidate(homeCategoryRailProvider);
           try {
             await ref.read(homeCategoriesProvider.future);
@@ -51,15 +57,17 @@ class HubHomeScreen extends ConsumerWidget {
             // A failed feed collapses its own section; nothing to surface here.
           }
         },
+        // Each rail is its own list child, so its product query only starts
+        // when it scrolls near the viewport instead of all six at launch.
         child: ListView(
           padding: const EdgeInsets.only(bottom: 28),
-          children: const [
-            _PromiseStrip(),
-            _ShopByCategory(),
-            _TodaysDeals(),
-            _CategoryRails(),
-            _PromoBanners(),
-            _TrustRow(),
+          children: [
+            const _PromiseStrip(),
+            const _ShopByCategory(),
+            for (final c in categories.take(kHomeRailCount))
+              _CategoryRail(key: ValueKey(c.uid), category: c),
+            const _PromoBanners(),
+            const _TrustRow(),
           ],
         ),
       ),
@@ -226,7 +234,7 @@ class _PromiseStrip extends ConsumerWidget {
           Expanded(
             child: Text(
               text,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 12,
@@ -390,45 +398,8 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
-class _TodaysDeals extends ConsumerWidget {
-  const _TodaysDeals();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    return ref.watch(homeDealsProvider).when(
-          loading: () => const _RailSkeleton(),
-          error: (_, __) => const SizedBox.shrink(),
-          data: (items) => items.isEmpty
-              ? const SizedBox.shrink()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _SectionHeader(title: l10n.homeTodaysDeals),
-                    _ProductCarousel(products: items),
-                  ],
-                ),
-        );
-  }
-}
-
-class _CategoryRails extends ConsumerWidget {
-  const _CategoryRails();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(homeCategoriesProvider).valueOrNull ?? const <Category>[];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final c in categories.take(kHomeRailCount)) _CategoryRail(category: c),
-      ],
-    );
-  }
-}
-
 class _CategoryRail extends ConsumerWidget {
-  const _CategoryRail({required this.category});
+  const _CategoryRail({super.key, required this.category});
 
   final Category category;
 
