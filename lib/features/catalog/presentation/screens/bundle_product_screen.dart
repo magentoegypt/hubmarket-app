@@ -465,7 +465,10 @@ class _PackageCard extends StatelessWidget {
           for (final row in shown)
             _Divided(
               child: row.selection == null
-                  ? _ChooseRow(option: row.option, onTap: () => onSwap(row.option))
+                  ? _ChooseRow(
+                      option: row.option,
+                      onTap: () => onSwap(row.option),
+                    )
                   : _ItemRow(
                       option: row.option,
                       selection: row.selection!,
@@ -620,7 +623,10 @@ class _ItemRow extends StatelessWidget {
                     line == null
                         ? l10n.bundleLineQty(count)
                         : l10n.bundleLineQtyPrice(count, line.formatted()),
-                    style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.scaffoldMuted,
+                    ),
                   ),
                 if (child != null && child.isConfigurable)
                   for (final attribute in child.options)
@@ -727,11 +733,7 @@ class _ChooseRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: context.scaffoldMuted,
-            ),
+            Icon(Icons.chevron_right, size: 18, color: context.scaffoldMuted),
           ],
         ),
       ),
@@ -857,14 +859,19 @@ class _SmallStepper extends StatelessWidget {
         child: Icon(
           icon,
           size: 16,
-          color: onTap == null ? context.scaffoldFaint : context.scaffoldHeading,
+          color: onTap == null
+              ? context.scaffoldFaint
+              : context.scaffoldHeading,
         ),
       ),
     );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        button(Icons.remove, quantity > 1 ? () => onChanged(quantity - 1) : null),
+        button(
+          Icons.remove,
+          quantity > 1 ? () => onChanged(quantity - 1) : null,
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Text(
@@ -945,7 +952,8 @@ class _PackageSummary extends StatelessWidget {
               color: context.scaffoldHeading,
             ),
           ),
-          if (regular != null) row(l10n.bundleRegularPrice, regular.formatted()),
+          if (regular != null)
+            row(l10n.bundleRegularPrice, regular.formatted()),
           if (saving != null)
             row(
               l10n.bundleSaving,
@@ -961,7 +969,10 @@ class _PackageSummary extends StatelessWidget {
                 Expanded(
                   child: Text(
                     l10n.cartDelivery,
-                    style: TextStyle(fontSize: 14, color: context.scaffoldMuted),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: context.scaffoldMuted,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -995,7 +1006,9 @@ class _PackageSummary extends StatelessWidget {
               Text(
                 total != null
                     ? total.formatted()
-                    : (from == null ? '—' : l10n.bundlePriceFrom(from.formatted())),
+                    : (from == null
+                          ? '—'
+                          : l10n.bundlePriceFrom(from.formatted())),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -1245,7 +1258,10 @@ class _SwapSheetState extends State<_SwapSheet> {
     if (price == null || current == null) return null;
     final delta = (price.amount - current.amount) * selection.quantity;
     if (delta.abs() < 0.005) return null;
-    final text = Money(amount: delta.abs(), currency: price.currency).formatted();
+    final text = Money(
+      amount: delta.abs(),
+      currency: price.currency,
+    ).formatted();
     return delta > 0 ? '+$text' : '−$text';
   }
 }
@@ -1349,7 +1365,10 @@ class _SwapRow extends StatelessWidget {
                             if (price != null) price.formatted(),
                             ?difference,
                           ].join('  ·  '),
-                    style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.scaffoldMuted,
+                    ),
                   ),
                 ],
               ),

@@ -316,13 +316,17 @@ class BundleQuote {
     ];
     final items = _sum([
       for (final (_, selection) in chosen)
-        _times(_unitPrice(bundle, choice, selection, regular: false),
-            choice.quantityOf(selection)),
+        _times(
+          _unitPrice(bundle, choice, selection, regular: false),
+          choice.quantityOf(selection),
+        ),
     ]);
     final itemsRegular = _sum([
       for (final (_, selection) in chosen)
-        _times(_unitPrice(bundle, choice, selection, regular: true),
-            choice.quantityOf(selection)),
+        _times(
+          _unitPrice(bundle, choice, selection, regular: true),
+          choice.quantityOf(selection),
+        ),
     ]);
 
     final cheapest = _cheapestPackage(bundle);
@@ -365,7 +369,10 @@ class BundleQuote {
     }
     return BundleQuote(
       regular: itemsRegular,
-      total: Money(amount: _round(items.amount * factor), currency: items.currency),
+      total: Money(
+        amount: _round(items.amount * factor),
+        currency: items.currency,
+      ),
     );
   }
 
@@ -444,7 +451,10 @@ class BundleQuote {
 
   static Money? _times(Money? price, double quantity) => price == null
       ? null
-      : Money(amount: _round(price.amount * quantity), currency: price.currency);
+      : Money(
+          amount: _round(price.amount * quantity),
+          currency: price.currency,
+        );
 
   /// Null when any is null (a package can't be priced from part of it).
   static Money? _sum(List<Money?> prices) {

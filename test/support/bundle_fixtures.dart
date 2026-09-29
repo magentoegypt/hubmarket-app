@@ -6,7 +6,10 @@ import 'marketplace_fakes.dart';
 
 /// Bundle data as `HmProductMarketplace` returns it.
 
-Map<String, dynamic> _money(double value) => {'value': value, 'currency': 'AED'};
+Map<String, dynamic> _money(double value) => {
+  'value': value,
+  'currency': 'AED',
+};
 
 Map<String, dynamic> _range(double regular, double finalPrice) => {
   'minimum_price': {
@@ -49,8 +52,16 @@ Map<String, dynamic> configurableChildJson({bool mSoldOut = false}) => {
       'attribute_code': 'size',
       'label': 'Size',
       'values': [
-        {'uid': 'Y29uZmlndXJhYmxlLzE0NC8xNjc=', 'value_index': 167, 'label': 'S'},
-        {'uid': 'Y29uZmlndXJhYmxlLzE0NC8xNjg=', 'value_index': 168, 'label': 'M'},
+        {
+          'uid': 'Y29uZmlndXJhYmxlLzE0NC8xNjc=',
+          'value_index': 167,
+          'label': 'S',
+        },
+        {
+          'uid': 'Y29uZmlndXJhYmxlLzE0NC8xNjg=',
+          'value_index': 168,
+          'label': 'M',
+        },
       ],
     },
   ],
@@ -149,7 +160,12 @@ Map<String, dynamic> fitnessPackJson({String? sellerCode = 'test-1'}) => {
     optionJson('YnVuZGxlLzIy', 'Yoga Brick', position: 3, [
       selectionJson(
         'YnVuZGxlLzIyLzY1LzE=',
-        childJson('24-WG084', 'Sprite Foam Yoga Brick', regular: 5, finalPrice: 4.25),
+        childJson(
+          '24-WG084',
+          'Sprite Foam Yoga Brick',
+          regular: 5,
+          finalPrice: 4.25,
+        ),
         isDefault: true,
       ),
     ]),
@@ -173,27 +189,40 @@ Map<String, dynamic> kitBuilderJson({bool mSoldOut = false}) => {
   'hm_seller': sellerJson('loly', 'loly store'),
   'dynamic_price': true,
   'price_range': {
-    'minimum_price': {
-      'regular_price': _money(44),
-      'final_price': _money(39.6),
-    },
-    'maximum_price': {
-      'regular_price': _money(95),
-      'final_price': _money(85.5),
-    },
+    'minimum_price': {'regular_price': _money(44), 'final_price': _money(39.6)},
+    'maximum_price': {'regular_price': _money(95), 'final_price': _money(85.5)},
   },
   'items': [
     optionJson('b3B0L3RvcA==', 'Top', type: 'radio', [
-      selectionJson('c2VsL3RvcA==', configurableChildJson(mSoldOut: mSoldOut), isDefault: true),
-      selectionJson('c2VsL3RlZQ==', childJson('TEE', 'Plain Tee', regular: 20), position: 2),
+      selectionJson(
+        'c2VsL3RvcA==',
+        configurableChildJson(mSoldOut: mSoldOut),
+        isDefault: true,
+      ),
+      selectionJson(
+        'c2VsL3RlZQ==',
+        childJson('TEE', 'Plain Tee', regular: 20),
+        position: 2,
+      ),
     ]),
     optionJson('b3B0L21hdA==', 'Mat', type: 'select', position: 2, [
       selectionJson('c2VsL21hdA==', childJson('MAT', 'Yoga Mat', regular: 18)),
-      selectionJson('c2VsL3Bybw==', childJson('MAT-PRO', 'Pro Mat', regular: 40), position: 2),
+      selectionJson(
+        'c2VsL3Bybw==',
+        childJson('MAT-PRO', 'Pro Mat', regular: 40),
+        position: 2,
+      ),
     ]),
     optionJson('b3B0L2V4dA==', 'Extras', required: false, position: 3, [
-      selectionJson('c2VsL3N0cmFw', childJson('STRAP', 'Yoga Strap', regular: 6)),
-      selectionJson('c2VsL3Rvd2Vs', childJson('TOWEL', 'Gym Towel', regular: 9), position: 2),
+      selectionJson(
+        'c2VsL3N0cmFw',
+        childJson('STRAP', 'Yoga Strap', regular: 6),
+      ),
+      selectionJson(
+        'c2VsL3Rvd2Vs',
+        childJson('TOWEL', 'Gym Towel', regular: 9),
+        position: 2,
+      ),
     ]),
     optionJson('b3B0L2JvdA==', 'Bottle', position: 4, [
       selectionJson(

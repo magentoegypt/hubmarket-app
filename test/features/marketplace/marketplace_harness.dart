@@ -181,7 +181,10 @@ Widget marketplaceHarness({
         AppRoutes.checkout,
         AppRoutes.search,
       ])
-        GoRoute(path: path, builder: (_, __) => Scaffold(body: Text(path))),
+        GoRoute(
+          path: path,
+          builder: (_, __) => Scaffold(body: Text(path)),
+        ),
     ],
   );
   final app = MaterialApp.router(

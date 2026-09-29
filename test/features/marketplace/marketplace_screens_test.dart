@@ -48,9 +48,7 @@ Map<String, Object> _answer(Map<String, dynamic> item) => {
   },
 };
 
-Map<String, dynamic> _dressItem({
-  bool marketplace = false,
-}) => {
+Map<String, dynamic> _dressItem({bool marketplace = false}) => {
   '__typename': 'SimpleProduct',
   'sku': 'LOLY-DR-0231',
   'hm_seller': marketplace
@@ -186,15 +184,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(cart.bundleRequests.single.sku, 'HM-DEMO-BUNDLE-FITNESS');
-      expect(
-        cart.bundleRequests.single.selections.map((s) => s.selectionUid),
-        [
-          'YnVuZGxlLzIwLzYzLzE=',
-          'YnVuZGxlLzIxLzY0LzE=',
-          'YnVuZGxlLzIyLzY1LzE=',
-          'YnVuZGxlLzIzLzY2LzE=',
-        ],
-      );
+      expect(cart.bundleRequests.single.selections.map((s) => s.selectionUid), [
+        'YnVuZGxlLzIwLzYzLzE=',
+        'YnVuZGxlLzIxLzY0LzE=',
+        'YnVuZGxlLzIyLzY1LzE=',
+        'YnVuZGxlLzIzLzY2LzE=',
+      ]);
     });
 
     testWidgets('choices, a size and a quantity reach the mutation input', (
@@ -311,9 +306,9 @@ void main() {
       final mia = tester.getTopLeft(find.text('MIA CO')).dy;
       final loly = tester.getTopLeft(find.text('loly store')).dy;
       final sofa = tester.getTopLeft(find.text('Corner Sofa Bed')).dy;
-      final dress = tester.getTopLeft(
-        find.text('Floral Print Corset-Waist Tie Dress'),
-      ).dy;
+      final dress = tester
+          .getTopLeft(find.text('Floral Print Corset-Waist Tie Dress'))
+          .dy;
       expect(mia < sofa && sofa < loly && loly < dress, isTrue);
     });
 

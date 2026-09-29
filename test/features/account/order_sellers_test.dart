@@ -58,7 +58,10 @@ void main() {
       expect(twin, contains('hm_seller'));
       // Still one operation, every spread defined once.
       final ast = parseString(twin);
-      expect(ast.definitions.whereType<OperationDefinitionNode>(), hasLength(1));
+      expect(
+        ast.definitions.whereType<OperationDefinitionNode>(),
+        hasLength(1),
+      );
       final fragments = [
         for (final f in ast.definitions.whereType<FragmentDefinitionNode>())
           f.name.value,
@@ -66,7 +69,12 @@ void main() {
       expect(fragments.toSet(), hasLength(fragments.length));
       expect(
         fragments,
-        containsAll(['OrderFields', 'HmOrderSellers', 'HmSellerFields', 'HmLinkFields']),
+        containsAll([
+          'OrderFields',
+          'HmOrderSellers',
+          'HmSellerFields',
+          'HmLinkFields',
+        ]),
       );
       expect(printNode(ast), isNotEmpty);
     }
@@ -95,10 +103,10 @@ void main() {
     ).fetchOrders();
 
     expect(server.documents.single, contains('hm_seller'));
-    expect(
-      page.items.single.lines.map((l) => l.seller?.name),
-      ['MIA CO', 'loly store'],
-    );
+    expect(page.items.single.lines.map((l) => l.seller?.name), [
+      'MIA CO',
+      'loly store',
+    ]);
   });
 
   test('a server without hm_seller gets today\'s document', () async {

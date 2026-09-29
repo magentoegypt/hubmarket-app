@@ -129,9 +129,8 @@ class ProductMarketplaceRepository {
 
 final productMarketplaceRepositoryProvider =
     Provider<ProductMarketplaceRepository>(
-      (ref) => ProductMarketplaceRepository(
-        ref.watch(publicGraphqlClientProvider),
-      ),
+      (ref) =>
+          ProductMarketplaceRepository(ref.watch(publicGraphqlClientProvider)),
     );
 
 /// One `products.items[0]` of [ProductMarketplaceQueries.productMarketplace].
@@ -151,9 +150,13 @@ ProductMarketplace productMarketplaceFromJson(Map<String, dynamic> json) {
       bundle = BundleProduct(
         options: List.unmodifiable(options),
         dynamicPrice: json['dynamic_price'] != false,
-        minRegular: moneyFromJson(min?['regular_price'] as Map<String, dynamic>?),
+        minRegular: moneyFromJson(
+          min?['regular_price'] as Map<String, dynamic>?,
+        ),
         minFinal: moneyFromJson(min?['final_price'] as Map<String, dynamic>?),
-        maxRegular: moneyFromJson(max?['regular_price'] as Map<String, dynamic>?),
+        maxRegular: moneyFromJson(
+          max?['regular_price'] as Map<String, dynamic>?,
+        ),
         maxFinal: moneyFromJson(max?['final_price'] as Map<String, dynamic>?),
       );
     }
@@ -238,7 +241,8 @@ BundleVariant _bundleVariant(Map<String, dynamic> json) {
       for (final a
           in (json['attributes'] as List<dynamic>? ?? const [])
               .whereType<Map<String, dynamic>>())
-        if (hmString(a['code']) case final code?) code: hmInt(a['value_index']) ?? 0,
+        if (hmString(a['code']) case final code?)
+          code: hmInt(a['value_index']) ?? 0,
     },
     regularPrice: moneyFromJson(min?['regular_price'] as Map<String, dynamic>?),
     finalPrice: moneyFromJson(min?['final_price'] as Map<String, dynamic>?),

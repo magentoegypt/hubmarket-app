@@ -11,7 +11,10 @@ const _request = BundleCartRequest(
     BundleSelectionInput(
       selectionUid: 'YnVuZGxlLzIxLzY0LzE=',
       quantity: 2,
-      configurableOptionUids: ['Y29uZmlndXJhYmxlLzkzLzUz', 'Y29uZmlndXJhYmxlLzE0NC8xNjc='],
+      configurableOptionUids: [
+        'Y29uZmlndXJhYmxlLzkzLzUz',
+        'Y29uZmlndXJhYmxlLzE0NC8xNjc=',
+      ],
     ),
   ],
 );
@@ -22,13 +25,9 @@ OperationDefinitionNode _operation(String document) => parseString(
 
 /// `input: {...}` of `hmAddBundleToCart`, as field name → printed value.
 Map<String, String> _input(OperationDefinitionNode operation) {
-  final field = operation.selectionSet.selections
-      .whereType<FieldNode>()
-      .single;
+  final field = operation.selectionSet.selections.whereType<FieldNode>().single;
   final input = field.arguments.single.value as ObjectValueNode;
-  return {
-    for (final f in input.fields) f.name.value: printNode(f.value),
-  };
+  return {for (final f in input.fields) f.name.value: printNode(f.value)};
 }
 
 void main() {

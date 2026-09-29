@@ -67,12 +67,12 @@ void main() {
         expect(fragments.defined.toSet(), containsAll(fragments.spreads));
         expect(fragments.defined.toSet(), hasLength(fragments.defined.length));
         // The operation itself is untouched: same fields, plus one spread.
-        final liveOp = parseString(live).definitions
-            .whereType<OperationDefinitionNode>()
-            .single;
-        final twinOp = parseString(twin).definitions
-            .whereType<OperationDefinitionNode>()
-            .single;
+        final liveOp = parseString(
+          live,
+        ).definitions.whereType<OperationDefinitionNode>().single;
+        final twinOp = parseString(
+          twin,
+        ).definitions.whereType<OperationDefinitionNode>().single;
         String normalized(Node node) => printNode(
           node,
         ).replaceAll('...HmCartSellers', '').replaceAll(RegExp(r'\s+'), ' ');

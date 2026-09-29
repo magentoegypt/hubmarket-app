@@ -81,7 +81,8 @@ class BundleChild {
     if (!isConfigurable || attributes.length < options.length) return null;
     for (final variant in variants) {
       final matches = options.every(
-        (o) => variant.attributes[o.attributeCode] == attributes[o.attributeCode],
+        (o) =>
+            variant.attributes[o.attributeCode] == attributes[o.attributeCode],
       );
       if (matches) return variant;
     }

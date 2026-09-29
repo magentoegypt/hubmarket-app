@@ -28,8 +28,11 @@ class BundleSelectionInput {
       listEquals(other.configurableOptionUids, configurableOptionUids);
 
   @override
-  int get hashCode =>
-      Object.hash(selectionUid, quantity, Object.hashAll(configurableOptionUids));
+  int get hashCode => Object.hash(
+    selectionUid,
+    quantity,
+    Object.hashAll(configurableOptionUids),
+  );
 
   @override
   String toString() =>

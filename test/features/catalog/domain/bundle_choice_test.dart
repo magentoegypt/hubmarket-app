@@ -66,7 +66,12 @@ void main() {
     final tee = top.selections[1];
 
     test('parses options in order, with their types', () {
-      expect(bundle.options.map((o) => o.title), ['Top', 'Mat', 'Extras', 'Bottle']);
+      expect(bundle.options.map((o) => o.title), [
+        'Top',
+        'Mat',
+        'Extras',
+        'Bottle',
+      ]);
       expect(top.type, BundleOptionType.radio);
       expect(extras.type.allowsMany, isTrue);
       expect(extras.required, isFalse);
@@ -102,31 +107,31 @@ void main() {
           .withQuantity(bottle.selections.single, 3);
 
       expect(choice.issues(bundle), isEmpty);
-      expect(
-        choice.toRequest('KIT-BUILDER', bundle).selections,
-        const [
-          BundleSelectionInput(
-            selectionUid: 'c2VsL3RvcA==',
-            configurableOptionUids: ['Y29uZmlndXJhYmxlLzE0NC8xNjg='],
-          ),
-          BundleSelectionInput(selectionUid: 'c2VsL21hdA=='),
-          BundleSelectionInput(selectionUid: 'c2VsL3Rvd2Vs'),
-          BundleSelectionInput(selectionUid: 'c2VsL2JvdA==', quantity: 3),
-        ],
-      );
+      expect(choice.toRequest('KIT-BUILDER', bundle).selections, const [
+        BundleSelectionInput(
+          selectionUid: 'c2VsL3RvcA==',
+          configurableOptionUids: ['Y29uZmlndXJhYmxlLzE0NC8xNjg='],
+        ),
+        BundleSelectionInput(selectionUid: 'c2VsL21hdA=='),
+        BundleSelectionInput(selectionUid: 'c2VsL3Rvd2Vs'),
+        BundleSelectionInput(selectionUid: 'c2VsL2JvdA==', quantity: 3),
+      ]);
     });
 
-    test('swapping replaces a single choice; toggling a checkbox adds and removes', () {
-      var choice = BundleChoice.initial(bundle).choose(top, tee);
-      expect(choice.chosenIn(top), [tee]);
+    test(
+      'swapping replaces a single choice; toggling a checkbox adds and removes',
+      () {
+        var choice = BundleChoice.initial(bundle).choose(top, tee);
+        expect(choice.chosenIn(top), [tee]);
 
-      choice = choice.toggle(extras, extras.selections[0]);
-      choice = choice.toggle(extras, extras.selections[1]);
-      expect(choice.chosenIn(extras), extras.selections);
+        choice = choice.toggle(extras, extras.selections[0]);
+        choice = choice.toggle(extras, extras.selections[1]);
+        expect(choice.chosenIn(extras), extras.selections);
 
-      choice = choice.toggle(extras, extras.selections[0]);
-      expect(choice.chosenIn(extras), [extras.selections[1]]);
-    });
+        choice = choice.toggle(extras, extras.selections[0]);
+        expect(choice.chosenIn(extras), [extras.selections[1]]);
+      },
+    );
 
     test("a sold-out size can't go", () {
       final soldOut = bundleOf(kitBuilderJson(mSoldOut: true));
@@ -134,16 +139,13 @@ void main() {
           .choose(soldOut.options[1], soldOut.options[1].selections.first)
           .withAttribute(soldOut.options[0].selections.first, 'size', 168);
 
-      expect(
-        choice.issues(soldOut).single.kind,
-        BundleIssueKind.outOfStock,
-      );
+      expect(choice.issues(soldOut).single.kind, BundleIssueKind.outOfStock);
     });
 
     test("the cheapest package is the server's price", () {
-      final cheapest = BundleChoice.initial(bundle)
-          .choose(top, tee)
-          .choose(mat, mat.selections.first);
+      final cheapest = BundleChoice.initial(
+        bundle,
+      ).choose(top, tee).choose(mat, mat.selections.first);
       final quote = BundleQuote.of(bundle, cheapest);
 
       expect(quote.exact, isTrue);

@@ -47,7 +47,9 @@ void main() {
 
       expect(child.options.single.values.map((v) => v.label), ['S', 'M']);
       expect(child.variantFor({'size': 168})!.finalPrice!.amount, 34);
-      expect(child.optionUidsFor({'size': 167}), ['Y29uZmlndXJhYmxlLzE0NC8xNjc=']);
+      expect(child.optionUidsFor({'size': 167}), [
+        'Y29uZmlndXJhYmxlLzE0NC8xNjc=',
+      ]);
       expect(child.optionUidsFor(const {}), isNull);
     });
   });

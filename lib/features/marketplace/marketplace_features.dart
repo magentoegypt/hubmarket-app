@@ -32,7 +32,8 @@ class MarketplaceFeatures {
   int get hashCode => Object.hash(sellers, bundles);
 
   @override
-  String toString() => 'MarketplaceFeatures(sellers: $sellers, bundles: $bundles)';
+  String toString() =>
+      'MarketplaceFeatures(sellers: $sellers, bundles: $bundles)';
 }
 
 /// Satellites the server turned down at run time ("Cannot query field

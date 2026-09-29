@@ -24,7 +24,11 @@ Map<String, dynamic> _cart({required bool withSellers}) => {
       '__typename': 'SimpleCartItem',
       'uid': 'line-dress',
       'quantity': 1,
-      'product': {'__typename': 'SimpleProduct', 'sku': 'DRESS', 'name': 'Dress'},
+      'product': {
+        '__typename': 'SimpleProduct',
+        'sku': 'DRESS',
+        'name': 'Dress',
+      },
       if (withSellers) 'hm_seller': sellerJson('loly', 'loly store'),
     },
   ],
@@ -90,26 +94,29 @@ void main() {
       expect(merged.items.first.seller?.code, 'mia');
     });
 
-    test('a server without hm_seller gets today\'s document, once told', () async {
-      final server = RecordingGraphQLClient(
-        (_, document) => document.contains('hm_seller')
-            ? missingFieldResponse('hm_seller', 'CartItemInterface')
-            : {'cart': _cart(withSellers: false)},
-      );
-      final gate = RecordingMarketplaceGate();
-      final repository = CartRepository(server.client, marketplace: gate);
+    test(
+      'a server without hm_seller gets today\'s document, once told',
+      () async {
+        final server = RecordingGraphQLClient(
+          (_, document) => document.contains('hm_seller')
+              ? missingFieldResponse('hm_seller', 'CartItemInterface')
+              : {'cart': _cart(withSellers: false)},
+        );
+        final gate = RecordingMarketplaceGate();
+        final repository = CartRepository(server.client, marketplace: gate);
 
-      final cart = await repository.getCart('cart-1');
-      expect(cart.items, hasLength(2));
-      expect(gate.sellersMissingCalls, 1);
-      expect(server.documents, hasLength(2));
-      expect(server.documents.last, isNot(contains('hm_seller')));
+        final cart = await repository.getCart('cart-1');
+        expect(cart.items, hasLength(2));
+        expect(gate.sellersMissingCalls, 1);
+        expect(server.documents, hasLength(2));
+        expect(server.documents.last, isNot(contains('hm_seller')));
 
-      // The gate now says no, so the next call goes straight to the live one.
-      await repository.getCart('cart-1');
-      expect(server.documents, hasLength(3));
-      expect(server.documents.last, isNot(contains('hm_seller')));
-    });
+        // The gate now says no, so the next call goes straight to the live one.
+        await repository.getCart('cart-1');
+        expect(server.documents, hasLength(3));
+        expect(server.documents.last, isNot(contains('hm_seller')));
+      },
+    );
 
     test('a real failure is not mistaken for a missing module', () async {
       final server = RecordingGraphQLClient(
@@ -176,7 +183,10 @@ void main() {
           'hmAddBundleToCart': {
             'cart': _cart(withSellers: false),
             'user_errors': [
-              {'code': 'INSUFFICIENT_STOCK', 'message': 'Yoga Brick is sold out'},
+              {
+                'code': 'INSUFFICIENT_STOCK',
+                'message': 'Yoga Brick is sold out',
+              },
             ],
           },
         },
@@ -204,10 +214,10 @@ void main() {
       final gate = RecordingMarketplaceGate();
 
       await expectLater(
-        CartRepository(server.client, marketplace: gate).addBundle(
-          'cart-1',
-          request,
-        ),
+        CartRepository(
+          server.client,
+          marketplace: gate,
+        ).addBundle('cart-1', request),
         throwsA(isA<HubAppMissing>()),
       );
       expect(gate.bundlesMissingCalls, 1);
