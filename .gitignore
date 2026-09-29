@@ -78,3 +78,6 @@ lib/core/graphql/schema.introspection.json
 # step. Tracking it only produced diff noise on every build.
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
+
+# Claude Code session data (agent worktrees, local settings)
+.claude/
