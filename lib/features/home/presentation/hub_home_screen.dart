@@ -261,8 +261,12 @@ class _SectionHeader extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: AppTheme.displayFont,
+              style: TextStyle(
+                // Playfair Display has no Arabic glyphs; Arabic titles keep
+                // the theme's Arabic face.
+                fontFamily: Localizations.localeOf(context).languageCode == 'ar'
+                    ? null
+                    : AppTheme.displayFont,
                 fontSize: 21,
                 fontWeight: FontWeight.w700,
                 color: AppColors.inkHeading,
@@ -313,7 +317,7 @@ class _ShopByCategory extends ConsumerWidget {
               onAction: () => context.go(AppRoutes.categories),
             ),
             SizedBox(
-              height: 124,
+              height: 140,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -363,7 +367,7 @@ class _CategoryTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               category.name,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: const TextStyle(
