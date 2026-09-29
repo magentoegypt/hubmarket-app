@@ -10,7 +10,6 @@
   "themeBlack": "أسود",
   "themeSystem": "تلقائي",
   "versionLabel": "الإصدار",
-
   "actionRetry": "إعادة المحاولة",
   "actionCopy": "نسخ",
   "actionLinkCopied": "تم نسخ الرابط",
@@ -22,7 +21,6 @@
   "linkNotFoundBody": "تعذر فتح هذا الرابط. ربما تم نقله أو لم يعد متاحًا.",
   "errorNetwork": "تعذّر الوصول إلى المتجر. تحقّق من اتصالك وحاول مرة أخرى.",
   "errorService": "المتجر غير متاح مؤقتًا. يرجى المحاولة بعد قليل.",
-
   "healthCheckTitle": "فحص حالة المتجر",
   "healthCheckSubtitle": "إعدادات المتجر الحيّة لطريقة العرض النشطة",
   "settingsConnectionTest": "اختبار الاتصال",
@@ -41,22 +39,19 @@
   "fieldBaseUrl": "الرابط الأساسي",
   "fieldMediaUrl": "رابط الوسائط",
   "availableStoresTitle": "طرق عرض المتجر المتاحة",
-
   "navHome": "الرئيسية",
   "navCategories": "الفئات",
   "navCart": "السلة",
   "navWishlist": "المفضلة",
   "navAccount": "حسابي",
   "navSearch": "بحث",
-
-  "launchTagline": "الجمال والعطور",
+  "launchTagline": "مئات المتاجر المحلية. سلة واحدة.",
   "introSkip": "تخطي المقدمة",
   "welcomeGetStarted": "ابدأ الآن",
   "welcomeSignIn": "تسجيل الدخول",
-  "welcomeContinueGuest": "المتابعة كزائر",
-  "welcomeHeadline": "الجمال يصلك خلال ساعات",
-  "welcomeSubtitle": "تسوّق العطور ومنتجات الجمال الأصلية مع توصيل مجاني خلال 3 ساعات في دبي والشارقة وعجمان",
-
+  "welcomeContinueGuest": "المتابعة كضيف",
+  "welcomeHeadline": "مئات المتاجر المحلية. سلة واحدة.",
+  "welcomeSubtitle": "بقالة وأثاث وأزياء والمزيد — من بائعين موثّقين على Hub Market، حتى باب بيتك.",
   "homeShopByCategory": "تسوّق حسب الفئة",
   "homeFeatured": "مميّزة",
   "homeNewArrivals": "وصل حديثًا",
@@ -103,14 +98,20 @@
   "categoriesSubtitle": "تسوّقي حسب ما تحبين",
   "categoryProductCount": "{count} منتج",
   "@categoryProductCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "categoryCount": "{count} فئة",
   "@categoryCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "filtersLabel": "تصفية",
   "filterPriceLabel": "السعر",
   "filterSortByLabel": "ترتيب حسب",
@@ -121,10 +122,14 @@
   "filterAll": "الكل",
   "actionShare": "مشاركة",
   "badgeNew": "جديد",
-  "badgeBestseller": "الأكثر مبيعاً",
+  "badgeBestseller": "الأكثر مبيعًا",
   "shareProduct": "اكتشفي {name} على Hub Market",
   "@shareProduct": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "sortLabel": "ترتيب",
   "sortRelevance": "الصلة",
@@ -138,15 +143,17 @@
   "filterRatingLabel": "التقييم",
   "filterDiscountOption": "{percent}% أو أكثر",
   "@filterDiscountOption": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "filterRatingAndAbove": "فأكثر",
   "applyLabel": "تطبيق",
   "clearLabel": "مسح",
   "resultsCount": "{count} نتيجة",
-
   "searchResultsFor": "نتائج البحث عن: ”{query}“",
-
   "searchHint": "ابحث في المتجر كامل هنا…",
   "searchFieldHint": "ابحث عن المنتجات والماركات…",
   "searchRecentTitle": "عمليات البحث الأخيرة",
@@ -157,7 +164,6 @@
   "searchHintExpanded": "ابحث عن المنتجات والعلامات…",
   "comingSoon": "قريبًا",
   "comingSoonBody": "سيتوفّر هذا القسم في مرحلة لاحقة.",
-
   "authSignInTitle": "تسجيل الدخول",
   "authSignInWelcome": "مرحبًا بعودتك",
   "authSignInSubtitle": "سجّل الدخول لمتابعة التسوّق",
@@ -184,7 +190,6 @@
   "authResetError": "تعذّر إعادة تعيين كلمة المرور. تحقّق من الرمز وحاول مرة أخرى.",
   "fieldResetCode": "رمز إعادة التعيين",
   "authSignInError": "تعذّر تسجيل الدخول. يرجى التحقّق من بياناتك.",
-
   "authMethodEmail": "البريد الإلكتروني",
   "authMethodPhone": "رقم الهاتف",
   "authGetOtp": "إرسال الرمز",
@@ -210,7 +215,6 @@
   "validationPasswordMatch": "كلمتا المرور غير متطابقتين",
   "checkoutVerifyMobileTitle": "التحقّق من رقم الهاتف",
   "checkoutVerifyMobileIntro": "أدخل الرمز المكوّن من 6 أرقام المُرسَل إلى رقم التوصيل {phone}",
-
   "validationRequired": "مطلوب",
   "validationEmail": "أدخل بريدًا إلكترونيًا صحيحًا",
   "validationPassword": "استخدم 8 أحرف على الأقل",
@@ -228,20 +232,17 @@
   "accountStatOrders": "الطلبات",
   "accountStatWishlist": "المفضلة",
   "accountStatVouchers": "القسائم",
-
   "aboutBody": "زونزي وجهتك للجمال والعطور الأصلية في الإمارات. منذ 2008 نقدّم عطورًا ومنتجات عناية بالبشرة ومكياجًا ومنتجات للشعر أصلية 100% من كبرى العلامات العالمية الفاخرة — بأسعار تنافسية وتوصيل سريع وخدمة موثوقة.",
   "aboutCompany": "زونزي لتجارة العطور ومستحضرات التجميل ذ.م.م",
   "aboutAddress": "برج HHHR، شارع الشيخ زايد، مركز التجارة الأول، دبي، الإمارات العربية المتحدة",
   "aboutFollowUs": "تابعنا",
   "aboutWeAccept": "نقبل الدفع عبر",
-
   "helpIntro": "إجابات عن الأسئلة الشائعة. ما زلت بحاجة إلى مساعدة؟ تواصل مع فريقنا أدناه.",
   "helpSearchHint": "ابحث عن مساعدة…",
   "helpFrequentlyAsked": "الأسئلة الشائعة",
   "helpLiveChat": "دردشة مباشرة",
   "helpCallUs": "اتصل بنا",
   "helpEmailLabel": "البريد",
-
   "helpQ1": "كيف تضمن زونزي أن المنتجات أصلية 100%؟",
   "helpA1": "في زونزي، جميع العطور ومنتجات العناية بالبشرة والمكياج والعناية بالشعر مصدرها موردون موثوقون ويتم التحقق منها لضمان أصالتها 100%.",
   "helpQ2": "هل جميع العطور ومنتجات البشرة والشعر والمكياج التي تبيعها زونزي أصلية؟",
@@ -262,7 +263,6 @@
   "helpA9": "بالتأكيد. من الساعة 10 صباحًا حتى 10 مساءً، فريق دعم العملاء متاح قبل عملية الشراء وبعدها لضمان تجربة تسوّق سلسة.",
   "helpQ10": "لماذا أتسوّق من زونزي؟",
   "helpA10": "تجمع زونزي بين المنتجات الأصلية 100% والأسعار التنافسية والتوصيل السريع والخدمة الموثوقة وسنوات من الخبرة في قطاع الجمال منذ 2008.",
-
   "helpQOrders": "كيف أتتبّع طلبي؟",
   "helpAOrders": "افتح حسابي ← طلباتي لعرض حالة كل طلب.",
   "helpQPayments": "ما طرق الدفع المتاحة؟",
@@ -278,7 +278,6 @@
   "helpContactTitle": "ما زلت بحاجة إلى مساعدة؟",
   "helpEmailAction": "مراسلة الدعم",
   "helpWebsiteAction": "زيارة hub-market.magento2.click",
-
   "notificationsTitle": "الإشعارات",
   "notificationsPromoTitle": "العروض والتخفيضات",
   "notificationsPromoBody": "تلقَّ إشعارات بالتخفيضات والمنتجات الجديدة والعروض الحصرية.",
@@ -288,13 +287,30 @@
   "notificationsEmptyBody": "ستظهر هنا تحديثات الطلبات والعروض وانخفاضات الأسعار.",
   "notifJustNow": "الآن",
   "notifMinutesAgo": "قبل {count} دقيقة",
-  "@notifMinutesAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@notifMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifHoursAgo": "قبل {count} ساعة",
-  "@notifHoursAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@notifHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifYesterday": "أمس",
   "notifDaysAgo": "قبل {count} يوم",
-  "@notifDaysAgo": { "placeholders": { "count": { "type": "int" } } },
-
+  "@notifDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cartTitle": "السلة",
   "cartHeading": "سلتي",
   "cartItemCount": "{count, plural, =0{لا عناصر} =1{عنصر واحد} other{{count} عناصر}}",
@@ -313,17 +329,28 @@
   "cartDeliveryCalculated": "يُحتسب عند الدفع",
   "cartFreeDeliveryUnlocked": "لقد حصلت على توصيل مجاني خلال 3 ساعات!",
   "cartFreeDeliveryRemaining": "أضف {amount} للحصول على توصيل مجاني خلال 3 ساعات",
-  "@cartFreeDeliveryRemaining": { "placeholders": { "amount": { "type": "String" } } },
+  "@cartFreeDeliveryRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "cartTotal": "الإجمالي",
   "cartCheckout": "إتمام الشراء",
   "cartCouponHint": "رمز هدية أو خصم",
   "cartApply": "تطبيق",
   "cartCouponCopied": "تم نسخ رمز الخصم",
   "cartCouponApplied": "تم تطبيق {code}",
-  "@cartCouponApplied": { "placeholders": { "code": { "type": "String" } } },
+  "@cartCouponApplied": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "cartAdded": "تمت الإضافة إلى السلة",
   "cartCouponError": "هذا الرمز غير صالح.",
-
   "wishlistHeading": "مفضّلتي",
   "wishlistSavedCount": "{count, plural, =1{عنصر محفوظ واحد} other{{count} عناصر محفوظة}}",
   "wishlistAddAll": "أضف الكل إلى السلة",
@@ -332,7 +359,6 @@
   "wishlistSignInPrompt": "سجّل الدخول لحفظ المنتجات في قائمتك.",
   "wishlistGuestTitle": "احفظ مفضّلاتك",
   "wishlistGuestBody": "سجّل الدخول للاحتفاظ بقائمة المفضلة عبر أجهزتك.",
-
   "ordersEmpty": "ليس لديك طلبات بعد.",
   "ordersFilterAll": "الكل",
   "ordersFilterToReceive": "قيد الاستلام",
@@ -352,7 +378,13 @@
   "orderTimelineSection": "سجل الطلب",
   "orderBillingAddress": "عنوان الفوترة",
   "orderItemCount": "{count, plural, =1{منتج واحد} other{{count} منتجات}}",
-  "@orderItemCount": { "placeholders": { "count": { "type": "int" } } },
+  "@orderItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderTotalLabel": "الإجمالي",
   "orderTrack": "تتبّع",
   "orderReorder": "إعادة الطلب",
@@ -367,16 +399,34 @@
   "orderStatusOnHold": "قيد الانتظار",
   "orderDeliveryAddress": "عنوان التوصيل",
   "orderItemsCount": "المنتجات ({count})",
-  "@orderItemsCount": { "placeholders": { "count": { "type": "int" } } },
+  "@orderItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderQty": "الكمية {count}",
-  "@orderQty": { "placeholders": { "count": { "type": "int" } } },
+  "@orderQty": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderNeedHelp": "هل تحتاج مساعدة بخصوص هذا الطلب؟",
   "ordersGuestTitle": "تتبّع طلبك",
   "ordersGuestBody": "تظهر هنا الطلبات التي تنشئها من التطبيق. سجّل الدخول للاحتفاظ بها على كل أجهزتك.",
   "ordersGuestSignIn": "تسجيل الدخول",
   "ordersTrackAnother": "تتبّع طلب آخر",
   "ordersGuestUnresolved": "تعذّر تحميل الطلب رقم {number}.",
-  "@ordersGuestUnresolved": { "placeholders": { "number": { "type": "String" } } },
+  "@ordersGuestUnresolved": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "ordersGuestRemove": "إزالة",
   "guestTrackTitle": "تتبّع طلبك",
   "guestTrackIntro": "أدخل رقم الطلب مع البريد الإلكتروني واسم العائلة اللذين استخدمتهما عند إتمام الشراء.",
@@ -439,7 +489,6 @@
   "fieldCurrentPassword": "كلمة المرور الحالية",
   "fieldNewPassword": "كلمة المرور الجديدة",
   "passwordChanged": "تم تغيير كلمة المرور",
-
   "reviewsWrite": "اكتب مراجعة",
   "reviewRating": "تقييمك",
   "reviewNickname": "الاسم المستعار",
@@ -447,7 +496,6 @@
   "reviewText": "مراجعتك",
   "reviewSubmit": "إرسال المراجعة",
   "reviewSubmitted": "شكرًا لك! مراجعتك قيد المراجعة.",
-
   "checkoutTitle": "إتمام الطلب",
   "checkoutContact": "معلومات التواصل",
   "checkoutShippingAddress": "عنوان الشحن",
@@ -472,7 +520,6 @@
   "tabbyInfoBody": "قسّم مشترياتك على 4 دفعات متساوية بدون فوائد، ولا رسوم عند السداد في الوقت المحدد.",
   "tabbyInfoGotIt": "حسنًا",
   "paymentSessionUnavailable": "طريقة الدفع هذه غير متاحة لهذا الطلب. يرجى اختيار طريقة دفع أخرى.",
-  "fieldCountryLabel": "الدولة",
   "countryUae": "الإمارات العربية المتحدة",
   "paymentDeclined": "تم رفض الدفع. يرجى اختيار طريقة دفع أخرى.",
   "paymentFailed": "تعذّر إتمام الدفع. يرجى المحاولة مرة أخرى.",
@@ -504,13 +551,9 @@
   "orderNumberCopied": "تم نسخ رقم الطلب",
   "paymentRedirectTitle": "إتمام الدفع",
   "paymentRedirectPending": "تم استلام طلبك وهو بانتظار تأكيد الدفع. سنخطرك بمجرد إتمام الدفع.",
-
-  "badgeNew": "جديد",
-  "badgeBestseller": "الأكثر مبيعًا",
   "priceFrom": "ابتداءً من",
   "productAddToCart": "أضف إلى السلة",
   "productOutOfStock": "غير متوفّر",
-
   "tabDescription": "الوصف",
   "tabDetails": "التفاصيل",
   "tabKeyFeatures": "المميزات الرئيسية",
@@ -532,13 +575,11 @@
   "pdpTrustFreeOver": "فوق ال {amount} درهم",
   "pdpTrustDeliveryValue": "توصيل خلال ٣ ساعات داخل دبي",
   "pdpTrustDeliveryLabel": "بقية الإمارات خلال 48 ساعة",
-
   "menuShop": "تسوّق",
   "menuViewAll": "عرض الكل",
   "menuAccountSection": "الحساب",
   "menuLogOut": "تسجيل الخروج",
   "drawerVouchers": "القسائم",
-
   "footerShop": "تسوّق",
   "footerSupport": "خدمة العملاء",
   "footerNewsletterTitle": "النشرة البريدية",
@@ -560,6 +601,12 @@
   "footerTerms": "الشروط والأحكام",
   "footerShipping": "الشحن والتوصيل",
   "footerReturns": "الإرجاع والاستبدال",
-
-  "webviewOpenInBrowser": "فتح في المتصفح"
+  "webviewOpenInBrowser": "فتح في المتصفح",
+  "homeSearchMarketplaceHint": "ابحث عن منتجات ومتاجر وماركات",
+  "homeDeliverTo": "التوصيل إلى",
+  "homeChooseArea": "اختر منطقتك",
+  "homeTodaysDeals": "عروض اليوم",
+  "launchFooter": "في جميع الإمارات السبع",
+  "welcomeKicker": "توصيل في نفس اليوم",
+  "welcomeCreateAccount": "إنشاء حساب"
 }

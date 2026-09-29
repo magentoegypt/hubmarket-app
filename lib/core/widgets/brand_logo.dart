@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import '../assets/app_images.dart';
 import 'brand_lockup.dart';
 
-/// The Hub Market brand lockup rendered as the real logo image — the ornate Z-mark
-/// over the `HUB MARKET` wordmark (`assets/branding/logo.png`) — matching the Figma
-/// header / drawer / footer lockup.
+/// The Hub Market logo lockup (H-and-cart mark + "Hub MARKET" wordmark) as
+/// supplied by the client, rendered from `assets/branding/logo.png`.
 ///
-/// The asset is a burgundy silhouette on transparent, so pass [onDark] to tint
-/// it white for dark surfaces (footer, burgundy headers). Falls back to the
-/// text wordmark ([BrandLockup]) if the asset can't load (e.g. widget tests).
+/// The positive artwork is navy + orange for light surfaces; pass [onDark] for
+/// navy headers, the splash and the footer — that switches to the reversed
+/// artwork (white + orange) instead of tinting, so the orange cart stays
+/// orange. Falls back to the text wordmark ([BrandLockup]) if the asset can't
+/// load (e.g. widget tests).
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.height = 40, this.onDark = false});
 
@@ -18,15 +19,14 @@ class BrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = onDark ? Colors.white : null;
     return Image.asset(
-      AppImages.logo,
+      onDark ? AppImages.logoReversed : AppImages.logo,
       height: height,
       fit: BoxFit.contain,
-      color: tint,
-      colorBlendMode: tint != null ? BlendMode.srcIn : null,
-      errorBuilder: (_, __, ___) =>
-          BrandLockup(color: tint, fontSize: height * 0.5),
+      errorBuilder: (_, __, ___) => BrandLockup(
+        color: onDark ? Colors.white : null,
+        fontSize: height * 0.5,
+      ),
     );
   }
 }

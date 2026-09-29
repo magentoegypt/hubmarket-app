@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # CMS block markup (promo tiles, trust row) parsed into native widgets.
+  html: ^0.15.6
   intl: any
 
   # State management + DI
@@ -78,11 +80,6 @@ flutter:
     # the licensed artwork is dropped in by hand; the checkout row falls back to
     # a Material icon while the directory holds only the README.
     - assets/payments/
-    # First-launch intro (assets/video/README.md). Re-encoded from the 4K
-    # master to 1080x1920 and stripped of its silent audio track — ~1 MB, which
-    # every user downloads, so keep any replacement to the same budget. Listed
-    # as a file, not a directory, so the README beside it isn't shipped too.
-    - assets/video/app_intro.mp4
   fonts:
     # Variable fonts (all weights in a single file). Inter + Playfair Display for
     # Latin/EN; Cairo for Arabic/AR. See docs/FIGMA_DESIGN.md.
@@ -96,15 +93,16 @@ flutter:
       fonts:
         - asset: assets/fonts/PlayfairDisplay.ttf
 
-# App launcher icons — generated from the brand logo's Z-monogram (white on
-# brand burgundy) by `dart run tool/icon_gen.dart`, then `dart run
-# flutter_launcher_icons`. app_icon.png = full (iOS/legacy);
-# app_icon_foreground.png = padded transparent (Android adaptive).
+# App launcher icons — the client-supplied Hub Market "Customer App" icon: white
+# H + orange cart on the logo navy (#02224D). Rendered from the traced logo
+# vectors (Figma component "Logo", app icon glyph 110:200); regenerate with
+# `dart run flutter_launcher_icons`. app_icon.png = full (iOS/legacy);
+# app_icon_foreground.png = padded transparent mark (Android adaptive).
 flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
   min_sdk_android: 21
   image_path: "assets/branding/app_icon.png"
-  adaptive_icon_background: "#9E1B3F"
+  adaptive_icon_background: "#02224D"
   adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"

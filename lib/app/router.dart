@@ -29,7 +29,7 @@ import '../features/catalog/domain/product_preview.dart';
 import '../features/catalog/presentation/screens/brands_screen.dart';
 import '../features/catalog/presentation/screens/categories_screen.dart';
 import '../features/catalog/presentation/screens/all_reviews_screen.dart';
-import '../features/catalog/presentation/screens/home_screen.dart';
+import '../features/home/presentation/hub_home_screen.dart';
 import '../features/catalog/presentation/screens/plp_screen.dart';
 import '../features/catalog/presentation/screens/product_detail_screen.dart';
 import '../features/catalog/presentation/screens/search_screen.dart';
@@ -69,7 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const HubHomeScreen(),
       ),
       GoRoute(
         path: AppRoutes.categories,

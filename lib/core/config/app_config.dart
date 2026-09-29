@@ -73,7 +73,7 @@ class AppConfig {
   /// network call on the cold-start path.
   static const bool introVideoEnabled = bool.fromEnvironment(
     'INTRO_VIDEO_ENABLED',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   static const AppConfig current = AppConfig(

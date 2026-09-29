@@ -1,8 +1,9 @@
 {
   "@@locale": "en",
   "appTitle": "Hub Market Beauty",
-  "@appTitle": { "description": "Application title shown in the OS task switcher." },
-
+  "@appTitle": {
+    "description": "Application title shown in the OS task switcher."
+  },
   "languageEnglish": "English",
   "languageArabic": "العربية",
   "languageToggleLabel": "Language",
@@ -12,7 +13,6 @@
   "themeBlack": "Black",
   "themeSystem": "System",
   "versionLabel": "Version",
-
   "actionRetry": "Retry",
   "actionCopy": "Copy",
   "actionLinkCopied": "Link copied to clipboard",
@@ -20,12 +20,13 @@
   "stateEmpty": "Nothing here yet",
   "errorGeneric": "Something went wrong. Please try again.",
   "sessionExpiredMessage": "Your session has ended. Please sign in again.",
-  "@sessionExpiredMessage": { "description": "Shown when the customer token is rejected and the app drops to guest." },
+  "@sessionExpiredMessage": {
+    "description": "Shown when the customer token is rejected and the app drops to guest."
+  },
   "linkNotFoundTitle": "Link not found",
   "linkNotFoundBody": "We couldn't open that link. It may have moved or is no longer available.",
   "errorNetwork": "We couldn't reach the store. Check your connection and try again.",
   "errorService": "The store is temporarily unavailable. Please try again shortly.",
-
   "healthCheckTitle": "Store health check",
   "healthCheckSubtitle": "Live storeConfig for the active store view",
   "settingsConnectionTest": "Connection test",
@@ -44,22 +45,19 @@
   "fieldBaseUrl": "Base URL",
   "fieldMediaUrl": "Media URL",
   "availableStoresTitle": "Available store views",
-
   "navHome": "Home",
   "navCategories": "Categories",
   "navCart": "Cart",
   "navWishlist": "Wishlist",
   "navAccount": "Account",
   "navSearch": "Search",
-
-  "launchTagline": "BEAUTY & FRAGRANCE",
+  "launchTagline": "Hundreds of local stores. One cart.",
   "introSkip": "Skip Intro",
   "welcomeGetStarted": "Get Started",
-  "welcomeSignIn": "Sign In",
+  "welcomeSignIn": "Sign in",
   "welcomeContinueGuest": "Continue as guest",
-  "welcomeHeadline": "Beauty, delivered in hours",
-  "welcomeSubtitle": "Shop authentic fragrance & beauty with free 3-hour delivery across Dubai, Sharjah & Ajman",
-
+  "welcomeHeadline": "Hundreds of local stores. One cart.",
+  "welcomeSubtitle": "Groceries, furniture, fashion and more — from verified Hub Market vendors, delivered to your door.",
   "homeShopByCategory": "Shop by category",
   "homeFeatured": "Featured",
   "homeNewArrivals": "New Arrivals",
@@ -106,14 +104,20 @@
   "categoriesSubtitle": "Shop by what you love",
   "categoryProductCount": "{count} products",
   "@categoryProductCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "categoryCount": "{count} categories",
   "@categoryCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "filtersLabel": "Filters",
   "filterPriceLabel": "Price",
   "filterSortByLabel": "Sort By",
@@ -127,7 +131,11 @@
   "badgeBestseller": "BESTSELLER",
   "shareProduct": "Check out {name} at Hub Market",
   "@shareProduct": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "sortLabel": "Sort",
   "sortRelevance": "Relevance",
@@ -141,21 +149,31 @@
   "filterRatingLabel": "Rating",
   "filterDiscountOption": "{percent}% or more",
   "@filterDiscountOption": {
-    "placeholders": { "percent": { "type": "int" } }
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "filterRatingAndAbove": "& above",
   "applyLabel": "Apply",
   "clearLabel": "Clear",
   "resultsCount": "{count} results",
   "@resultsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
-
   "searchResultsFor": "Search results for “{query}”",
   "@searchResultsFor": {
-    "placeholders": { "query": { "type": "String" } }
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
   },
-
   "searchHint": "Search for products…",
   "searchFieldHint": "Search for products, brands…",
   "searchRecentTitle": "Recent searches",
@@ -164,12 +182,15 @@
   "searchTrendingCsv": "Fragrance,Skincare,Makeup,Gift Sets,Bestsellers",
   "searchForQuery": "Search “{query}”",
   "@searchForQuery": {
-    "placeholders": { "query": { "type": "String" } }
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
   },
   "searchHintExpanded": "Search for products, brands…",
   "comingSoon": "Coming soon",
   "comingSoonBody": "This section arrives in a later phase.",
-
   "authSignInTitle": "Sign In",
   "authSignInWelcome": "Welcome back",
   "authSignInSubtitle": "Sign in to continue shopping",
@@ -196,7 +217,6 @@
   "authResetError": "Couldn't reset your password. Check the code and try again.",
   "fieldResetCode": "Reset code",
   "authSignInError": "Couldn't sign you in. Please check your details.",
-
   "authMethodEmail": "Email",
   "authMethodPhone": "Phone Number",
   "authGetOtp": "Get OTP",
@@ -204,12 +224,20 @@
   "authOtpEnter": "Enter the 6-digit code",
   "authOtpSentTo": "Code sent to {phone}",
   "@authOtpSentTo": {
-    "placeholders": { "phone": { "type": "String" } }
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
   },
   "authResendCode": "Resend code",
   "authResendIn": "Resend in {seconds}s",
   "@authResendIn": {
-    "placeholders": { "seconds": { "type": "int" } }
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
   },
   "authVerifyAndSignIn": "Verify & Sign In",
   "authVerify": "Verify",
@@ -229,9 +257,12 @@
   "checkoutVerifyMobileTitle": "Verify Mobile Number",
   "checkoutVerifyMobileIntro": "Enter the 6-digit code sent to your delivery number {phone}",
   "@checkoutVerifyMobileIntro": {
-    "placeholders": { "phone": { "type": "String" } }
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
   },
-
   "validationRequired": "Required",
   "validationEmail": "Enter a valid email",
   "validationPassword": "Use at least 8 characters",
@@ -249,20 +280,17 @@
   "accountStatOrders": "Orders",
   "accountStatWishlist": "Wishlist",
   "accountStatVouchers": "Vouchers",
-
   "aboutBody": "Hub Market is your destination for authentic beauty and fragrance in the UAE. Since 2008 we've offered 100% genuine perfumes, skincare, makeup and haircare from the world's leading luxury brands — with competitive prices, fast delivery and trusted service.",
   "aboutCompany": "Hub Market Perfume & Cosmetics Trading LLC",
   "aboutAddress": "HHHR Tower, Sheikh Zayed Road, Trade Center First, Dubai, United Arab Emirates",
   "aboutFollowUs": "Follow Us",
   "aboutWeAccept": "We Accept",
-
   "helpIntro": "Answers to common questions. Still stuck? Reach our team below.",
   "helpSearchHint": "Search for help…",
   "helpFrequentlyAsked": "Frequently Asked",
   "helpLiveChat": "Live Chat",
   "helpCallUs": "Call Us",
   "helpEmailLabel": "Email",
-
   "helpQ1": "How does Hub Market guarantee 100% authentic products?",
   "helpA1": "At Hub Market, all perfumes, skincare, makeup, and haircare products are sourced from trusted suppliers and verified to ensure they are 100% authentic.",
   "helpQ2": "Are all perfumes, skincare, haircare and makeup sold by Hub Market original?",
@@ -283,7 +311,6 @@
   "helpA9": "Absolutely. From 10 AM until 10 PM, our customer support team is available before and after your purchase to ensure a seamless shopping experience.",
   "helpQ10": "Why should I shop from Hub Market?",
   "helpA10": "Hub Market combines 100% authentic products, competitive pricing, fast delivery, trusted service, and years of beauty-industry experience since 2008.",
-
   "helpQOrders": "How can I track my order?",
   "helpAOrders": "Open Account → My Orders to see the status of each order.",
   "helpQPayments": "What payment methods do you accept?",
@@ -299,7 +326,6 @@
   "helpContactTitle": "Still need help?",
   "helpEmailAction": "Email support",
   "helpWebsiteAction": "Visit hub-market.magento2.click",
-
   "notificationsTitle": "Notifications",
   "notificationsPromoTitle": "Promotions & offers",
   "notificationsPromoBody": "Get notified about sales, new arrivals and exclusive offers.",
@@ -309,18 +335,39 @@
   "notificationsEmptyBody": "Order updates, offers and price drops will show up here.",
   "notifJustNow": "Just now",
   "notifMinutesAgo": "{count, plural, =1{1 min ago} other{{count} min ago}}",
-  "@notifMinutesAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@notifMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifHoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
-  "@notifHoursAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@notifHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifYesterday": "Yesterday",
   "notifDaysAgo": "{count, plural, =1{1 day ago} other{{count} days ago}}",
-  "@notifDaysAgo": { "placeholders": { "count": { "type": "int" } } },
-
+  "@notifDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cartTitle": "Cart",
   "cartHeading": "My Cart",
   "cartItemCount": "{count, plural, =0{No items} =1{1 item} other{{count} items}}",
   "@cartItemCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "cartSecureCheckout": "Proceed To Checkout",
   "cartEmptyTitle": "Your bag is empty",
@@ -330,30 +377,57 @@
   "cartOrderSummary": "Order Summary",
   "cartSubtotal": "Subtotal",
   "cartSubtotalCount": "Subtotal ({count, plural, =1{1 item} other{{count} items}})",
-  "@cartSubtotalCount": { "placeholders": { "count": { "type": "int" } } },
+  "@cartSubtotalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cartPromoCode": "Promo ({code})",
-  "@cartPromoCode": { "placeholders": { "code": { "type": "String" } } },
+  "@cartPromoCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "cartDiscount": "Discount",
   "cartDelivery": "Delivery (3-hour)",
   "cartDeliveryFree": "FREE",
   "cartDeliveryCalculated": "Calculated at checkout",
   "cartFreeDeliveryUnlocked": "You've unlocked FREE 3-hour delivery!",
   "cartFreeDeliveryRemaining": "Add {amount} more for FREE 3-hour delivery",
-  "@cartFreeDeliveryRemaining": { "placeholders": { "amount": { "type": "String" } } },
+  "@cartFreeDeliveryRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "cartTotal": "Total",
   "cartCheckout": "Checkout",
   "cartCouponHint": "Gift or promo code",
   "cartApply": "Apply",
   "cartCouponCopied": "Promo code copied",
   "cartCouponApplied": "{code} applied",
-  "@cartCouponApplied": { "placeholders": { "code": { "type": "String" } } },
+  "@cartCouponApplied": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "cartAdded": "Added to cart",
   "cartCouponError": "That code didn't work.",
-
   "wishlistHeading": "My Wishlist",
   "wishlistSavedCount": "{count, plural, =1{1 saved item} other{{count} saved items}}",
   "@wishlistSavedCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "wishlistAddAll": "Add all to Bag",
   "wishlistEmptyTitle": "Your wishlist is empty",
@@ -361,7 +435,6 @@
   "wishlistSignInPrompt": "Sign in to save items to your wishlist.",
   "wishlistGuestTitle": "Save your favourites",
   "wishlistGuestBody": "Sign in to keep your wishlist across devices.",
-
   "ordersEmpty": "You have no orders yet.",
   "ordersFilterAll": "All",
   "ordersFilterToReceive": "To Receive",
@@ -369,7 +442,13 @@
   "ordersFilterCancelled": "Cancelled",
   "orderStatus": "Status",
   "orderNumber": "Order #{number}",
-  "@orderNumber": { "placeholders": { "number": { "type": "String" } } },
+  "@orderNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "orderDetailsTitle": "Order Details",
   "orderItemsSection": "Items",
   "orderTrackingSection": "Tracking",
@@ -378,12 +457,24 @@
   "orderTrackingCopied": "Tracking number copied",
   "orderViewDetails": "View Details",
   "orderMoreItems": "+{count} more",
-  "@orderMoreItems": { "placeholders": { "count": { "type": "int" } } },
+  "@orderMoreItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderPaymentSection": "Payment Method",
   "orderTimelineSection": "Order Timeline",
   "orderBillingAddress": "Billing Address",
   "orderItemCount": "{count, plural, =1{1 item} other{{count} items}}",
-  "@orderItemCount": { "placeholders": { "count": { "type": "int" } } },
+  "@orderItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderTotalLabel": "Total",
   "orderTrack": "Track",
   "orderReorder": "Reorder",
@@ -398,16 +489,34 @@
   "orderStatusOnHold": "On Hold",
   "orderDeliveryAddress": "Delivery Address",
   "orderItemsCount": "Items ({count})",
-  "@orderItemsCount": { "placeholders": { "count": { "type": "int" } } },
+  "@orderItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderQty": "Qty {count}",
-  "@orderQty": { "placeholders": { "count": { "type": "int" } } },
+  "@orderQty": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderNeedHelp": "Need help with this order?",
   "ordersGuestTitle": "Track your order",
   "ordersGuestBody": "Orders you place in the app show up here. Sign in to keep them across devices.",
   "ordersGuestSignIn": "Sign in",
   "ordersTrackAnother": "Track another order",
   "ordersGuestUnresolved": "Unable to load order #{number}.",
-  "@ordersGuestUnresolved": { "placeholders": { "number": { "type": "String" } } },
+  "@ordersGuestUnresolved": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "ordersGuestRemove": "Remove",
   "guestTrackTitle": "Track Your Order",
   "guestTrackIntro": "Enter your order number and the email and last name you used at checkout.",
@@ -470,7 +579,6 @@
   "fieldCurrentPassword": "Current password",
   "fieldNewPassword": "New password",
   "passwordChanged": "Password changed",
-
   "reviewsWrite": "Write a Review",
   "reviewRating": "Your rating",
   "reviewNickname": "Nickname",
@@ -478,7 +586,6 @@
   "reviewText": "Your review",
   "reviewSubmit": "Submit Review",
   "reviewSubmitted": "Thank you! Your review is awaiting approval.",
-
   "checkoutTitle": "Checkout",
   "checkoutContact": "Contact",
   "checkoutShippingAddress": "Shipping Address",
@@ -499,8 +606,12 @@
   "promoTabbyPayIn4": "or {count} interest-free payments of {amount}",
   "@promoTabbyPayIn4": {
     "placeholders": {
-      "count": { "type": "int" },
-      "amount": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "promoTabbyPayLater": "or pay later, interest-free",
@@ -509,7 +620,6 @@
   "tabbyInfoBody": "Split your purchase into 4 equal, interest-free payments. No fees when you pay on time.",
   "tabbyInfoGotIt": "Got it",
   "paymentSessionUnavailable": "This payment method is unavailable for this order. Please choose another payment method.",
-  "fieldCountryLabel": "Country",
   "countryUae": "United Arab Emirates",
   "paymentDeclined": "Payment was declined. Please choose another payment method.",
   "paymentFailed": "Payment couldn't be completed. Please try again.",
@@ -517,7 +627,13 @@
   "paymentProcessing": "Your payment is still processing. Please try again in a moment.",
   "completePaymentTitle": "Complete payment",
   "completePaymentBody": "Order {number} is placed and awaiting payment. Choose how you'd like to pay.",
-  "@completePaymentBody": { "placeholders": { "number": { "type": "String" } } },
+  "@completePaymentBody": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "completePaymentPayNow": "Pay now",
   "savedCardsTitle": "Payment Methods",
   "savedCardsSubtitle": "Cards saved at checkout",
@@ -536,21 +652,29 @@
   "orderSuccessTitle": "Order Placed!",
   "orderPendingTitle": "Order received",
   "orderSuccessBody": "Thank you. Your order number is {number}.",
-  "@orderSuccessBody": { "placeholders": { "number": { "type": "String" } } },
+  "@orderSuccessBody": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "orderSuccessThanks": "Thank you! Your order is confirmed and on its way.",
   "orderSuccessThanksNamed": "Thank you, {name}! Your order is confirmed and on its way.",
-  "@orderSuccessThanksNamed": { "placeholders": { "name": { "type": "String" } } },
+  "@orderSuccessThanksNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "orderNumberLabel": "Order Number",
   "orderNumberCopied": "Order number copied",
   "paymentRedirectTitle": "Complete payment",
   "paymentRedirectPending": "Your order is placed and awaiting payment confirmation. We'll notify you once your payment is completed.",
-
-  "badgeNew": "NEW",
-  "badgeBestseller": "BESTSELLER",
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",
-
   "tabDescription": "Description",
   "tabDetails": "Details",
   "tabKeyFeatures": "Key Features",
@@ -562,19 +686,34 @@
   "reviewsEmptyBody": "Be the first to review this product.",
   "reviewsSummary": "{rating}% rating · {count} reviews",
   "@reviewsSummary": {
-    "placeholders": { "rating": { "type": "int" }, "count": { "type": "int" } }
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pdpQuantityLabel": "Quantity",
   "pdpYouMayAlsoLike": "You may also like",
   "reviewsCount": "{count} reviews",
   "@reviewsCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "pdpRatingReviews": "{rating} · {count} reviews",
   "@pdpRatingReviews": {
     "placeholders": {
-      "rating": { "type": "String" },
-      "count": { "type": "int" }
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "pdpTrustAuthenticValue": "100%",
@@ -583,17 +722,19 @@
   "pdpTrustFreeLabel": "Delivery",
   "pdpTrustFreeOver": "Delivery over AED {amount}",
   "@pdpTrustFreeOver": {
-    "placeholders": { "amount": { "type": "int" } }
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
   },
   "pdpTrustDeliveryValue": "3 Hours",
   "pdpTrustDeliveryLabel": "in Dubai · 48h elsewhere",
-
   "menuShop": "Shop",
   "menuViewAll": "View All",
   "menuAccountSection": "Account",
   "menuLogOut": "Log Out",
   "drawerVouchers": "Vouchers",
-
   "footerShop": "Shop",
   "footerSupport": "Customer Care",
   "footerNewsletterTitle": "Newsletter",
@@ -615,6 +756,12 @@
   "footerTerms": "Terms & Conditions",
   "footerShipping": "Shipping & Delivery",
   "footerReturns": "Returns & Exchanges",
-
-  "webviewOpenInBrowser": "Open in browser"
+  "webviewOpenInBrowser": "Open in browser",
+  "homeSearchMarketplaceHint": "Search products, stores and brands",
+  "homeDeliverTo": "Deliver to",
+  "homeChooseArea": "Choose your area",
+  "homeTodaysDeals": "Today's Deals",
+  "launchFooter": "Across all seven emirates",
+  "welcomeKicker": "SAME-DAY DELIVERY",
+  "welcomeCreateAccount": "Create account"
 }

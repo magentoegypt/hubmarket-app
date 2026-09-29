@@ -24,7 +24,7 @@ abstract final class AppTheme {
       seedColor: AppColors.brandPrimary,
       brightness: brightness,
       primary: AppColors.brandPrimary,
-      secondary: AppColors.accentGold,
+      secondary: AppColors.accent,
       error: AppColors.accentSale,
     );
 
@@ -70,9 +70,9 @@ abstract final class AppTheme {
         backgroundColor: brightness == Brightness.light
             ? Colors.white
             : AppColors.surfaceDark,
-        // Ink (near-black) titles + leading/action icons per QA — the burgundy
-        // brand colour stays on the wordmark logo, prices and buttons, not the
-        // page titles. Screens that render the BrandLogo image are unaffected.
+        // Ink (near-black) titles + leading/action icons per QA — the navy
+        // brand colour stays on the logo and buttons, not the page titles.
+        // Screens that render the BrandLogo image are unaffected.
         // In dark mode the ink title would be near-invisible on the dark surface
         // (QA: "the page title is still not clearly visible in Dark Mode"), so
         // flip it to white — this fixes every text AppBar title app-wide.
@@ -98,7 +98,7 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       // Figma form fields: filled grey (surface/alt), rounded, no hard border,
-      // burgundy focus ring. Applies to every TextField/TextFormField app-wide.
+      // navy focus ring. Applies to every TextField/TextFormField app-wide.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: brightness == Brightness.light

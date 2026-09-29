@@ -152,29 +152,19 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // logo.png is a burgundy silhouette on transparent; tint it white
-                // so it reads on the burgundy splash. Sized up per QA so the
-                // wordmark dominates the tagline.
+                // Reversed lockup (white + orange) on the navy splash — the
+                // Figma "01 Splash". Not tinted: the cart must stay orange.
                 Image.asset(
-                  AppImages.logo,
-                  width: 210,
-                  color: Colors.white,
-                  colorBlendMode: BlendMode.srcIn,
+                  AppImages.logoReversed,
+                  width: 232,
                   errorBuilder: (_, __, ___) =>
                       const BrandLockup(color: Colors.white, fontSize: 44),
                 ),
-                const SizedBox(height: 14),
-                // Short underline beneath the wordmark (Figma).
-                Container(width: 46, height: 1.5, color: Colors.white70),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
                 Text(
                   l10n.launchTagline,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    letterSpacing: 3,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ],
             ),
@@ -184,6 +174,13 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
           const Align(
             alignment: Alignment(0, 0.72),
             child: _DotsLoader(),
+          ),
+          Align(
+            alignment: const Alignment(0, 0.84),
+            child: Text(
+              l10n.launchFooter,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
         ],
       ),

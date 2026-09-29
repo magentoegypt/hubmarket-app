@@ -1,31 +1,43 @@
 import 'package:flutter/material.dart';
 
-/// Figma design tokens (`Hub Market/Color`). A single source of truth for brand
-/// colours so theming stays consistent across every screen.
+/// Hub Market design tokens (Figma file rJVCVQdnC59gNbLAWQBZw3, page
+/// "01 · Cover & Foundations", mirrored from the storefront's `--hm-*` CSS
+/// variables). A single source of truth for brand colours so theming stays
+/// consistent across every screen.
 abstract final class AppColors {
-  /// Burgundy — primary actions, prices, wordmark.
-  static const Color brandPrimary = Color(0xFF9E1B3F);
+  /// Navy — primary actions, active tabs, headers.
+  static const Color brandPrimary = Color(0xFF0F2144);
 
-  /// Pressed / active state.
-  static const Color brandPrimaryPressed = Color(0xFF7E1632);
+  /// Pressed / active state of [brandPrimary].
+  static const Color brandPrimaryPressed = Color(0xFF0A1731);
 
-  /// Blush — section backgrounds, icon chips, empty-state circles.
-  static const Color surfaceTint = Color(0xFFFBF1F4);
+  /// Logo navy (`#02224D`) — app icon tile and the logo artwork only.
+  static const Color logoNavy = Color(0xFF02224D);
+
+  /// Orange accent (storefront `--hm-orange`) — highlights, search button, dots.
+  static const Color accent = Color(0xFFF26522);
+
+  /// Accent for text and filled buttons on white — passes AA contrast where
+  /// [accent] does not (prices, "See all" links, Accent buttons).
+  static const Color accentStrong = Color(0xFFC2410C);
+
+  /// Light navy tint — section backgrounds, icon chips, empty-state circles.
+  static const Color surfaceTint = Color(0xFFEEF2F8);
 
   /// Discount badges (e.g. `-24%`).
-  static const Color accentSale = Color(0xFFEF4444);
+  static const Color accentSale = Color(0xFFE5484D);
 
-  /// `BESTSELLER` badge and review stars.
-  static const Color accentGold = Color(0xFFC9A24C);
+  /// Rank / "#1" badges and review stars.
+  static const Color accentGold = Color(0xFFF5B700);
 
   /// Positive states — "FREE" delivery, in-stock, unlocked thresholds.
   static const Color success = Color(0xFF16A34A);
 
-  /// WhatsApp brand green — the "Send WhatsApp code" registration action.
+  /// WhatsApp brand green — WhatsApp code / support actions.
   static const Color whatsappGreen = Color(0xFF25D366);
 
-  /// Headings / primary text.
-  static const Color inkHeading = Color(0xFF1F2937);
+  /// Headings / primary text (Figma `text/primary`).
+  static const Color inkHeading = Color(0xFF1A1A2E);
 
   /// Secondary text, struck-through prices.
   static const Color inkMuted = Color(0xFF6B7280);
@@ -34,17 +46,17 @@ abstract final class AppColors {
   static const Color inkFaint = Color(0xFF9CA3AF);
 
   /// Default hairline border (`border/default`) — card outlines, dividers.
-  static const Color borderDefault = Color(0xFFE5E7EB);
+  static const Color borderDefault = Color(0xFFE3E8EF);
 
   /// Light neutral band — section separators between sticky header and content.
   static const Color surfaceMuted = Color(0xFFF3F4F6);
 
+  /// Page background behind grouped sections (Figma `bg/subtle`).
+  static const Color surfaceSubtle = Color(0xFFF5F7FA);
+
   /// Dark surfaces.
   static const Color surfaceDark = Color(0xFF1F2937);
 
-  /// Marketing-footer ground. Its own token rather than [surfaceDark] because
-  /// it has to match the storefront exactly (`.page-footer{background-color}`
-  /// on hub-market.magento2.click), while [surfaceDark] also paints dark-mode scaffolds and
-  /// app bars — moving that would repaint the whole dark theme.
+  /// Marketing-footer ground — the storefront footer navy.
   static const Color footerSurface = Color(0xFF0F1A2E);
 }

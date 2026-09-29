@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#9E1B3F</color>
-    <!-- FCM/notification accent (brand burgundy). -->
-    <color name="notification_color">#9E1B3F</color>
+    <!-- Adaptive-icon background: the Hub Market logo navy. -->
+    <color name="ic_launcher_background">#02224D</color>
+    <!-- FCM/notification accent (Hub Market orange). -->
+    <color name="notification_color">#F26522</color>
 </resources>

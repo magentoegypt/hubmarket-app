@@ -11,9 +11,10 @@ import '../../../core/widgets/brand_lockup.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../../../l10n/l10n.dart';
 
-/// Welcome screen (Figma "Splash — Welcome"): EN/AR language pill, brand lockup,
-/// circular flatlay visual, headline + subtitle, and the Get Started / Sign In /
-/// guest actions. Chrome-free (no bottom nav, no drawer, no footer).
+/// Welcome (Figma "02 Welcome"): EN/AR language pill, the Hub Market logo and
+/// app mark, the "same-day delivery" kicker, headline + subtitle, then Create
+/// account / Sign in / Continue as guest. Chrome-free (no bottom nav, no
+/// drawer). Guests can browse; sign-in is only forced at checkout.
 class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
@@ -31,8 +32,8 @@ class WelcomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Column(
             children: [
-              // Language switcher — first-launch language choice. Flips the
-              // Store header + Directionality via the atomic store switch.
+              // First-launch language choice. Flips the Store header +
+              // Directionality via the atomic store switch.
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: LanguageToggle(
@@ -46,94 +47,87 @@ class WelcomeScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Brand logo (burgundy on transparent → reads on the light
-                    // background); falls back to the wordmark if absent. Sized
-                    // up to match Figma — the 48px version read as too small.
                     Image.asset(
                       AppImages.logo,
-                      height: 84,
+                      height: 72,
                       errorBuilder: (_, __, ___) =>
-                          const BrandLockup(fontSize: 44),
+                          const BrandLockup(fontSize: 40),
                     ),
-                    const SizedBox(height: 32),
-                    // Circular flatlay visual (Figma uses a contained circle,
-                    // not a full-bleed rectangle).
+                    const SizedBox(height: 28),
                     ClipOval(
-                      child: SizedBox(
-                        width: 240,
-                        height: 240,
-                        child: Image.asset(
-                          AppImages.banner,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: AppColors.surfaceTint),
+                      child: Image.asset(
+                        AppImages.appIcon,
+                        width: 168,
+                        height: 168,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 168,
+                          height: 168,
+                          color: AppColors.logoNavy,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF4EC),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        l10n.welcomeKicker,
+                        style: const TextStyle(
+                          color: AppColors.accentStrong,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     Text(
                       l10n.welcomeHeadline,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        // Playfair Display (Latin display face) for EN only —
-                        // it has no Arabic glyphs, so AR keeps Cairo.
+                        // Playfair Display has no Arabic glyphs — AR keeps the
+                        // Arabic face.
                         fontFamily: isEn ? AppTheme.displayFont : null,
                         fontWeight: FontWeight.w700,
                         color: AppColors.inkHeading,
-                        height: 1.15,
+                        height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
                       l10n.welcomeSubtitle,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: AppColors.inkMuted,
                         fontSize: 14,
-                        height: 1.4,
+                        height: 1.45,
                       ),
                     ),
                   ],
                 ),
               ),
               FilledButton(
-                onPressed: () => context.go(AppRoutes.home),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.welcomeGetStarted),
-                    const SizedBox(width: 8),
-                    // arrow_forward auto-mirrors under RTL (matchTextDirection:
-                    // true), so it points "forward" in both LTR and AR. The old
-                    // manual rtl→arrow_back flip double-mirrored and pointed the
-                    // wrong way in Arabic.
-                    const Icon(Icons.arrow_forward, size: 18),
-                  ],
+                onPressed: () => context.push(AppRoutes.signUp),
+                child: Text(l10n.welcomeCreateAccount),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => context.push(AppRoutes.signIn),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  foregroundColor: AppColors.brandPrimary,
+                  side: const BorderSide(color: AppColors.brandPrimary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
+                child: Text(l10n.welcomeSignIn),
               ),
-              const SizedBox(height: 16),
-              // "Already have an account? Sign In" — muted prefix + burgundy link.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    l10n.authHaveAccount,
-                    style: const TextStyle(color: AppColors.inkMuted),
-                  ),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => context.push(AppRoutes.signIn),
-                    child: Text(
-                      l10n.welcomeSignIn,
-                      style: const TextStyle(
-                        color: AppColors.brandPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextButton(
                 onPressed: () => context.go(AppRoutes.home),
                 child: Text(
