@@ -169,4 +169,84 @@ void main() {
       expect(searchMatchSlices('', 'sofa'), isEmpty);
     });
   });
+
+  group('parseHighlighted (Algolia _highlightResult)', () {
+    String tag(String word) => '$kHighlightPreTag$word$kHighlightPostTag';
+
+    test('strips the tags and keeps where they were', () {
+      final parsed = parseHighlighted(
+        '${tag('Dining')} ${tag('Chair')} with Gold Metal Legs',
+      );
+      expect(parsed.text, 'Dining Chair with Gold Metal Legs');
+      expect(parsed.matches, [(start: 0, end: 6), (start: 7, end: 12)]);
+    });
+
+    test('marks prefix and typo matches a literal search can\'t', () {
+      // "sof" typed: Algolia marks the prefix of "Sofa".
+      final parsed = parseHighlighted('Corner ${tag('Sof')}a Bed');
+      expect(parsed.text, 'Corner Sofa Bed');
+      expect(parsed.matches, [(start: 7, end: 10)]);
+      expect(searchMatchSlices('Corner Sofa Bed', 'sfoa'), isEmpty);
+    });
+
+    test('Arabic, and an unclosed tag left plain', () {
+      expect(parseHighlighted('${tag('كنبة')} سرير ركنه').matches, [
+        (start: 0, end: 4),
+      ]);
+      final broken = parseHighlighted('Corner ${kHighlightPreTag}Sofa Bed');
+      expect(broken.text, 'Corner Sofa Bed');
+      expect(broken.matches, isEmpty);
+    });
+  });
+
+  group('searchCategoriesFromIds (Algolia categoryIds facet)', () {
+    const tree = <Category>[
+      Category(
+        uid: 'NzQ=',
+        name: 'Furniture',
+        urlKey: 'furniture',
+        children: [
+          Category(uid: 'NzU=', name: 'Home Furniture', urlKey: 'home'),
+          Category(uid: 'Nzc=', name: 'Living Room Sets', urlKey: 'living'),
+          Category(
+            uid: 'MTY4',
+            name: 'All',
+            urlKey: 'all',
+            includeInMenu: false,
+          ),
+        ],
+      ),
+    ];
+
+    test('names ids from the tree, ranked; unknown and hidden ids go', () {
+      final categories = searchCategoriesFromIds(
+        {'74': 12, '168': 12, '77': 5, '75': 5, '2': 40},
+        tree,
+      );
+      expect(
+        categories.map((c) => (c.name, c.uid, c.count, c.level)),
+        [
+          ('Furniture', 'NzQ=', 12, 2),
+          // A tie goes to the aggregation order at the same depth.
+          ('Living Room Sets', 'Nzc=', 5, 3),
+          ('Home Furniture', 'NzU=', 5, 3),
+        ],
+      );
+    });
+
+    test('the scoped category is left out; no tree, no names', () {
+      expect(
+        _names(searchCategoriesFromIds({'74': 3, '75': 2}, tree, excludeUid: 'NzQ=')),
+        ['Home Furniture'],
+      );
+      expect(searchCategoriesFromIds({'74': 3}, const []), isEmpty);
+    });
+
+    test('ids and uids convert both ways', () {
+      expect(categoryUidFromId('74'), 'NzQ=');
+      expect(categoryIdFromUid('NzQ='), '74');
+      expect(categoryIdFromUid('bm90LWFuLWlk'), isNull);
+      expect(categoryIdFromUid('%%%'), isNull);
+    });
+  });
 }
