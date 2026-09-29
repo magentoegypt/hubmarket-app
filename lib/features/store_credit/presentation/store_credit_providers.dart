@@ -10,12 +10,14 @@ import '../data/store_credit_repository.dart';
 import '../domain/store_credit.dart';
 
 /// Store credit is on: the server has it (`HubAppAccount`) and a customer is
-/// signed in — credit belongs to an account.
-final storeCreditEnabledProvider = Provider<bool>(
-  (ref) =>
-      ref.watch(hubAppAccountFeaturesProvider.select((f) => f.storeCredit)) &&
-      ref.watch(authControllerProvider.select((a) => a.isAuthenticated)),
-);
+/// signed in — credit belongs to an account. The server is asked first, so a
+/// Build 1 server settles it without reading the session.
+final storeCreditEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(hubAppAccountFeaturesProvider.select((f) => f.storeCredit))) {
+    return false;
+  }
+  return ref.watch(authControllerProvider.select((a) => a.isAuthenticated));
+});
 
 /// Remembers that the server turned out not to have the account module, so
 /// every store-credit entry point hides for the rest of the session.
