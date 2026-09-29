@@ -375,6 +375,9 @@ class AccountRepository {
         .whereType<String>()
         .toList();
     final region = json['region'] as Map<String, dynamic>?;
+    // A free-text region (a store without regions for the country) comes back
+    // with region_id 0 — not an id to preselect or send back.
+    final regionId = (region?['region_id'] as num?)?.toInt();
     final label = _addressLabel(json['custom_attributesV2']);
     return CustomerAddress(
       id: (json['id'] as num?)?.toInt(),
@@ -386,7 +389,7 @@ class AccountRepository {
       city: (json['city'] as String?) ?? '',
       postcode: (json['postcode'] as String?) ?? '',
       region: (region?['region'] as String?) ?? '',
-      regionId: (region?['region_id'] as num?)?.toInt(),
+      regionId: (regionId != null && regionId > 0) ? regionId : null,
       countryCode: (json['country_code'] as String?) ?? 'AE',
       defaultShipping: (json['default_shipping'] as bool?) ?? false,
       defaultBilling: (json['default_billing'] as bool?) ?? false,

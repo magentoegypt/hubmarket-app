@@ -214,7 +214,11 @@ class FakeCheckoutRepository implements CheckoutRepository {
   final bool fail;
   final bool guestOtpVerifyFails;
 
-  String? guestOtpCartId;
+  /// Every repository call, in order — `setPaymentMethod:cashondelivery` etc.
+  final List<String> calls = [];
+
+  String? guestOtpPhone;
+  bool? guestOtpResend;
   String? guestOtpCode;
   String? guestEmail;
   Map<String, dynamic>? lastAddress;
@@ -234,6 +238,7 @@ class FakeCheckoutRepository implements CheckoutRepository {
 
   @override
   Future<void> setGuestEmail(String cartId, String email) async {
+    calls.add('setGuestEmail');
     if (fail) throw const Failure(FailureKind.unknown);
     guestEmail = email;
   }
@@ -243,6 +248,7 @@ class FakeCheckoutRepository implements CheckoutRepository {
     String cartId,
     Map<String, dynamic> address,
   ) async {
+    calls.add('setShippingAddress');
     if (fail) throw const Failure(FailureKind.unknown);
     lastAddress = address;
     return shippingMethods;
@@ -254,6 +260,7 @@ class FakeCheckoutRepository implements CheckoutRepository {
     String carrier,
     String method,
   ) async {
+    calls.add('setShippingMethod:$carrier|$method');
     if (fail) throw const Failure(FailureKind.unknown);
     selectedShippingMethod = '$carrier|$method';
     return grandTotal;
@@ -263,6 +270,7 @@ class FakeCheckoutRepository implements CheckoutRepository {
   Future<List<PaymentMethodOption>> setBillingSameAsShipping(
     String cartId,
   ) async {
+    calls.add('setBillingSameAsShipping');
     if (fail) throw const Failure(FailureKind.unknown);
     return paymentMethods;
   }
@@ -274,6 +282,7 @@ class FakeCheckoutRepository implements CheckoutRepository {
     String? publicHash,
     bool saveCard = false,
   }) async {
+    calls.add('setPaymentMethod:$code');
     if (fail) throw const Failure(FailureKind.unknown);
     selectedPaymentCode = code;
     selectedPublicHash = publicHash;
@@ -282,25 +291,32 @@ class FakeCheckoutRepository implements CheckoutRepository {
   }
 
   @override
-  Future<void> requestGuestCheckoutOtp(String cartId) async {
+  Future<void> requestGuestCheckoutOtp(
+    String mobile, {
+    bool resend = false,
+  }) async {
+    calls.add('requestGuestCheckoutOtp');
     if (fail) throw const Failure(FailureKind.unknown);
-    guestOtpCartId = cartId;
+    guestOtpPhone = mobile;
+    guestOtpResend = resend;
   }
 
   @override
-  Future<void> verifyGuestCheckoutOtp(String cartId, String code) async {
+  Future<void> verifyGuestCheckoutOtp(String mobile, String code) async {
+    calls.add('verifyGuestCheckoutOtp');
     if (guestOtpVerifyFails) {
       throw const Failure(
         FailureKind.server,
-        detail: 'The verification code is incorrect.',
+        detail: 'The OTP code is not valid.',
       );
     }
-    guestOtpCartId = cartId;
+    guestOtpPhone = mobile;
     guestOtpCode = code;
   }
 
   @override
   Future<PlaceOrderResult> placeOrder(String cartId) async {
+    calls.add('placeOrder');
     if (fail) throw const Failure(FailureKind.unknown);
     return orderResult;
   }
@@ -312,6 +328,7 @@ class FakeCheckoutRepository implements CheckoutRepository {
     String? lastname,
     String? token,
   }) async {
+    calls.add('fetchPaymentSession');
     lastSessionEmail = email;
     lastSessionLastname = lastname;
     lastSessionToken = token;
@@ -327,13 +344,17 @@ class FakeCheckoutRepository implements CheckoutRepository {
     String? token,
     String? publicHash,
   }) async {
+    calls.add('setOrderPaymentMethod:$methodCode');
     switchedToMethod = methodCode;
     switchedToPublicHash = publicHash;
     return paymentSession;
   }
 
   @override
-  Future<TabbyConfig?> fetchTabbyConfig() async => tabbyConfig;
+  Future<TabbyConfig?> fetchTabbyConfig() async {
+    calls.add('fetchTabbyConfig');
+    return tabbyConfig;
+  }
 }
 
 class FakeWishlistRepository implements WishlistRepository {

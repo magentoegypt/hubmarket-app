@@ -14,7 +14,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// these are compile-time constants rather than remote config — none of them
 /// can be switched on without an app release anyway.
 class BackendCapabilities {
-  const BackendCapabilities({this.whatsappOtpLogin = false});
+  const BackendCapabilities({
+    this.whatsappOtpLogin = false,
+    this.guestCheckoutOtp = false,
+    this.gatewayPaymentSessions = false,
+    this.tabbyPromo = false,
+  });
 
   /// Passwordless sign-in with a WhatsApp code.
   ///
@@ -24,6 +29,28 @@ class BackendCapabilities {
   /// token (see `WhatsAppOtpApi`). Off hides the Phone tab on sign-in and
   /// leaves e-mail + password.
   final bool whatsappOtpLogin;
+
+  /// Guests confirm the delivery phone with a WhatsApp code before Place Order
+  /// (`customerCheckoutSendOtp` / `customerCheckoutVerifyOtp`, wired).
+  ///
+  /// Off, like the website: the store has `vsms/settings/verify_address_mobile`
+  /// disabled, and even when enabled the module only enforces it on the web
+  /// checkout — GraphQL `placeOrder` never checks it — so on the app it would
+  /// be friction with no server-side effect.
+  final bool guestCheckoutOtp;
+
+  /// A payment session for a placed order — what card (N-Genius), wallet,
+  /// Tabby and Tamara payments present. Needs a `paymentSession` /
+  /// `setOrderPaymentMethod` resolver, which Hub Market doesn't have.
+  ///
+  /// Off: checkout drops those methods from `available_payment_methods`
+  /// (placing an order with one would leave it unpaid), so only methods that
+  /// complete on `placeOrder` remain — cash on delivery on this store.
+  final bool gatewayPaymentSessions;
+
+  /// Tabby eligibility + "Pay in 4" promo metadata (`tabbyConfig`) for the
+  /// product page and cart. Off hides the promo.
+  final bool tabbyPromo;
 
   /// What the Hub Market backend supports today.
   static const BackendCapabilities hubMarket = BackendCapabilities(

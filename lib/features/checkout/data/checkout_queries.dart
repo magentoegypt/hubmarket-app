@@ -8,21 +8,20 @@ mutation SetGuestEmail($cartId: String!, $email: String!) {
 }
 ''';
 
-  // --- Guest-checkout WhatsApp OTP (MagentoEgypt_OtpVerification) ------------
-  // Cart-bound: reads the cart's shipping (fallback billing) `telephone`, so the
-  // address (with a full +971… phone) must be set first. `verify` binds the
-  // challenge to the quote; the server then lets `placeOrder` through
-  // (INTEGRATION.md §7d/§9). On failure both return a GraphQL error with a
-  // localized message.
-  static const String requestGuestCheckoutOtp = r'''
-mutation RequestGuestCheckoutOtp($cartId: String!) {
-  requestGuestCheckoutOtp(cartId: $cartId) { success message }
+  // --- Guest-checkout WhatsApp OTP (Vnecoms SMS) -----------------------------
+  // Phone-bound, not cart-bound: the code goes to the delivery phone the guest
+  // just submitted. Refusals are `success: false` + `msg` (see VnecomsOtp).
+  // Only used when BackendCapabilities.guestCheckoutOtp is on — it is off,
+  // matching the website, and GraphQL `placeOrder` doesn't check it.
+  static const String sendCheckoutOtp = r'''
+mutation CheckoutSendOtp($input: CustomerSendOtp!) {
+  customerCheckoutSendOtp(input: $input) { success msg }
 }
 ''';
 
-  static const String verifyGuestCheckoutOtp = r'''
-mutation VerifyGuestCheckoutOtp($cartId: String!, $code: String!) {
-  verifyGuestCheckoutOtp(cartId: $cartId, code: $code) { success message }
+  static const String verifyCheckoutOtp = r'''
+mutation CheckoutVerifyOtp($input: CustomerrVerifyOtp!) {
+  customerCheckoutVerifyOtp(input: $input) { success msg }
 }
 ''';
 
@@ -99,9 +98,10 @@ mutation SetBilling($cartId: String!) {
   /// `{ code: $code }`, so the saved-card extras can ride along without a second
   /// operation: `ngeniusonline_vault: { public_hash }` to pay with a stored
   /// card, `ngeniusonline: { is_active_payment_token_enabler: true }` to save
-  /// the one being entered (docs/backend/payment-contract.md §④). Both sub-inputs
-  /// are backend additions; `CheckoutRepository.setPaymentMethod` retries
-  /// without the save flag if the deployed schema doesn't know it yet.
+  /// the one being entered (docs/backend/payment-contract.md §④). Neither
+  /// sub-input exists on Hub Market, and they are only sent for an N-Genius
+  /// card row, which checkout never shows here; a plain `{ code }` (cash on
+  /// delivery) is what this store receives.
   static const String setPaymentMethod = r'''
 mutation SetPayment($cartId: String!, $method: PaymentMethodInput!) {
   setPaymentMethodOnCart(
@@ -121,126 +121,9 @@ mutation PlaceOrder($cartId: String!) {
 }
 ''';
 
-  /// `MagentoEgypt_PaymentGraphQl` resolver — create/return the gateway session
-  /// for an already-placed order (docs/backend/payment-contract.md). One resolver
-  /// serves both gateways. Until deployed this errors and the repository degrades
-  /// to null (checkout shows "awaiting payment").
-  static const String paymentSession = r'''
-query PaymentSession(
-  $orderNumber: String!
-  $email: String
-  $lastname: String
-  $token: String
-) {
-  paymentSession(
-    order_number: $orderNumber
-    email: $email
-    lastname: $lastname
-    token: $token
-  ) {
-    order_number
-    method_code
-    gateway
-    status
-    payment_id
-    web_url
-    publishable_key
-    additional_data { key value }
-  }
-}
-''';
-
-  /// Switches the payment method on an already-placed order and returns a fresh
-  /// session, so a guest/customer can retry payment with a different method
-  /// without rebuilding the (consumed) cart. Same guest auth as `paymentSession`.
-  /// docs/backend/payment-contract.md §①.
-  static const String setOrderPaymentMethod = r'''
-mutation SetOrderPaymentMethod(
-  $orderNumber: String!
-  $methodCode: String!
-  $email: String
-  $lastname: String
-  $token: String
-) {
-  setOrderPaymentMethod(
-    input: {
-      order_number: $orderNumber
-      payment_method: $methodCode
-      email: $email
-      lastname: $lastname
-      token: $token
-    }
-  ) {
-    order_number
-    method_code
-    gateway
-    status
-    payment_id
-    web_url
-    publishable_key
-    additional_data { key value }
-  }
-}
-''';
-
-  /// Same switch, but onto a **saved card**: adds `public_hash` to the input.
-  ///
-  /// Deliberately a second document rather than an optional variable on the one
-  /// above. `SetOrderPaymentMethodInput` has no `public_hash` until the backend
-  /// ships §④, and an unknown *field* fails document validation even when the
-  /// variable is null — which would break the retry screen that works today.
-  /// This document is only ever sent when a saved card was actually picked.
-  static const String setOrderPaymentMethodWithCard = r'''
-mutation SetOrderPaymentMethodWithCard(
-  $orderNumber: String!
-  $methodCode: String!
-  $publicHash: String!
-  $email: String
-  $lastname: String
-  $token: String
-) {
-  setOrderPaymentMethod(
-    input: {
-      order_number: $orderNumber
-      payment_method: $methodCode
-      public_hash: $publicHash
-      email: $email
-      lastname: $lastname
-      token: $token
-    }
-  ) {
-    order_number
-    method_code
-    gateway
-    status
-    payment_id
-    web_url
-    publishable_key
-    additional_data { key value }
-  }
-}
-''';
-
-  /// Tabby eligibility + promo metadata (`tabbyConfig`), read from Magento config
-  /// (enable flags + thresholds — never hardcoded). Eligibility/promo only;
-  /// checkout availability still comes from cart available_payment_methods. Until
-  /// deployed this errors and the repository degrades to null (promo hidden).
-  static const String tabbyConfig = r'''
-query TabbyConfig {
-  tabbyConfig {
-    enabled
-    publishable_key
-    merchant_code
-    currency
-    products {
-      type
-      method_code
-      enabled
-      min_amount
-      max_amount
-      promo_enabled
-    }
-  }
-}
-''';
+  // No payment-session or Tabby operations: Hub Market has no `paymentSession`
+  // / `setOrderPaymentMethod` / `tabbyConfig` resolver (they were custom
+  // modules of the backend this app started from). See
+  // BackendCapabilities.gatewayPaymentSessions / .tabbyPromo; the contract they
+  // implemented is docs/backend/payment-contract.md.
 }

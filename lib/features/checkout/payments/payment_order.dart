@@ -1,5 +1,43 @@
+import '../../../core/config/backend_capabilities.dart';
 import '../domain/checkout.dart';
 import '../domain/payment_wallet.dart';
+
+/// The methods this build can take a payment with on the connected backend.
+///
+/// [methods] come from `available_payment_methods` and stay the only source:
+/// the app never adds a method, it only drops the ones it cannot complete —
+///
+/// * gateway methods (`isRedirect`: N-Genius card and wallets, Tabby, Tamara)
+///   are paid in a session opened for the placed order. Without
+///   [BackendCapabilities.gatewayPaymentSessions] the order would be placed
+///   and then left unpaid;
+/// * methods paid in a web SDK the app doesn't embed ([needsWebPaymentSdk])
+///   would fail at `placeOrder`, after the shopper had chosen them.
+///
+/// Everything else completes on `placeOrder` and always stays: cash on
+/// delivery, check / money order, bank transfer, Zero Subtotal `free`.
+List<PaymentMethodOption> supportedPaymentMethods(
+  List<PaymentMethodOption> methods,
+  BackendCapabilities capabilities,
+) => [
+  for (final m in methods)
+    if ((capabilities.gatewayPaymentSessions || !m.isRedirect) &&
+        !needsWebPaymentSdk(m.code))
+      m,
+];
+
+/// Whether [code] is paid through a web payment SDK / hosted-fields flow the
+/// app doesn't integrate: Adobe Payment Services (`payment_services_paypal_*`,
+/// installed on Hub Market — its `createPaymentOrder` needs the PayPal SDK on
+/// the page) and core Magento's PayPal / Braintree methods.
+bool needsWebPaymentSdk(String code) {
+  final c = code.toLowerCase();
+  return c.startsWith('payment_services_') ||
+      c.startsWith('braintree') ||
+      c.startsWith('paypal') ||
+      c.startsWith('payflow') ||
+      c == 'hosted_pro';
+}
 
 /// Payment methods in the CL042-DEV27 display order, stable within a rank.
 ///

@@ -4,38 +4,69 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../error/graphql_failure_mapper.dart';
 import '../graphql/graphql_client.dart';
 
-/// A Magento system region (e.g. a UAE emirate). Magento requires a valid
-/// `region_id` on an address when the country has system regions (AE does), so
-/// address forms post this id rather than free-text `region`.
+/// An emirate the address forms offer: a Magento system region of the store,
+/// or — when the store defines none for the country — a named choice from
+/// [uaeFallbackRegions] that is submitted as free text.
 class RegionOption {
   const RegionOption({required this.id, required this.code, required this.name});
 
+  /// The store's `region_id` — or, for [uaeFallbackRegions], a negative local
+  /// id that only keys the picker and is never sent (see [isMagentoRegion]).
   final int id;
   final String code;
   final String name;
+
+  /// Whether [id] is a real `region_id` of the connected store. Only those may
+  /// be posted: Magento 2.4.8 rejects any other `region_id` outright ("The
+  /// specified region is not a part of the selected country or region"), even
+  /// for a country whose region is optional. Otherwise post [name] as
+  /// `region`, which a country without regions accepts as free text.
+  bool get isMagentoRegion => id > 0;
 }
 
 /// UAE-only storefront — the fixed address country. Region lists and the
 /// address `country_code` both derive from this.
 const String addressCountryCode = 'AE';
 
-/// The seven UAE emirates as Magento system regions, with the live `region_id`s
-/// (1148–1154) confirmed against hub-market.magento2.click. Used as a fallback when the live
-/// `country(id:"AE")` query fails or returns empty, so the emirate picker always
-/// offers a valid `region_id`. Magento rejects an AE address that carries
-/// neither `region_id` nor a resolvable `region` ("Region is required."), which
-/// otherwise blocks (guest) checkout at the "Continue" step. Order matches the
-/// live query (alphabetical by name); Arabic labels come from the live query
-/// when it succeeds — this English fallback only appears if that call fails.
+/// The seven emirates, offered when the store defines no regions for the UAE —
+/// Hub Market defines none (`country(id: "AE") { available_regions }` is null)
+/// — or when that lookup fails. The ids are local (negative), so the form
+/// still gets its picker but submits the emirate's name as `region` instead of
+/// a `region_id` the store doesn't have. English names: the store has no
+/// localized regions to take them from.
 const List<RegionOption> uaeFallbackRegions = [
-  RegionOption(id: 1148, code: 'AZ', name: 'Abu Dhabi'),
-  RegionOption(id: 1151, code: 'AJ', name: 'Ajman'),
-  RegionOption(id: 1149, code: 'DU', name: 'Dubai'),
-  RegionOption(id: 1154, code: 'FU', name: 'Fujairah'),
-  RegionOption(id: 1153, code: 'RK', name: 'Ras Al Khaimah'),
-  RegionOption(id: 1150, code: 'SH', name: 'Sharjah'),
-  RegionOption(id: 1152, code: 'UQ', name: 'Umm Al Quwain'),
+  RegionOption(id: -1, code: 'AZ', name: 'Abu Dhabi'),
+  RegionOption(id: -2, code: 'AJ', name: 'Ajman'),
+  RegionOption(id: -3, code: 'DU', name: 'Dubai'),
+  RegionOption(id: -4, code: 'FU', name: 'Fujairah'),
+  RegionOption(id: -5, code: 'RK', name: 'Ras Al Khaimah'),
+  RegionOption(id: -6, code: 'SH', name: 'Sharjah'),
+  RegionOption(id: -7, code: 'UQ', name: 'Umm Al Quwain'),
 ];
+
+/// The address-input fields for the emirate [regionId] picked from [regions]
+/// (or the free-text [fallbackName] when the picker wasn't available):
+/// `{region_id}` for a real store region, `{region: <name>}` otherwise, or
+/// nothing when neither is known. Shared by checkout (`CartAddressInput`) and
+/// the address book (`CustomerAddressRegionInput`), which name the same fields.
+Map<String, dynamic> regionInput({
+  required int? regionId,
+  required List<RegionOption> regions,
+  String fallbackName = '',
+}) {
+  RegionOption? picked;
+  for (final r in regions) {
+    if (r.id == regionId) {
+      picked = r;
+      break;
+    }
+  }
+  if (picked != null && picked.isMagentoRegion) {
+    return <String, dynamic>{'region_id': picked.id};
+  }
+  final name = (picked?.name ?? fallbackName).trim();
+  return name.isEmpty ? const <String, dynamic>{} : <String, dynamic>{'region': name};
+}
 
 /// Fetches a country's system regions from the live schema
 /// (`country(id:){ available_regions }`). Cross-cutting (checkout + account),
@@ -81,11 +112,12 @@ query CountryRegions($id: String!) {
           )
           .toList();
       if (parsed.isNotEmpty) return parsed;
-      // Server returned no regions — fall through to the static fallback so an
-      // AE address can still carry a valid region_id.
+      // The store defines no regions for the country (Hub Market, for AE) —
+      // fall through to the named emirates, submitted as free text.
     } on Object {
-      // Live fetch failed (network / WAF-HTML / parse). For AE we still have a
-      // known-good region set, so degrade to it rather than blocking checkout.
+      // Live fetch failed (network / WAF-HTML / parse). Degrade to the named
+      // emirates rather than blocking checkout; they never post a region_id,
+      // so they can't carry an id the store doesn't know.
     }
     if (countryCode == addressCountryCode) return uaeFallbackRegions;
     return const [];

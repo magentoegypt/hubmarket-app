@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/backend_capabilities.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/storage/secure_token_store.dart';
 import '../../../core/store/store_controller.dart';
@@ -59,9 +60,10 @@ class CheckoutState {
   /// number, not the live (possibly-edited) address field.
   final String submittedPhone;
 
-  /// Guest-checkout OTP has been verified for the current cart. Gates Place
-  /// Order for guests (the server rejects `placeOrder` without it). Reset with
-  /// the rest of the state on checkout entry via [CheckoutController.reset].
+  /// Guest-checkout OTP has been verified for [submittedPhone]. Gates Place
+  /// Order for guests — only when `BackendCapabilities.guestCheckoutOtp` is on.
+  /// Reset with the rest of the state on checkout entry via
+  /// [CheckoutController.reset].
   final bool guestOtpVerified;
 
   final bool isBusy;
@@ -213,9 +215,9 @@ class CheckoutController extends Notifier<CheckoutState> {
       final methods = await _repo.setShippingAddress(cartId, shippingAddress);
       final phone = Phone.normalizeUae(telephone);
       // Keep a prior guest-OTP verification only when the phone is unchanged —
-      // the challenge is bound to the cart's number, so editing an unrelated
-      // address field (same phone) shouldn't force re-verification, but a new
-      // number must.
+      // the code was sent to that number, so editing an unrelated address
+      // field (same phone) shouldn't force re-verification, but a new number
+      // must.
       final phoneChanged = phone != state.submittedPhone;
       state = state.copyWith(
         email: email,
@@ -259,14 +261,20 @@ class CheckoutController extends Notifier<CheckoutState> {
       // checkout list still contains only what the backend returns in
       // `available_payment_methods`.
       //
-      // The only thing the app *removes* is a wallet this device cannot pay
-      // with: the API offers Apple Pay to Android phones too, because
-      // availability is a device concern the backend cannot see. This single
-      // filter point feeds `state.paymentMethods`, the default selection, and
-      // the method list forwarded to the complete-payment screen.
+      // The app only ever *removes* methods: ones it cannot complete on this
+      // backend (a gateway method without payment sessions, a web-SDK method —
+      // see supportedPaymentMethods; on Hub Market that leaves cash on
+      // delivery), and a wallet this device cannot pay with (the API offers
+      // Apple Pay to Android phones too, because availability is a device
+      // concern the backend cannot see). This single filter point feeds
+      // `state.paymentMethods`, the default selection, and the method list
+      // forwarded to the complete-payment screen.
       final payments = orderPayments(
         filterUnavailableWallets(
-          await _repo.setBillingSameAsShipping(cartId),
+          supportedPaymentMethods(
+            await _repo.setBillingSameAsShipping(cartId),
+            ref.read(backendCapabilitiesProvider),
+          ),
           await ref.read(walletAvailabilityProvider.future),
         ),
       );
@@ -389,23 +397,31 @@ class CheckoutController extends Notifier<CheckoutState> {
     }
   }
 
-  /// Sends a guest-checkout OTP to the cart's shipping phone. Throws [Failure]
-  /// (localized `detail`) so the verify card can surface the backend message;
+  /// Sends a guest-checkout code to the delivery phone submitted with the
+  /// address ([CheckoutState.submittedPhone]). Throws [Failure] (localized
+  /// `detail`) so the verify card can surface the backend message;
   /// deliberately does **not** touch `isBusy` (the card owns its own local
   /// spinner, avoiding the screen-wide busy barrier for a small inline action).
-  Future<void> requestGuestOtp() async {
-    final cartId = _cartId;
-    if (cartId == null) throw const Failure(FailureKind.unknown);
-    await _repo.requestGuestCheckoutOtp(cartId);
+  Future<void> requestGuestOtp({bool resend = false}) async {
+    final phone = state.submittedPhone;
+    if (_cartId == null || phone.isEmpty) {
+      throw const Failure(FailureKind.unknown);
+    }
+    await _repo.requestGuestCheckoutOtp(phone, resend: resend);
   }
 
-  /// Verifies the guest-checkout OTP and binds it to the quote so `placeOrder`
-  /// is allowed. Throws [Failure] on a wrong/expired code.
+  /// Checks the guest-checkout [code] for the submitted phone and marks it
+  /// verified. Throws [Failure] on a wrong/expired code.
   Future<void> verifyGuestOtp(String code) async {
-    final cartId = _cartId;
-    if (cartId == null) throw const Failure(FailureKind.unknown);
-    await _repo.verifyGuestCheckoutOtp(cartId, code);
-    state = state.copyWith(guestOtpVerified: true);
+    final phone = state.submittedPhone;
+    if (_cartId == null || phone.isEmpty) {
+      throw const Failure(FailureKind.unknown);
+    }
+    await _repo.verifyGuestCheckoutOtp(phone, code);
+    // Only if the number wasn't changed while the code was in flight.
+    if (state.submittedPhone == phone) {
+      state = state.copyWith(guestOtpVerified: true);
+    }
   }
 
   Future<PlaceOrderResult?> placeOrder() async {
@@ -454,6 +470,10 @@ class CheckoutController extends Notifier<CheckoutState> {
     String orderNumber, {
     String? orderToken,
   }) async {
+    // No session resolver on this backend: don't poll for one.
+    if (!ref.read(backendCapabilitiesProvider).gatewayPaymentSessions) {
+      return null;
+    }
     final guest = state.isGuest;
     final email = guest ? state.email : null;
     final lastname = guest ? state.lastname : null;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/config/backend_capabilities.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
@@ -54,6 +55,11 @@ Future<ProviderContainer> _seeded(FakeCheckoutRepository repo) async {
       checkoutRepositoryProvider.overrideWithValue(repo),
       walletAvailabilityProvider.overrideWith(
         (ref) async => WalletAvailability.none,
+      ),
+      // Saved cards ride the N-Genius gateway session, which only a backend
+      // with payment sessions offers (Hub Market has none).
+      backendCapabilitiesProvider.overrideWithValue(
+        const BackendCapabilities(gatewayPaymentSessions: true),
       ),
     ],
   );
