@@ -20,5 +20,18 @@ void main() {
     test('isProd reflects the flavor', () {
       expect(config.isProd, isFalse);
     });
+
+    test('Algolia: the storefront application and prefix, no static key', () {
+      expect(config.algoliaAppId, 'HL67ED06DQ');
+      expect(config.algoliaIndexPrefix, 'hubmarket_');
+      // The storefront's key expires daily, so none ships in the app.
+      expect(config.algoliaSearchKey, isEmpty);
+      expect(config.algoliaConfigured, isTrue);
+      expect(config.algoliaSortReplicaSuffixes, [
+        'price_default_asc',
+        'price_default_desc',
+        'created_at_desc',
+      ]);
+    });
   });
 }

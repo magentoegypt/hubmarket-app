@@ -6,5 +6,9 @@
   "STORE_CODE_EN": "en",
   "STORE_CODE_AR": "ar",
   "CURRENCY": "AED",
-  "USER_AGENT": "HubMarketApp-staging/0.1.0 (Flutter)"
+  "USER_AGENT": "HubMarketApp-staging/0.1.0 (Flutter)",
+  "ALGOLIA_APP_ID": "HL67ED06DQ",
+  "ALGOLIA_SEARCH_KEY": "",
+  "ALGOLIA_INDEX_PREFIX": "hubmarket_",
+  "ALGOLIA_SORT_REPLICAS": "price_default_asc,price_default_desc,created_at_desc"
 }
