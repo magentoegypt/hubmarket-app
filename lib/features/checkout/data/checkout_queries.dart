@@ -8,6 +8,14 @@ mutation SetGuestEmail($cartId: String!, $email: String!) {
 }
 ''';
 
+  /// Drives the guest's "You already have an account with us" prompt (Figma
+  /// 17a) — see `CheckoutRepository.hasAccount`.
+  static const String isEmailAvailable = r'''
+query IsEmailAvailable($email: String!) {
+  isEmailAvailable(email: $email) { is_email_available }
+}
+''';
+
   // --- Guest-checkout WhatsApp OTP (Vnecoms SMS) -----------------------------
   // Phone-bound, not cart-bound: the code goes to the delivery phone the guest
   // just submitted. Refusals are `success: false` + `msg` (see VnecomsOtp).

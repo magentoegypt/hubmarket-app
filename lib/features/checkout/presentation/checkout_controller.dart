@@ -12,9 +12,12 @@ import '../domain/checkout.dart';
 
 class CheckoutState {
   const CheckoutState({
+    this.step = CheckoutStep.shipping,
     this.email = '',
     this.lastname = '',
     this.isGuest = false,
+    this.shipTo,
+    this.registeredEmail,
     this.shippingMethods = const <ShippingMethodOption>[],
     this.selectedShipping,
     this.paymentMethods = const <PaymentMethodOption>[],
@@ -26,11 +29,24 @@ class CheckoutState {
     this.error,
   });
 
+  /// The step on screen. Moves forward only once the one before is complete
+  /// ([CheckoutController.continueToPayment] / `continueToReview`).
+  final CheckoutStep step;
+
   /// Email + lastname captured at the address step — kept with a guest's
   /// order reference so "Track order" can find the order later.
   final String email;
   final String lastname;
   final bool isGuest;
+
+  /// The submitted address as the Ship to and Review cards show it.
+  final ShipTo? shipTo;
+
+  /// A guest email the store reports as belonging to an account — shows the
+  /// "You already have an account with us" prompt while the field still holds
+  /// it. See [CheckoutController.checkGuestEmail].
+  final String? registeredEmail;
+
   final List<ShippingMethodOption> shippingMethods;
   final ShippingMethodOption? selectedShipping;
   final List<PaymentMethodOption> paymentMethods;
@@ -44,9 +60,9 @@ class CheckoutState {
   /// number, not the live (possibly-edited) address field.
   final String submittedPhone;
 
-  /// Guest-checkout OTP has been verified for [submittedPhone]. Gates Place
-  /// Order for guests — only when `BackendCapabilities.guestCheckoutOtp` is on.
-  /// Reset with the rest of the state on checkout entry via
+  /// Guest-checkout OTP has been verified for [submittedPhone]. Gates the
+  /// payment step for guests — only when `BackendCapabilities.guestCheckoutOtp`
+  /// is on. Reset with the rest of the state on checkout entry via
   /// [CheckoutController.reset].
   final bool guestOtpVerified;
 
@@ -58,12 +74,23 @@ class CheckoutState {
       selectedShipping != null && paymentMethods.isNotEmpty;
   bool get paymentDone => selectedPayment != null;
 
+  /// Whether [target] may be shown: a step opens once every step before it is
+  /// complete.
+  bool canEnter(CheckoutStep target) => switch (target) {
+    CheckoutStep.shipping => true,
+    CheckoutStep.payment => shippingDone,
+    CheckoutStep.review => shippingDone && paymentDone,
+  };
+
   static const Object _keep = Object();
 
   CheckoutState copyWith({
+    CheckoutStep? step,
     String? email,
     String? lastname,
     bool? isGuest,
+    Object? shipTo = _keep,
+    Object? registeredEmail = _keep,
     List<ShippingMethodOption>? shippingMethods,
     Object? selectedShipping = _keep,
     List<PaymentMethodOption>? paymentMethods,
@@ -74,9 +101,14 @@ class CheckoutState {
     bool? isBusy,
     Object? error = _keep,
   }) => CheckoutState(
+    step: step ?? this.step,
     email: email ?? this.email,
     lastname: lastname ?? this.lastname,
     isGuest: isGuest ?? this.isGuest,
+    shipTo: identical(shipTo, _keep) ? this.shipTo : shipTo as ShipTo?,
+    registeredEmail: identical(registeredEmail, _keep)
+        ? this.registeredEmail
+        : registeredEmail as String?,
     shippingMethods: shippingMethods ?? this.shippingMethods,
     selectedShipping: identical(selectedShipping, _keep)
         ? this.selectedShipping
@@ -95,7 +127,8 @@ class CheckoutState {
   );
 }
 
-/// Drives the sequential checkout mutations against the active cart.
+/// Drives the sequential checkout mutations against the active cart, and which
+/// of the three steps (Shipping → Payment → Review) is on screen.
 class CheckoutController extends Notifier<CheckoutState> {
   @override
   CheckoutState build() {
@@ -129,18 +162,60 @@ class CheckoutController extends Notifier<CheckoutState> {
     return id.isEmpty ? null : id;
   }
 
+  // --- Steps -----------------------------------------------------------------
+
+  /// Shipping → Payment, once a shipping method is on the cart. False (and no
+  /// move) otherwise.
+  bool continueToPayment() => _enter(CheckoutStep.payment);
+
+  /// Payment → Review, once a payment method is on the cart.
+  bool continueToReview() => _enter(CheckoutStep.review);
+
+  /// Jumps to [target] — the step indicator and the Review "Edit" links. Only
+  /// to a step that is open (see [CheckoutState.canEnter]).
+  bool goTo(CheckoutStep target) => _enter(target);
+
+  /// One step back. False on the first step, where "back" leaves checkout.
+  bool back() {
+    final index = state.step.index;
+    if (index == 0) return false;
+    state = state.copyWith(step: CheckoutStep.values[index - 1]);
+    return true;
+  }
+
+  bool _enter(CheckoutStep target) {
+    if (!state.canEnter(target)) return false;
+    state = state.copyWith(step: target);
+    return true;
+  }
+
+  // --- Contact ---------------------------------------------------------------
+
+  /// Asks the store whether the guest's [email] already has an account, for
+  /// the "You already have an account with us" prompt. Silent on failure.
+  Future<void> checkGuestEmail(String email) async {
+    final trimmed = email.trim();
+    if (trimmed.isEmpty) return;
+    final taken = await _repo.hasAccount(trimmed);
+    state = state.copyWith(registeredEmail: taken ? trimmed : null);
+  }
+
+  // --- Mutations -------------------------------------------------------------
+
   /// Submits the checkout shipping address.
   ///
   /// [shippingAddress] is a Magento `ShippingAddressInput` — `{'address': {...}}`
   /// for a newly entered address, or `{'customer_address_id': id}` for a saved
   /// one. [lastname] and [telephone] are passed alongside rather than read back
-  /// out of the map, because the saved-address form carries neither.
+  /// out of the map, because the saved-address form carries neither. [shipTo]
+  /// is what the Ship to and Review cards show for it.
   Future<bool> submitAddress({
     required String email,
     required Map<String, dynamic> shippingAddress,
     required String lastname,
     required String telephone,
     required bool isGuest,
+    ShipTo? shipTo,
   }) async {
     final cartId = _cartId;
     if (cartId == null) return false;
@@ -155,7 +230,8 @@ class CheckoutController extends Notifier<CheckoutState> {
       // guest-only email on the actual token (what AuthLink sends), and drive
       // the rest of checkout (OTP gating, placeOrder auth) by that same flag so
       // a real bearer runs the customer path end-to-end.
-      final hasToken = (await ref.read(secureTokenStoreProvider).read()) != null;
+      final hasToken =
+          (await ref.read(secureTokenStoreProvider).read()) != null;
       final guest = isGuest && !hasToken;
       if (guest && email.isNotEmpty) {
         await _repo.setGuestEmail(cartId, email);
@@ -168,9 +244,11 @@ class CheckoutController extends Notifier<CheckoutState> {
       // must.
       final phoneChanged = phone != state.submittedPhone;
       state = state.copyWith(
+        step: CheckoutStep.shipping,
         email: email,
         lastname: lastname,
         isGuest: guest,
+        shipTo: shipTo,
         shippingMethods: methods,
         selectedShipping: null,
         paymentMethods: const [],
@@ -216,8 +294,8 @@ class CheckoutController extends Notifier<CheckoutState> {
         selectedPayment: null,
         isBusy: false,
       );
-      // Pre-select Cash on Delivery (QA default) so the summary + Place Order
-      // are ready immediately; the shopper can still switch method.
+      // Pre-select Cash on Delivery (QA default) so the payment step opens
+      // ready to review; the shopper can still switch method.
       final defaultPayment = _defaultPayment(payments);
       if (defaultPayment != null) {
         await selectPayment(defaultPayment);
@@ -233,8 +311,9 @@ class CheckoutController extends Notifier<CheckoutState> {
   /// when the store offers one, sorts first).
   ShippingMethodOption? _defaultShipping(List<ShippingMethodOption> methods) {
     if (methods.isEmpty) return null;
-    final sorted = [...methods]
-      ..sort((a, b) => (a.amount?.amount ?? 0).compareTo(b.amount?.amount ?? 0));
+    final sorted = [
+      ...methods,
+    ]..sort((a, b) => (a.amount?.amount ?? 0).compareTo(b.amount?.amount ?? 0));
     return sorted.first;
   }
 

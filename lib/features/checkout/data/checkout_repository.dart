@@ -20,6 +20,34 @@ class CheckoutRepository {
     {'cartId': cartId, 'email': email},
   );
 
+  /// Whether [email] already belongs to a customer account — false when
+  /// `isEmailAvailable` says the address is taken.
+  ///
+  /// Magento 2.4.7+ answers "available" for every address unless the admin
+  /// enables Stores › Configuration › Sales › Checkout › Checkout Options ›
+  /// Enable Guest Checkout Login, so by default this is always false and the
+  /// guest's "you already have an account" prompt stays hidden, as it does on
+  /// the website. A failed check reads as false too: the prompt is a
+  /// convenience, never a gate.
+  Future<bool> hasAccount(String email) async {
+    try {
+      final result = await _client.query(
+        QueryOptions(
+          document: gql(CheckoutQueries.isEmailAvailable),
+          variables: {'email': email},
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      );
+      if (result.hasException) return false;
+      final available =
+          (result.data?['isEmailAvailable']
+              as Map<String, dynamic>?)?['is_email_available'];
+      return available == false;
+    } on Object {
+      return false;
+    }
+  }
+
   /// Sets the shipping address and returns the available shipping methods.
   ///
   /// [shippingAddress] is a Magento `ShippingAddressInput`: either
@@ -145,16 +173,20 @@ class CheckoutRepository {
     );
   }
 
-  ShippingMethodOption _parseShipping(Map<String, dynamic> json) =>
-      ShippingMethodOption(
-        carrierCode: (json['carrier_code'] as String?) ?? '',
-        methodCode: (json['method_code'] as String?) ?? '',
-        title: [
-          json['carrier_title'],
-          json['method_title'],
-        ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
-        amount: moneyFromJson(json['amount'] as Map<String, dynamic>?),
-      );
+  /// The carrier names the option and the method, when it says something else,
+  /// becomes its second line (Figma 17: "Standard delivery / 2–4 working
+  /// days"). A carrier without a title falls back to the method's.
+  ShippingMethodOption _parseShipping(Map<String, dynamic> json) {
+    final carrier = ((json['carrier_title'] as String?) ?? '').trim();
+    final method = ((json['method_title'] as String?) ?? '').trim();
+    return ShippingMethodOption(
+      carrierCode: (json['carrier_code'] as String?) ?? '',
+      methodCode: (json['method_code'] as String?) ?? '',
+      title: carrier.isNotEmpty ? carrier : method,
+      detail: carrier.isNotEmpty && method != carrier ? method : '',
+      amount: moneyFromJson(json['amount'] as Map<String, dynamic>?),
+    );
+  }
 
   Future<Map<String, dynamic>> _mutate(
     String document,

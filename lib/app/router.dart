@@ -211,16 +211,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.checkout,
         builder: (context, state) => const CheckoutScreen(),
       ),
+      // Reached only from Place order, which hands over the order in `extra`;
+      // a cold start or a restored route has none, so go Home instead.
       GoRoute(
         path: AppRoutes.orderSuccess,
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          return OrderSuccessScreen(
-            orderNumber: (extra?['number'] as String?) ?? '',
-            deliveryEta: extra?['eta'] as String?,
-            deliveryLocation: extra?['location'] as String?,
-          );
-        },
+        redirect: (context, state) =>
+            state.extra is OrderPlacedArgs ? null : AppRoutes.home,
+        builder: (context, state) =>
+            OrderSuccessScreen(args: state.extra! as OrderPlacedArgs),
       ),
       GoRoute(
         path: AppRoutes.diagnostics,

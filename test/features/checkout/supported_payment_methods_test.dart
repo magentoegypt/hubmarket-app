@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
 
-List<String> _codes(List<PaymentMethodOption> methods) =>
-    [for (final m in methods) m.code];
+List<String> _codes(List<PaymentMethodOption> methods) => [
+  for (final m in methods) m.code,
+];
 
 /// What `available_payment_methods` can hold: Magento's offline methods and
 /// the online integrations (`is_deferred: true`) — the gateway methods of the
@@ -33,10 +34,12 @@ const _all = [
 void main() {
   group('payableInApp', () {
     test('keeps only the offline methods, in the backend order', () {
-      expect(
-        _codes(payableInApp(_all)),
-        ['cashondelivery', 'checkmo', 'banktransfer', 'free'],
-      );
+      expect(_codes(payableInApp(_all)), [
+        'cashondelivery',
+        'checkmo',
+        'banktransfer',
+        'free',
+      ]);
     });
 
     test('never adds a method', () {

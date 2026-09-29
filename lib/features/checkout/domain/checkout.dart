@@ -1,19 +1,35 @@
 import '../../catalog/domain/money.dart';
 
+/// The three checkout steps (Figma 17 → 18 → 18b), in order.
+enum CheckoutStep { shipping, payment, review }
+
 class ShippingMethodOption {
   const ShippingMethodOption({
     required this.carrierCode,
     required this.methodCode,
     required this.title,
+    this.detail = '',
     this.amount,
   });
 
   final String carrierCode;
   final String methodCode;
+
+  /// The option's name — Magento's `carrier_title` (or `method_title` when the
+  /// carrier has none).
   final String title;
+
+  /// The option's second line — `method_title`, when it adds something to
+  /// [title]; empty otherwise.
+  final String detail;
   final Money? amount;
 
   String get id => '$carrierCode|$methodCode';
+
+  /// [title] and [detail] on one line, e.g. "Flat Rate · Fixed".
+  String get label => detail.isEmpty ? title : '$title · $detail';
+
+  bool get isFree => amount == null || amount!.amount <= 0;
 }
 
 class PaymentMethodOption {
@@ -60,6 +76,35 @@ List<PaymentMethodOption> payableInApp(List<PaymentMethodOption> methods) => [
   for (final m in methods)
     if (!m.isOnline) m,
 ];
+
+/// The delivery address as the Ship to and Review cards show it. Captured when
+/// the address is submitted, because a saved address reaches Magento by id
+/// only.
+class ShipTo {
+  const ShipTo({
+    required this.name,
+    required this.telephone,
+    required this.address,
+    this.label,
+  });
+
+  final String name;
+
+  /// E.164, as submitted.
+  final String telephone;
+
+  /// One line: street, apartment, emirate.
+  final String address;
+
+  /// The saved address's `address_label` ("Home", "Office"); null for a newly
+  /// typed address.
+  final String? label;
+
+  String get firstName {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    return parts.first;
+  }
+}
 
 class PlaceOrderResult {
   const PlaceOrderResult({required this.orderNumber, this.orderToken});

@@ -3,19 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/shell/hub_bottom_nav.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_theme.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/address/regions.dart';
 import '../../../../core/config/backend_capabilities.dart';
-import '../../../../core/validation/phone.dart';
+import '../../../../core/config/free_shipping.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/address_form.dart';
-import '../../../../core/widgets/brand_logo.dart';
-import '../../../../core/widgets/button_spinner.dart';
 import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/otp_code_field.dart';
-import '../../../../core/widgets/resend_countdown.dart';
-import '../../../../core/widgets/summary_row.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/data/account_repository.dart';
 import '../../../account/domain/customer_address.dart';
@@ -24,10 +20,25 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../catalog/domain/money.dart';
+import '../../domain/checkout.dart';
 import '../../domain/shipping_address_input.dart';
-import '../../payments/payment_method_card.dart';
 import '../checkout_controller.dart';
+import '../widgets/checkout_parts.dart';
+import '../widgets/checkout_review_step.dart';
+import '../widgets/checkout_shipping_step.dart';
+import '../widgets/guest_verify_card.dart';
+import '../widgets/payment_method_tile.dart';
+import 'order_success_screen.dart';
 
+/// Checkout in three steps (Figma 17 → 18 → 18b), ending on Order placed (19):
+///
+/// 1. **Shipping** — a guest gives an email and the address (17a); a customer
+///    starts from their default saved address. Then "Ship to" and the shipping
+///    methods Magento offers for it (17).
+/// 2. **Payment** — the methods the app can take (cash on delivery on Hub
+///    Market) and the order summary (18).
+/// 3. **Review** — address, method, payment, items and totals, then Place
+///    order (18b).
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -38,6 +49,7 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
+  final _emailFocus = FocusNode();
   late final AddressFormController _address;
 
   /// Only shown (and sent) when the store requires a postcode for the UAE.
@@ -59,6 +71,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   int? _selectedAddressId;
   bool _useNewAddress = false;
 
+  /// "Change" on the Ship to card reopened the address form.
+  bool _editingAddress = false;
+
+  /// A signed-in customer's default address has been sent once, so step 1
+  /// opens on "Ship to" (Figma 17) instead of on the address picker.
+  bool _defaultAddressSent = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,12 +88,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _address.fullName.text = '${customer.firstName} ${customer.lastName}'
           .trim();
     }
+    _emailFocus.addListener(_onEmailFocus);
     // Start every checkout from a clean slate. The checkout controller is a
     // session-wide singleton, so without this a second checkout in the same
     // session (or a checkout after logout) inherits the previous order's
     // shipping/payment/total. Post-frame because a provider can't be mutated
-    // during the widget-tree build that mounts this screen; the stale sections
-    // only render below the address form, so the one-frame pre-reset is unseen.
+    // during the widget-tree build that mounts this screen.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(checkoutControllerProvider.notifier).reset();
@@ -83,6 +102,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   void dispose() {
+    _emailFocus.removeListener(_onEmailFocus);
+    _emailFocus.dispose();
     _email.dispose();
     _address.dispose();
     _postcode.dispose();
@@ -91,6 +112,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   CheckoutController get _controller =>
       ref.read(checkoutControllerProvider.notifier);
+
+  bool get _isGuest => !ref.read(authControllerProvider).isAuthenticated;
+
+  /// Leaving the email field asks the store whether the address already has an
+  /// account (17a's sign-in prompt).
+  void _onEmailFocus() {
+    if (!mounted || _emailFocus.hasFocus || !_isGuest) return;
+    final email = _email.text.trim();
+    if (Validators.email(context, email) != null) return;
+    _controller.checkGuestEmail(email);
+  }
 
   /// Magento `CartAddressInput`. The emirate goes out as the store's
   /// `region_id` when it has UAE regions, otherwise as the free-text `region`
@@ -115,6 +147,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     };
   }
 
+  /// The typed address on one line — street, apartment, emirate — as the Ship
+  /// to and Review cards show it.
+  String _typedAddressLine() {
+    var emirate = _address.region.text.trim();
+    final regions = ref.read(regionsProvider).valueOrNull ?? const [];
+    for (final r in regions) {
+      if (r.id == _address.regionId.value) {
+        emirate = r.name;
+        break;
+      }
+    }
+    return [
+      ..._address.streetLines(),
+      emirate,
+    ].where((p) => p.isNotEmpty).join(', ');
+  }
+
   /// The new-address form: the shared fields plus, when the store requires
   /// one for the UAE, a postcode.
   Widget _newAddressForm() => Column(
@@ -137,139 +186,147 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // Only the email (and, when shown, the new-address form) is validated — a
     // selected saved address needs no form validation.
     if (!_formKey.currentState!.validate()) return;
-    final isGuest = !ref.read(authControllerProvider).isAuthenticated;
+    final isGuest = _isGuest;
     final saved =
         ref.read(addressesProvider).valueOrNull ?? const <CustomerAddress>[];
-    final useSaved = !isGuest && !_useNewAddress && saved.isNotEmpty;
-    final Map<String, dynamic> shippingAddress;
-    final String lastname;
-    final String telephone;
-    if (useSaved) {
+    if (!isGuest && !_useNewAddress && saved.isNotEmpty) {
       final id = _selectedAddressId ?? _defaultId(saved);
-      final a = saved.firstWhere((x) => x.id == id, orElse: () => saved.first);
-      shippingAddress = ShippingAddressInput.saved(a);
-      // The saved-address branch sends only an id, so these come from the
-      // address record rather than being read back out of the input map.
-      lastname = a.lastName;
-      telephone = a.telephone;
-    } else {
-      // A newly typed address is still saved to the address book, which is the
-      // behaviour a shopper expects when they enter one at checkout. Only the
-      // already-saved path had to stop re-saving.
-      final input = _addressInput();
-      shippingAddress = ShippingAddressInput.fresh(input);
-      lastname = (input['lastname'] as String?) ?? '';
-      telephone = (input['telephone'] as String?) ?? '';
+      await _submitSaved(
+        saved.firstWhere((x) => x.id == id, orElse: () => saved.first),
+      );
+      return;
     }
+    // A newly typed address is still saved to the address book, which is the
+    // behaviour a shopper expects when they enter one at checkout. Only the
+    // already-saved path had to stop re-saving.
+    final input = _addressInput();
+    final telephone = (input['telephone'] as String?) ?? '';
+    await _send(
+      shippingAddress: ShippingAddressInput.fresh(input),
+      lastname: (input['lastname'] as String?) ?? '',
+      telephone: telephone,
+      isGuest: isGuest,
+      shipTo: ShipTo(
+        name: _address.fullName.text.trim(),
+        telephone: telephone,
+        address: _typedAddressLine(),
+      ),
+    );
+  }
+
+  /// A saved address goes to Magento by id, so its record supplies the
+  /// lastname, phone and what the cards show.
+  Future<void> _submitSaved(CustomerAddress a) => _send(
+    shippingAddress: ShippingAddressInput.saved(a),
+    lastname: a.lastName,
+    telephone: a.telephone,
+    isGuest: false,
+    shipTo: ShipTo(
+      name: a.fullName,
+      telephone: a.telephone,
+      address: a.summary,
+      label: a.labelText,
+    ),
+  );
+
+  Future<void> _send({
+    required Map<String, dynamic> shippingAddress,
+    required String lastname,
+    required String telephone,
+    required bool isGuest,
+    required ShipTo shipTo,
+  }) async {
     final ok = await _controller.submitAddress(
       email: _email.text.trim(),
       shippingAddress: shippingAddress,
       lastname: lastname,
       telephone: telephone,
       isGuest: isGuest,
+      shipTo: shipTo,
     );
-    if (!mounted) return;
-    if (ok) {
-      setState(() => _addressSubmitted = true);
-    } else {
-      // Surface the real backend message (e.g. a Magento address/guest-checkout
-      // validation error) instead of a blanket "Something went wrong", so a
-      // failed Continue is diagnosable rather than opaque (QA: "check api").
-      final l10n = AppLocalizations.of(context);
-      final error = ref.read(checkoutControllerProvider).error;
-      _snack(
-        error != null
-            ? serverMessageOr(context, error, l10n.errorGeneric)
-            : l10n.errorGeneric,
-      );
-    }
+    if (!mounted || !ok) return;
+    setState(() {
+      _addressSubmitted = true;
+      _editingAddress = false;
+    });
   }
 
-  /// Address step body: a signed-in customer with saved addresses picks one
-  /// (default auto-selected) or opens the new-address form; guests / customers
-  /// with no saved addresses get the form directly.
-  Widget _addressSection(AppLocalizations l10n, bool isGuest) {
-    if (isGuest) return _newAddressForm();
-    return ref
-        .watch(addressesProvider)
-        .maybeWhen(
-          data: (list) {
-            if (list.isEmpty) return _newAddressForm();
-            final selectedId =
-                _useNewAddress ? null : (_selectedAddressId ?? _defaultId(list));
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final a in list)
-                  _AddressRadioCard(
-                    address: a,
-                    selected: !_useNewAddress && a.id == selectedId,
-                    onTap: () => setState(() {
-                      _useNewAddress = false;
-                      _selectedAddressId = a.id;
-                    }),
-                  ),
-                _NewAddressTile(
-                  label: l10n.checkoutUseNewAddress,
-                  selected: _useNewAddress,
-                  onTap: () => setState(() {
-                    _useNewAddress = true;
-                    _selectedAddressId = null;
-                  }),
-                ),
-                if (_useNewAddress) ...[
-                  const SizedBox(height: 12),
-                  _newAddressForm(),
-                ],
-              ],
-            );
-          },
-          orElse: _newAddressForm,
-        );
+  /// A signed-in customer lands on "Ship to" with their default address
+  /// (Figma 17): sent once, as soon as the address book has loaded.
+  void _sendDefaultAddress(List<CustomerAddress> saved) {
+    if (!mounted || _defaultAddressSent || saved.isEmpty || _isGuest) return;
+    final state = ref.read(checkoutControllerProvider);
+    if (state.addressDone || state.isBusy) return;
+    _defaultAddressSent = true;
+    final id = _defaultId(saved);
+    _submitSaved(
+      saved.firstWhere((x) => x.id == id, orElse: () => saved.first),
+    );
+  }
+
+  Future<void> _selectShipping(ShippingMethodOption method) async {
+    if (ref.read(checkoutControllerProvider).selectedShipping?.id ==
+        method.id) {
+      return;
+    }
+    await _controller.selectShipping(method);
+  }
+
+  Future<void> _selectPayment(PaymentMethodOption method) async {
+    if (ref.read(checkoutControllerProvider).selectedPayment?.code ==
+        method.code) {
+      return;
+    }
+    await _controller.selectPayment(method);
   }
 
   Future<void> _placeOrder() async {
     if (_placing) return;
     setState(() => _placing = true);
     try {
+      // Read before placing: a placed order resets the cart.
+      final before = ref.read(checkoutControllerProvider);
+      final firstName =
+          ref.read(authControllerProvider).customer?.firstName ??
+          before.shipTo?.firstName;
       final result = await _controller.placeOrder();
-      if (!mounted) return;
-      if (result == null) {
-        _snack(AppLocalizations.of(context).errorGeneric);
-        return;
-      }
+      if (!mounted || result == null) return;
       // Every method checkout offers completes on placeOrder (payableInApp):
       // cash on delivery, Zero Subtotal `free`, check / money order.
-      _goSuccess(result.orderNumber);
+      context.go(
+        AppRoutes.orderSuccess,
+        extra: OrderPlacedArgs(
+          orderNumber: result.orderNumber,
+          firstName: firstName,
+          total: before.grandTotal,
+          payment: before.selectedPayment,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _placing = false);
     }
   }
 
-  void _goSuccess(String number) {
+  /// Whether back leaves checkout: only from step 1 with no reopened form.
+  bool _canLeave(CheckoutState state) =>
+      state.step == CheckoutStep.shipping &&
+      !(_editingAddress && state.addressDone);
+
+  /// Back closes a reopened address form, then goes a step back, then leaves.
+  void _onBack() {
     final state = ref.read(checkoutControllerProvider);
-    // Resolve the emirate name for the order-success delivery chip.
-    String? location;
-    final regionId = _address.regionId.value;
-    if (regionId != null) {
-      final regions = ref.read(regionsProvider).valueOrNull;
-      if (regions != null) {
-        for (final r in regions) {
-          if (r.id == regionId) {
-            location = r.name;
-            break;
-          }
-        }
-      }
+    if (state.step == CheckoutStep.shipping &&
+        _editingAddress &&
+        state.addressDone) {
+      setState(() => _editingAddress = false);
+      return;
     }
-    context.go(
-      AppRoutes.orderSuccess,
-      extra: {
-        'number': number,
-        'eta': state.selectedShipping?.title,
-        'location': location,
-      },
-    );
+    if (_controller.back()) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.cart);
+    }
   }
 
   void _snack(String message) {
@@ -286,647 +343,401 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final state = ref.watch(checkoutControllerProvider);
     final cart = ref.watch(cartControllerProvider.select((s) => s.cart));
     final isGuest = !ref.watch(authControllerProvider).isAuthenticated;
-    // _placing spans the whole place-order → session → present flow; state.isBusy
-    // covers the individual address/shipping/payment mutations.
+    // _placing spans place order → navigation; state.isBusy covers the
+    // individual address / shipping / payment mutations.
     final busy = state.isBusy || _placing;
     // Guest delivery-phone verification is a backend switch — off on Hub
     // Market, as on its website. When on, the guest must verify the code
-    // before Place Order is enabled.
+    // before moving on to payment.
     final guestOtp = ref.watch(
       backendCapabilitiesProvider.select((c) => c.guestCheckoutOtp),
     );
     final needsGuestOtp = guestOtp && isGuest && !state.guestOtpVerified;
+    final showEditor =
+        state.step == CheckoutStep.shipping &&
+        (!state.addressDone || _editingAddress);
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 60,
-        centerTitle: false,
-        titleSpacing: 4,
-        title: const BrandLogo(height: 44),
-      ),
-      bottomNavigationBar: const HubBottomNav(current: AppTab.cart),
-      body: Stack(
-        children: [
-          AbsorbPointer(
-            absorbing: busy,
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    l10n.checkoutTitle,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                // Contact Information — email (Figma: a separate top section,
-                // not a numbered step). Read-only for a signed-in customer.
-                _SectionHeader(title: l10n.contactInformation),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      // Label above the field (not a floating label) so it never
-                      // overlaps the box border — matters in Arabic/RTL (QA).
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          l10n.fieldEmail,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.inkHeading,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _email,
-                        enabled: isGuest,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          hintText: l10n.authEmailHint,
-                          helperText: l10n.checkoutEmailHelp,
-                        ),
-                        validator: (v) => Validators.email(context, v),
-                      ),
-                      const SizedBox(height: 24),
-                      _StepHeader(
-                        index: 1,
-                        title: l10n.checkoutDeliveryAddress,
-                      ),
-                      _addressSection(l10n, isGuest),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                FilledButton(
-                  onPressed: busy ? null : _submitAddress,
-                  child: Text(l10n.checkoutContinue),
-                ),
-                // When the backend asks for it, guest checkout verifies the
-                // delivery-address phone by OTP before the order can be placed.
-                // The card sits directly under Delivery Address (Figma) and
-                // gates Place Order below. Keyed by the *submitted* phone so a
-                // changed number remounts it (re-requesting the code); shown
-                // only after a real submit this session so it never auto-sends
-                // on re-entry.
-                if (guestOtp && isGuest && _addressSubmitted && state.addressDone)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: _GuestVerifyCard(
-                      key: ValueKey(state.submittedPhone),
-                      phone: state.submittedPhone,
-                    ),
-                  ),
-                if (state.addressDone) ...[
-                  const SizedBox(height: 24),
-                  _StepHeader(index: 2, title: l10n.checkoutShippingMethod),
-                  RadioGroup<String>(
-                    groupValue: state.selectedShipping?.id,
-                    onChanged: (id) {
-                      if (id == null) return;
-                      final method = state.shippingMethods.firstWhere(
-                        (m) => m.id == id,
-                      );
-                      _controller.selectShipping(method);
-                    },
-                    child: Column(
-                      children: [
-                        for (final method in state.shippingMethods)
-                          RadioListTile<String>(
-                            value: method.id,
-                            title: Text(method.title),
-                            secondary:
-                                (method.amount == null ||
-                                    method.amount!.amount <= 0)
-                                ? Text(
-                                    l10n.cartDeliveryFree,
-                                    style: const TextStyle(
-                                      color: AppColors.brandPrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  )
-                                : Text(
-                                    method.amount!.formatted(),
-                                    textDirection: TextDirection.ltr,
-                                  ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (state.shippingDone) ...[
-                  const SizedBox(height: 24),
-                  _StepHeader(index: 3, title: l10n.checkoutPayment),
-                  for (final method in state.paymentMethods)
-                    PaymentMethodCard(
-                      method: method,
-                      selected: state.selectedPayment?.code == method.code,
-                      onTap: () => _controller.selectPayment(method),
-                    ),
-                  // Security reassurance below the methods (Figma / QA #5).
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4, bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.lock_outline,
-                          size: 14,
-                          color: AppColors.inkMuted,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            l10n.checkoutPaymentSecurityNote,
-                            style: const TextStyle(
-                              color: AppColors.inkMuted,
-                              fontSize: 12,
-                              height: 1.35,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (state.paymentDone) ...[
-                  const SizedBox(height: 24),
-                  _StepHeader(index: 4, title: l10n.checkoutSummary),
-                  _CheckoutSummary(
-                    cart: cart,
-                    deliveryFee: state.selectedShipping?.amount,
-                    grandTotal: state.grandTotal,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: (busy || needsGuestOtp) ? null : _placeOrder,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.lock_outline, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          state.grandTotal != null
-                              ? '${l10n.checkoutPlaceOrder} · ${state.grandTotal!.formatted()}'
-                              : l10n.checkoutPlaceOrder,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (needsGuestOtp)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        l10n.checkoutVerifyMobileTitle,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.inkMuted,
-                          fontSize: 12.5,
-                        ),
-                      ),
-                    ),
-                ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    // Surface the store's own message when Magento refuses a step (an address
+    // it rejects, an out-of-stock item at placeOrder) instead of a blanket
+    // "Something went wrong" (QA: "check api").
+    ref.listen<Object?>(checkoutControllerProvider.select((s) => s.error), (
+      previous,
+      next,
+    ) {
+      if (next != null && !identical(previous, next)) {
+        _snack(serverMessageOr(context, next, l10n.errorGeneric));
+      }
+    });
+
+    if (!isGuest && !_defaultAddressSent) {
+      final saved = ref.watch(addressesProvider).valueOrNull;
+      if (saved != null && saved.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _sendDefaultAddress(saved),
+        );
+      }
+    }
+
+    return PopScope(
+      canPop: _canLeave(state),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !busy) _onBack();
+      },
+      child: Scaffold(
+        backgroundColor: context.isDarkMode ? null : AppColors.surfaceSubtle,
+        appBar: AppBar(
+          toolbarHeight: 56,
+          centerTitle: false,
+          titleSpacing: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, size: 22),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: busy ? null : _onBack,
           ),
-          // Single busy indicator over a translucent barrier — reinforces the
-          // AbsorbPointer lock without stacking multiple spinners.
-          if (busy)
-            const Positioned.fill(
-              child: ColoredBox(
-                color: Color(0x33000000),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Plain (non-numbered) section header — used for "Contact Information".
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Text(title, style: Theme.of(context).textTheme.titleMedium),
-    ),
-  );
-}
-
-class _StepHeader extends StatelessWidget {
-  const _StepHeader({required this.index, required this.title});
-  final int index;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Row(
-      children: [
-        CircleAvatar(
-          radius: 14,
-          backgroundColor: AppColors.brandPrimary,
-          child: Text(
-            '$index',
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+          title: Text(
+            l10n.checkoutTitle,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
         ),
-        const SizedBox(width: 12),
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-      ],
-    ),
-  );
-}
-
-/// Order Summary breakdown (QA #6): Subtotal, optional Promo discount, Delivery
-/// fee (FREE when the selected shipping is free), a divider, then the Total.
-/// Item subtotal + discount come from the cart; the delivery fee is the selected
-/// shipping method's amount and the total is the checkout grand total.
-class _CheckoutSummary extends StatelessWidget {
-  const _CheckoutSummary({
-    required this.cart,
-    this.deliveryFee,
-    this.grandTotal,
-  });
-
-  final Cart cart;
-  final Money? deliveryFee;
-  final Money? grandTotal;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final totals = cart.totals;
-    final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
-    final freeDelivery = deliveryFee == null || deliveryFee!.amount <= 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SummaryRow(
-          label: l10n.cartSubtotalCount(itemCount),
-          value: totals.subtotal?.formatted(),
+        bottomNavigationBar: _footer(
+          l10n,
+          state,
+          cart,
+          busy: busy,
+          showEditor: showEditor,
+          needsGuestOtp: needsGuestOtp,
         ),
-        if (totals.discount != null) ...[
-          const SizedBox(height: 11),
-          SummaryRow(
-            label: totals.appliedCoupon != null
-                ? l10n.cartPromoCode(totals.appliedCoupon!)
-                : l10n.cartDiscount,
-            value: '−${totals.discount!.formatted()}',
-            valueColor: AppColors.brandPrimary,
-          ),
-        ],
-        const SizedBox(height: 11),
-        SummaryRow(
-          label: l10n.checkoutDeliveryFee,
-          value: freeDelivery ? l10n.cartDeliveryFree : deliveryFee!.formatted(),
-          valueColor: freeDelivery ? AppColors.brandPrimary : null,
-          valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
-        ),
-        const SizedBox(height: 11),
-        const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
-        const SizedBox(height: 11),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        body: Column(
           children: [
-            Text(
-              l10n.cartTotal,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.inkHeading,
-              ),
+            CheckoutStepIndicator(
+              current: state.step,
+              onTap: (step) {
+                if (!busy) _controller.goTo(step);
+              },
             ),
-            Text(
-              (grandTotal ?? totals.grandTotal)?.formatted() ?? '—',
-              textDirection: TextDirection.ltr,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.brandPrimary,
+            Expanded(
+              child: Stack(
+                children: [
+                  AbsorbPointer(
+                    absorbing: busy,
+                    // Not a lazy list: every address field must stay mounted
+                    // for the form to validate it.
+                    child: SingleChildScrollView(
+                      key: ValueKey(showEditor ? 'address' : state.step.name),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                      child: _stepBody(
+                        l10n,
+                        state,
+                        cart,
+                        isGuest: isGuest,
+                        guestOtp: guestOtp,
+                        showEditor: showEditor,
+                      ),
+                    ),
+                  ),
+                  // Single busy indicator over a translucent barrier —
+                  // reinforces the AbsorbPointer lock without stacking spinners.
+                  if (busy)
+                    const Positioned.fill(
+                      child: ColoredBox(
+                        color: Color(0x33000000),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _stepBody(
+    AppLocalizations l10n,
+    CheckoutState state,
+    Cart cart, {
+    required bool isGuest,
+    required bool guestOtp,
+    required bool showEditor,
+  }) {
+    final children = switch (state.step) {
+      CheckoutStep.shipping when showEditor => _addressEditor(
+        l10n,
+        state,
+        isGuest,
+      ),
+      CheckoutStep.shipping => _shippingChoices(
+        l10n,
+        state,
+        cart,
+        isGuest: isGuest,
+        guestOtp: guestOtp,
+      ),
+      CheckoutStep.payment => _paymentStep(l10n, state, cart),
+      CheckoutStep.review => _reviewStep(l10n, state, cart),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          children[i],
+        ],
       ],
     );
   }
-}
 
-/// A selectable saved-address card (Figma): radio + name (+ "Default" badge) +
-/// phone + single-line address.
-class _AddressRadioCard extends StatelessWidget {
-  const _AddressRadioCard({
-    required this.address,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final CustomerAddress address;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.surfaceTint : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? AppColors.brandPrimary : AppColors.borderDefault,
-              width: selected ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                selected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                color: selected ? AppColors.brandPrimary : AppColors.inkMuted,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            address.fullName,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        if (address.defaultShipping)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.brandPrimary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              l10n.addressDefaultBadge,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (address.telephone.isNotEmpty)
-                      Text(
-                        address.telephone,
-                        textDirection: TextDirection.ltr,
-                        style: const TextStyle(
-                          color: AppColors.inkMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    const SizedBox(height: 2),
-                    Text(
-                      address.summary,
-                      style: const TextStyle(
-                        color: AppColors.inkMuted,
-                        fontSize: 12.5,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The "Use a new address" option below the saved-address cards.
-class _NewAddressTile extends StatelessWidget {
-  const _NewAddressTile({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.surfaceTint : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: selected ? AppColors.brandPrimary : AppColors.borderDefault,
-          width: selected ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
+  /// 17a: contact (guests) and the address — typed, or picked from the address
+  /// book.
+  List<Widget> _addressEditor(
+    AppLocalizations l10n,
+    CheckoutState state,
+    bool isGuest,
+  ) => [
+    Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(
-            selected
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked,
-            color: selected ? AppColors.brandPrimary : AppColors.inkMuted,
-            size: 20,
+          if (isGuest) ...[
+            ContactCard(
+              email: _email,
+              focusNode: _emailFocus,
+              registeredEmail: state.registeredEmail,
+              onSignIn: () => context.push(AppRoutes.signIn),
+              onForgotPassword: () => context.push(AppRoutes.forgotPassword),
+            ),
+            const SizedBox(height: 12),
+          ],
+          CheckoutCard(
+            title: l10n.checkoutShippingAddressTitle,
+            children: [isGuest ? _newAddressForm() : _savedAddresses()],
           ),
-          const SizedBox(width: 12),
-          const Icon(
-            Icons.add_location_alt_outlined,
-            size: 18,
-            color: AppColors.brandPrimary,
-          ),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     ),
-  );
-}
+  ];
 
-/// Guest-checkout "Verify Mobile Number" card (Figma), shown only when
-/// `BackendCapabilities.guestCheckoutOtp` is on: auto-requests a WhatsApp OTP
-/// to the submitted delivery phone on appear, then 6 boxes → Verify + Resend.
-/// On success the checkout controller flips `guestOtpVerified`, which both
-/// re-renders this card to the verified state and unlocks Place Order.
-class _GuestVerifyCard extends ConsumerStatefulWidget {
-  const _GuestVerifyCard({super.key, required this.phone});
-
-  final String phone;
-
-  @override
-  ConsumerState<_GuestVerifyCard> createState() => _GuestVerifyCardState();
-}
-
-class _GuestVerifyCardState extends ConsumerState<_GuestVerifyCard> {
-  final _otp = TextEditingController();
-  bool _busy = false;
-  bool _requested = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _otp.addListener(_onOtp);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _request(initial: true));
-  }
-
-  @override
-  void dispose() {
-    _otp.removeListener(_onOtp);
-    _otp.dispose();
-    super.dispose();
-  }
-
-  void _onOtp() => setState(() {});
-
-  CheckoutController get _controller =>
-      ref.read(checkoutControllerProvider.notifier);
-
-  Future<void> _request({bool initial = false}) async {
-    // The initial call is a post-frame callback — bail if the card was unmounted
-    // (e.g. reset() dropped it) before it ran, so no stray live OTP is sent.
-    if (!mounted) return;
-    // Send the code once automatically; a manual Resend re-sends and clears.
-    if (initial && _requested) return;
-    _requested = true;
-    if (!initial) _otp.clear();
-    try {
-      await _controller.requestGuestOtp(resend: !initial);
-    } catch (error) {
-      if (!mounted) return;
-      _snack(
-        serverMessageOr(
-          context,
-          error,
-          AppLocalizations.of(context).authOtpRequestError,
+  /// A signed-in customer picks a saved address (default selected) or opens
+  /// the form; with none saved, the form is all there is.
+  Widget _savedAddresses() => ref
+      .watch(addressesProvider)
+      .when(
+        data: (list) {
+          if (list.isEmpty) return _newAddressForm();
+          return SavedAddressPicker(
+            addresses: list,
+            selectedId: _useNewAddress
+                ? null
+                : (_selectedAddressId ?? _defaultId(list)),
+            useNew: _useNewAddress,
+            onSelect: (a) => setState(() {
+              _useNewAddress = false;
+              _selectedAddressId = a.id;
+            }),
+            onUseNew: () => setState(() {
+              _useNewAddress = true;
+              _selectedAddressId = null;
+            }),
+            newAddressForm: _newAddressForm(),
+          );
+        },
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: CircularProgressIndicator()),
         ),
+        error: (_, _) => _newAddressForm(),
       );
-    }
-  }
 
-  Future<void> _verify() async {
-    if (_otp.text.length != 6) return;
-    setState(() => _busy = true);
-    try {
-      await _controller.verifyGuestOtp(_otp.text);
-    } catch (error) {
-      if (!mounted) return;
-      _otp.clear();
-      _snack(
-        serverMessageOr(
-          context,
-          error,
-          AppLocalizations.of(context).authOtpVerifyError,
+  /// 17: where it ships, and how.
+  List<Widget> _shippingChoices(
+    AppLocalizations l10n,
+    CheckoutState state,
+    Cart cart, {
+    required bool isGuest,
+    required bool guestOtp,
+  }) {
+    final threshold = ref.watch(freeShippingThresholdProvider).valueOrNull;
+    final currency = (state.grandTotal ?? cart.totals.grandTotal)?.currency;
+    return [
+      if (state.shipTo != null)
+        ShipToCard(
+          shipTo: state.shipTo!,
+          onChange: () => setState(() => _editingAddress = true),
         ),
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+      // When the backend asks for it, guest checkout verifies the delivery
+      // phone by OTP before payment. Keyed by the *submitted* phone so a
+      // changed number remounts it (re-requesting the code); shown only after
+      // a real submit this session so it never auto-sends on re-entry.
+      if (guestOtp && isGuest && _addressSubmitted)
+        GuestVerifyCard(
+          key: ValueKey(state.submittedPhone),
+          phone: state.submittedPhone,
+        ),
+      ShippingMethodsCard(
+        methods: state.shippingMethods,
+        selected: state.selectedShipping,
+        onSelect: _selectShipping,
+        freeShippingOver: threshold == null || currency == null
+            ? null
+            : Money(amount: threshold, currency: currency),
+      ),
+    ];
   }
 
-  void _snack(String m) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
-    }
-  }
+  /// 18: the methods the app can take, and the order summary.
+  List<Widget> _paymentStep(
+    AppLocalizations l10n,
+    CheckoutState state,
+    Cart cart,
+  ) => [
+    Text(
+      l10n.checkoutPaymentMethodTitle,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: context.scaffoldHeading,
+      ),
+    ),
+    for (final method in state.paymentMethods)
+      PaymentMethodTile(
+        method: method,
+        selected: state.selectedPayment?.code == method.code,
+        onTap: () => _selectPayment(method),
+      ),
+    CheckoutTotalsCard(
+      title: l10n.checkoutOrderSummaryTitle,
+      trailing: l10n.cartItemCount(cart.itemCount),
+      cart: cart,
+      shipping: state.selectedShipping,
+      grandTotal: state.grandTotal,
+    ),
+  ];
 
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final verified = ref.watch(
-      checkoutControllerProvider.select((s) => s.guestOtpVerified),
-    );
-    // A plain section (Figma) — no card border/tint; it sits inline between the
-    // Delivery Address card and the Shipping Method step.
-    return verified ? _verifiedView(l10n) : _entryView(l10n);
-  }
-
-  Widget _verifiedView(AppLocalizations l10n) => Row(
-    children: [
-      const Icon(Icons.check_circle, color: AppColors.success, size: 20),
-      const SizedBox(width: 10),
+  /// 18b: everything once more before Place order.
+  List<Widget> _reviewStep(
+    AppLocalizations l10n,
+    CheckoutState state,
+    Cart cart,
+  ) {
+    final isEn = Localizations.localeOf(context).languageCode != 'ar';
+    final payment = state.selectedPayment;
+    return [
       Text(
-        l10n.authMobileVerified,
-        style: const TextStyle(
-          color: AppColors.success,
+        l10n.checkoutReviewTitle,
+        style: TextStyle(
+          // Playfair Display has no Arabic glyphs; Arabic keeps the theme's
+          // face.
+          fontFamily: isEn ? AppTheme.displayFont : null,
+          fontSize: 22,
           fontWeight: FontWeight.w700,
+          color: context.scaffoldHeading,
         ),
       ),
-    ],
-  );
+      ReviewShippingCard(
+        shipTo: state.shipTo,
+        method: state.selectedShipping,
+        onEdit: () => _controller.goTo(CheckoutStep.shipping),
+      ),
+      if (payment != null)
+        ReviewPaymentCard(
+          method: payment,
+          onEdit: () => _controller.goTo(CheckoutStep.payment),
+        ),
+      ReviewItemsCard(cart: cart),
+      CheckoutTotalsCard(
+        title: l10n.checkoutOrderTotal,
+        cart: cart,
+        shipping: state.selectedShipping,
+        grandTotal: state.grandTotal,
+      ),
+      Text(
+        l10n.checkoutTermsNote,
+        style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+      ),
+    ];
+  }
 
-  Widget _entryView(AppLocalizations l10n) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        l10n.checkoutVerifyMobileTitle,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        l10n.checkoutVerifyMobileIntro(Phone.maskBidi(widget.phone)),
-        style: const TextStyle(color: AppColors.inkMuted, fontSize: 12.5),
-      ),
-      const SizedBox(height: 14),
-      OtpCodeField(
-        controller: _otp,
-        autofocus: false,
-        onCompleted: (_) => _verify(),
-      ),
-      const SizedBox(height: 14),
-      FilledButton(
-        onPressed: (_busy || _otp.text.length != 6) ? null : _verify,
-        child: _busy ? const ButtonSpinner() : Text(l10n.authVerify),
-      ),
-      Center(
-        child: ResendCountdown(
-          onResend: () => _request(),
-          resendLabel: l10n.authResendCode,
-          countingLabel: l10n.authResendIn,
-        ),
-      ),
-    ],
-  );
+  /// The pinned action for the step on screen.
+  Widget _footer(
+    AppLocalizations l10n,
+    CheckoutState state,
+    Cart cart, {
+    required bool busy,
+    required bool showEditor,
+    required bool needsGuestOtp,
+  }) {
+    final total = state.grandTotal ?? cart.totals.grandTotal;
+    switch (state.step) {
+      case CheckoutStep.shipping:
+        if (showEditor) {
+          return CheckoutFooter(
+            children: [
+              FilledButton(
+                style: checkoutButtonStyle(context),
+                onPressed: busy ? null : _submitAddress,
+                child: Text(l10n.checkoutContinueToShipping),
+              ),
+            ],
+          );
+        }
+        return CheckoutFooter(
+          children: [
+            CheckoutAmountRow(
+              label: l10n.checkoutTotalInclShipping,
+              value: total?.formatted() ?? '—',
+              valueStyle: CheckoutText.price,
+            ),
+            if (needsGuestOtp)
+              Text(
+                l10n.checkoutVerifyMobileTitle,
+                textAlign: TextAlign.center,
+                style: CheckoutText.caption,
+              ),
+            FilledButton(
+              style: checkoutButtonStyle(context),
+              onPressed: (busy || !state.shippingDone || needsGuestOtp)
+                  ? null
+                  : _controller.continueToPayment,
+              child: Text(l10n.checkoutContinueToPayment),
+            ),
+          ],
+        );
+      case CheckoutStep.payment:
+        return CheckoutFooter(
+          children: [
+            FilledButton.icon(
+              style: checkoutButtonStyle(context),
+              onPressed: (busy || !state.paymentDone)
+                  ? null
+                  : _controller.continueToReview,
+              icon: const Icon(Icons.arrow_forward, size: 20),
+              label: Text(l10n.checkoutReviewOrder),
+            ),
+          ],
+        );
+      case CheckoutStep.review:
+        return CheckoutFooter(
+          children: [
+            FilledButton.icon(
+              style: checkoutButtonStyle(context),
+              onPressed:
+                  (busy ||
+                      needsGuestOtp ||
+                      !state.canEnter(CheckoutStep.review))
+                  ? null
+                  : _placeOrder,
+              icon: const Icon(Icons.lock_outline, size: 20),
+              label: Text(
+                total == null
+                    ? l10n.checkoutPlaceOrder
+                    : '${l10n.checkoutPlaceOrder} · ${total.formatted()}',
+              ),
+            ),
+          ],
+        );
+    }
+  }
 }

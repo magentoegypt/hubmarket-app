@@ -270,6 +270,102 @@ void main() {
     });
   });
 
+  group('CheckoutController — steps', () {
+    Future<void> submit(CheckoutController checkout) => checkout.submitAddress(
+      email: 'guest@example.com',
+      shippingAddress: _newAddress,
+      lastname: 'Hassan',
+      telephone: '0500000000',
+      isGuest: true,
+      shipTo: const ShipTo(
+        name: 'Layla Hassan',
+        telephone: '+971500000000',
+        address: '1 Marina Walk, Dubai',
+      ),
+    );
+
+    test('a step opens only once the one before it is complete', () async {
+      final container = await _seededContainer(FakeCheckoutRepository());
+      final checkout = container.read(checkoutControllerProvider.notifier);
+      CheckoutStep step() => container.read(checkoutControllerProvider).step;
+
+      // No address, so no shipping method: payment and review stay shut.
+      expect(checkout.continueToPayment(), isFalse);
+      expect(checkout.goTo(CheckoutStep.review), isFalse);
+      expect(step(), CheckoutStep.shipping);
+
+      // The address brings the default shipping + payment methods with it.
+      await submit(checkout);
+      expect(step(), CheckoutStep.shipping);
+      expect(
+        container.read(checkoutControllerProvider).shipTo?.firstName,
+        'Layla',
+      );
+
+      expect(checkout.continueToPayment(), isTrue);
+      expect(step(), CheckoutStep.payment);
+      expect(checkout.continueToReview(), isTrue);
+      expect(step(), CheckoutStep.review);
+    });
+
+    test('back walks Review → Payment → Shipping, then leaves', () async {
+      final container = await _seededContainer(FakeCheckoutRepository());
+      final checkout = container.read(checkoutControllerProvider.notifier);
+      await submit(checkout);
+      checkout
+        ..continueToPayment()
+        ..continueToReview();
+
+      expect(checkout.back(), isTrue);
+      expect(
+        container.read(checkoutControllerProvider).step,
+        CheckoutStep.payment,
+      );
+      expect(checkout.back(), isTrue);
+      expect(
+        container.read(checkoutControllerProvider).step,
+        CheckoutStep.shipping,
+      );
+      // On the first step "back" is the screen's to handle: leave checkout.
+      expect(checkout.back(), isFalse);
+    });
+
+    test('a new address sends the shopper back to the shipping step', () async {
+      final container = await _seededContainer(FakeCheckoutRepository());
+      final checkout = container.read(checkoutControllerProvider.notifier);
+      await submit(checkout);
+      checkout
+        ..continueToPayment()
+        ..continueToReview();
+
+      // Review's "Edit" → step 1 → "Change" → a new address: its shipping
+      // methods have to be looked at again before paying.
+      checkout.goTo(CheckoutStep.shipping);
+      await submit(checkout);
+      expect(
+        container.read(checkoutControllerProvider).step,
+        CheckoutStep.shipping,
+      );
+    });
+
+    test('checkGuestEmail flags an email the store knows, only while it is '
+        'the one typed', () async {
+      final repo = FakeCheckoutRepository()
+        ..registeredEmails = {'layla@example.com'};
+      final container = await _seededContainer(repo);
+      final checkout = container.read(checkoutControllerProvider.notifier);
+
+      await checkout.checkGuestEmail(' layla@example.com ');
+      expect(
+        container.read(checkoutControllerProvider).registeredEmail,
+        'layla@example.com',
+      );
+
+      await checkout.checkGuestEmail('someone@example.com');
+      expect(container.read(checkoutControllerProvider).registeredEmail, isNull);
+    });
+  });
+
   group('CheckoutController — guest OTP', () {
     test('submitAddress records the normalized submitted phone', () async {
       final repo = FakeCheckoutRepository();

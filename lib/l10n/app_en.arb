@@ -459,6 +459,14 @@
       }
     }
   },
+  "itemQty": "Qty {count}",
+  "@itemQty": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cartSecureCheckout": "Proceed To Checkout",
   "cartEmptyTitle": "Your bag is empty",
   "cartEmptyBody": "Looks like you haven't added anything yet. Explore today's deals and hundreds of local stores.",
@@ -646,6 +654,7 @@
   "checkoutEmailHelp": "Order updates will be sent to this email.",
   "checkoutDeliveryAddress": "Delivery Address",
   "actionChange": "Change",
+  "actionEdit": "Edit",
   "profileTitle": "Edit Profile",
   "profileSaved": "Profile updated",
   "profilePersonalInfo": "Personal Information",
@@ -686,7 +695,46 @@
   "checkoutCodFee": "Cash on Delivery Fee",
   "checkoutPaymentSecurityNote": "Online payments are processed securely. Cash on delivery is available.",
   "checkoutContinue": "Continue",
-  "checkoutPlaceOrder": "Place Order",
+  "checkoutPlaceOrder": "Place order",
+  "checkoutStepShipping": "Shipping",
+  "checkoutStepPayment": "Payment",
+  "checkoutStepReview": "Review",
+  "checkoutContactTitle": "Contact",
+  "checkoutEmailLabel": "Email address",
+  "checkoutExistingAccount": "You already have an account with us.",
+  "checkoutSignIn": "Sign in",
+  "checkoutForgotPassword": "Forgot your password?",
+  "checkoutShippingAddressTitle": "Shipping address",
+  "checkoutContinueToShipping": "Continue to shipping method",
+  "checkoutShipTo": "Ship to",
+  "checkoutShippingMethodTitle": "Shipping method",
+  "checkoutFreeShippingOver": "Free shipping on orders over {amount}",
+  "@checkoutFreeShippingOver": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "checkoutTotalInclShipping": "Total incl. shipping",
+  "checkoutContinueToPayment": "Continue to payment",
+  "checkoutPaymentMethodTitle": "Payment method",
+  "checkoutCodSubtitle": "Pay each store when its package arrives",
+  "checkoutOrderSummaryTitle": "Order summary",
+  "checkoutShippingFee": "Shipping",
+  "checkoutTotalInclVat": "Total (incl. VAT)",
+  "checkoutReviewOrder": "Review order",
+  "checkoutReviewTitle": "Review your order",
+  "checkoutItemsCount": "Items ({count})",
+  "@checkoutItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkoutOrderTotal": "Order total",
+  "checkoutTermsNote": "By placing your order you agree to Hub Market’s Terms and each store’s return policy.",
   "checkoutPayIn4": "or 4 interest-free payments",
   "checkoutPayLater": "Pay later, interest-free",
   "checkoutCardInstalments": "Pay by card in instalments",
@@ -739,7 +787,7 @@
   "checkoutSaveCard": "Save this card for next time",
   "checkoutSavedCardsLabel": "Saved cards",
   "completePaymentPayLater": "I'll pay later",
-  "orderSuccessTitle": "Order Placed!",
+  "orderSuccessTitle": "Order placed!",
   "orderPendingTitle": "Order received",
   "orderSuccessBody": "Thank you. Your order number is {number}.",
   "@orderSuccessBody": {
@@ -758,6 +806,45 @@
       }
     }
   },
+  "orderPlacedThanks": "Thank you. Order #{number} is confirmed — we’ve emailed your receipt.",
+  "@orderPlacedThanks": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPlacedThanksNamed": "Thank you, {name}. Order #{number} is confirmed — we’ve emailed your receipt.",
+  "@orderPlacedThanksNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPlacedPayOnDelivery": "Pay {amount} in cash when your order arrives",
+  "@orderPlacedPayOnDelivery": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPlacedPayWith": "Pay {amount} with {method}",
+  "@orderPlacedPayWith": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPlacedTrack": "Track order",
   "orderNumberLabel": "Order Number",
   "orderNumberCopied": "Order number copied",
   "paymentRedirectTitle": "Complete payment",

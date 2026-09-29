@@ -218,6 +218,15 @@ class FakeCheckoutRepository implements CheckoutRepository {
   String? selectedShippingMethod;
   String? selectedPaymentCode;
 
+  /// Emails [hasAccount] reports as belonging to a customer.
+  Set<String> registeredEmails = {};
+
+  @override
+  Future<bool> hasAccount(String email) async {
+    calls.add('hasAccount');
+    return registeredEmails.contains(email);
+  }
+
   @override
   Future<void> setGuestEmail(String cartId, String email) async {
     calls.add('setGuestEmail');
