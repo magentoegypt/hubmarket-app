@@ -193,6 +193,8 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
                 Checkbox(
                   value: _understood,
                   activeColor: AppColors.brandPrimary,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
                   onChanged: _busy
                       ? null
                       : (v) => setState(() => _understood = v ?? false),

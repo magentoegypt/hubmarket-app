@@ -77,6 +77,7 @@ class ReviewsSummaryCard extends StatelessWidget {
           average.toStringAsFixed(1),
           style: TextStyle(
             fontFamily: AppTheme.displayFont,
+            fontFamilyFallback: const [AppTheme.arabicFont],
             fontSize: 38,
             height: 1.1,
             fontWeight: FontWeight.w700,

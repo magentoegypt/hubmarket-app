@@ -162,11 +162,12 @@ void main() {
       expect(find.text(en.reviewsScreenTitle), findsOneWidget);
       expect(find.text(en.reviewsCount(3)), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNWidgets(5));
-      expect(find.text('5★'), findsOneWidget);
-      expect(find.text('3★'), findsOneWidget);
-      expect(find.text('4★'), findsNothing); // no 4★ reviews, no chip
+      expect(find.byKey(const ValueKey('review-filter-5')), findsOneWidget);
+      expect(find.byKey(const ValueKey('review-filter-3')), findsOneWidget);
+      // No 4★ reviews, no 4★ chip.
+      expect(find.byKey(const ValueKey('review-filter-4')), findsNothing);
 
-      await tester.tap(find.text('3★'));
+      await tester.tap(find.byKey(const ValueKey('review-filter-3')));
       await tester.pumpAndSettle();
       expect(find.byType(ReviewStars), findsNWidgets(2)); // summary + 1 card
     });
@@ -175,7 +176,7 @@ void main() {
       await pump(tester, FakeReviewsRepository(productReviews: _figmaReviews));
       expect(find.text(en.reviewsCount(27)), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsNothing);
-      expect(find.text('5★'), findsNothing);
+      expect(find.byKey(const ValueKey('review-filter-5')), findsNothing);
     });
 
     testWidgets('Write a review opens the review form', (tester) async {

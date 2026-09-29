@@ -137,6 +137,8 @@ Future<CancelOutcome?> showCancelOrderSheet(
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: true,
+  // White like the frame, not Material's tinted sheet surface.
+  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
   shape: const RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
   ),
@@ -203,6 +205,8 @@ class _CancelOrderSheetState extends ConsumerState<CancelOrderSheet> {
             l10n.orderCancelTitle(order.number),
             style: TextStyle(
               fontFamily: AppTheme.displayFont,
+              // Playfair has no Arabic glyphs.
+              fontFamilyFallback: const [AppTheme.arabicFont],
               fontSize: 23,
               fontWeight: FontWeight.w700,
               color: context.scaffoldHeading,

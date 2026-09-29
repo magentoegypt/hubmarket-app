@@ -187,7 +187,9 @@ class _StarFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget chip(String label, int? value) {
       final on = selected == value;
+      final color = on ? Colors.white : context.scaffoldHeading;
       return Padding(
+        key: ValueKey('review-filter-${value ?? 'all'}'),
         padding: const EdgeInsetsDirectional.only(end: 8),
         child: Material(
           color: on ? AppColors.brandPrimary : groupCardColor(context),
@@ -203,13 +205,21 @@ class _StarFilters extends StatelessWidget {
               height: 38,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               alignment: Alignment.center,
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: on ? Colors.white : context.scaffoldHeading,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  // An icon, not "★": the Arabic font has no star glyph.
+                  if (value != null)
+                    Icon(Icons.star_rounded, size: 15, color: color),
+                ],
               ),
             ),
           ),
@@ -222,8 +232,7 @@ class _StarFilters extends StatelessWidget {
       child: Row(
         children: [
           chip(allLabel, null),
-          // Stars read left-to-right as a rating in both languages.
-          for (final s in stars) chip('$s★', s),
+          for (final s in stars) chip('$s', s),
         ],
       ),
     );
@@ -247,6 +256,7 @@ class _WriteReviewBar extends StatelessWidget {
       ),
       child: SizedBox(
         height: 52,
+        width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: onTap,
           icon: const Icon(Icons.edit_outlined, size: 20),

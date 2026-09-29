@@ -14,8 +14,9 @@ class WebViewArgs {
   final String title;
 }
 
-/// In-app browser for store CMS pages (About, FAQs, Shipping, Returns, Privacy,
-/// Terms) on the active store's live site. Keeps the user inside the app with a
+/// In-app browser for storefront pages the app has no screen for (marketplace
+/// pages, the blog) on the active store's live site — CMS pages (About, the
+/// policies) render natively in `CmsPageScreen`. Keeps the user inside the app with a
 /// branded chrome, a progress bar, an error/retry state, and an
 /// "open in browser" escape hatch. The loaded page owns its own LTR/RTL — only
 /// the surrounding chrome follows the app's [Directionality].

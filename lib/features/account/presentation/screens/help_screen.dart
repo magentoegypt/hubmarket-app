@@ -153,12 +153,18 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             ),
             if (channels.isNotEmpty) ...[
               const SizedBox(height: 16),
+              // Three equal slots as in the frame, so a store publishing one
+              // channel shows one tile rather than a full-width banner.
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (var i = 0; i < channels.length; i++) ...[
+                  for (var i = 0; i < 3; i++) ...[
                     if (i > 0) const SizedBox(width: 8),
-                    Expanded(child: channels[i]),
+                    Expanded(
+                      child: i < channels.length
+                          ? channels[i]
+                          : const SizedBox.shrink(),
+                    ),
                   ],
                 ],
               ),
