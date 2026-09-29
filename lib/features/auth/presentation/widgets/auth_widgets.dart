@@ -272,7 +272,7 @@ class AuthErrorBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.dangerSubtle,
+          color: AppColors.dangerSurface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -381,7 +381,7 @@ class AuthCheckRow extends StatelessWidget {
                 border: value
                     ? null
                     : Border.all(
-                        color: error ? AppColors.danger : AppColors.borderStrong,
+                        color: error ? AppColors.danger : AppColors.borderControl,
                         width: 1.5,
                       ),
               ),

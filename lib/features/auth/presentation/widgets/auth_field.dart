@@ -150,10 +150,10 @@ class _AuthFieldState extends State<AuthField> {
                         child: widget.trailing,
                       ),
                 suffixIconConstraints: const BoxConstraints(),
-                border: _outline(AppColors.borderInput, 1),
+                border: _outline(AppColors.borderStrong, 1),
                 enabledBorder: red
                     ? _outline(AppColors.danger, 1.5)
-                    : _outline(AppColors.borderInput, 1),
+                    : _outline(AppColors.borderStrong, 1),
                 focusedBorder: red
                     ? _outline(AppColors.danger, 1.5)
                     : _outline(AppColors.brandPrimary, 1.5),

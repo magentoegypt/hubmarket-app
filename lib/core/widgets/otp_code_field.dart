@@ -162,7 +162,7 @@ class _OtpCodeFieldState extends State<OtpCodeField> {
       border = AppColors.brandPrimary;
       borderWidth = 2;
     } else {
-      border = AppColors.borderInput;
+      border = AppColors.borderStrong;
       borderWidth = 1;
     }
     return DecoratedBox(

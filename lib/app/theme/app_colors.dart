@@ -33,21 +33,32 @@ abstract final class AppColors {
   /// Discount badges (e.g. `-24%`).
   static const Color accentSale = Color(0xFFE5484D);
 
+  /// Destructive actions — "Cancel order", "Delete account" — as text and
+  /// icons; AA on white and on [dangerSurface].
+  static const Color danger = Color(0xFFC0392B);
+
+  /// Fill of a destructive button, and the tint of its card's border.
+  static const Color dangerSurface = Color(0xFFFCEBEA);
+
+  /// Orange notice box behind [accentStrong] text (cancellation and deletion
+  /// notes).
+  static const Color accentSurface = Color(0xFFFDF3E7);
+
   /// Rank / "#1" badges and review stars.
   static const Color accentGold = Color(0xFFF5B700);
 
   /// Positive states — "FREE" delivery, in-stock, unlocked thresholds.
   static const Color success = Color(0xFF16A34A);
 
-  /// Status colours (`--hm-{danger,success,warning,info}` and their `-subtle`
-  /// tints) — form errors and banners, the verify-code badge, the offline
-  /// state, notes.
-  static const Color danger = Color(0xFFC0392B);
-  static const Color dangerSubtle = Color(0xFFFBECEA);
+  /// Figma `--hm-success` — completed checkout steps, the order-placed and
+  /// added-to-cart ticks, free-shipping notes.
   static const Color successStrong = Color(0xFF0F7B3F);
+
+  /// Figma `--hm-success-subtle` — the halo behind the order-placed tick.
   static const Color successSubtle = Color(0xFFEAF6EF);
-  static const Color warning = Color(0xFFB45309);
-  static const Color warningSubtle = Color(0xFFFDF3E7);
+
+  /// Figma `--hm-info` / `--hm-info-subtle` — informational notes, e.g.
+  /// checkout's "You already have an account with us".
   static const Color info = Color(0xFF1D4ED8);
   static const Color infoSubtle = Color(0xFFEAF0FD);
 
@@ -66,13 +77,9 @@ abstract final class AppColors {
   /// Default hairline border (`border/default`) — card outlines, dividers.
   static const Color borderDefault = Color(0xFFE3E8EF);
 
-  /// Form-field outline (`--hm-default`) and the stronger checkbox outline
-  /// (`--hm-strong`).
-  static const Color borderInput = Color(0xFFCBD3E2);
-  static const Color borderStrong = Color(0xFF7D879C);
-
-  /// Faint rules (`--hm-subtle`) — the "or" divider.
-  static const Color borderSubtle = Color(0xFFE8ECF3);
+  /// Figma `--hm-default` — a firmer outline: upcoming checkout steps and their
+  /// connectors, the bottom-sheet handle.
+  static const Color borderStrong = Color(0xFFCBD3E2);
 
   /// Light neutral band — section separators between sticky header and content.
   static const Color surfaceMuted = Color(0xFFF3F4F6);
@@ -85,4 +92,15 @@ abstract final class AppColors {
 
   /// Marketing-footer ground — the storefront footer navy.
   static const Color footerSurface = Color(0xFF0F1A2E);
+
+  /// Figma `--hm-warning` / `--hm-warning-subtle` — the offline state's
+  /// no-signal disc.
+  static const Color warning = Color(0xFFB45309);
+  static const Color warningSubtle = Color(0xFFFDF3E7);
+
+  /// Figma `--hm-strong` — the outline of an unticked checkbox.
+  static const Color borderControl = Color(0xFF7D879C);
+
+  /// Figma `--hm-subtle` — faint rules, e.g. the "or" divider on Sign in.
+  static const Color borderSubtle = Color(0xFFE8ECF3);
 }
