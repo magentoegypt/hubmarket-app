@@ -104,7 +104,7 @@
   "homeViewAll": "View All",
   "homeTrustReviewsTitle": "Why Shoppers Trust Hub Market",
   "homeTrustReviewsSubtitle": "Loved across the UAE",
-  "reviewsScreenTitle": "Customer Reviews",
+  "reviewsScreenTitle": "Reviews",
   "homeJournalTitle": "The Hub Market Journal",
   "homeJournalSubtitle": "Beauty notes & guides",
   "homeJournalTag": "BLOGS",
@@ -687,13 +687,25 @@
   "fieldCurrentPassword": "Current password",
   "fieldNewPassword": "New password",
   "passwordChanged": "Password changed",
-  "reviewsWrite": "Write a Review",
+  "reviewsWrite": "Write a review",
   "reviewRating": "Your rating",
   "reviewNickname": "Nickname",
   "reviewSummary": "Summary",
   "reviewText": "Your review",
   "reviewSubmit": "Submit Review",
   "reviewSubmitted": "Thank you! Your review is awaiting approval.",
+  "myReviewsTitle": "My product reviews",
+  "myReviewsCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@myReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "myReviewsApprovalNote": "New reviews appear on the product page once approved",
+  "myReviewsEmptyBody": "Reviews you write on product pages show up here.",
+  "myReviewsSignIn": "Sign in to see the reviews you've written.",
   "checkoutTitle": "Checkout",
   "checkoutContact": "Contact",
   "checkoutShippingAddress": "Shipping Address",
@@ -807,6 +819,15 @@
   "pdpYouMayAlsoLike": "You may also like",
   "reviewsCount": "{count} reviews",
   "@reviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsSeeAll": "See all {count}",
+  "@reviewsSeeAll": {
+    "description": "Product page link to the full Reviews screen; count = all published reviews.",
     "placeholders": {
       "count": {
         "type": "int"

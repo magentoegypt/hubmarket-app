@@ -10,6 +10,7 @@ import '../features/account/presentation/screens/edit_profile_screen.dart';
 import '../features/account/domain/order.dart';
 import '../features/account/presentation/screens/help_screen.dart';
 import '../features/account/presentation/screens/help_topic_screen.dart';
+import '../features/account/presentation/screens/my_reviews_screen.dart';
 import '../features/account/presentation/screens/order_detail_screen.dart';
 import '../features/account/presentation/screens/order_tracking_screen.dart';
 import '../features/account/presentation/screens/guest_track_order_screen.dart';
@@ -32,6 +33,7 @@ import '../features/catalog/presentation/screens/categories_screen.dart';
 import '../features/home/presentation/hub_home_screen.dart';
 import '../features/catalog/presentation/screens/plp_screen.dart';
 import '../features/catalog/presentation/screens/product_detail_screen.dart';
+import '../features/catalog/presentation/screens/product_reviews_screen.dart';
 import '../features/catalog/presentation/screens/search_screen.dart';
 import '../features/catalog/presentation/screens/write_review_screen.dart';
 import '../features/cms/domain/cms_links.dart';
@@ -124,6 +126,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             WriteReviewScreen(sku: state.pathParameters['sku']!),
       ),
       GoRoute(
+        path: '/reviews/:urlKey',
+        builder: (context, state) =>
+            ProductReviewsScreen(urlKey: state.pathParameters['urlKey']!),
+      ),
+      GoRoute(
         path: AppRoutes.cart,
         builder: (context, state) => const CartScreen(),
       ),
@@ -179,6 +186,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.guestTrackOrder,
         builder: (context, state) => const GuestTrackOrderScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.myReviews,
+        builder: (context, state) => const MyReviewsScreen(),
       ),
       GoRoute(
         path: AppRoutes.addresses,

@@ -18,6 +18,7 @@ import 'package:hubmarket_app/features/checkout/domain/tabby_config.dart';
 import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/features/wishlist/domain/wishlist_entry.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
+import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/aggregation.dart';
 import 'package:hubmarket_app/features/catalog/domain/brand.dart';
 import 'package:hubmarket_app/features/catalog/domain/category.dart';
@@ -25,6 +26,7 @@ import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_page.dart';
+import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
 import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
 import 'package:hubmarket_app/features/cms/domain/cms_page.dart';
 
@@ -598,6 +600,75 @@ class FakeCatalogRepository implements CatalogRepository {
     required List<({String id, String valueId})> ratings,
   }) async {}
 }
+
+/// Reviews served in real pages: [productReviews] and [customerReviews] are
+/// sliced by the requested page size, like Magento does.
+class FakeReviewsRepository implements ReviewsRepository {
+  FakeReviewsRepository({
+    this.productReviews = const <ProductReview>[],
+    this.reviewCount,
+    this.ratingSummary = 80,
+    this.customerReviews = const <CustomerReview>[],
+    this.productExists = true,
+  });
+
+  final List<ProductReview> productReviews;
+
+  /// `review_count`; defaults to the number of [productReviews].
+  final int? reviewCount;
+  final int ratingSummary;
+  final List<CustomerReview> customerReviews;
+  final bool productExists;
+
+  final List<int> productPagesRequested = <int>[];
+  final List<int> customerPagesRequested = <int>[];
+
+  @override
+  Future<ProductReviewsPage?> fetchProductReviews(
+    String urlKey, {
+    int pageSize = 20,
+    int currentPage = 1,
+  }) async {
+    productPagesRequested.add(currentPage);
+    if (!productExists) return null;
+    return ProductReviewsPage(
+      sku: 'SKU-$urlKey',
+      name: 'Product $urlKey',
+      urlKey: urlKey,
+      ratingSummary: ratingSummary,
+      reviewCount: reviewCount ?? productReviews.length,
+      reviews: _page(productReviews, pageSize, currentPage),
+      currentPage: currentPage,
+      totalPages: (productReviews.length / pageSize).ceil(),
+    );
+  }
+
+  @override
+  Future<CustomerReviewsPage> fetchCustomerReviews({
+    int pageSize = 20,
+    int currentPage = 1,
+  }) async {
+    customerPagesRequested.add(currentPage);
+    return CustomerReviewsPage(
+      items: _page(customerReviews, pageSize, currentPage),
+      currentPage: currentPage,
+      totalPages: (customerReviews.length / pageSize).ceil(),
+    );
+  }
+
+  static List<T> _page<T>(List<T> all, int size, int page) =>
+      all.skip((page - 1) * size).take(size).toList();
+}
+
+/// A published review with [stars] (1–5).
+ProductReview sampleReview(int stars, {String nickname = 'Nour A.'}) =>
+    ProductReview(
+      nickname: nickname,
+      summary: 'Lovely fabric',
+      text: 'The fit is true to size.',
+      averageRating: stars * 20,
+      date: '2026-09-12 10:24:33',
+    );
 
 /// Account data for the order-cancellation, newsletter and contact-form flows.
 /// Records every write so tests can assert the exact call; reads not listed

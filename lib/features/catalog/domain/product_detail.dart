@@ -60,6 +60,15 @@ class ProductReview {
     required this.date,
   });
 
+  /// From a core `ProductReview` (`average_rating` is 0–100).
+  factory ProductReview.fromJson(Map<String, dynamic> json) => ProductReview(
+    nickname: (json['nickname'] as String?) ?? '',
+    summary: (json['summary'] as String?) ?? '',
+    text: (json['text'] as String?) ?? '',
+    averageRating: (json['average_rating'] as num?)?.round() ?? 0,
+    date: (json['created_at'] as String?) ?? '',
+  );
+
   final String nickname;
   final String summary;
   final String text;
@@ -89,13 +98,29 @@ class RatingBar {
   /// Share of the rated reviews, 0–100 (rounded).
   final int percent;
 
+  /// The distribution of [reviews] **only when they are all of the product's
+  /// published reviews** ([reviewCount] of them); empty otherwise.
+  ///
+  /// Magento core has no histogram field, so bars can only be counted from
+  /// reviews the app has loaded — and a page of the newest reviews says
+  /// nothing about the older ones. Bars drawn from part of the set would
+  /// present a guess as the product's distribution, so they appear only once
+  /// every review is in hand (all of them on the PDP when there are at most
+  /// 20; on the Reviews screen once the last page has loaded).
+  static List<RatingBar> exactHistogram(
+    List<ProductReview> reviews,
+    int reviewCount,
+  ) => (reviewCount > 0 && reviews.length >= reviewCount)
+      ? histogramOf(reviews)
+      : const <RatingBar>[];
+
   /// The 5★ → 1★ distribution of [reviews], bucketed by each review's rounded
   /// star rating ([ProductReview.stars], the same stars its card shows).
   ///
   /// Magento core has no histogram field, so it is derived from the reviews
   /// the PDP loaded. Reviews without a usable rating are left out; when none
   /// is rated the result is empty — bars are never drawn for ratings that
-  /// don't exist.
+  /// don't exist. See [exactHistogram] for when it describes the product.
   static List<RatingBar> histogramOf(Iterable<ProductReview> reviews) {
     final counts = List<int>.filled(6, 0);
     var rated = 0;
@@ -206,11 +231,11 @@ class ProductDetail {
   /// The first page of published reviews (the PDP query loads up to 20).
   final List<ProductReview> reviews;
 
-  /// Per-star distribution bars (5★→1★) derived from the loaded [reviews]
-  /// (see [RatingBar.histogramOf]); empty when none is rated. With more than
-  /// one page of reviews ([reviewCount] > [reviews].length) it describes the
-  /// loaded page only.
-  List<RatingBar> get ratingHistogram => RatingBar.histogramOf(reviews);
+  /// Per-star distribution bars (5★→1★) counted from [reviews] — only when
+  /// they are every published review ([reviewCount] ≤ the 20 the PDP loads);
+  /// empty otherwise, or when none is rated. See [RatingBar.exactHistogram].
+  List<RatingBar> get ratingHistogram =>
+      RatingBar.exactHistogram(reviews, reviewCount);
 
   /// "You may also like" — Magento's core `related_products` then
   /// `upsell_products`, de-duplicated by SKU (without the product itself) and

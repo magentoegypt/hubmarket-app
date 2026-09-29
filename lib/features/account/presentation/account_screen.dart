@@ -216,6 +216,12 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.savedCardsTitle,
           onTap: () => context.push(AppRoutes.paymentMethods),
         ),
+        const _TileDivider(),
+        _AccountTile(
+          icon: Icons.star_outline,
+          label: l10n.myReviewsTitle,
+          onTap: () => context.push(AppRoutes.myReviews),
+        ),
         const _AccountBand(),
         // Preferences group (Figma 43:3 …).
         _AccountTile(
