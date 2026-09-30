@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Opens an external [uri] (web/email/phone) in the platform handler. Returns
@@ -12,6 +13,12 @@ Future<bool> launchExternalUri(Uri uri) async {
     return false;
   }
 }
+
+/// [launchExternalUri] as a dependency, for screens whose widget tests check
+/// what would open.
+final externalUriLauncherProvider = Provider<Future<bool> Function(Uri uri)>(
+  (ref) => launchExternalUri,
+);
 
 /// Convenience: a `mailto:` link to [address].
 Uri mailtoUri(String address) => Uri(scheme: 'mailto', path: address);
