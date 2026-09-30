@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
+import '../../marketplace/domain/product_offer.dart';
 import '../../marketplace/marketplace_features.dart';
+import '../../marketplace/product_offers.dart';
 import '../data/catalog_repository.dart';
 import '../data/product_marketplace_repository.dart';
+import '../data/product_route_query.dart';
 import '../domain/category.dart';
 import '../domain/product_detail.dart';
 import '../domain/product_marketplace.dart';
@@ -67,27 +70,59 @@ String categoryThumbnailKey(Iterable<Category> items) => items
     .join(',');
 
 /// Full product detail for the PDP (by url_key). Refetches on store switch.
+///
+/// With the Hub Market App, a url_key product search doesn't know is looked
+/// up once more by its URL: another seller's offer, opened from "Sold by N
+/// other sellers", is a product of its own that search leaves out. Build 1
+/// asks exactly what it did.
 final productDetailProvider = FutureProvider.autoDispose
-    .family<ProductDetail?, String>((ref, urlKey) {
+    .family<ProductDetail?, String>((ref, urlKey) async {
       ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
-      return ref.watch(catalogRepositoryProvider).fetchProductDetail(urlKey);
+      final detail = await ref
+          .watch(catalogRepositoryProvider)
+          .fetchProductDetail(urlKey);
+      if (detail != null ||
+          ref.read(hubAppStatusProvider) != HubAppStatus.available) {
+        return detail;
+      }
+      try {
+        return await ref
+            .read(productRouteRepositoryProvider)
+            .fetchDetail(productRouteUrl(urlKey));
+      } on Failure {
+        // Still "not found", as before the second look.
+        return null;
+      }
     });
 
-/// What HubApp adds to the product page — who sells it, a bundle's options —
-/// or null: without HubApp, while its probe runs, or when the read fails (the
-/// page then stays as it is today). A server that turns `hm_seller` down is
-/// remembered, so the cart and orders stop asking too.
+/// What HubApp adds to the product page — who sells it, other sellers'
+/// offers, a bundle's options — or null: without HubApp, while its probe
+/// runs, or when the read fails (the page then stays as it is today). A
+/// server that turns `hm_seller` down is remembered, so the cart and orders
+/// stop asking too; one that serves sellers without offers (P2) is asked
+/// again without them, and from then on only without them.
 final productMarketplaceProvider = FutureProvider.autoDispose
     .family<ProductMarketplace?, String>((ref, urlKey) async {
       ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
       if (!ref.watch(marketplaceFeaturesProvider.select((f) => f.sellers))) {
         return null;
       }
+      final repository = ref.watch(productMarketplaceRepositoryProvider);
+      final withOffers = !ref.read(productOffersMissingProvider);
       try {
-        return await ref
-            .watch(productMarketplaceRepositoryProvider)
-            .fetch(urlKey);
-      } on HubAppMissing {
+        return await repository.fetch(urlKey, withOffers: withOffers);
+      } on HubAppMissing catch (missing) {
+        if (withOffers && isOffersMissing(missing)) {
+          ref.read(productOffersMissingProvider.notifier).offersMissing();
+          try {
+            return await repository.fetch(urlKey, withOffers: false);
+          } on HubAppMissing {
+            ref.read(marketplaceMissingProvider.notifier).sellersMissing();
+            return null;
+          } on Failure {
+            return null;
+          }
+        }
         ref.read(marketplaceMissingProvider.notifier).sellersMissing();
         return null;
       } on Failure {
