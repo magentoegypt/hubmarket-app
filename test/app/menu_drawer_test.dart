@@ -108,4 +108,34 @@ void main() {
     // Nothing in Magento counts vouchers: no invented "0 Vouchers" tile.
     expect(find.text('Vouchers'), findsNothing);
   });
+
+  testWidgets('Build 2 lists deals, bundles, brands and stores', (
+    tester,
+  ) async {
+    await _pump(tester, hubApp: const HubAppState.available(kSampleHmAppConfig));
+    for (final label in [
+      en.homeTodaysDeals,
+      en.bundlesTitle,
+      en.brandsScreenTitle,
+      en.storesTitle,
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+
+    await tester.tap(find.text(en.storesTitle));
+    await tester.pumpAndSettle();
+    expect(find.text('route ${AppRoutes.stores}'), findsOneWidget);
+  });
+
+  testWidgets('Build 1 has none of the Hub Market App lists', (tester) async {
+    await _pump(tester);
+    for (final label in [
+      en.homeTodaysDeals,
+      en.bundlesTitle,
+      en.brandsScreenTitle,
+      en.storesTitle,
+    ]) {
+      expect(find.text(label), findsNothing, reason: label);
+    }
+  });
 }

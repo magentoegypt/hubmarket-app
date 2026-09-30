@@ -134,6 +134,15 @@ class MenuDrawer extends ConsumerWidget {
                         context.push(AppRoutes.brands);
                       },
                     ),
+                    // Figma 12: every approved seller (`hmStores`).
+                    _DrawerTile(
+                      icon: Icons.storefront_outlined,
+                      label: l10n.storesTitle,
+                      onTap: () {
+                        _close(context);
+                        context.push(AppRoutes.stores);
+                      },
+                    ),
                   ],
                   const Divider(height: 1),
                   _SectionHeader(label: l10n.menuAccountSection),
