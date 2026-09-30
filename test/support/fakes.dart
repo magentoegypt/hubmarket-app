@@ -731,6 +731,16 @@ class FakeAccountRepository implements AccountRepository {
         totalCount: orders.length,
       );
 
+  /// How many times the Home asked for the newest orders.
+  int recentOrderCalls = 0;
+
+  /// [orders] are newest first, as the recent-orders query sorts them.
+  @override
+  Future<List<CustomerOrder>> fetchRecentOrders({int pageSize = 3}) async {
+    recentOrderCalls++;
+    return orders.take(pageSize).toList();
+  }
+
   @override
   Future<CustomerOrder?> cancelOrder({
     required String orderId,

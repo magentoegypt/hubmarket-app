@@ -50,6 +50,22 @@ class AccountRepository {
     );
   }
 
+  /// The signed-in customer's [pageSize] newest orders, newest first — one
+  /// small query for the Home's active-order card. Parsed like [fetchOrders],
+  /// so each can open the order detail as it is.
+  Future<List<CustomerOrder>> fetchRecentOrders({int pageSize = 3}) async {
+    final data = await _orderRun(AccountQueries.recentOrders, {
+      'pageSize': pageSize,
+    }, mutation: false);
+    final orders =
+        (data['customer'] as Map<String, dynamic>?)?['orders']
+            as Map<String, dynamic>?;
+    return (orders?['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .toList();
+  }
+
   /// Guest order lookup by the Magento order token captured at checkout
   /// (`placeOrder.orderV2.token`). Native Magento query — returns the same
   /// `CustomerOrder` type as the customer list, so it parses identically.

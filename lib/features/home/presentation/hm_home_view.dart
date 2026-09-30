@@ -14,6 +14,7 @@ import 'widgets/hm_brand_strip.dart';
 import 'widgets/hm_category_chips.dart';
 import 'widgets/hm_cms_sections.dart';
 import 'widgets/hm_hero.dart';
+import 'widgets/home_active_order.dart';
 import 'widgets/hm_picked_for_you.dart';
 import 'widgets/hm_product_rail.dart';
 import 'widgets/hm_section_header.dart';
@@ -35,13 +36,29 @@ class HmHomeView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The active-order card (not an admin section) leads the Home, below a
+    // leading delivery strip as in Figma 07.
+    final cardAt =
+        sections.isNotEmpty &&
+            sections.first.type == HmSectionType.deliveryStrip
+        ? 1
+        : 0;
     return RefreshIndicator(
       color: AppColors.brandPrimary,
       onRefresh: onRefresh,
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: gap),
-        itemCount: sections.length,
-        itemBuilder: (context, i) {
+        itemCount: sections.length + 1,
+        itemBuilder: (context, index) {
+          if (index == cardAt) {
+            // Nothing unless signed in with an open recent order; 12 below
+            // plus the next section's 16 make the frame's 28.
+            return const HomeActiveOrder(
+              key: ValueKey('hm-active-order'),
+              padding: EdgeInsetsDirectional.fromSTEB(16, 16, 16, 12),
+            );
+          }
+          final i = index > cardAt ? index - 1 : index;
           final section = sections[i];
           final top = i == 0
               ? (section.type == HmSectionType.deliveryStrip ? 0.0 : 16.0)
