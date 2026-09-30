@@ -59,14 +59,14 @@ class BundleRailCard extends StatelessWidget {
                         children: [
                           if (deal.hasSaving) ...[
                             BundleBadge(
-                              label: l10n.bundleDiscountBadge(
+                              label: l10n.bundleCardDiscount(
                                 deal.discountPercent,
                               ),
                               color: AppColors.accentSale,
                             ),
                             const SizedBox(width: 6),
                             BundleBadge(
-                              label: l10n.bundleSaveBadge(
+                              label: l10n.bundleCardSave(
                                 deal.saving!.formatted(),
                               ),
                               color: AppColors.successStrong,
@@ -95,7 +95,9 @@ class BundleRailCard extends StatelessWidget {
                           deal.seller!.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: t.captionStrong.copyWith(color: AppColors.info),
+                          style: t.captionStrong.copyWith(
+                            color: AppColors.info,
+                          ),
                         ),
                         const SizedBox(height: 8),
                       ],
@@ -295,7 +297,7 @@ class BundlePriceRow extends StatelessWidget {
           child: deal.hasSaving
               ? Text(
                   compactSaving
-                      ? l10n.bundleSaveBadge(deal.saving!.formatted())
+                      ? l10n.bundleCardSave(deal.saving!.formatted())
                       : l10n.bundleYouSave(deal.saving!.formatted()),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

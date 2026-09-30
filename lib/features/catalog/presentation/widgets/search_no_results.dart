@@ -1,28 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routes.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../stores/presentation/stores_providers.dart';
+import '../../domain/product.dart';
+import '../product_navigation.dart';
+import '../search_providers.dart';
+import 'product_card.dart';
 import 'search_style.dart';
 
 /// A search that found nothing (Figma S2): the search glyph in a grey disc,
 /// "No results for “…”" and a hint.
 ///
-/// The frame's "Popular right now" rail is Build 2: the store has no
-/// best-seller data to rank "popular" by, and Today's Deals (the other
-/// candidate) waits for the Hub Market App module too. The "Try" suggestions
-/// and "Browse … stores" button are left out as well: the store's Algolia has
+/// With the Hub Market App's API ([storesAvailableProvider]) it also offers
+/// "Browse stores" and the "Popular right now" rail — its best sellers
+/// (`hmBestSellers`); without it the page stays as it was.
+///
+/// Left out of the frame: the "Try" suggestions, as the store's Algolia has
 /// no query-suggestions index (autocomplete suggestions are off and
-/// `popularQueries` is empty, checked 29 Sep 2026), and vendor pages need the
-/// public vendor API (Build 2).
-class SearchNoResults extends StatelessWidget {
+/// `popularQueries` is empty, checked 29 Sep 2026); the category in "Browse
+/// Furniture stores", as a search that found nothing names no category; and
+/// the rail's "View All", as the app has no best-sellers page.
+class SearchNoResults extends ConsumerWidget {
   const SearchNoResults({super.key, required this.query});
 
   final String query;
 
+  /// The rail's card, as on Home.
+  static const double _cardWidth = 152;
+  static const double _railHeight = 292;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final stores = ref.watch(storesAvailableProvider);
+    final popular = stores
+        ? ref.watch(searchPopularNowProvider).valueOrNull ?? const <Product>[]
+        : const <Product>[];
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     final display = TextStyle(
       fontFamily: isEn ? AppTheme.displayFont : null,
@@ -59,7 +78,7 @@ class SearchNoResults extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            l10n.searchNoResultsBody,
+            stores ? l10n.searchNoResultsBodyStores : l10n.searchNoResultsBody,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -68,6 +87,62 @@ class SearchNoResults extends StatelessWidget {
             ),
           ),
         ),
+        if (stores) ...[
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: OutlinedButton.icon(
+              onPressed: () => context.push(AppRoutes.stores),
+              icon: const Icon(Icons.storefront_outlined, size: 20),
+              label: Text(l10n.searchBrowseStores),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                foregroundColor: context.isDarkMode
+                    ? Colors.white
+                    : AppColors.brandPrimary,
+                side: BorderSide(
+                  color: context.isDarkMode
+                      ? Colors.white70
+                      : AppColors.brandPrimary,
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                // From the theme, so the label keeps the app's typeface.
+                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontSize: 15,
+                  height: 20 / 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (popular.isNotEmpty) ...[
+          const SizedBox(height: 28),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(l10n.searchPopularNow, style: display),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: _railHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: popular.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) => SizedBox(
+                width: _cardWidth,
+                child: ProductCard(
+                  product: popular[i],
+                  onTap: () => openProduct(context, popular[i]),
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

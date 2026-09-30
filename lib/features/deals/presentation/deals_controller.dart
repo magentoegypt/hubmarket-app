@@ -63,10 +63,12 @@ class DealsState {
         (p.finalPrice ?? p.regularPrice)?.amount ?? double.infinity;
     return switch (sort) {
       DealsSort.biggestDiscount => picked,
-      DealsSort.priceLowHigh => [...picked]
-        ..sort((a, b) => price(a).compareTo(price(b))),
-      DealsSort.priceHighLow => [...picked]
-        ..sort((a, b) => price(b).compareTo(price(a))),
+      DealsSort.priceLowHigh => [
+        ...picked,
+      ]..sort((a, b) => price(a).compareTo(price(b))),
+      DealsSort.priceHighLow => [
+        ...picked,
+      ]..sort((a, b) => price(b).compareTo(price(a))),
     };
   }
 
@@ -87,13 +89,14 @@ class DealsState {
         names[c.uid] = c.name;
       }
     }
-    final chips = [
-      for (final MapEntry(key: uid, value: count) in counts.entries)
-        DealsCategory(uid: uid, name: names[uid]!, count: count),
-    ]..sort((a, b) {
-        final byCount = b.count.compareTo(a.count);
-        return byCount != 0 ? byCount : a.name.compareTo(b.name);
-      });
+    final chips =
+        [
+          for (final MapEntry(key: uid, value: count) in counts.entries)
+            DealsCategory(uid: uid, name: names[uid]!, count: count),
+        ]..sort((a, b) {
+          final byCount = b.count.compareTo(a.count);
+          return byCount != 0 ? byCount : a.name.compareTo(b.name);
+        });
     return chips;
   }
 

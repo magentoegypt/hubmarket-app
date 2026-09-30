@@ -184,6 +184,7 @@ class ProductDetail {
     required this.sku,
     required this.name,
     required this.urlKey,
+    this.typeId,
     this.brand,
     this.description,
     this.shortDescription,
@@ -204,6 +205,11 @@ class ProductDetail {
   final String sku;
   final String name;
   final String urlKey;
+
+  /// Magento's product type from the item's `__typename` — `simple`,
+  /// `configurable`, `bundle` (a `new_bundle` too, with HubApp) …; null when
+  /// unknown.
+  final String? typeId;
   final String? brand;
 
   /// Plain-text description (HTML already stripped).
@@ -243,6 +249,7 @@ class ProductDetail {
   final List<Product> alsoLike;
 
   bool get isConfigurable => options.isNotEmpty;
+  bool get isBundle => typeId == 'bundle';
   bool get hasReviews => reviewCount > 0;
 
   bool get isOnSale {

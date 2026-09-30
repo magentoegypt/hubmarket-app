@@ -145,7 +145,9 @@ class HmPillButton extends StatelessWidget {
     final t = AppTextStyles.of(context);
     return Material(
       color: Colors.white,
-      shape: const StadiumBorder(side: BorderSide(color: AppColors.borderStrong)),
+      shape: const StadiumBorder(
+        side: BorderSide(color: AppColors.borderStrong),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

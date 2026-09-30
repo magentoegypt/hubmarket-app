@@ -1,3 +1,4 @@
+import '../../../core/hubapp/hubapp_models.dart';
 import '../../catalog/domain/money.dart';
 
 /// A line item in the cart.
@@ -12,6 +13,7 @@ class CartItem {
     this.originalUnitPrice,
     this.rowTotal,
     this.options = const <String>[],
+    this.seller,
   });
 
   final String uid;
@@ -29,6 +31,10 @@ class CartItem {
   /// Display strings for chosen configurable options, e.g. "Size: 100ml".
   final List<String> options;
 
+  /// Who sells the line (`hm_seller`); null without HubApp, which keeps the
+  /// cart one flat list.
+  final HmSellerSummary? seller;
+
   /// True when the regular price is above the price actually charged.
   bool get isDiscounted =>
       unitPrice != null &&
@@ -42,12 +48,18 @@ class CartTotals {
     this.subtotal,
     this.discount,
     this.appliedCoupon,
+    this.shipping,
   });
 
   final Money? grandTotal;
   final Money? subtotal;
   final Money? discount;
   final String? appliedCoupon;
+
+  /// The fee of the delivery method chosen at checkout
+  /// (`shipping_addresses[0].selected_shipping_method.amount`), which
+  /// [grandTotal] then includes; null until one is chosen.
+  final Money? shipping;
 }
 
 class Cart {

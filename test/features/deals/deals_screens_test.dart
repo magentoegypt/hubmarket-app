@@ -98,8 +98,9 @@ class _FakeDeals implements DealsRepository {
     int pageSize = 20,
     int currentPage = 1,
   }) async {
-    if (missing)
+    if (missing) {
       throw const HubAppMissing('Cannot query field "hmBundleDeals"');
+    }
     bundleCategories.add(categoryId);
     final items = categoryId == 7
         ? [_bundle('Home Fitness Starter Pack')]

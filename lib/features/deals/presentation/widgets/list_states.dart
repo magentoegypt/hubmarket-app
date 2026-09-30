@@ -66,7 +66,11 @@ class HmListError extends ConsumerWidget {
 
 /// A two-column grid of card skeletons.
 class HmGridSkeleton extends StatelessWidget {
-  const HmGridSkeleton({super.key, this.count = 4, this.aspectRatio = 173 / 283});
+  const HmGridSkeleton({
+    super.key,
+    this.count = 4,
+    this.aspectRatio = 173 / 283,
+  });
 
   final int count;
   final double aspectRatio;

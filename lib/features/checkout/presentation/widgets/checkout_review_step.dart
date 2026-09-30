@@ -5,6 +5,8 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
+import '../../../marketplace/domain/seller_groups.dart';
+import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
 import 'payment_method_tile.dart';
@@ -128,7 +130,8 @@ class ReviewPaymentCard extends StatelessWidget {
 }
 
 /// "Items (N)" — every cart line: thumbnail, name, options and quantity, and
-/// the line total.
+/// the line total. With HubApp the lines come grouped by store, each under
+/// the store's name, a hairline between stores (Figma 18b).
 class ReviewItemsCard extends StatelessWidget {
   const ReviewItemsCard({super.key, required this.cart});
 
@@ -137,10 +140,29 @@ class ReviewItemsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final groups = groupBySeller<CartItem>(cart.items, (item) => item.seller);
     return CheckoutCard(
       title: l10n.checkoutItemsCount(cart.itemCount),
       spacing: 2,
-      children: [for (final item in cart.items) ReviewItemRow(item: item)],
+      children: [
+        if (groups == null)
+          for (final item in cart.items) ReviewItemRow(item: item)
+        else
+          for (var i = 0; i < groups.length; i++) ...[
+            if (i > 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.borderSubtle,
+                ),
+              ),
+            if (groups[i].seller case final seller?)
+              SellerCaption(seller: seller),
+            for (final item in groups[i].items) ReviewItemRow(item: item),
+          ],
+      ],
     );
   }
 }

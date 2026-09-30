@@ -7,10 +7,14 @@ import '../../cms/domain/faq.dart';
 /// the CMS block `hm_app_faq` (see `FaqDocument`).
 ///
 /// It only describes what the app does today: cash-on-delivery-style methods
-/// listed at checkout (no card gateway, no Tabby/Tamara), no in-app returns,
-/// no store pages or seller badges, cancellation only where the store
-/// allows it.
-List<FaqTopic> bundledHelpFaq(AppLocalizations l10n) => [
+/// listed at checkout (no card gateway, no Tabby/Tamara), no store pages or
+/// seller badges, cancellation only where the store allows it — and returns
+/// in the app only when [returnsInApp] (the store has HubApp's returns),
+/// otherwise the Help-centre route.
+List<FaqTopic> bundledHelpFaq(
+  AppLocalizations l10n, {
+  bool returnsInApp = false,
+}) => [
   FaqTopic(
     title: l10n.helpTopicOrders,
     icon: 'orders',
@@ -24,7 +28,12 @@ List<FaqTopic> bundledHelpFaq(AppLocalizations l10n) => [
   FaqTopic(
     title: l10n.helpTopicReturns,
     icon: 'returns',
-    items: [FaqItem.text(l10n.helpQ8, l10n.helpA8)],
+    items: [
+      FaqItem.text(
+        l10n.helpQ8,
+        returnsInApp ? l10n.helpA8Returns : l10n.helpA8,
+      ),
+    ],
   ),
   FaqTopic(
     title: l10n.helpTopicPayments,

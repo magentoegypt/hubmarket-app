@@ -1,3 +1,6 @@
+import '../../../core/hubapp/hubapp_models.dart';
+import '../../marketplace/data/seller_selections.dart';
+
 /// Hand-written Magento 2.4.8 customer account operations (orders, addresses,
 /// profile).
 abstract final class AccountQueries {
@@ -64,6 +67,28 @@ fragment OrderFields on CustomerOrder {
 
   static String _withOrderFields(String operation) =>
       '$operation\n$_orderFields';
+
+  /// Each line's seller (HubAppVendors `hm_seller`), which the order detail
+  /// groups items by. GraphQL merges these `items` with [_orderFields]'.
+  static const String hmOrderSellers = r'''
+fragment HmOrderSellers on CustomerOrder {
+  items {
+    hm_seller {
+      ...HmSellerFields
+    }
+  }
+}
+''';
+
+  /// The HubApp twin of an order [document]: `...HmOrderSellers` beside each
+  /// `...OrderFields`. Sent only while HubApp serves `hm_seller`; today's
+  /// server gets [document] itself — see `SellerSelections`.
+  static String withSellers(String document) => SellerSelections.beside(
+    document,
+    anchor: 'OrderFields',
+    spread: 'HmOrderSellers',
+    fragments: '$hmOrderSellers\n${HmFragments.seller}\n${HmFragments.link}',
+  );
 
   // scope: WEBSITE unifies orders across both store views (`en` / `ar` share
   // one website) — without it `orders` defaults to STORE and each language only

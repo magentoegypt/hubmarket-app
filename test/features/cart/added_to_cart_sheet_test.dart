@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
 import 'package:hubmarket_app/core/config/free_shipping.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -21,6 +22,7 @@ import 'package:hubmarket_app/features/catalog/presentation/widgets/product_card
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 import '../checkout/checkout_harness.dart';
 
 /// An add lands the cart of Figma 18b (4 items, AED 543), whatever was added.
@@ -131,6 +133,8 @@ Widget _harness(
       freeShippingThresholdProvider.overrideWith(
         (ref) async => freeShippingOver,
       ),
+      // The product page asks HubApp for its seller; Build 1 here.
+      hubAppOverride(const HubAppState.unavailable()),
     ],
     child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
   );

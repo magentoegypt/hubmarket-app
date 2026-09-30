@@ -183,7 +183,11 @@ class _FilterSheetState extends State<FilterSheet> {
               ],
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.borderDefault,
+          ),
           Flexible(
             child: ListView(
               shrinkWrap: true,
@@ -191,15 +195,18 @@ class _FilterSheetState extends State<FilterSheet> {
               children: [
                 // Price Range.
                 if (bounds != null) ...[
-                  _SectionLabel(text: l10n.filterPriceRangeLabel, trailing: Text(
-                    '${_money(_price.start)} — ${_money(_price.end)}',
-                    textDirection: TextDirection.ltr,
-                    style: const TextStyle(
-                      color: AppColors.brandPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.5,
+                  _SectionLabel(
+                    text: l10n.filterPriceRangeLabel,
+                    trailing: Text(
+                      '${_money(_price.start)} — ${_money(_price.end)}',
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(
+                        color: AppColors.brandPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                      ),
                     ),
-                  )),
+                  ),
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 4),
                     child: RangeSlider(
@@ -282,7 +289,11 @@ class _FilterSheetState extends State<FilterSheet> {
               ],
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.borderDefault,
+          ),
           // Footer — Clear All (fixed 120) + Apply Filters (fills). Figma 68:70.
           Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 16),
@@ -303,10 +314,11 @@ class _FilterSheetState extends State<FilterSheet> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      textStyle: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                     child: Text(l10n.filterClearAllLabel),
                   ),
@@ -323,10 +335,11 @@ class _FilterSheetState extends State<FilterSheet> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        textStyle: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        textStyle: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
                       child: Text(l10n.filterApplyLabel),
                     ),
@@ -465,10 +478,7 @@ class _FacetRow extends StatelessWidget {
             ),
             Text(
               '$count',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.inkMuted,
-              ),
+              style: const TextStyle(fontSize: 13, color: AppColors.inkMuted),
             ),
           ],
         ),

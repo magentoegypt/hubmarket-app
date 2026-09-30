@@ -8,6 +8,9 @@ import '../../../../core/store/store_controller.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../stores/presentation/search_vendors.dart';
+import '../../../stores/presentation/stores_providers.dart';
+import '../../../stores/presentation/widgets/search_vendor_widgets.dart';
 import '../../data/algolia/algolia_search.dart' show kAlgoliaCategoryIds;
 import '../../domain/aggregation.dart';
 import '../../domain/search_facets.dart';
@@ -22,17 +25,20 @@ import 'search_style.dart';
 import 'search_type_ahead.dart' show openSearchCategory;
 import 'sort_sheet.dart';
 
-/// Full results of a submitted search (Figma 09c): "Products (N)" and
-/// "Categories (M)" tabs. Products carries the result count, the Sort and
-/// Filter sheets and the paged grid; Categories lists the categories the
-/// results fall into, each opening its listing.
+/// Full results of a submitted search (Figma 09c): "Products (N)",
+/// "Vendors (V)" and "Categories (M)" tabs. Products carries the result
+/// count, the Sort and Filter sheets, the best-matching seller's card and the
+/// paged grid; Vendors lists the sellers the search found (see
+/// [searchVendorsFrom]); Categories lists the categories the results fall
+/// into, each opening its listing.
 ///
 /// On Algolia the pages are Algolia's, the sorts are the replicas configured
 /// in Magento (relevance first) and the filters are the index's facets with
 /// their store-view labels; on the GraphQL fallback they are GraphQL's.
 ///
-/// The frame's Vendors tab and matching-vendor card need a public vendor API,
-/// which is Build 2, so both are left out. A search that finds nothing at all
+/// The Vendors tab and the seller card need the Hub Market App's seller API:
+/// without it ([storesAvailableProvider] off) the page keeps its two tabs. A
+/// search that finds nothing at all (no product, and no store by that name)
 /// shows the no-results page (Figma S2) instead of the tabs.
 class SearchResultsView extends ConsumerWidget {
   const SearchResultsView({super.key, required this.request, this.scopeName});
@@ -46,27 +52,47 @@ class SearchResultsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(searchResultsProvider(request));
+    final stores = ref.watch(storesAvailableProvider);
+    final vendors = stores ? ref.watch(searchVendorsProvider(request)) : null;
+    final vendorList = vendors?.valueOrNull ?? const <SearchVendor>[];
+    final vendorsCounted = vendors?.hasValue ?? false;
 
     // Emptied by its own filters, a search keeps its tabs so the filters can
-    // be changed back; one that found nothing at all gets the S2 page.
+    // be changed back; one that found nothing at all gets the S2 page, unless
+    // it names a store, which then opens on the Vendors tab.
     final foundNothing =
         !state.isLoading &&
         state.error == null &&
         state.products.isEmpty &&
         state.filters.isEmpty;
-    if (foundNothing) return SearchNoResults(query: request.query);
+    var initialTab = 0;
+    if (foundNothing) {
+      if (vendors == null || (vendorsCounted && vendorList.isEmpty)) {
+        return SearchNoResults(query: request.query);
+      }
+      if (!vendorsCounted) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      initialTab = 1;
+    }
 
     final counted = !state.isLoading || state.products.isNotEmpty;
     return DefaultTabController(
-      // A new search starts on the Products tab.
-      key: ValueKey(request),
-      length: 2,
+      // A new search starts on its first tab.
+      key: ValueKey((request, stores, initialTab)),
+      length: stores ? 3 : 2,
+      initialIndex: initialTab,
       child: Column(
         children: [
           _ResultTabs(
             products: counted
                 ? l10n.searchTabProducts(state.totalCount)
                 : l10n.searchProductsHeading,
+            vendors: !stores
+                ? null
+                : vendorsCounted
+                ? l10n.searchTabVendors(vendorList.length)
+                : l10n.searchVendorsLabel,
             categories: counted
                 ? l10n.searchTabCategories(state.categories.length)
                 : l10n.searchCategoriesLabel,
@@ -74,7 +100,17 @@ class SearchResultsView extends ConsumerWidget {
           Expanded(
             child: TabBarView(
               children: [
-                _ProductsTab(request: request, scopeName: scopeName),
+                _ProductsTab(
+                  request: request,
+                  scopeName: scopeName,
+                  vendor: vendorList.firstOrNull,
+                ),
+                if (stores)
+                  SearchVendorsTab(
+                    query: request.query,
+                    vendors: vendorList,
+                    loading: !vendorsCounted,
+                  ),
                 _CategoriesTab(
                   query: request.query,
                   categories: state.categories,
@@ -104,10 +140,17 @@ String searchSortLabel(AppLocalizations l10n, SearchSortOption option) {
 
 /// The underlined tab row: orange 3 pt indicator under the active label.
 class _ResultTabs extends StatelessWidget {
-  const _ResultTabs({required this.products, required this.categories});
+  const _ResultTabs({
+    required this.products,
+    required this.categories,
+    this.vendors,
+  });
 
   final String products;
   final String categories;
+
+  /// The Vendors tab's label; null leaves the tab out.
+  final String? vendors;
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +173,7 @@ class _ResultTabs extends StatelessWidget {
       ),
       tabs: [
         Tab(height: 41, text: products),
+        if (vendors != null) Tab(height: 41, text: vendors),
         Tab(height: 41, text: categories),
       ],
     );
@@ -139,10 +183,13 @@ class _ResultTabs extends StatelessWidget {
 /// Products tab: "N results for “q”" with the Sort and Filter actions, then
 /// the product grid, paging on scroll.
 class _ProductsTab extends ConsumerStatefulWidget {
-  const _ProductsTab({required this.request, this.scopeName});
+  const _ProductsTab({required this.request, this.scopeName, this.vendor});
 
   final SearchRequest request;
   final String? scopeName;
+
+  /// The seller the search found first, carded above the grid.
+  final SearchVendor? vendor;
 
   @override
   ConsumerState<_ProductsTab> createState() => _ProductsTabState();
@@ -299,10 +346,16 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
       );
     }
 
+    final vendor = widget.vendor;
     return CustomScrollView(
       controller: _scroll,
       slivers: [
         SliverToBoxAdapter(child: meta),
+        if (vendor != null)
+          SliverPadding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 10),
+            sliver: SliverToBoxAdapter(child: SearchVendorCard(vendor: vendor)),
+          ),
         if (state.products.isEmpty)
           SliverToBoxAdapter(
             child: EmptyState(

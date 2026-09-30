@@ -108,11 +108,13 @@ BundleDealPage bundleDealPageFromJson(Object? json) {
   if (json is! Map<String, dynamic>) return BundleDealPage.empty;
   return BundleDealPage(
     items: [
-      for (final item in json['items'] is List ? json['items'] as List : const [])
+      for (final item
+          in json['items'] is List ? json['items'] as List : const [])
         if (bundleDealFromJson(item) case final deal?) deal,
     ],
     categories: [
-      for (final c in json['categories'] is List ? json['categories'] as List : const [])
+      for (final c
+          in json['categories'] is List ? json['categories'] as List : const [])
         if (c is Map<String, dynamic>)
           if ((hmString(c['uid']), hmString(c['name'])) case (
             final uid?,
@@ -167,7 +169,10 @@ BundleDeal? bundleDealFromJson(Object? json) {
     ratingPercent: hmInt(json['rating_percent']),
     reviewCount: hmInt(json['review_count']) ?? 0,
     categoryIds: [
-      for (final id in json['category_ids'] is List ? json['category_ids'] as List : const [])
+      for (final id
+          in json['category_ids'] is List
+              ? json['category_ids'] as List
+              : const [])
         if (hmInt(id) case final value?) value,
     ],
   );

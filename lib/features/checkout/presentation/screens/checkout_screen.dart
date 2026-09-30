@@ -22,11 +22,13 @@ import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
 import '../../domain/shipping_address_input.dart';
 import '../checkout_controller.dart';
+import '../checkout_credit_controller.dart';
 import '../widgets/checkout_parts.dart';
 import '../widgets/checkout_review_step.dart';
 import '../widgets/checkout_shipping_step.dart';
 import '../widgets/guest_verify_card.dart';
 import '../widgets/payment_method_tile.dart';
+import '../widgets/store_credit_row.dart';
 import 'order_success_screen.dart';
 
 /// Checkout in three steps (Figma 17 → 18 → 18b), ending on Order placed (19):
@@ -614,6 +616,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         color: AppColors.inkHeading,
       ),
     ),
+    // "Use my credit" (HubAppAccount), while the customer can spend some.
+    if (ref.watch(checkoutCreditProvider.select((s) => s.offered)))
+      const CheckoutStoreCreditRow(),
     for (final method in state.paymentMethods)
       PaymentMethodTile(
         method: method,

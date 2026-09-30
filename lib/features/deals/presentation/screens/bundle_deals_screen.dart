@@ -220,7 +220,9 @@ class BundleListCard extends StatelessWidget {
                   else
                     for (final (i, url) in images.indexed) ...[
                       if (i > 0) const SizedBox(width: 2),
-                      Expanded(child: HubImage(url: url, fit: BoxFit.cover)),
+                      Expanded(
+                        child: HubImage(url: url, fit: BoxFit.cover),
+                      ),
                     ],
                 ],
               ),
@@ -243,9 +245,7 @@ class BundleListCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            l10n
-                                .bundleDiscountBadge(deal.discountPercent)
-                                .toUpperCase(),
+                            l10n.bundleDiscountBadge(deal.discountPercent),
                             style: t.micro.copyWith(color: Colors.white),
                           ),
                         ),
@@ -281,7 +281,9 @@ class BundleListCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             '${rating.toStringAsFixed(1)} (${deal.reviewCount})',
-                            style: t.caption.copyWith(color: AppColors.inkMuted),
+                            style: t.caption.copyWith(
+                              color: AppColors.inkMuted,
+                            ),
                           ),
                           const SizedBox(width: 6),
                         ],

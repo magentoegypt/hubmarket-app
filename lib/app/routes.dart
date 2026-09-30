@@ -25,10 +25,18 @@ abstract final class AppRoutes {
   static const String orderDetail = '/order-detail';
   static const String orderTracking = '/order-tracking';
   static const String guestTrackOrder = '/track-order';
+
+  /// Returns: My returns (Figma 23b), the return form (23) and one return
+  /// (23c, [returnDetail]).
+  static const String returns = '/returns';
+  static const String returnRequest = '/return-request';
   static const String myReviews = '/my-reviews';
   static const String addresses = '/addresses';
   static const String addressForm = '/address';
   static const String paymentMethods = '/payment-methods';
+
+  /// Figma 20d — store credit balance and transactions (HubAppAccount).
+  static const String myCredit = '/my-credit';
   static const String editProfile = '/profile';
   static const String notifications = '/notifications';
   static const String notificationSettings = '/notification-settings';
@@ -64,6 +72,14 @@ abstract final class AppRoutes {
   /// `BRAND` link). A `Brand` in `extra` skips the brand lookup.
   static String brandPage(String urlKey) =>
       '/brand/${Uri.encodeComponent(urlKey)}';
+
+  /// The return form opened on order [orderNumber].
+  static String returnRequestFor(String orderNumber) => Uri(
+    path: returnRequest,
+    queryParameters: {'order': orderNumber},
+  ).toString();
+
+  static String returnDetail(int id) => '$returns/$id';
 
   /// A CMS page by its identifier, e.g. `about-us`.
   static String cmsPageById(String identifier, {String? title}) =>

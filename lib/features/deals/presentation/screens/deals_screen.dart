@@ -37,7 +37,10 @@ class DealsScreen extends ConsumerWidget {
         emptyTitle: l10n.dealsEmpty,
       );
     } else if (state.items.isEmpty) {
-      body = EmptyState(icon: Icons.local_offer_outlined, title: l10n.dealsEmpty);
+      body = EmptyState(
+        icon: Icons.local_offer_outlined,
+        title: l10n.dealsEmpty,
+      );
     } else {
       body = _DealsList(state: state, controller: controller);
     }

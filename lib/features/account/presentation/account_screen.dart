@@ -13,6 +13,8 @@ import '../../../core/store/store_controller.dart';
 import '../../../l10n/l10n.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../notifications/presentation/notification_settings_controller.dart';
+import '../../store_credit/presentation/store_credit_providers.dart';
+import '../../returns/presentation/returns_providers.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
 
@@ -81,6 +83,15 @@ class _Authenticated extends ConsumerWidget {
     final newsletterEnabled =
         ref.watch(storeFeaturesProvider).valueOrNull?.newsletterEnabled ??
         false;
+    final creditEnabled = ref.watch(storeCreditEnabledProvider);
+    final creditBalance = creditEnabled
+        ? ref.watch(storeCreditBalanceProvider).valueOrNull?.balance
+        : null;
+    // "AED 120.00" in a left-to-right isolate, so it keeps its order in RTL.
+    final creditValue = creditBalance == null
+        ? null
+        : '\u2066${creditBalance.formatted()}\u2069';
+    final returnsAvailable = ref.watch(returnsAvailableProvider);
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -204,6 +215,16 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.accountOrders,
           onTap: () => context.push(AppRoutes.orders),
         ),
+        // My returns (Figma 20 "Returns") — only when the store takes returns
+        // in the app (HubApp and its `returns` flag).
+        if (returnsAvailable) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.replay,
+            label: l10n.returnsMyReturns,
+            onTap: () => context.push(AppRoutes.returns),
+          ),
+        ],
         const _TileDivider(),
         _AccountTile(
           icon: Icons.favorite_border,
@@ -222,6 +243,18 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.savedCardsTitle,
           onTap: () => context.push(AppRoutes.paymentMethods),
         ),
+        // 20d My credit, with the balance (Figma 20), once the backend has
+        // store credit (HubAppAccount).
+        if (creditEnabled) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.card_giftcard_outlined,
+            label: l10n.myCreditTitle,
+            value: creditValue,
+            valueColor: AppColors.successStrong,
+            onTap: () => context.push(AppRoutes.myCredit),
+          ),
+        ],
         const _TileDivider(),
         _AccountTile(
           icon: Icons.star_outline,
@@ -379,12 +412,17 @@ class _AccountTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.value,
+    this.valueColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final String? value;
+
+  /// A value that is itself the news — the credit balance in green (Figma
+  /// 20) — reads stronger than the faint default.
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -420,8 +458,10 @@ class _AccountTile extends StatelessWidget {
                 value!,
                 style: TextStyle(
                   fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: context.scaffoldFaint,
+                  fontWeight: valueColor == null
+                      ? FontWeight.w500
+                      : FontWeight.w600,
+                  color: valueColor ?? context.scaffoldFaint,
                 ),
               ),
               const SizedBox(width: 8),

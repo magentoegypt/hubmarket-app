@@ -48,7 +48,9 @@ class BundleDealsState {
     page: page ?? this.page,
     items: items ?? this.items,
     categories: categories ?? this.categories,
-    categoryId: identical(categoryId, _keep) ? this.categoryId : categoryId as int?,
+    categoryId: identical(categoryId, _keep)
+        ? this.categoryId
+        : categoryId as int?,
     isLoading: isLoading ?? this.isLoading,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     error: identical(error, _keep) ? this.error : error,
