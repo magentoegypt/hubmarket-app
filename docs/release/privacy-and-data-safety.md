@@ -27,7 +27,7 @@ analytics or crash-reporting SDK. Payment is cash on delivery, so it never handl
 | Orders, returns, store credit, reviews, wishlist | Ordering, "Return items", "My credit", writing a review | The store; a return is visible to the seller and the store's staff | Order service |
 | Photos on a return request and its replies | Chosen or taken by the customer through the system picker or camera; the app never asks for library or storage access. Resized to at most 2048 px and re-encoded. | The store; visible to the seller and staff | Showing the seller what is wrong |
 | Contact form message (name, email, message) | Help centre | The store's own contact form; the message is e-mailed to the store | Customer support |
-| Search terms | Search box | **Algolia** (the store's search provider), with analytics off and no user token; if Algolia cannot be reached, the store's own search | Search results |
+| Search terms | Search box | **Algolia** (the store's search provider). The searches are tagged `app` for the store's Algolia Analytics (only the extra filter-count queries switch analytics off) and no user token is sent, so Algolia counts users by connection address. If Algolia cannot be reached, the store's own search answers. | Search results |
 | Push token, platform, app version, language | Only when Firebase is configured and the customer has not turned notifications off | The store, bound to the customer's account (or kept as a guest device) | Order updates. Removed at sign-out or when notifications are switched off. |
 | Sign-in token | After sign-in | Stored on the phone in the platform's secure storage (Keychain, Android Keystore-backed) | Staying signed in |
 | Language and store view, recent searches, guest cart id, a short list of guest orders (order number, lookup token, and the billing email and last name used to re-open them), cached store data | Use of the app | **Stays on the phone** (local storage). The sign-in token and the cart are cleared at sign-out or account deletion; the rest goes when the app is uninstalled. | Convenience |
@@ -43,7 +43,7 @@ consent banner.
 |---|---|---|---|
 | Hub Market store (the client's Magento server) | Controller of the customer data | Everything in section 1 | Name the legal entity in the privacy policy. |
 | Marketplace sellers | Independent parties fulfilling their own orders | Name, phone, delivery address and the order for their own items; return messages and photos | Confirm which fields the seller panel shows (Vnecoms), and say so in the policy. |
-| Algolia | Service provider (search) | Search terms, and the connection's IP address | The client signs Algolia's data-processing agreement and names its hosting region in the policy. |
+| Algolia | Service provider (search and search analytics) | Search terms, and the connection's IP address | The client signs Algolia's data-processing agreement and names its hosting region and analytics retention in the policy. |
 | Google Firebase Cloud Messaging | Service provider (push), **only once Firebase is set up** | Push token, installation id | Follow Google's "Data safety" and Apple's privacy-details pages for Firebase when it goes live. |
 | WhatsApp or SMS code delivery (SmsExtend on the server) | Service provider | The phone number and the code | Name the provider in the policy. |
 | Apple and Google | Distribution, push delivery | Their own account data | – |
@@ -67,7 +67,7 @@ same list is in `ios/Runner/PrivacyInfo.xcprivacy`.
 | User content: Other user content | Yes | Yes | Reviews |
 | Identifiers: User ID | Yes | Yes | The customer account behind the sign-in token |
 | Identifiers: Device ID | Yes, **once push is on** | Yes | FCM push token |
-| Search history | Yes (**CONFIRM**) | No | Search terms reach Algolia and the store's search, which keeps terms and counts for its own reporting; not tied to a customer |
+| Search history | Yes (**CONFIRM**) | No | Search terms reach Algolia (with its analytics, which counts users by connection address) and the store's search (which keeps terms and counts for its own reporting); no customer id is sent with them. A stricter reading would call the connection address a link: if the client prefers it, declare "linked". |
 | Financial info (payment info, other) | **No** | – | Cash on delivery: no card data. **CONFIRM** if the store credit balance should also be declared as "Other financial info"; we treat it as purchase history. |
 | Location, Contacts, Health, Sensitive info, Browsing history, Usage data, Diagnostics | No | – | Nothing collects them |
 
@@ -132,7 +132,7 @@ and the privacy manifest if they changed.
 Apple's Guideline 5.1.1(v) and Google's account-deletion policy both apply, because the app can
 create accounts.
 
-**In the app:** Account tab › **Privacy & data** (the row's second line reads "Delete account") ›
+**In the app:** Account tab › **Privacy & data** (the row ends with the words "Delete account") ›
 Delete my account › tick "I understand this can't be undone" › confirm. The app calls Magento's
 `deleteCustomer`, then unregisters the push token and clears the sign-in token and the cart. If the
 server refuses, the customer stays signed in and sees an error; it never pretends to have worked.
@@ -204,9 +204,9 @@ returns, credit and account settings is open without signing in; give the review
 
 **User-generated content.** Reviews are held for approval before they show ("Your review is
 awaiting approval"), which is the moderation both stores look for (Apple 1.2, Google's UGC
-policy). Neither store's rule is met by moderation alone in every reviewer's eyes: if App Review
-asks for a way to report a review, add a "Report" action that opens the contact form with the
-review's id filled in. No backend change is needed.
+policy). Moderation is usually enough, but a reviewer may also expect a way to report content: if
+App Review asks for one, add a "Report" action that opens the contact form with the review's id
+filled in. No backend change is needed.
 
 **Pharmacy and restricted goods (decision needed).** The test catalogue already has a seller in the
 Pharmacy category. If real pharmacies will sell medicines through the app, both stores have rules
@@ -247,6 +247,7 @@ the mobile app. It should say, in English and Arabic:
 | 2 | Which legal entity owns the developer accounts (D-U-N-S), and will it be declared a trader for the EU? | The selling entity; a non-trader app disappears from EU storefronts. |
 | 3 | Does the seller panel show buyers' email and phone? | Confirm, then keep "shared" as in section 4. |
 | 4 | Sign Algolia's data-processing agreement; which region hosts the index? | Yes; name it in the policy. |
+| 4b | Keep Algolia Analytics on for the app's searches? It shows which searches find nothing. | Keep it and say in the policy that Algolia keeps search terms and connection addresses for its analytics; or switch `analytics` off for those queries in `lib/features/catalog/data/algolia/algolia_search.dart` (a one-line change) and the search-history answer gets simpler. |
 | 5 | Which provider delivers the WhatsApp or SMS codes? | Name it in the policy. |
 | 6 | Add crash reporting (Firebase Crashlytics) before launch? | Optional. It would add "crash logs, diagnostics" and a device id to both forms and to the privacy manifest. |
 | 7 | Return photos may carry GPS data from a phone camera. | Strip photo metadata on the server (a follow-up on the backend PR). |

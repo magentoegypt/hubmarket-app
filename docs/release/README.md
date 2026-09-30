@@ -178,7 +178,7 @@ follows the host.
 - **Forced update and maintenance mode** need no release: the admin sets a minimum app version
   and a maintenance switch; the app shows a full-screen page (`hmAppConfig`).
 - No crash reporting ships today, so a crash is only seen if a customer reports it. Decide on
-  Crashlytics (question 8) before the first release rather than after.
+  Crashlytics (item 8 in section 2) before the first release rather than after.
 - Home banners, sections, brands and texts are managed in the store admin; a marketing change is
   not an app release.
 - Platform requirements move every year: Apple raises the minimum SDK each spring (CI builds with

@@ -35,7 +35,7 @@ ACCOUNT DELETION (Guideline 5.1.1(v))
 
 1. Sign in with the demo account.
 2. Open the Account tab (bottom right).
-3. Tap "Privacy & data": its second line reads "Delete account".
+3. Tap "Privacy & data" (the row ends with the words "Delete account").
 4. Tap "Delete my account", tick "I understand this can't be undone" and confirm.
 
 The account is permanently deleted through our backend and the app returns to a signed-out state.
@@ -92,7 +92,7 @@ CONTACT
 [NAME, E-MAIL, PHONE]: glad to provide anything else needed for review.
 ```
 
-Length is about 3,000 characters. Delete the Push section if it does not apply.
+It is about 3,600 characters of the 4,000 allowed. Delete the Push section if it does not apply.
 
 ## Google Play Console: App access
 
