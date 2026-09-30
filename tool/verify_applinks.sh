@@ -16,7 +16,9 @@ set -uo pipefail
 HOSTS=("${@:-}")
 [[ -z "${HOSTS[0]:-}" ]] && HOSTS=(hub-market.magento2.click www.hub-market.magento2.click)
 
-UA="${USER_AGENT:-HubMarketApp/0.1.0 (Flutter)}"
+# The app's User-Agent: pubspec's version without the build number.
+APP_VERSION="$(sed -n 's/^version: *\([^+[:space:]]*\).*/\1/p' "$(dirname "$0")/../pubspec.yaml")"
+UA="${USER_AGENT:-HubMarketApp/${APP_VERSION:-0} (Flutter)}"
 ANDROID_PKG="com.hubmarket.app"
 # Hub Market's Apple Team ID is not known yet; pass it as IOS_TEAM_ID.
 IOS_APPID="${IOS_TEAM_ID:-TEAMID}.com.hubmarket.app"

@@ -16,11 +16,16 @@ final appVersionProvider = FutureProvider<String?>((ref) async {
 /// The build's semantic version alone, e.g. "1.0.0" — what the backend's
 /// version policy (`hmAppConfig.version`) compares against. Null when the
 /// platform plugin is unavailable, which never triggers an update prompt.
-final appSemverProvider = FutureProvider<String?>((ref) async {
+final appSemverProvider = FutureProvider<String?>((ref) => readAppSemver());
+
+/// The installed build's semantic version (pubspec `version:` without the
+/// build number), e.g. "1.0.0"; null when the platform plugin is unavailable.
+/// Also names the version in the User-Agent (`AppConfig.forVersion`).
+Future<String?> readAppSemver() async {
   try {
     final version = (await PackageInfo.fromPlatform()).version.trim();
     return version.isEmpty ? null : version;
   } catch (_) {
     return null;
   }
-});
+}

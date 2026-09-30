@@ -8,6 +8,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hubmarket_app/app/app.dart';
 import 'package:hubmarket_app/app/router.dart';
+import 'package:hubmarket_app/core/app_info.dart';
+import 'package:hubmarket_app/core/config/app_config.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/store/store_controller.dart';
@@ -36,9 +38,11 @@ void main() {
     final cache = await LocalCache.open();
     final prefs = await SharedPreferences.getInstance();
     await NotificationInbox.instance.init(cache);
+    final appVersion = await readAppSemver();
 
     final container = ProviderContainer(
       overrides: <Override>[
+        appConfigProvider.overrideWithValue(AppConfig.forVersion(appVersion)),
         localCacheProvider.overrideWithValue(cache),
         localePrefsProvider.overrideWithValue(LocalePrefs(prefs)),
       ],

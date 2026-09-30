@@ -29,8 +29,9 @@ dart run build_runner build --delete-conflicting-outputs   # typed GraphQL (grap
 
 ## Run
 
-Each flavor reads its settings (GraphQL endpoint, store codes, user agent…)
-from `config/<flavor>.json`:
+Each flavor reads its settings (GraphQL endpoint, store codes, Algolia…)
+from `config/<flavor>.json`. The User-Agent carries the installed build's
+version (pubspec `version:`), read at startup:
 
 ```bash
 flutter run -t lib/main_dev.dart     --dart-define-from-file=config/dev.json     --flavor dev

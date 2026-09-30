@@ -35,6 +35,9 @@ class AppConfig {
   final String storeCodeAr;
 
   final String currency;
+
+  /// The `User-Agent` of every backend request — see [userAgentFor] and
+  /// [forVersion].
   final String userAgent;
 
   // Algolia — the engine behind the storefront's search. The planned source
@@ -64,8 +67,13 @@ class AppConfig {
   /// (`algoliaConfig.sortingIndices`) is unavailable.
   final String algoliaSortReplicas;
 
+  static const String _flavor = String.fromEnvironment(
+    'FLAVOR',
+    defaultValue: 'dev',
+  );
+
   static const AppConfig current = AppConfig(
-    flavor: String.fromEnvironment('FLAVOR', defaultValue: 'dev'),
+    flavor: _flavor,
     graphqlEndpoint: String.fromEnvironment(
       'GRAPHQL_ENDPOINT',
       defaultValue: 'https://hub-market.magento2.click/graphql',
@@ -84,9 +92,12 @@ class AppConfig {
       defaultValue: 'ar',
     ),
     currency: String.fromEnvironment('CURRENCY', defaultValue: 'AED'),
+    // No version until bootstrap() reads the installed build's (forVersion);
+    // the same text as userAgentFor(_flavor, null).
     userAgent: String.fromEnvironment(
       'USER_AGENT',
-      defaultValue: 'HubMarketApp/0.1.0 (Flutter)',
+      defaultValue:
+          '${_flavor == 'prod' ? 'HubMarketApp' : 'HubMarketApp-$_flavor'} (Flutter)',
     ),
     algoliaAppId: String.fromEnvironment(
       'ALGOLIA_APP_ID',
@@ -101,6 +112,40 @@ class AppConfig {
       'ALGOLIA_SORT_REPLICAS',
       defaultValue: 'price_default_asc,price_default_desc,created_at_desc',
     ),
+  );
+
+  /// `HubMarketApp/<version> (Flutter)` in prod and
+  /// `HubMarketApp-<flavor>/<version> (Flutter)` in dev / staging, so the
+  /// backend's logs tell the builds apart. Without a [version] (none read yet,
+  /// or no platform plugin, as in unit tests) the `/<version>` is left out.
+  static String userAgentFor(String flavor, String? version) {
+    final product = flavor == 'prod' ? 'HubMarketApp' : 'HubMarketApp-$flavor';
+    final v = version?.trim() ?? '';
+    return v.isEmpty ? '$product (Flutter)' : '$product/$v (Flutter)';
+  }
+
+  /// [current] with a User-Agent naming the installed build's [version]
+  /// (pubspec's `version:`, read by `bootstrap()` through package_info_plus),
+  /// so it can't go stale the way a version in `config/*.json` did. A
+  /// `USER_AGENT` dart-define, when given, is kept as it is.
+  static AppConfig forVersion(String? version) =>
+      const bool.hasEnvironment('USER_AGENT')
+      ? current
+      : current._withUserAgent(userAgentFor(current.flavor, version));
+
+  AppConfig _withUserAgent(String userAgent) => AppConfig(
+    flavor: flavor,
+    graphqlEndpoint: graphqlEndpoint,
+    defaultLocale: defaultLocale,
+    bootstrapStoreCode: bootstrapStoreCode,
+    storeCodeEn: storeCodeEn,
+    storeCodeAr: storeCodeAr,
+    currency: currency,
+    userAgent: userAgent,
+    algoliaAppId: algoliaAppId,
+    algoliaSearchKey: algoliaSearchKey,
+    algoliaIndexPrefix: algoliaIndexPrefix,
+    algoliaSortReplicas: algoliaSortReplicas,
   );
 
   bool get isProd => flavor == 'prod';
@@ -124,4 +169,6 @@ class AppConfig {
   };
 }
 
+/// [AppConfig.current]; `bootstrap()` overrides it with
+/// [AppConfig.forVersion] once the build's version is known.
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.current);
