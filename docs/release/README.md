@@ -108,6 +108,11 @@ message to skip it) and deploys the same commit everywhere it can:
 | iOS ad-hoc IPA → Loadly | `IOS_ADHOC_PROFILE_BASE64`, the two p12 secrets, `LOADLY_API_KEY` | waits for the ad-hoc profile secret |
 | Android app bundle → Google Play internal testing | the four `ANDROID_*` secrets, `PLAY_SERVICE_ACCOUNT_JSON`, and the repository variable `PLAY_AUTO_PUBLISH` = `true` | off until the first release was uploaded by hand |
 
+**One Loadly link for both platforms.** The Android and iOS apps are *combined* in Loadly (Loadly ›
+the app › Combine; **Separate** undoes it), so the link https://loadly.io/7ino6c4V and its QR code
+install the right build for the phone that opens it, and the page also offers both downloads. New
+uploads from CI keep updating the same two apps, so the combination stays.
+
 A step whose secrets are missing is skipped with a notice that names them, so the file stays as it
 is while accounts arrive. To pause the TestFlight, iOS Loadly and Play uploads without editing
 anything, set the repository variable `DEPLOY_ON_PUSH` to `false` (`gh variable set DEPLOY_ON_PUSH
