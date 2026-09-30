@@ -397,9 +397,9 @@
   "authSignUpLink": "Create account",
   "authForgotIntro": "Enter the email linked to your account and we’ll send you a reset link.",
   "authForgotSent": "If that email is registered, a reset link is on its way.",
-  "authForgotLinkNote": "The link expires in 2 hours. Check your spam folder if it doesn’t arrive.",
+  "authForgotLinkNote": "The link is valid for a limited time. Check your spam folder if it doesn’t arrive.",
   "@authForgotLinkNote": {
-    "description": "Magento's Recovery Link Expiration Period — 2 hours on this store (the default)."
+    "description": "Generic on purpose: the expiry is Magento's Recovery Link Expiration Period, an admin setting the app doesn't read."
   },
   "authBackToSignIn": "Back to sign in",
   "authEmailHint": "Email address",
@@ -409,9 +409,9 @@
   "fieldResetCode": "Reset code",
   "authSignInError": "Couldn't sign you in. Please check your details.",
   "authErrorWrongCredentials": "Email or password is incorrect",
-  "authErrorWrongCredentialsHint": "Repeated failures lock sign-in for 10 minutes.",
+  "authErrorWrongCredentialsHint": "Repeated failures temporarily lock sign-in.",
   "@authErrorWrongCredentialsHint": {
-    "description": "Under the wrong-password banner. Magento locks an account for 10 minutes after 10 failures (customer/password lockout defaults); it does not report the attempts left."
+    "description": "Under the wrong-password banner. Generic on purpose: the lockout threshold and duration are Magento admin settings (customer/password lockout) that the API doesn't expose, and it doesn't report the attempts left."
   },
   "authErrorNoAccount": "No account uses this mobile number.",
   "authErrorMobileInUse": "Another account already uses this mobile number.",
@@ -478,8 +478,32 @@
   },
   "validationRequired": "Required",
   "validationEmail": "Enter a valid email address",
-  "validationPassword": "Password must be at least 8 characters",
-  "validationPasswordRule": "8+ characters, one number, one symbol",
+  "validationPassword": "Password is too short",
+  "validationPasswordRule": "Use a long password that mixes letters, numbers and symbols",
+  "@validationPasswordRule": {
+    "description": "New-password rule line until the store's policy (storeConfig) is read. Generic on purpose: the length and character classes are admin settings."
+  },
+  "validationPasswordPolicy": "{min, plural, =1{At least 1 character} other{At least {min} characters}}, with {classes} of: a–z, A–Z, 0–9, symbols",
+  "@validationPasswordPolicy": {
+    "description": "New-password rule line from storeConfig minimum_password_length and required_character_classes_number (Magento's four classes: lower case, upper case, digits, special characters).",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "classes": {
+        "type": "int"
+      }
+    }
+  },
+  "validationPasswordMinLength": "{min, plural, =1{At least 1 character} other{At least {min} characters}}",
+  "@validationPasswordMinLength": {
+    "description": "New-password rule line when the store requires a single character class.",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
   "accountGuestTitle": "Your Hub Market account",
   "accountGuestBody": "Sign in to track orders, save addresses and check out faster.",
   "accountSignOut": "Sign Out",

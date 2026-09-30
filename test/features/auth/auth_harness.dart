@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/validation/password_policy.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/presentation/widgets/mobile_number_editor.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
@@ -22,6 +24,13 @@ import '../../support/fakes.dart';
 /// Route of the stub that hosts the Edit-Profile mobile editor.
 const String editMobileRoute = '/edit-mobile';
 
+/// The live store's password rules (storeConfig, 30 Sep 2026): 8 characters,
+/// 3 character classes.
+const PasswordPolicy kLivePasswordPolicy = PasswordPolicy(
+  minLength: 8,
+  requiredClasses: 3,
+);
+
 /// A screen that opens Sign in the way checkout / account do (`push`) and
 /// records what the push completes with.
 const String callerRoute = '/caller';
@@ -35,6 +44,7 @@ class AuthHarness {
     FakeAuthRepository? repo,
     FakeAccountRepository? account,
     this.signedIn = false,
+    this.passwordPolicy = kLivePasswordPolicy,
   }) : repo = repo ?? FakeAuthRepository(),
        account = account ?? FakeAccountRepository();
 
@@ -42,6 +52,10 @@ class AuthHarness {
   final FakeAuthRepository repo;
   final FakeAccountRepository account;
   final bool signedIn;
+
+  /// The store's password rules as storeConfig serves them; null as when it
+  /// can't be read.
+  final PasswordPolicy? passwordPolicy;
   late final GoRouter router;
 
   /// What Sign in's `push` completed with, on the caller / Welcome stubs.
@@ -133,6 +147,9 @@ class AuthHarness {
         ),
         authRepositoryProvider.overrideWithValue(repo),
         accountRepositoryProvider.overrideWithValue(account),
+        storeFeaturesProvider.overrideWith(
+          (ref) async => StoreFeatures(passwordPolicy: passwordPolicy),
+        ),
       ],
       child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
     );

@@ -3,19 +3,22 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../graphql/graphql_client.dart';
 import '../store/store_controller.dart';
+import '../validation/password_policy.dart';
 
 /// Customer-facing features the store switches on and off in Magento admin,
 /// read from core `storeConfig`. Every flag defaults to off: a feature the app
 /// cannot confirm is enabled stays hidden rather than failing on use.
 ///
 /// Live values (29 Sep 2026, both store views): cancellation **off**,
-/// newsletter on, contact form on.
+/// newsletter on, contact form on; passwords of 8+ characters mixing 3
+/// character classes (30 Sep).
 class StoreFeatures {
   const StoreFeatures({
     this.orderCancellationEnabled = false,
     this.cancellationReasons = const <String>[],
     this.newsletterEnabled = false,
     this.contactEnabled = false,
+    this.passwordPolicy,
   });
 
   /// Sales › Order Cancellation › Enabled (`order_cancellation_enabled`).
@@ -31,6 +34,10 @@ class StoreFeatures {
 
   /// Contacts › Contact Us › Enabled (`contact_enabled`) — gates `contactUs`.
   final bool contactEnabled;
+
+  /// The rules for new passwords (`minimum_password_length`,
+  /// `required_character_classes_number`); null when not read.
+  final PasswordPolicy? passwordPolicy;
 
   /// Whether customers may cancel orders at all on this store view.
   bool get canCancelOrders =>
@@ -49,6 +56,7 @@ class StoreFeatures {
     ],
     newsletterEnabled: json['newsletter_enabled'] == true,
     contactEnabled: json['contact_enabled'] == true,
+    passwordPolicy: PasswordPolicy.fromStoreConfig(json),
   );
 }
 
@@ -64,6 +72,8 @@ query StoreFeatures {
     order_cancellation_reasons { description }
     newsletter_enabled
     contact_enabled
+    minimum_password_length
+    required_character_classes_number
   }
 }
 ''';
@@ -99,3 +109,10 @@ final storeFeaturesProvider = FutureProvider<StoreFeatures>((ref) {
   ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
   return ref.watch(storeFeaturesRepositoryProvider).fetch();
 });
+
+/// The store's rules for new passwords; null while storeConfig loads or when
+/// it can't be read (the forms then fall back to the app's own rule, worded
+/// generically — see `Validators.passwordRuleText`).
+final passwordPolicyProvider = Provider<PasswordPolicy?>(
+  (ref) => ref.watch(storeFeaturesProvider).valueOrNull?.passwordPolicy,
+);
