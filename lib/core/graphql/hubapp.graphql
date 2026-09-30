@@ -109,6 +109,7 @@ enum HmSectionType @doc(description: "Home section kind (admin Type field).") {
     TRUST_ROW @doc(description: "Trust items; cms_block hm_home_trust.")
     CMS_BLOCK @doc(description: "Any CMS block by identifier; cms_block.")
     PRODUCT_LIST @doc(description: "Hand-picked SKUs; products.")
+    ACTIVE_ORDER @doc(description: "Where the app draws the signed-in customer's open order; no content, the app reads the order itself and draws nothing for a guest or without one.")
 }
 
 enum HmLinkType @doc(description: "What a link points at, so the app can route natively.") {
@@ -394,12 +395,28 @@ type HmStorePage @doc(description: "Seller cards page.") {
     page_info: SearchResultPageInfo! @doc(description: "Paging.")
 }
 
+type HmProductOffer @doc(description: "Another seller's offer on the same product: a Vnecoms select-and-sell copy, a product of its own with its own SKU, price and stock, or on a copy's page the product it was copied from. Only what the website's price comparison lists: an approved seller of its own, sellable in the store view and in stock.") {
+    uid: ID! @doc(description: "Product uid of the offer.")
+    sku: String! @doc(description: "SKU to add to the cart, as for any product.")
+    url_key: String! @doc(description: "URL key of the offer's own product page. Offers are left out of product search, so products filtered by url_key does not find one: read it with route, url being url_key plus the product URL suffix.")
+    type_id: String! @doc(description: "Product type, e.g. simple or configurable. A configurable offer is bought with its options, chosen on its own page.")
+    seller: HmSellerSummary! @doc(description: "The seller; never Hub Market itself.")
+    price: Money! @doc(description: "Final price for the customer group, the lowest one for a configurable offer: what price_range.minimum_price.final_price says on the offer's page.")
+    regular_price: Money! @doc(description: "Price before discounts; equal to price when there is none.")
+    stock_status: ProductStockStatus! @doc(description: "Stock status. The website lists only offers in stock, so every listed offer is IN_STOCK.")
+    dispatch_time: HmDispatchTime @doc(description: "The seller's typical dispatch time, or null.")
+}
+
 type HmHomeSection {
     stores: [HmStoreCard!] @doc(description: "FEATURED_STORES, TOP_VENDORS, NEW_STORES: seller cards.")
 }
 
 interface ProductInterface {
     hm_seller: HmSellerSummary @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\ProductSeller") @doc(description: "'Sold by'. Hub Market for admin products; null if the seller is not approved.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\SellerIdentity")
+    hm_offer_count: Int! @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\ProductOfferCount") @doc(description: "How many other sellers offer this product, the website's Sold by N other sellers; 0 when none. Public; ask with the product as GET.")
+    hm_other_offers(
+        pageSize: Int = 10 @doc(description: "Most offers to return, 1-50.")
+    ): [HmProductOffer!]! @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\ProductOtherOffers") @doc(description: "The other sellers' offers on this product, cheapest first, as the website's price comparison lists them; on a copy's page, the product it was copied from and the other copies. Public; ask with the product as GET.")
 }
 
 interface CartItemInterface {

@@ -28,11 +28,20 @@ enum HmSectionType {
   cmsBlock('CMS_BLOCK'),
   productList('PRODUCT_LIST'),
 
+  /// Where the admin wants the signed-in customer's active-order card (Figma
+  /// 07). Placement only: the section carries no content, the card reads the
+  /// customer's own orders.
+  activeOrder('ACTIVE_ORDER'),
+
   /// A type newer than this build: skipped.
   unknown('');
 
   const HmSectionType(this.wire);
   final String wire;
+
+  /// Says where the app draws something of the viewer's own, with no content
+  /// from the server.
+  bool get isPlacement => this == activeOrder;
 
   static HmSectionType parse(Object? value) {
     for (final t in values) {
@@ -58,7 +67,8 @@ class HmHome {
   final List<HmHomeSection> sections;
 
   /// The sections to draw at [now]: known types with content, not past their
-  /// `ends_at` (a cached copy can outlive a scheduled section).
+  /// `ends_at` (a cached copy can outlive a scheduled section). Placements
+  /// ([HmSectionType.isPlacement]) are kept: they have no content by design.
   List<HmHomeSection> visibleSections(DateTime now) => [
     for (final section in sections)
       if (section.type != HmSectionType.unknown &&
@@ -67,6 +77,11 @@ class HmHome {
         section,
   ];
 }
+
+/// Whether [sections] hold anything besides placements — a layout of nothing
+/// but the active-order card is no Home, and the built-in one is drawn instead.
+bool hmHomeHasContent(List<HmHomeSection> sections) =>
+    sections.any((section) => !section.type.isPlacement);
 
 /// One Home section; only the content field of its [type] is filled.
 @immutable
@@ -148,6 +163,8 @@ class HmHomeSection {
     HmSectionType.bestSellers ||
     HmSectionType.popularProducts ||
     HmSectionType.productList => products.isNotEmpty,
+    // The card decides for itself: nothing for a guest or without an order.
+    HmSectionType.activeOrder => true,
     HmSectionType.unknown => false,
   };
 }

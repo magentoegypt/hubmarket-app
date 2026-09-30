@@ -1239,6 +1239,37 @@
   "pdpYouMayAlsoLike": "You may also like",
   "pdpSoldBy": "Sold by",
   "pdpVisitStore": "Visit store",
+  "pdpOtherSellers": "{count, plural, =1{Sold by 1 other seller} other{Sold by {count} other sellers}}",
+  "@pdpOtherSellers": {
+    "description": "Figma 14, under Sold by: other sellers offer this product too (the website's price comparison, Vnecoms select and sell). Opens the sheet of their offers, whose title it also is.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pdpOtherSellersCompare": "Compare",
+  "@pdpOtherSellersCompare": {
+    "description": "End of the other-sellers row (Figma 14 card header): opens the sheet that compares their offers."
+  },
+  "offerAddToCart": "Add {seller}'s offer to cart",
+  "@offerAddToCart": {
+    "description": "The + button of an offer in the other-sellers sheet, read by screen readers.",
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
+  "offerChooseOptions": "Choose options on {seller}'s page",
+  "@offerChooseOptions": {
+    "description": "The button of an offer that needs options (a configurable product): opens that seller's page of the product. Read by screen readers.",
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
   "pdpBundleOnWebsite": "This bundle is bought on our website for now.",
   "@pdpBundleOnWebsite": {
     "description": "Over a bundle's disabled Add to Cart on the plain product page (no Hub Market App bundle support): Magento refuses a bundle SKU without its options."
