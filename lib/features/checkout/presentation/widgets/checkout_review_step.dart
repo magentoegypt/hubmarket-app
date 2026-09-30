@@ -5,6 +5,7 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
+import '../../../cms/presentation/widgets/legal_links_text.dart';
 import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/checkout.dart';
@@ -127,6 +128,19 @@ class ReviewPaymentCard extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The terms line under the totals: "By placing your order you agree to Hub
+/// Market's Terms …", "Terms" opening the store's terms page (the website
+/// footer's link, see [LegalLinksText]).
+class ReviewTermsNote extends StatelessWidget {
+  const ReviewTermsNote({super.key});
+
+  @override
+  Widget build(BuildContext context) => LegalLinksText(
+    AppLocalizations.of(context).checkoutTermsNote,
+    style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
+  );
 }
 
 /// "Items (N)" — every cart line: thumbnail, name, options and quantity, and

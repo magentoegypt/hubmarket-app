@@ -673,10 +673,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         shipping: state.selectedShipping,
         grandTotal: state.grandTotal,
       ),
-      Text(
-        l10n.checkoutTermsNote,
-        style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
-      ),
+      const ReviewTermsNote(),
     ];
   }
 

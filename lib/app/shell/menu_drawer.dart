@@ -8,6 +8,7 @@ import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/customer_avatar.dart';
 import '../../core/widgets/language_toggle.dart';
 import '../../features/account/data/account_repository.dart';
+import '../../features/account/data/guest_order_store.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/catalog/domain/category.dart';
 import '../../features/catalog/presentation/catalog_providers.dart';
@@ -32,6 +33,7 @@ class MenuDrawer extends ConsumerWidget {
     final categories = ref.watch(categoryTreeProvider);
     final auth = ref.watch(authControllerProvider);
     final hubApp = ref.watch(hubAppStatusProvider) == HubAppStatus.available;
+    final hasGuestOrders = ref.watch(guestOrderStoreProvider).isNotEmpty;
 
     return Drawer(
       // Figma: white panel; only the profile strip is tinted (Material 3 would
@@ -134,9 +136,40 @@ class MenuDrawer extends ConsumerWidget {
                         context.push(AppRoutes.brands);
                       },
                     ),
+                    // Figma 12: every approved seller (`hmStores`).
+                    _DrawerTile(
+                      icon: Icons.storefront_outlined,
+                      label: l10n.storesTitle,
+                      onTap: () {
+                        _close(context);
+                        context.push(AppRoutes.stores);
+                      },
+                    ),
                   ],
                   const Divider(height: 1),
                   _SectionHeader(label: l10n.menuAccountSection),
+                  // A guest's way back to their orders (a customer has the
+                  // Orders tile above): the orders this device remembers,
+                  // once there are any, and the lookup (Figma 26).
+                  if (!auth.isAuthenticated) ...[
+                    if (hasGuestOrders)
+                      _DrawerTile(
+                        icon: Icons.receipt_long_outlined,
+                        label: l10n.accountOrders,
+                        onTap: () {
+                          _close(context);
+                          context.push(AppRoutes.orders);
+                        },
+                      ),
+                    _DrawerTile(
+                      icon: Icons.local_shipping_outlined,
+                      label: l10n.accountTrackOrder,
+                      onTap: () {
+                        _close(context);
+                        context.push(AppRoutes.guestTrackOrder);
+                      },
+                    ),
+                  ],
                   _DrawerTile(
                     icon: Icons.location_on_outlined,
                     label: l10n.accountAddresses,
@@ -466,9 +499,8 @@ class _IconBadge extends StatelessWidget {
   );
 }
 
-/// Three quick-stat tiles (Orders / Wishlist / Vouchers) — Figma. Counts are
-/// bound to real data where the backend exposes it; Vouchers has no source yet
-/// (shows 0 until a backend field is wired).
+/// Quick-stat tiles, Orders and Wishlist (Figma), both real counts. The
+/// frame's Vouchers tile has nothing behind it in Magento, so it isn't shown.
 class _QuickStats extends ConsumerWidget {
   const _QuickStats();
 
@@ -501,12 +533,6 @@ class _QuickStats extends ConsumerWidget {
               Navigator.of(context).maybePop();
               context.go(AppRoutes.wishlist);
             },
-          ),
-          const SizedBox(width: 12),
-          _StatTile(
-            icon: Icons.confirmation_number_outlined,
-            count: 0,
-            label: l10n.drawerVouchers,
           ),
         ],
       ),

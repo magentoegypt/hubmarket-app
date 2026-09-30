@@ -6,6 +6,7 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/theme_mode_controller.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/app_info.dart';
+import '../../../../core/config/app_config.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -15,6 +16,9 @@ import '../delete_account_action.dart';
 /// App settings: language toggle (EN/AR) + notification preferences, plus a
 /// shortcut to Help. The same language switch lives in the menu drawer; this
 /// screen is the discoverable home for it.
+///
+/// The dev and staging builds add developer tools: the theme switch (the
+/// design is light only) and the connection test.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -23,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final store = ref.watch(storeControllerProvider);
     final promoEnabled = ref.watch(notificationSettingsProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final developerTools = ref.watch(developerToolsProvider);
     final isAuthenticated = ref.watch(
       authControllerProvider.select((s) => s.isAuthenticated),
     );
@@ -32,22 +36,24 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         children: [
-          _SectionHeader(l10n.settingsTheme),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SegmentedButton<ThemeMode>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeWhite)),
-                ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeBlack)),
-                ButtonSegment(value: ThemeMode.system, label: Text(l10n.themeSystem)),
-              ],
-              selected: {themeMode},
-              onSelectionChanged: (s) =>
-                  ref.read(themeModeProvider.notifier).set(s.first),
+          if (developerTools) ...[
+            _SectionHeader(l10n.settingsTheme),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SegmentedButton<ThemeMode>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeWhite)),
+                  ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeBlack)),
+                  ButtonSegment(value: ThemeMode.system, label: Text(l10n.themeSystem)),
+                ],
+                selected: {ref.watch(themeModeProvider)},
+                onSelectionChanged: (s) =>
+                    ref.read(themeModeProvider.notifier).set(s.first),
+              ),
             ),
-          ),
-          const Divider(height: 32),
+            const Divider(height: 32),
+          ],
 
           _SectionHeader(l10n.languageToggleLabel),
           Padding(
@@ -90,14 +96,16 @@ class SettingsScreen extends ConsumerWidget {
           ),
           // Live on-device connection probe (runs storeConfig against the active
           // store view) — lets us tell a network/WAF problem apart from an empty
-          // catalogue when content isn't loading on a real device.
-          ListTile(
-            leading: const Icon(Icons.wifi_tethering),
-            title: Text(l10n.settingsConnectionTest),
-            subtitle: Text(l10n.settingsConnectionTestSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(AppRoutes.diagnostics),
-          ),
+          // catalogue when content isn't loading on a real device. A developer
+          // tool (its screen is English only), so not in the customer build.
+          if (developerTools)
+            ListTile(
+              leading: const Icon(Icons.wifi_tethering),
+              title: Text(l10n.settingsConnectionTest),
+              subtitle: Text(l10n.settingsConnectionTestSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.diagnostics),
+            ),
           // Account deletion must be reachable from inside the app whenever an
           // account exists (App Store Review Guideline 5.1.1(v)) — hidden for
           // guests, who have nothing to delete.

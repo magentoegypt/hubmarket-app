@@ -58,6 +58,14 @@
   "deleteAccountIntro": "This permanently erases your Hub Market account. You will lose:",
   "deleteAccountLoseOrders": "Your order history and reviews in the app",
   "deleteAccountLoseSaved": "Your saved addresses and wishlist",
+  "deleteAccountLoseCredit": "Your store credit balance of {amount}",
+  "@deleteAccountLoseCredit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "deleteAccountRecordsNote": "Order and invoice records are kept for the period required by UAE law.",
   "deleteAccountUnderstand": "I understand this can't be undone",
   "deleteAccountAction": "Delete my account",
@@ -380,7 +388,10 @@
     "description": "Register's title and button (Figma 04, sentence case)."
   },
   "authSignUpSubtitle": "Shop from every Hub Market store with one account.",
-  "authAgreeTerms": "I agree to the Terms of Service and Privacy Policy",
+  "authAgreeTerms": "I agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>",
+  "@authAgreeTerms": {
+    "description": "Words inside <terms>…</terms>, <privacy>…</privacy> or <cookies>…</cookies> link to that page of the store (CMS block hm_footer_legal): keep the tags around the translated words."
+  },
   "authAgreeTermsRequired": "Accept the terms to create your account.",
   "authNewsletterOptIn": "Send me offers from Hub Market stores",
   "authForgotTitle": "Reset your password",
@@ -510,13 +521,13 @@
   "accountHeading": "My Account",
   "accountAbout": "About Hub Market",
   "accountOrders": "My Orders",
+  "accountTrackOrder": "Track an order",
   "accountAddresses": "Saved Addresses",
   "accountHelp": "Help & FAQ",
   "accountLogOut": "Log Out",
   "accountMember": "Member",
   "accountStatOrders": "Orders",
   "accountStatWishlist": "Wishlist",
-  "accountStatVouchers": "Vouchers",
   "helpCentreTitle": "Help centre",
   "helpHowCanWeHelp": "How can we help?",
   "helpSearchHint": "Search e.g. “track my order”",
@@ -558,7 +569,7 @@
   "helpQ5": "How much is delivery?",
   "helpA5": "The delivery options and fees for your address are shown at checkout, before you place the order.",
   "helpQ7": "How do I track my order?",
-  "helpA7": "Open Account › My orders to see the status of each order. If you checked out as a guest, look it up under My orders with your order number, email and last name.",
+  "helpA7": "If you're signed in, open Account › My Orders to see the status of each order. Checked out as a guest? Open Account › Track an order and enter your order number, email and last name. Orders you placed or looked up as a guest on this device also appear under Account › My Orders.",
   "helpQCancel": "Can I cancel an order?",
   "helpACancel": "While an order can still be cancelled, its page shows a Cancel order button. Once it has shipped it can't be cancelled. Don't see the button? Send us a message.",
   "helpQ8": "Can I return an item?",
@@ -1117,13 +1128,16 @@
     }
   },
   "checkoutOrderTotal": "Order total",
-  "checkoutTermsNote": "By placing your order you agree to Hub Market’s Terms and each store’s return policy.",
+  "checkoutTermsNote": "By placing your order you agree to Hub Market’s <terms>Terms</terms> and each store’s return policy.",
+  "@checkoutTermsNote": {
+    "description": "Words inside <terms>…</terms>, <privacy>…</privacy> or <cookies>…</cookies> link to that page of the store (CMS block hm_footer_legal): keep the tags around the translated words."
+  },
   "checkoutFreeOrder": "No payment needed — your order total is free",
   "countryUae": "United Arab Emirates",
   "savedCardsTitle": "Payment Methods",
   "savedCardsSubtitle": "Cards saved at checkout",
   "savedCardsEmptyTitle": "No saved cards",
-  "savedCardsEmptyBody": "Tick “Save this card for next time” while paying and your card will appear here.",
+  "savedCardsEmptyBody": "Cards saved to your account appear here.",
   "savedCardExpired": "Expired",
   "savedCardRemove": "Remove card",
   "savedCardRemoveConfirmTitle": "Remove this card?",
@@ -1412,7 +1426,6 @@
   "menuViewAll": "View All",
   "menuAccountSection": "Account",
   "menuLogOut": "Log Out",
-  "drawerVouchers": "Vouchers",
   "footerSubscribeConfirm": "Almost there — check your inbox to confirm your subscription.",
   "footerTagline": "Hundreds of local stores. One cart.",
   "footerTrackOrder": "Track Order",

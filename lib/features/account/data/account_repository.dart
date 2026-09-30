@@ -4,6 +4,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/graphql/resilience_link.dart';
 import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../core/util/media.dart';
@@ -229,12 +230,11 @@ class AccountRepository {
   Future<void> deleteAddress(int id) =>
       _run(AccountQueries.deleteAddress, {'id': id}, mutation: true);
 
-  /// The customer's saved N-Genius cards, newest-usable-first.
-  ///
-  /// Filtered to the N-Genius method: the vault is shared by every vaulting
-  /// gateway, and a token we can't hand back to `ngeniusonline_vault` would be
-  /// a card the picker shows but cannot pay with. Rows that don't parse are
-  /// dropped rather than thrown (see [SavedCard.fromToken]).
+  /// The cards Magento's vault holds for the customer, whichever gateway
+  /// saved them — the app takes no card payments yet, so any card here was
+  /// saved on the website. They are listed to be seen and removed, not paid
+  /// with, so no gateway is filtered out. Non-card tokens and rows that
+  /// don't parse are dropped rather than thrown (see [SavedCard.fromToken]).
   Future<List<SavedCard>> fetchSavedCards() async {
     final data = await _run(
       AccountQueries.savedCards,
@@ -246,18 +246,9 @@ class AccountRepository {
             as List<dynamic>?;
     return (items ?? const [])
         .whereType<Map<String, dynamic>>()
-        .where(_isNGeniusToken)
         .map(SavedCard.fromToken)
         .nonNulls
         .toList();
-  }
-
-  /// `ngeniusonline` writes the token; `ngeniusonline_vault` is the code that
-  /// spends it. Accept either so a backend that labels its rows with the vault
-  /// code doesn't silently produce an empty list.
-  static bool _isNGeniusToken(Map<String, dynamic> json) {
-    final code = (json['payment_method_code'] as String?)?.toLowerCase() ?? '';
-    return code.contains('ngenius');
   }
 
   Future<void> deleteSavedCard(String publicHash) => _run(
@@ -273,10 +264,16 @@ class AccountRepository {
     'input': {'firstname': firstName, 'lastname': lastName},
   }, mutation: true);
 
+  /// Throws a `server` [Failure] with the store's message when it refuses:
+  /// a wrong current password ("Invalid login or password."), a new one it
+  /// won't take. A wrong current password is an authentication error on the
+  /// mutation's field, so the request is a [CredentialCheck]: it answers the
+  /// form and leaves the session alone.
   Future<void> changePassword(String current, String next) => _run(
     AccountQueries.changePassword,
     {'currentPassword': current, 'newPassword': next},
     mutation: true,
+    credentialCheck: true,
   );
 
   /// Replaces the customer's mobile with [mobileNumber] (E.164), proving it
@@ -569,13 +566,19 @@ class AccountRepository {
   }
 
   /// [throwMissing]: a "Cannot query field" answer throws [HubAppMissing]
-  /// rather than a [Failure].
+  /// rather than a [Failure]. [credentialCheck]: the request checks a
+  /// credential the customer typed ([CredentialCheck]); a field's refusal of
+  /// it becomes a `server` [Failure] with the store's message.
   Future<Map<String, dynamic>> _run(
     String document,
     Map<String, dynamic> variables, {
     required bool mutation,
     bool throwMissing = false,
+    bool credentialCheck = false,
   }) async {
+    final requestContext = credentialCheck
+        ? const Context().withEntry(const CredentialCheck())
+        : const Context();
     try {
       final result = mutation
           ? await _client.mutate(
@@ -583,6 +586,7 @@ class AccountRepository {
                 document: gql(document),
                 variables: variables,
                 fetchPolicy: FetchPolicy.networkOnly,
+                context: requestContext,
               ),
             )
           : await _client.query(
@@ -590,6 +594,7 @@ class AccountRepository {
                 document: gql(document),
                 variables: variables,
                 fetchPolicy: FetchPolicy.networkOnly,
+                context: requestContext,
               ),
             );
       if (result.hasException) {
@@ -598,6 +603,12 @@ class AccountRepository {
           throw HubAppMissing(
             exception.graphqlErrors.firstOrNull?.message ?? 'hm_seller',
           );
+        }
+        if (credentialCheck) {
+          final refusal = credentialRefusalMessage(exception);
+          if (refusal != null) {
+            throw Failure(FailureKind.server, detail: refusal);
+          }
         }
         throw mapOperationException(exception);
       }
@@ -732,8 +743,8 @@ final addressesProvider = FutureProvider.autoDispose<List<CustomerAddress>>((
 ///
 /// Error-safe by design: `customerPaymentTokens` 403s for a guest and errors
 /// outright until the gateway is vault-aware, and neither is a reason to break
-/// the screen. An empty list simply hides the Payment Methods rows — degrade,
-/// never fabricate.
+/// the screen. An empty list simply hides Account's Payment Methods row —
+/// degrade, never fabricate.
 final savedCardsProvider = FutureProvider.autoDispose<List<SavedCard>>((
   ref,
 ) async {

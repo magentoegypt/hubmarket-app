@@ -24,6 +24,26 @@ void main() {
       expect(config.isProd, isFalse);
     });
 
+    test('developer tools ship in dev and staging only', () {
+      AppConfig flavored(String flavor) => AppConfig(
+        flavor: flavor,
+        graphqlEndpoint: config.graphqlEndpoint,
+        defaultLocale: config.defaultLocale,
+        bootstrapStoreCode: config.bootstrapStoreCode,
+        storeCodeEn: config.storeCodeEn,
+        storeCodeAr: config.storeCodeAr,
+        currency: config.currency,
+        userAgent: config.userAgent,
+        algoliaAppId: config.algoliaAppId,
+        algoliaSearchKey: config.algoliaSearchKey,
+        algoliaIndexPrefix: config.algoliaIndexPrefix,
+        algoliaSortReplicas: config.algoliaSortReplicas,
+      );
+      expect(config.showsDeveloperTools, isTrue); // the default flavor: dev
+      expect(flavored('staging').showsDeveloperTools, isTrue);
+      expect(flavored('prod').showsDeveloperTools, isFalse);
+    });
+
     test('Algolia: the storefront application and prefix, no static key', () {
       expect(config.algoliaAppId, 'HL67ED06DQ');
       expect(config.algoliaIndexPrefix, 'hubmarket_');

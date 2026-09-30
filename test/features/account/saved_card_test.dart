@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/saved_card.dart';
+
+import '../../support/hubapp_fakes.dart';
 
 Map<String, dynamic> _token({
   String hash = 'abc123',
@@ -87,6 +90,32 @@ void main() {
         _token(details: '{"type":"ZZ","maskedCC":"9999"}'),
       )!;
       expect(card.brandLabel, 'ZZ');
+    });
+  });
+
+  group('AccountRepository.fetchSavedCards', () {
+    test('lists the cards of any vaulting gateway, not only N-Genius', () async {
+      Map<String, dynamic> row(String hash, String code, {String? type}) => {
+        ..._token(hash: hash, type: type ?? 'card'),
+        'payment_method_code': code,
+      };
+      final repo = AccountRepository(
+        fakeHubAppClient({
+          'CustomerPaymentTokens': {
+            'customerPaymentTokens': {
+              'items': [
+                row('aps', 'payment_services_paypal_vault'),
+                row('bt', 'braintree_cc_vault'),
+                row('pp', 'braintree_paypal_vault', type: 'account'),
+              ],
+            },
+          },
+        }),
+      );
+
+      final cards = await repo.fetchSavedCards();
+      // Cards only: a PayPal account token is not a card to list.
+      expect(cards.map((c) => c.publicHash), ['aps', 'bt']);
     });
   });
 }

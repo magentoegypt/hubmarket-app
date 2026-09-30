@@ -9,6 +9,7 @@ import '../../../../core/config/store_features.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../cms/presentation/widgets/legal_links_text.dart';
 import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
 import '../auth_error_text.dart';
@@ -234,6 +235,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           AuthCheckRow(
             value: _agreedToTerms,
             label: l10n.authAgreeTerms,
+            // "Terms of Service" and "Privacy Policy" open the store's pages.
+            labelBuilder: (label, style) => LegalLinksText(label, style: style),
             error: termsMissing,
             onChanged: (v) => setState(() => _agreedToTerms = v),
           ),

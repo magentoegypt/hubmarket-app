@@ -17,6 +17,7 @@ import '../../store_credit/presentation/store_credit_providers.dart';
 import '../../returns/presentation/returns_providers.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
+import '../data/guest_order_store.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -92,6 +93,8 @@ class _Authenticated extends ConsumerWidget {
         ? null
         : '\u2066${creditBalance.formatted()}\u2069';
     final returnsAvailable = ref.watch(returnsAvailableProvider);
+    final hasSavedCards =
+        ref.watch(savedCardsProvider).valueOrNull?.isNotEmpty ?? false;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -166,7 +169,8 @@ class _Authenticated extends ConsumerWidget {
           ),
         ),
         const _AccountBand(),
-        // Quick stats (Figma 42:17). Vouchers has no backend source → 0.
+        // Quick stats (Figma 42:17): orders and wishlist. The frame's third
+        // cell, Vouchers, has nothing behind it in Magento, so it isn't shown.
         IntrinsicHeight(
           child: Row(
             children: [
@@ -188,16 +192,6 @@ class _Authenticated extends ConsumerWidget {
                   value: '$wishlist',
                   label: l10n.accountStatWishlist,
                 ),
-              ),
-              VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: context.hairline,
-                indent: 16,
-                endIndent: 16,
-              ),
-              Expanded(
-                child: _StatCell(value: '0', label: l10n.accountStatVouchers),
               ),
             ],
           ),
@@ -237,12 +231,17 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.accountAddresses,
           onTap: () => context.push(AppRoutes.addresses),
         ),
-        const _TileDivider(),
-        _AccountTile(
-          icon: Icons.credit_card_outlined,
-          label: l10n.savedCardsTitle,
-          onTap: () => context.push(AppRoutes.paymentMethods),
-        ),
+        // Payment Methods only lists cards the vault already holds: no card
+        // gateway is wired into the app, so none can be saved here. No cards,
+        // no row.
+        if (hasSavedCards) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.credit_card_outlined,
+            label: l10n.savedCardsTitle,
+            onTap: () => context.push(AppRoutes.paymentMethods),
+          ),
+        ],
         // 20d My credit, with the balance (Figma 20), once the backend has
         // store credit (HubAppAccount).
         if (creditEnabled) ...[
@@ -474,58 +473,80 @@ class _AccountTile extends StatelessWidget {
   }
 }
 
-class _Guest extends StatelessWidget {
+/// Signed out: sign in / create account, and the guest's way back to their
+/// orders — the lookup by order number, e-mail and last name (Figma 26),
+/// and, once this device has placed or looked one up, My Orders (the orders
+/// the device remembers, see `GuestOrderStore`).
+class _Guest extends ConsumerWidget {
   const _Guest();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.surfaceTint,
-              child: Icon(
-                Icons.person_outline,
-                size: 48,
-                color: AppColors.brandPrimary,
+    final hasGuestOrders = ref.watch(guestOrderStoreProvider).isNotEmpty;
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          child: Column(
+            children: [
+              const CircleAvatar(
+                radius: 48,
+                backgroundColor: AppColors.surfaceTint,
+                child: Icon(
+                  Icons.person_outline,
+                  size: 48,
+                  color: AppColors.brandPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              l10n.accountGuestTitle,
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.accountGuestBody,
-              style: TextStyle(color: context.scaffoldMuted),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => context.push(AppRoutes.signIn),
-                child: Text(l10n.authSignInTitle),
+              const SizedBox(height: 20),
+              Text(
+                l10n.accountGuestTitle,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => context.push(AppRoutes.signUp),
-                child: Text(l10n.authSignUpTitle),
+              const SizedBox(height: 8),
+              Text(
+                l10n.accountGuestBody,
+                style: TextStyle(color: context.scaffoldMuted),
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => context.push(AppRoutes.signIn),
+                  child: Text(l10n.authSignInTitle),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => context.push(AppRoutes.signUp),
+                  child: Text(l10n.authSignUpTitle),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+        const _AccountBand(),
+        if (hasGuestOrders) ...[
+          _AccountTile(
+            icon: Icons.receipt_long_outlined,
+            label: l10n.accountOrders,
+            onTap: () => context.push(AppRoutes.orders),
+          ),
+          const _TileDivider(),
+        ],
+        _AccountTile(
+          icon: Icons.local_shipping_outlined,
+          label: l10n.accountTrackOrder,
+          onTap: () => context.push(AppRoutes.guestTrackOrder),
+        ),
+        const _AccountBand(),
+      ],
     );
   }
 }

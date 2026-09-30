@@ -90,8 +90,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _currentPassword.clear();
       _newPassword.clear();
       _snack(l10n.passwordChanged);
-    } catch (_) {
-      _snack(l10n.errorGeneric);
+    } catch (error) {
+      // The store's own (localized) words — a wrong current password, a new
+      // one it won't take — like the other forms; generic only when it gave
+      // none.
+      if (mounted) _snack(serverMessageOr(context, error, l10n.errorGeneric));
     } finally {
       if (mounted) setState(() => _savingPassword = false);
     }

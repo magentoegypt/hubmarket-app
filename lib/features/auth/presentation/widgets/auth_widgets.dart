@@ -346,6 +346,7 @@ class AuthCheckRow extends StatelessWidget {
     required this.value,
     required this.label,
     required this.onChanged,
+    this.labelBuilder,
     this.emphasised = true,
     this.error = false,
   });
@@ -353,6 +354,11 @@ class AuthCheckRow extends StatelessWidget {
   final bool value;
   final String label;
   final ValueChanged<bool> onChanged;
+
+  /// Builds the label from [label] and the row's text style — the terms row
+  /// links its words to the store's pages. Plain text when null. A tap on a
+  /// link opens it; a tap anywhere else in the row toggles the box.
+  final Widget Function(String label, TextStyle style)? labelBuilder;
 
   /// Ink label (terms) vs muted label (the optional newsletter opt-in).
   final bool emphasised;
@@ -363,6 +369,9 @@ class AuthCheckRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppTextStyles.of(context);
+    final style = t.body.copyWith(
+      color: emphasised ? AppColors.inkHeading : AppColors.inkMuted,
+    );
     return Semantics(
       checked: value,
       child: InkWell(
@@ -391,12 +400,8 @@ class AuthCheckRow extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                label,
-                style: t.body.copyWith(
-                  color: emphasised ? AppColors.inkHeading : AppColors.inkMuted,
-                ),
-              ),
+              child:
+                  labelBuilder?.call(label, style) ?? Text(label, style: style),
             ),
           ],
         ),

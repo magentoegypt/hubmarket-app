@@ -29,13 +29,12 @@ Future<void> openCmsHref(
   await openStorefrontUrl(context, ref, value);
 }
 
-/// Icon for a footer legal link, picked from its URL (as in Figma 27).
-IconData legalLinkIcon(CmsLink link) {
-  final url = link.url.toLowerCase();
-  if (url.contains('privacy')) return Icons.shield_outlined;
-  if (url.contains('cookie')) return Icons.language;
-  return Icons.edit_outlined;
-}
+/// Icon for a footer legal link, picked by the page it opens (as in Figma 27).
+IconData legalLinkIcon(CmsLink link) => switch (legalPageOf(link)) {
+  LegalPage.privacy => Icons.shield_outlined,
+  LegalPage.cookies => Icons.language,
+  LegalPage.terms => Icons.edit_outlined,
+};
 
 /// Opens a link known to point at a storefront CMS page (the footer's legal
 /// links) straight in the native content page — no `urlResolver` round trip.

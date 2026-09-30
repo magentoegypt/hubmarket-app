@@ -50,6 +50,29 @@ Failure mapOperationException(OperationException exception) {
   return const Failure(FailureKind.unknown);
 }
 
+/// True when [error] is a field refusing a credential the customer typed:
+/// Magento answers a wrong current password on `changeCustomerPassword` with
+/// a `graphql-authentication` error on the mutation's own field ("Invalid
+/// login or password."). A dead session is reported differently — by the
+/// token check before any field runs (no `path`), or inside a resolver as
+/// `graphql-authorization` ("The current customer isn't authorized.").
+bool isCredentialRefusal(GraphQLError error) =>
+    error.extensions?['category'] == 'graphql-authentication' &&
+    (error.path?.isNotEmpty ?? false);
+
+/// The store's message for a [isCredentialRefusal] error in [exception] —
+/// a GraphQL error, or one inside the ServerException Magento's HTTP 401
+/// becomes — or null when there is none.
+String? credentialRefusalMessage(OperationException exception) {
+  final link = exception.linkException;
+  final errors = [
+    ...exception.graphqlErrors,
+    if (link is ServerException) ...?link.parsedResponse?.errors,
+  ];
+  final message = errors.where(isCredentialRefusal).firstOrNull?.message.trim();
+  return (message == null || message.isEmpty) ? null : message;
+}
+
 /// True when a GraphQL error indicates the customer token is invalid/expired
 /// (Magento returns these as a 200 + errors payload, category
 /// `graphql-authorization`/`graphql-authentication`). Shared by the failure
