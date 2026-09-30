@@ -883,6 +883,15 @@
     }
   },
   "returnsNewReply": "New reply",
+  "returnsMoreItems": "+{count} more",
+  "@returnsMoreItems": {
+    "description": "After the first product's name on a return's card, when the return has more lines.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "returnsStoreNote": "Returns go to the store that sold the item. Only delivered or processing orders can be returned.",
   "returnsStoreNoteSeller": "Returns go to the store that sold the item ({seller}). Only delivered or processing orders can be returned.",
   "@returnsStoreNoteSeller": {
@@ -950,6 +959,23 @@
   "returnsCommentHint": "What's wrong with the item? The store reads this first.",
   "returnsTracking": "Shipment tracking number (optional)",
   "returnsTrackingHint": "If you already sent it back",
+  "returnsPhotos": "Photos (optional)",
+  "returnsAddPhoto": "Add",
+  "returnsAddPhotos": "Add photos",
+  "returnsTakePhoto": "Take a photo",
+  "returnsChoosePhotos": "Choose from your photos",
+  "returnsRemovePhoto": "Remove photo",
+  "returnsPhoto": "Photo",
+  "returnsPhotoPickFailed": "We couldn't open the camera or your photos.",
+  "returnsPhotoUnsupported": "That photo can't be sent. Choose another one or take a new photo.",
+  "returnsPhotoTooLarge": "Photos can be up to {size} MB.",
+  "@returnsPhotoTooLarge": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "returnsPolicy": "Return policy",
   "returnsSubmit": "Submit return request",
   "returnsSubmitted": "Return request sent",
@@ -983,6 +1009,21 @@
   "returnsWriteReply": "Write a reply…",
   "returnsSendReply": "Send",
   "returnsClosedNote": "This return is closed, so it can't take new messages.",
+  "returnsEscalatePrompt": "Not resolved? Hub Market can step in.",
+  "returnsEscalate": "Escalate",
+  "returnsEscalateTitle": "Escalate to Hub Market",
+  "returnsEscalateBody": "Tell Hub Market what went wrong. The store sees your escalation too and can add its side.",
+  "returnsEscalateHint": "What happened, and what would you like us to do?",
+  "returnsEscalateError": "Tell Hub Market what went wrong.",
+  "returnsEscalateSubmit": "Send to Hub Market",
+  "returnsEscalated": "Sent to Hub Market. We'll review your return.",
+  "returnsEscalationTitle": "Escalated to Hub Market",
+  "returnsCancelAction": "Cancel return request",
+  "returnsCancelTitle": "Cancel this return?",
+  "returnsCancelBody": "The store stops handling it, and its items can be returned again with a new request. This can't be undone.",
+  "returnsCancelKeep": "Keep it",
+  "returnsCancelConfirm": "Cancel return",
+  "returnsCancelled": "Return request cancelled.",
   "returnsNotFound": "We couldn't find this return.",
   "returnsPackageOpenedRow": "Package opened",
   "returnsTrackingRow": "Tracking number",

@@ -10,9 +10,9 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../returns_providers.dart';
 
 /// Return items on the order detail (Figma 22): shown when returns are on,
-/// the order is the signed-in customer's, and the server lists it among the
-/// customer's returnable orders (processing or complete, with something left
-/// to return). Opens the return form (23) on this order.
+/// the order is the signed-in customer's, and the server says it has
+/// something left to return (`hmReturnableOrder`: processing or complete,
+/// one request). Opens the return form (23) on this order.
 ///
 /// Nothing is shown while that is being checked, or when it can't be.
 class ReturnItemsButton extends ConsumerWidget {
@@ -30,9 +30,7 @@ class ReturnItemsButton extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final returnable = ref
-        .watch(
-          returnableOrderProvider((number: order.number, placedAt: order.date)),
-        )
+        .watch(returnableOrderProvider(order.number))
         .valueOrNull;
     if (returnable == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);

@@ -1,4 +1,5 @@
 import '../../../core/hubapp/hubapp.dart';
+import 'return_photo.dart';
 import 'returns.dart';
 
 /// Why a line on the return form (Figma 23) can or can't be ticked.
@@ -50,6 +51,7 @@ class ReturnDraft {
     this.customAmount = '',
     this.comment = '',
     this.trackingCode = '',
+    this.photos = const <ReturnPhoto>[],
   });
 
   /// Limits the server enforces (EligibilityService).
@@ -81,6 +83,10 @@ class ReturnDraft {
   final String comment;
   final String trackingCode;
 
+  /// Photos for the first message (Figma "Photos (optional)"), checked
+  /// against the store's rules when picked.
+  final List<ReturnPhoto> photos;
+
   ReturnDraft copyWith({
     Map<int, int>? quantities,
     ReturnType? type,
@@ -93,6 +99,7 @@ class ReturnDraft {
     String? customAmount,
     String? comment,
     String? trackingCode,
+    List<ReturnPhoto>? photos,
   }) => ReturnDraft(
     order: order,
     quantities: quantities ?? this.quantities,
@@ -105,6 +112,7 @@ class ReturnDraft {
     customAmount: customAmount ?? this.customAmount,
     comment: comment ?? this.comment,
     trackingCode: trackingCode ?? this.trackingCode,
+    photos: photos ?? this.photos,
   );
 
   bool get hasSelection => quantities.isNotEmpty;
@@ -190,18 +198,30 @@ class ReturnDraft {
     return double.tryParse(western);
   }
 
-  /// The most a custom refund may ask for: each ticked line's
-  /// (row total incl. tax − discount) ÷ qty ordered × units returned, as the
-  /// server computes it, in [unitRefunds] (`order_item_id` → per-unit
-  /// amount). Rounded down to the cent. Null when nothing is ticked or a
-  /// ticked line's amount is unknown.
-  double? refundCap(Map<int, double> unitRefunds) {
+  /// What a unit of [item] was paid, the refund cap's base: the server's
+  /// figure (`HmReturnableItem.unit_price`), else [fallback]'s
+  /// (`order_item_id` → amount, from the core order's prices) for a server
+  /// that doesn't send one.
+  static double? unitRefund(
+    ReturnableItem item, [
+    Map<int, double> fallback = const <int, double>{},
+  ]) => item.unitPrice?.amount ?? fallback[item.orderItemId];
+
+  /// Whether a line of the order lacks the server's price, so the form needs
+  /// the core order's prices ([unitRefund]'s fallback).
+  bool get needsFallbackPrices => order.items.any((i) => i.unitPrice == null);
+
+  /// The most a custom refund may ask for: each ticked line's per-unit refund
+  /// base ([unitRefund]) × units returned, as the server computes it.
+  /// Rounded down to the cent. Null when nothing is ticked or a ticked line's
+  /// amount is unknown.
+  double? refundCap([Map<int, double> fallback = const <int, double>{}]) {
     if (quantities.isEmpty) return null;
     var sum = 0.0;
-    for (final entry in quantities.entries) {
-      final unit = unitRefunds[entry.key];
+    for (final item in selectedItems) {
+      final unit = unitRefund(item, fallback);
       if (unit == null) return null;
-      sum += unit * entry.value;
+      sum += unit * quantities[item.orderItemId]!;
     }
     return (sum * 100 + 1e-6).floorToDouble() / 100;
   }
@@ -255,7 +275,8 @@ class ReturnDraft {
 
   /// The `HmCreateReturnInput` for this draft. Lines keep the order's line
   /// order; the refund fields go only with a refund, the custom amount only
-  /// with a custom refund, and empty optional text is left out.
+  /// with a custom refund, the photos only when there are some, and empty
+  /// optional text is left out.
   Map<String, dynamic> toInput() {
     final other = otherReason.trim();
     final tracking = trackingCode.trim();
@@ -279,6 +300,8 @@ class ReturnDraft {
           'refund_custom_amount': customAmountValue,
       },
       if (tracking.isNotEmpty) 'tracking_code': tracking,
+      if (photos.isNotEmpty)
+        'attachments': [for (final photo in photos) photo.toInput()],
     };
   }
 }

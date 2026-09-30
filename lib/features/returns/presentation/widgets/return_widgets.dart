@@ -64,20 +64,21 @@ String returnTypeLabel(AppLocalizations l10n, ReturnType type) =>
       ReturnType.replace => l10n.returnsTypeReplace,
     };
 
-/// Status pill (Figma 23b/23c): amber while open, green once closed
-/// (resolved), red when cancelled. The label is the store's own status name.
+/// Status pill (Figma 23b/23c): amber while it is being handled, green once
+/// resolved, red when rejected or cancelled ([ReturnTone], from the store's
+/// status code). The label is the store's own status name.
 class ReturnStatusPill extends StatelessWidget {
-  const ReturnStatusPill({super.key, required this.state, required this.label});
+  const ReturnStatusPill({super.key, required this.tone, required this.label});
 
-  final ReturnState state;
+  final ReturnTone tone;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    final (background, foreground) = switch (state) {
-      ReturnState.open => (AppColors.warningSubtle, AppColors.warning),
-      ReturnState.closed => (AppColors.successSubtle, AppColors.successStrong),
-      ReturnState.canceled => (AppColors.dangerSurface, AppColors.danger),
+    final (background, foreground) = switch (tone) {
+      ReturnTone.pending => (AppColors.warningSubtle, AppColors.warning),
+      ReturnTone.resolved => (AppColors.successSubtle, AppColors.successStrong),
+      ReturnTone.rejected => (AppColors.dangerSurface, AppColors.danger),
     };
     if (label.trim().isEmpty) return const SizedBox.shrink();
     return Container(

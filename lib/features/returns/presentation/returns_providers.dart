@@ -4,6 +4,7 @@ import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
 import '../../catalog/domain/money.dart';
 import '../data/returns_repository.dart';
+import '../domain/return_photo.dart';
 import '../domain/returns.dart';
 
 /// Whether returns are offered at all: My returns on Account (20), Return
@@ -27,10 +28,11 @@ final returnConfigProvider = FutureProvider.autoDispose<ReturnConfig>((ref) {
   return ref.watch(returnsRepositoryProvider).fetchConfig();
 });
 
-/// Per-unit refund base of each line of an order (see
-/// `ReturnsRepository.fetchUnitRefunds`), for the line prices and the refund
-/// cap. Empty when the order can't be read: the form then shows no amounts
-/// and the server checks the cap.
+/// Per-unit refund base of each line of an order from the core order (see
+/// `ReturnsRepository.fetchUnitRefunds`): the fallback for line prices and
+/// the refund cap when the server's lines carry no `unit_price`. Empty when
+/// the order can't be read: the form then shows no amounts and the server
+/// checks the cap.
 final returnUnitRefundsProvider = FutureProvider.autoDispose
     .family<Map<int, Money>, String>((ref, orderNumber) async {
       try {
@@ -42,51 +44,13 @@ final returnUnitRefundsProvider = FutureProvider.autoDispose
       }
     });
 
-/// Finds order [number] among the customer's returnable orders, paging
-/// through `hmReturnableOrders` (newest first). With [placedAt] — the order's
-/// store-local `order_date` — the search stops at the first page reaching
-/// orders a day older than it, since the order can't come after them; it
-/// never reads more than [maxPages] pages. Null when the order has nothing
-/// returnable.
-Future<ReturnableOrder?> findReturnableOrder(
-  ReturnsRepository repository,
-  String number, {
-  String? placedAt,
-  int maxPages = 10,
-}) async {
-  // `order_date` has no offset; read as UTC it is at most a zone offset
-  // later than the real instant, so a day of margin covers every zone.
-  final placed = placedAt == null
-      ? null
-      : DateTime.tryParse('${placedAt.trim().replaceFirst(' ', 'T')}Z');
-  final floor = placed?.subtract(const Duration(days: 1));
-  for (var page = 1; page <= maxPages; page++) {
-    final result = await repository.fetchReturnableOrders(currentPage: page);
-    for (final order in result.items) {
-      if (order.number == number) {
-        return order.hasReturnableItem ? order : null;
-      }
-    }
-    if (!result.hasMore || result.items.isEmpty) return null;
-    if (floor != null) {
-      final oldest = DateTime.tryParse(result.items.last.createdAt);
-      if (oldest != null && oldest.isBefore(floor)) return null;
-    }
-  }
-  return null;
-}
-
-/// Order [number]'s returnable lines, or null when it has none: drives Return
-/// items on the order detail (22), which passes the order's `order_date` so
-/// the search stops early (see [findReturnableOrder]).
+/// Order [number]'s returnable lines (`hmReturnableOrder`, one request), or
+/// null when it has nothing left to return: drives Return items on the order
+/// detail (22) and the return form opened on an order by number.
 final returnableOrderProvider = FutureProvider.autoDispose
-    .family<ReturnableOrder?, ({String number, String? placedAt})>((ref, key) {
+    .family<ReturnableOrder?, String>((ref, number) {
       ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
-      return findReturnableOrder(
-        ref.watch(returnsRepositoryProvider),
-        key.number,
-        placedAt: key.placedAt,
-      );
+      return ref.watch(returnsRepositoryProvider).fetchReturnableOrder(number);
     });
 
 /// A paged list's state.
@@ -197,21 +161,7 @@ class MyReturnsController extends _PagedReturnsController<ReturnSummary> {
     state = state.copyWith(
       items: [
         for (final r in state.items)
-          if (r.id == id)
-            ReturnSummary(
-              id: r.id,
-              number: r.number,
-              orderNumber: r.orderNumber,
-              createdAt: r.createdAt,
-              updatedAt: r.updatedAt,
-              state: r.state,
-              statusLabel: r.statusLabel,
-              type: r.type,
-              itemCount: r.itemCount,
-              seller: r.seller,
-            )
-          else
-            r,
+          if (r.id == id) r.markedRead() else r,
       ],
     );
   }
@@ -238,7 +188,10 @@ final returnableOrdersControllerProvider =
       PagedReturnsState<ReturnableOrder>
     >(ReturnableOrdersController.new);
 
-/// One return (23c) and the customer's replies on it.
+/// One return (23c) and what the customer does on it: reply, escalate,
+/// cancel. Each shows the return as the server returns it, and throws the
+/// [Failure] when the store refuses (a closed return, too long, a photo it
+/// doesn't take, a return that can't be escalated or cancelled any more).
 class ReturnDetailController
     extends AutoDisposeFamilyAsyncNotifier<ReturnDetail?, int> {
   @override
@@ -251,12 +204,31 @@ class ReturnDetailController
     return detail;
   }
 
-  /// Sends [message] and shows the return as the server returns it. Throws
-  /// the [Failure] when the store refuses (a closed return, too long).
-  Future<void> reply(String message) async {
+  /// Sends [message] with [photos].
+  Future<void> reply(
+    String message, {
+    List<ReturnPhoto> photos = const <ReturnPhoto>[],
+  }) async {
     final updated = await ref
         .read(returnsRepositoryProvider)
-        .addMessage(arg, message);
+        .addMessage(arg, message, photos: photos);
+    state = AsyncData(updated);
+  }
+
+  /// Asks Hub Market to step in, with [message] and [photos].
+  Future<void> escalate(
+    String message, {
+    List<ReturnPhoto> photos = const <ReturnPhoto>[],
+  }) async {
+    final updated = await ref
+        .read(returnsRepositoryProvider)
+        .escalate(arg, message, photos: photos);
+    state = AsyncData(updated);
+  }
+
+  /// Cancels the return.
+  Future<void> cancel() async {
+    final updated = await ref.read(returnsRepositoryProvider).cancel(arg);
     state = AsyncData(updated);
   }
 }
@@ -266,9 +238,9 @@ final returnDetailControllerProvider = AsyncNotifierProvider.autoDispose
       ReturnDetailController.new,
     );
 
-/// Forgets what a new return changes on the screens below the form: My
-/// returns and the orders' Return items checks. (The form's own order list
-/// goes with the form.)
+/// Forgets what a new, cancelled or escalated return changes on the screens
+/// below: My returns and the orders' Return items checks. (The form's own
+/// order list goes with the form.)
 void invalidateReturnLists(WidgetRef ref) {
   ref.invalidate(myReturnsControllerProvider);
   ref.invalidate(returnableOrderProvider);
