@@ -9,7 +9,7 @@ backend. Nothing is executed on the server — introspection only.
 Two modes:
 
 * default — the live introspection **plus** the Hub Market App contract
-  (`lib/core/graphql/hubapp.graphql`, not deployed yet), merged the way Magento
+  (`lib/core/graphql/hubapp.graphql`, the deployed HubApp contract), merged the way Magento
   merges module schemas: a `type X` / `interface X` that already exists adds
   its fields, fields added to an interface also land on every type that
   implements it, and new types, enums and inputs are added;

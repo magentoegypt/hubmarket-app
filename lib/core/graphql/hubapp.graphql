@@ -1,13 +1,13 @@
 # =============================================================================
 # COPY - do not edit here. Source of truth is the backend repo:
 #   magentoegypt/multivendor PR #22 (https://github.com/magentoegypt/multivendor/pull/22)
-#   branch feature/hubapp-graphql, commit 9c0d00841
+#   branch figma-parity-home, merged as bb1ca0555 (PR head 9c0d00841)
 #   app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
 # Refresh with:
-#   git -C <multivendor> show feature/hubapp-graphql:app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
+#   git -C <multivendor> show figma-parity-home:app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
 #
-# Not deployed yet (P3): the app is built against this frozen contract and
-# falls back to Build 1 when the live server lacks the hm* fields.
+# Deployed on hub-market.magento2.click since 30 Sep (PR #22). The app still
+# probes hmAppConfig and falls back to Build 1 when a server lacks the hm* fields.
 # tool/validate_ops.py overlays this file on the live introspection by default
 # (--live-only skips it): Magento-style re-declarations (type Query, interface
 # ProductInterface, ...) add their fields to the live types. It is not an

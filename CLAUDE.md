@@ -50,14 +50,20 @@ special prices. Other CMS blocks the app reads: `hm_app_faq` (Help centre FAQ,
 the bundled FAQ as fallback), `hm_footer_customer` (the WhatsApp support link)
 and `hm_footer_legal` (the legal links).
 
-**HubApp** is built — magentoegypt/multivendor PR #22, branch
-`feature/hubapp-graphql` — and **not deployed yet**. It is a module family:
-`HubApp` (app settings, Home, deals, best sellers, bundle deals, brands),
-`HubAppVendors` (stores, `hm_seller`), `HubAppBundle`, `HubAppReturns` and
-`HubAppAccount` (store credit, push devices, WhatsApp sign-in); the app's copy
-of the contract is `lib/core/graphql/hubapp.graphql`. The app probes
-`hmAppConfig` on each launch and store switch and falls back to Build 1 when it
-isn't there. Remote feature flags (`hmAppConfig.features`): `store_credit`,
+**HubApp** is built and deployed — magentoegypt/multivendor PR #22, merged into
+`figma-parity-home` as `bb1ca0555` on 30 Sep and live on
+`hub-market.magento2.click` (Varnish in front, varying on the `Store` header:
+public GETs are cached server-side although the client sees `no-store`; watch
+`X-Magento-Cache-Debug` for MISS/HIT; `multi.magento2.click` is the uncached
+origin). It is a module family: `HubApp` (app settings, Home, deals, best
+sellers, bundle deals, brands), `HubAppVendors` (stores, `hm_seller`, other
+sellers), `HubAppBundle`, `HubAppReturns`, `HubAppAccount` (store credit, push
+devices, WhatsApp sign-in) and `HubAppOrders` (per-store order packages); the
+app's copy of the contract is `lib/core/graphql/hubapp.graphql`. The app probes
+`hmAppConfig` on each launch and store switch (it also lists which satellites
+are enabled, `capabilities`) and falls back to Build 1 when it isn't there. A
+deploy means a few minutes of 503s and a first call of 15-25 s while caches
+rebuild: the retry and the Retry button are for that. Remote feature flags (`hmAppConfig.features`): `store_credit`,
 `returns`, `whatsapp_login`, `push` — an unset flag counts as off. The Figma
 section "G · Managed from the backend" shows the admin screens and the full map.
 
