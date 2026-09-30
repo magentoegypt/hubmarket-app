@@ -24,8 +24,12 @@ DateTime? storeStampToLocal(String raw, String ianaZone) {
   if (parsed.isUtc || _hasOffset(text)) return parsed.toLocal();
   final location = _location(ianaZone);
   if (location == null) return parsed;
-  // Re-anchor the same wall-clock reading to the store's zone, then convert.
-  return tz.TZDateTime(
+  // Re-anchor the same wall-clock reading to the store's zone, then read the
+  // instant on the device's clock. `TZDateTime.toLocal()` would not do: it
+  // resolves to the timezone package's own `local`, which is UTC until
+  // `setLocalLocation` is called (the app never does), so every time came out
+  // in UTC. A plain `DateTime` from the instant is in the device's zone.
+  final anchored = tz.TZDateTime(
     location,
     parsed.year,
     parsed.month,
@@ -33,7 +37,8 @@ DateTime? storeStampToLocal(String raw, String ianaZone) {
     parsed.hour,
     parsed.minute,
     parsed.second,
-  ).toLocal();
+  );
+  return DateTime.fromMillisecondsSinceEpoch(anchored.millisecondsSinceEpoch);
 }
 
 /// Whether an ISO-8601 string carries an explicit zone. Only the time half can:
