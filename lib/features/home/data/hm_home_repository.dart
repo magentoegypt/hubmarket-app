@@ -9,14 +9,24 @@ import '../../../core/hubapp/hubapp.dart';
 import '../../catalog/data/brands_repository.dart';
 import '../../catalog/data/product_mapper.dart';
 import '../../deals/data/deals_repository.dart';
+import '../../marketplace/data/listing_sellers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../domain/hm_home.dart';
 
 /// Reads the admin-laid-out Home (`hmAppHome`) over the public GET client —
 /// one request, cached by the full-page cache per store view and audience.
 class HmHomeRepository {
-  HmHomeRepository(this._client);
+  HmHomeRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
+
+  /// Whether the product rails' cards ask who sells each product
+  /// (`sendListing`) — only while the server lists HubAppVendors, so a
+  /// server without it never turns the whole Home down for that field.
+  final MarketplaceGate _marketplace;
 
   /// The guest document. The audience goes inline (see [documentFor]): a
   /// `$audience: HmAudience` variable would make a server without the module
@@ -54,7 +64,11 @@ query HmAppHome {
   /// The Home for [audience] in the active store view. Throws [HubAppMissing]
   /// without the module, a [Failure] otherwise.
   Future<HmHome> fetchHome(HmAudience audience) async {
-    final data = await runHubAppQuery(_client, documentFor(audience));
+    final data = await sendListing(
+      _marketplace,
+      documentFor(audience),
+      (document, _) => runHubAppQuery(_client, document),
+    );
     final json = data['hmAppHome'];
     if (json is! Map<String, dynamic>) {
       throw const Failure(FailureKind.server, detail: 'hmAppHome is empty');
@@ -64,7 +78,10 @@ query HmAppHome {
 }
 
 final hmHomeRepositoryProvider = Provider<HmHomeRepository>(
-  (ref) => HmHomeRepository(ref.watch(publicGraphqlClientProvider)),
+  (ref) => HmHomeRepository(
+    ref.watch(publicGraphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );
 
 /// `hmAppHome` → [HmHome]. Unknown section types and unreadable items are

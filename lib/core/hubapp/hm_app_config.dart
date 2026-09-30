@@ -15,6 +15,7 @@ class HmAppConfig {
     this.versions = const <HmVersionPolicy>[],
     this.maintenance = const HmMaintenance(),
     this.features = const <String, bool>{},
+    this.capabilities,
   });
 
   final String storeCode;
@@ -32,6 +33,18 @@ class HmAppConfig {
   /// Remote switches by code. A code the backend doesn't list is unset — see
   /// [flag].
   final Map<String, bool> features;
+
+  /// The HubApp satellites the server runs (`vendors`, `bundle`, `returns`,
+  /// `account` — see [HubAppCapability]); null when the server predates the
+  /// list. A satellite can be off on its own, and a server without it
+  /// rejects a whole document naming one of its fields, so a document shared
+  /// with Build 1 (a product listing) gains a satellite's fields only when
+  /// its code is listed here.
+  final Set<String>? capabilities;
+
+  /// Whether the server lists the satellite [code] — false when it lists
+  /// others, and when it predates [capabilities].
+  bool hasCapability(String code) => capabilities?.contains(code) ?? false;
 
   /// The switch [code] (`store_credit`, `returns`, `whatsapp_login`, `push`,
   /// …); null when the backend doesn't list it, so each feature picks its own
@@ -70,8 +83,31 @@ class HmAppConfig {
             if (hmString(item['code']) case final code?)
               code: item['enabled'] == true,
       },
+      capabilities: json['capabilities'] is List
+          ? Set.unmodifiable(hmStrings(json['capabilities']))
+          : null,
     );
   }
+}
+
+/// The codes of `hmAppConfig.capabilities`: which HubApp satellite serves a
+/// feature.
+abstract final class HubAppCapability {
+  /// `MagentoEgypt_HubAppVendors`: stores, `hm_seller`, store reviews,
+  /// contact and chips.
+  static const String vendors = 'vendors';
+
+  /// `MagentoEgypt_HubAppBundle`: `hmAddBundleToCart`.
+  static const String bundle = 'bundle';
+
+  /// `MagentoEgypt_HubAppOrders`: `CustomerOrder.hm_packages`.
+  static const String orders = 'orders';
+
+  /// `MagentoEgypt_HubAppReturns`.
+  static const String returns = 'returns';
+
+  /// `MagentoEgypt_HubAppAccount`.
+  static const String account = 'account';
 }
 
 /// `HmSearchConfig`.

@@ -16,7 +16,8 @@ import 'algolia_settings.dart';
 //               the parent + children for a configurable), type_id,
 //               image_url, thumbnail_url, categories.level0…N ("A /// B"),
 //               categoryIds, price.AED.{default, default_original_formated,
-//               special_from_date, special_to_date}, rating_summary, seller
+//               special_from_date, special_to_date}, rating_summary, seller,
+//               seller_id, seller_url_key
 //   categories: objectID (the id), name, path, level, url, product_count,
 //               include_in_menu
 //   pages:      objectID, name, slug, url, content
@@ -116,10 +117,14 @@ String? _imageUrl(Object? value, String pageUrl) {
 /// regular price comes from `<group>_original_formated`, which the extension
 /// writes only while a special price applies — and which the storefront
 /// ignores once the special price's dates have passed, as this does.
+///
+/// [sellers]: read the record's seller for the card's seller line (while the
+/// server lists HubAppVendors, `MarketplaceFeatures.listingSellers`).
 Product? productFromAlgoliaHit(
   Map<String, dynamic> hit,
   AlgoliaSettings settings, {
   required DateTime now,
+  bool sellers = false,
 }) {
   final url = _text(hit['url']);
   final urlKey = productUrlKeyFromUrl(url);
@@ -159,6 +164,13 @@ Product? productFromAlgoliaHit(
   }
 
   final type = _text(hit['type_id']);
+  // AlgoliaVendor puts the seller on every record of a seller's product
+  // (`seller`: its name in the index's language, `seller_url_key`: its code);
+  // Hub Market's own products have none, and their cards an empty line. Read
+  // only when [sellers] (the server lists HubAppVendors): Build 1's cards
+  // have no seller line.
+  final seller = sellers ? _text(hit['seller']) : '';
+  final sellerCode = sellers ? _text(hit['seller_url_key']) : '';
   return Product(
     sku: sku,
     name: name,
@@ -182,6 +194,9 @@ Product? productFromAlgoliaHit(
       final String value => double.tryParse(value.trim()),
       _ => null,
     },
+    sellerKnown: sellers,
+    sellerName: seller.isEmpty ? null : seller,
+    sellerCode: sellerCode.isEmpty ? null : sellerCode,
   );
 }
 

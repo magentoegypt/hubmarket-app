@@ -243,9 +243,14 @@ Map<String, dynamic> productRecord({
   List<String> categoryPaths = const [],
   List<String> categoryIds = const [],
   String? highlighted,
+  String? seller,
+  String? sellerKey,
 }) => {
   'objectID': id,
   'name': name,
+  // AlgoliaVendor AddSellerData: a seller's product carries its seller.
+  'seller': ?seller,
+  'seller_url_key': ?sellerKey,
   'url': 'https://hub-market.magento2.click/$store/$urlKey.html',
   'sku': sku ?? urlKey,
   'type_id': type,

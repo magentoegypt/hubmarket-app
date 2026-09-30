@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/app/theme/app_colors.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/widgets/network_image.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
@@ -190,6 +192,69 @@ void main() {
       await tester.pump();
 
       expect(find.byIcon(Icons.star_rounded), findsNothing);
+    });
+  });
+
+  group('the seller line (Figma v3)', () {
+    Product sold({String? seller, bool known = true}) => Product(
+      sku: 'SOFA1',
+      name: 'Corner Sofa Bed',
+      urlKey: 'corner-sofa-bed',
+      regularPrice: const Money(amount: 425, currency: 'AED'),
+      finalPrice: const Money(amount: 425, currency: 'AED'),
+      sellerName: seller,
+      sellerCode: seller == null ? null : 'MIA',
+      sellerKnown: known,
+    );
+
+    testWidgets('names the seller above the product, in link blue', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_wrap(ProductCard(product: sold(seller: 'MIA CO'))));
+      await tester.pump();
+
+      final seller = tester.widget<Text>(find.text('MIA CO'));
+      expect(seller.style!.color, AppColors.info);
+      expect(seller.style!.fontWeight, FontWeight.w600);
+      expect(
+        tester.getTopLeft(find.text('MIA CO')).dy,
+        lessThan(tester.getTopLeft(find.text('Corner Sofa Bed')).dy),
+      );
+      // Read out as "Sold by …" (the card may merge it with the name).
+      expect(find.bySemanticsLabel(RegExp('Sold by MIA CO')), findsOneWidget);
+      semantics.dispose();
+    });
+
+    // The image takes what the text leaves, so its height says how tall the
+    // text block is.
+    Future<double> imageHeight(WidgetTester tester, Product product) async {
+      await tester.pumpWidget(_wrap(ProductCard(product: product)));
+      await tester.pump();
+      return tester.getSize(find.byType(HubImage)).height;
+    }
+
+    testWidgets("Hub Market's own product keeps the line, empty, so rows stay level", (
+      tester,
+    ) async {
+      final withSeller = await imageHeight(tester, sold(seller: 'MIA CO'));
+      final own = await imageHeight(tester, sold());
+
+      expect(find.text('MIA CO'), findsNothing);
+      expect(own, withSeller);
+    });
+
+    testWidgets('a listing that did not ask (Build 1) has no seller line', (
+      tester,
+    ) async {
+      final withLine = await imageHeight(tester, sold(seller: 'MIA CO'));
+      final build1 = await imageHeight(
+        tester,
+        sold(seller: 'MIA CO', known: false),
+      );
+
+      expect(find.text('MIA CO'), findsNothing);
+      expect(build1, greaterThan(withLine));
     });
   });
 

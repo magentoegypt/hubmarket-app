@@ -1,7 +1,7 @@
 # =============================================================================
 # COPY - do not edit here. Source of truth is the backend repo:
 #   magentoegypt/multivendor PR #22 (https://github.com/magentoegypt/multivendor/pull/22)
-#   branch feature/hubapp-graphql, commit 501bbe217
+#   branch feature/hubapp-graphql, commit 9c0d00841
 #   app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
 # Refresh with:
 #   git -C <multivendor> show feature/hubapp-graphql:app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
@@ -49,6 +49,17 @@
 #   - vendor_id is a MATCH filter in the live ProductAttributeFilterInput
 #     (FilterMatchTypeInput), so a seller's products are
 #     products(filter: vendor_id match <id>, match_type FULL), not eq.
+#
+# P3.1, store pages (additions only):
+#   - HmAppConfig.capabilities lists the enabled satellites (vendors, bundle,
+#     returns, account). A server with HubApp but without a satellite rejects
+#     a whole document naming one of its fields, so the app adds a satellite's
+#     fields to shared documents (hm_seller on listing cards) only when its
+#     code is listed;
+#   - HubAppVendors: hmStoreReviews (the Reviews tab), hmStoreCategories (the
+#     Stores chips), HmStore contact / location / sales_count (only what the
+#     website's store page publishes), HmStoreCard primary_category and
+#     facet_value (the Algolia seller facet's value).
 # =============================================================================
 
 
@@ -63,7 +74,10 @@ type Query {
     ): HmHome! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\Home") @doc(description: "Active, in-schedule Home sections in admin order with their content; empty sections are omitted. Public; send as GET.") @cache(cacheIdentity: "MagentoEgypt\\HubApp\\Model\\Resolver\\Identity\\HomeIdentity")
     hmDeals(
         pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
-        currentPage: Int = 1 @doc(description: "Page number from 1.")
+        currentPage: Int = 1 @doc(description: "Page number from 1."),
+        category_id: Int @doc(description: "Only deals in this category or below it, e.g. a department id from categories."),
+        min_discount_percent: Int @doc(description: "Only offers of at least this percentage off, 0-100; 0 keeps every offer."),
+        sort: HmDealSort @doc(description: "Order; DISCOUNT when omitted. Write it inline.")
     ): HmProductPage! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\Deals") @doc(description: "Products whose special price is live today (store timezone), deepest percentage discount first.") @cache(cacheIdentity: "MagentoEgypt\\HubApp\\Model\\Resolver\\Identity\\ProductPageIdentity")
     hmBestSellers(
         pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
@@ -77,7 +91,8 @@ type Query {
     hmBrands(
         featured_only: Boolean @doc(description: "Only brands flagged Featured."),
         pageSize: Int = 100 @doc(description: "Items per page, 1-200."),
-        currentPage: Int = 1 @doc(description: "Page number from 1.")
+        currentPage: Int = 1 @doc(description: "Page number from 1."),
+        with_products: Boolean @doc(description: "Only brands whose page lists at least one product.")
     ): HmBrandPage! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\Brands") @doc(description: "Enabled MGS brands assigned to this store view, in admin order.") @cache(cacheIdentity: "MagentoEgypt\\HubApp\\Model\\Resolver\\Identity\\BrandIdentity")
 }
 
@@ -89,6 +104,14 @@ enum HmPlatform @doc(description: "Mobile platform.") {
 enum HmAudience @doc(description: "Who the Home is for.") {
     GUEST @doc(description: "Not signed in.")
     CUSTOMER @doc(description: "Signed-in customer.")
+}
+
+enum HmDealSort @doc(description: "Order of hmDeals, applied to the whole day's ranking.") {
+    DISCOUNT @doc(description: "Deepest percentage discount first, a bundle by its percent special price: the ranking itself.")
+    PRICE_ASC @doc(description: "Lowest indexed guest price first.")
+    PRICE_DESC @doc(description: "Highest indexed guest price first.")
+    ENDING_SOON @doc(description: "Soonest special_to_date first; offers without an end last.")
+    NEWEST @doc(description: "Newest products first, as the storefront's Newest sort: created_at, then id.")
 }
 
 enum HmSectionType @doc(description: "Home section kind (admin Type field).") {
@@ -160,6 +183,12 @@ type HmAppConfig @doc(description: "App settings for one store view.") {
     version: [HmVersionPolicy!]! @doc(description: "Version policy per platform.")
     maintenance: HmMaintenance! @doc(description: "Maintenance mode.")
     features: [HmFeatureFlag!]! @doc(description: "Feature flags; codes unknown to the app mean off.")
+    capabilities: [String!]! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\Capabilities") @doc(description: "HubApp satellites enabled on this server, A-Z: vendors (HubAppVendors), bundle (HubAppBundle), returns (HubAppReturns), account (HubAppAccount). Ask for a satellite's fields only when its code is listed.")
+    shipping: HmShippingConfig! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\Shipping") @doc(description: "Shipping promises of the store view.")
+}
+
+type HmShippingConfig @doc(description: "Shipping promises.") {
+    free_over: Money @doc(description: "Cart subtotal that earns free shipping, the figure the storefront's mini-cart counts down to: the lowest base_subtotal threshold of the active, coupon-free cart price rules granting free shipping to the caller's customer group, guests without a token. Null when there is none.")
 }
 
 type HmSearchConfig @doc(description: "Search settings.") {
@@ -175,6 +204,31 @@ type HmAlgoliaConfig @doc(description: "Algolia as the storefront uses it for th
     product_index: String! @doc(description: "Products index of this store view, e.g. hubmarket_en_products.")
     category_index: String! @doc(description: "Categories index of this store view, e.g. hubmarket_en_categories.")
     page_index: String! @doc(description: "CMS pages index of this store view, e.g. hubmarket_en_pages.")
+    facets: [HmAlgoliaFacet!]! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Search facets in admin order with this store view's labels, as the storefront's algoliaConfig.facets.")
+    sorts: [HmAlgoliaSort!]! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Sort replicas of product_index in admin order, for guests, as algoliaConfig.sortingIndices. Relevance is product_index itself.")
+    suggestion_index: String @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Query suggestions index the storefront's autocomplete reads; null when its suggestions are off.")
+    suggestion_count: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Suggestions the autocomplete shows; 0 when off.")
+    currency_code: String! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Currency of the records' prices, e.g. AED.")
+    price_group: String! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Price group of guest records: default, or group_0 with customer group pricing. The numeric price attribute is price.<currency_code>.<price_group>.")
+    max_values_per_facet: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Facet values the storefront asks for.")
+    product_suggestions: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Products the autocomplete shows.")
+    category_suggestions: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Categories the autocomplete shows.")
+    page_suggestions: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "CMS pages the autocomplete shows; 0 without a pages section.")
+    category_separator: String! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "Between the levels of a categories.levelN value, as indexed, spaces included.")
+    categories_outside_menu: Boolean! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\AppConfig\\AlgoliaLayoutField") @doc(description: "True when categories left out of the menu are searchable too.")
+}
+
+type HmAlgoliaFacet @doc(description: "A facet of the storefront's search.") {
+    attribute: String! @doc(description: "Record attribute, e.g. price, categories, mgs_brand.")
+    type: String! @doc(description: "slider, conjunctive, disjunctive or priceRanges.")
+    label: String! @doc(description: "Label in the store view's language; may be empty.")
+}
+
+type HmAlgoliaSort @doc(description: "A sort replica of the products index.") {
+    index: String! @doc(description: "Replica index, e.g. hubmarket_en_products_price_default_asc.")
+    attribute: String! @doc(description: "Sorted attribute, e.g. price or created_at.")
+    direction: SortEnum! @doc(description: "ASC or DESC.")
+    label: String! @doc(description: "Label in the store view's language.")
 }
 
 type HmContactConfig @doc(description: "Contact channels.") {
@@ -272,6 +326,8 @@ type HmBrand @doc(description: "MGS brand.") {
     image_url: String @doc(description: "Large image; absolute HTTPS.")
     is_featured: Boolean! @doc(description: "Featured flag.")
     link: HmLink! @doc(description: "Brand destination.")
+    product_count: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\BrandCount") @doc(description: "Products its brand page lists: the brand's products that pass the storefront gate in this store view.")
+    seller_count: Int! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\BrandCount") @doc(description: "Distinct sellers of those products; Hub Market itself counts as one.")
 }
 
 type HmBrandPage @doc(description: "Brands page.") {
@@ -285,6 +341,7 @@ type HmProductPage @doc(description: "Ranked products page.") {
     total_count: Int! @doc(description: "Ranked products available (capped at 200).")
     page_info: SearchResultPageInfo! @doc(description: "Paging.")
     countdown_ends_at: String @doc(description: "hmDeals: soonest offer end on this page.")
+    categories: [HmCategoryCount!] @doc(description: "hmDeals: departments, the active top-level categories, of the deals matching every filter but category_id, catalogue order, with counts; empty when fewer than two. Null for other lists.")
 }
 
 type HmBundleDeal @doc(description: "Bundle card.") {
@@ -338,6 +395,12 @@ type Query {
     hmStore(
         code: String! @doc(description: "Seller code, case-insensitive.")
     ): HmStore @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Store") @doc(description: "An approved seller's store page; null otherwise. For its products, filter products by vendor_id match card.vendor_entity_id (a match filter in the live schema, not eq).") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\StoreIdentity")
+    hmStoreReviews(
+        code: String! @doc(description: "Seller code, case-insensitive."),
+        pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
+        currentPage: Int = 1 @doc(description: "Page number from 1.")
+    ): HmStoreReviewPage @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreReviews") @doc(description: "A store page's Reviews tab: approved reviews of the seller's products that this store view shows, newest first, with the seller's rating as the card counts it; null for a code that is not an approved seller. Public; GET.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\StoreReviewsIdentity")
+    hmStoreCategories: HmStoreCategories! @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreCategories") @doc(description: "The Stores chips: top-level menu categories in menu order with how many sellers each holds, as the hmStores category_id filter counts them; categories with none are left out. Public; GET.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\StoreCategoriesIdentity")
 }
 
 input HmStoreFilterInput @doc(description: "Store filters.") {
@@ -378,6 +441,8 @@ type HmStoreCard @doc(description: "Seller card.") {
     is_featured: Boolean! @doc(description: "Show on Home flag.")
     joined_at: String! @doc(description: "Joined, ISO-8601 UTC.")
     link: HmLink! @doc(description: "Store page link.")
+    primary_category: HmCategoryCount @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreCardCategory") @doc(description: "Top-level menu category holding most of the seller's listable products, count being how many are in it; null when none is filed in one.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\CategoryCountIdentity")
+    facet_value: String @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreCardFacetValue") @doc(description: "The seller's value in the storefront's Algolia seller facet, the product records' seller attribute, in this store view: match facet counts to stores on it, not on name. Null when records carry no seller.")
 }
 
 type HmStore @doc(description: "Store page.") {
@@ -387,6 +452,13 @@ type HmStore @doc(description: "Store page.") {
     about_html: String @doc(description: "About HTML when shown.")
     shipping_policy_html: String @doc(description: "Shipping policy HTML when enabled.")
     refund_policy_html: String @doc(description: "Refund policy HTML when enabled.")
+    contact: HmStoreContact @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreContact") @doc(description: "Ways to reach the seller that the store page publishes; null when it publishes none.")
+    location: String @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreLocation") @doc(description: "The store page's location line: the admin's address template in this store view's language, city and region translated as the website shows them; null when empty.")
+    sales_count: Int @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreSalesCount") @doc(description: "The store page's sales count, the seller's orders with a paid amount; null while the admin hides sales counts.")
+}
+
+type HmStoreContact @doc(description: "Seller contact the store page publishes.") {
+    phone: String @doc(description: "Telephone as the seller typed it; the page's Contact Vendor button dials it. Null while the admin hides seller phones.")
 }
 
 type HmStorePage @doc(description: "Seller cards page.") {
@@ -405,6 +477,39 @@ type HmProductOffer @doc(description: "Another seller's offer on the same produc
     regular_price: Money! @doc(description: "Price before discounts; equal to price when there is none.")
     stock_status: ProductStockStatus! @doc(description: "Stock status. The website lists only offers in stock, so every listed offer is IN_STOCK.")
     dispatch_time: HmDispatchTime @doc(description: "The seller's typical dispatch time, or null.")
+}
+
+type HmStoreCategories @doc(description: "Seller counts for the Stores chips.") {
+    total_count: Int! @doc(description: "Sellers with a listable product, the All chip: hmStores total_count without filters.")
+    items: [HmCategoryCount!]! @doc(description: "Categories in menu order; count is the number of sellers in each.")
+}
+
+type HmStoreReviewSummary @doc(description: "The seller's rating, the figures of HmStoreCard.") {
+    rating: Float @doc(description: "Out of 5, one decimal; null when unrated.")
+    review_count: Int! @doc(description: "Approved reviews in every store view.")
+}
+
+type HmStoreReviewProduct @doc(description: "The product a review is about.") {
+    name: String! @doc(description: "Name in this store view.")
+    url_key: String @doc(description: "URL key; null when the storefront does not list the product.")
+    thumbnail_url: String @doc(description: "Absolute HTTPS thumbnail or null.")
+}
+
+type HmStoreReview @doc(description: "A review of one of the seller's products.") {
+    id: Int! @doc(description: "Review id.")
+    nickname: String! @doc(description: "Reviewer's nickname.")
+    title: String @doc(description: "Title, plain text.")
+    text: String @doc(description: "Review text, plain text.")
+    rating: Float @doc(description: "Average of the review's votes out of 5, one decimal; null without votes.")
+    created_at: String! @doc(description: "Written, ISO-8601 UTC.")
+    product: HmStoreReviewProduct @doc(description: "Reviewed product.")
+}
+
+type HmStoreReviewPage @doc(description: "A seller's reviews.") {
+    summary: HmStoreReviewSummary! @doc(description: "The seller's rating.")
+    items: [HmStoreReview!]! @doc(description: "Reviews, newest first.")
+    total_count: Int! @doc(description: "Reviews this store view shows.")
+    page_info: SearchResultPageInfo! @doc(description: "Paging.")
 }
 
 type HmHomeSection {
@@ -449,6 +554,25 @@ input HmBundleSelectionInput @doc(description: "Chosen selection.") {
     configurable_option_uids: [ID!] @doc(description: "For configurable selections: ConfigurableProductOptionsValues.uid per attribute.")
 }
 
+type Query {
+    hmBundleQuote(
+        sku: String! @doc(description: "Bundle or new_bundle SKU."),
+        quantity: Float @doc(description: "Packages; 1 when omitted."),
+        selections: [HmBundleSelectionInput!]! @doc(description: "The package as for hmAddBundleToCart, one entry per chosen selection. Write the list inline; scalar variables may fill it.")
+    ): HmBundleQuote! @resolver(class: "MagentoEgypt\\HubAppBundle\\Model\\Resolver\\BundleQuote") @doc(description: "One package priced the way the cart will charge it: the buy request hmAddBundleToCart would add, priced by the bundle price model for the caller's customer group, before cart price rules, tax and shipping. Public; send as GET.") @cache(cacheIdentity: "MagentoEgypt\\HubAppBundle\\Model\\Resolver\\Identity\\BundleQuoteIdentity")
+}
+
+type HmBundleQuote @doc(description: "A priced package.") {
+    available: Boolean! @doc(description: "True when the cart would take this package: a saleable bundle and a complete choice of saleable selections. Stock quantities are checked when it is added.")
+    message: String @doc(description: "Why not, in the store view's language; null when available.")
+    quantity: Float! @doc(description: "Packages priced.")
+    price: Money @doc(description: "One package: the cart line's unit price. Null when not available.")
+    row_total: Money @doc(description: "price times quantity: the cart line before cart price rules, tax and shipping. Null when not available.")
+    regular_total: Money @doc(description: "One package's items bought separately at their regular prices; null without a real saving.")
+    saving: Money @doc(description: "regular_total minus price; null when none.")
+    discount_percent: Int! @doc(description: "saving as a rounded percent of regular_total; 0 when none.")
+}
+
 
 # ===================== HubAppReturns/etc/schema.graphqls (C) =====================
 
@@ -458,6 +582,9 @@ type Query {
         pageSize: Int = 10 @doc(description: "Orders per page, 1-20."),
         currentPage: Int = 1 @doc(description: "Page number from 1.")
     ): HmReturnableOrderPage! @resolver(class: "MagentoEgypt\\HubAppReturns\\Model\\Resolver\\ReturnableOrders") @doc(description: "Customer's orders with a returnable item, newest first. Token.") @cache(cacheable: false)
+    hmReturnableOrder(
+        order_number: String! @doc(description: "Order increment id.")
+    ): HmReturnableOrder @resolver(class: "MagentoEgypt\\HubAppReturns\\Model\\Resolver\\ReturnableOrder") @doc(description: "One of the customer's orders with its lines as hmReturnableOrders lists them; null when it is not theirs, not processing or complete, or has nothing left to return. Token.") @cache(cacheable: false)
     hmReturns(
         pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
         currentPage: Int = 1 @doc(description: "Page number from 1.")
@@ -474,6 +601,12 @@ type Mutation {
     hmAddReturnMessage(
         input: HmAddReturnMessageInput! @doc(description: "Message.")
     ): HmReturnOutput! @resolver(class: "MagentoEgypt\\HubAppReturns\\Model\\Resolver\\AddReturnMessage") @doc(description: "Customer reply; notifies seller and admin like the website. Token.")
+    hmEscalateReturn(
+        input: HmEscalateReturnInput! @doc(description: "Escalation.")
+    ): HmReturnOutput! @resolver(class: "MagentoEgypt\\HubAppReturns\\Model\\Resolver\\EscalateReturn") @doc(description: "Ask Hub Market to step in, as the website's Escalate form does; only while HmReturn.can_escalate. Token.")
+    hmCancelReturn(
+        input: HmCancelReturnInput! @doc(description: "Return to cancel.")
+    ): HmReturnOutput! @resolver(class: "MagentoEgypt\\HubAppReturns\\Model\\Resolver\\CancelReturn") @doc(description: "Cancel one of the customer's returns, as the website's Cancel button does; only while HmReturn.can_cancel. Token.")
 }
 
 enum HmReturnType @doc(description: "Requested outcome.") {
@@ -506,6 +639,9 @@ type HmReturnConfig @doc(description: "Return form settings.") {
     reasons: [HmReturnReason!]! @doc(description: "Active reasons, sorted.")
     policy_html: String @doc(description: "Policy CMS block HTML.")
     window_days: Int @doc(description: "Days after order creation; null = no window (website rule for customers).")
+    attachment_extensions: [String!]! @doc(description: "File extensions a message may carry, lower case: the RMA Allowed file extensions setting the website's upload uses, less the store's protected extensions.")
+    attachment_max_bytes: Int! @doc(description: "Largest file in bytes: the store's upload limit, as on the website, at most 10 MB.")
+    attachment_max_files: Int! @doc(description: "Most files one message may carry.")
 }
 
 type HmReturnReason @doc(description: "Reason.") {
@@ -536,6 +672,9 @@ type HmReturnableItem @doc(description: "Order line.") {
     qty_returnable: Float! @doc(description: "Returnable now (website formula).")
     open_return_numbers: [String!]! @doc(description: "Non-cancelled returns already holding this line.")
     seller: HmSellerSummary @doc(description: "Seller; one seller per return.")
+    unit_price: Money @doc(description: "Paid per unit, the refund cap's base: (row total incl. tax - discount) / qty ordered, in the order currency. A bundle's child line has its own figures, as on the website.")
+    row_total: Money @doc(description: "Paid for the whole line: row total incl. tax - discount, in the order currency.")
+    max_refund: Money @doc(description: "Most a custom refund may ask for this line: unit_price x qty_returnable, the cap hmCreateReturn applies.")
 }
 
 input HmCreateReturnInput @doc(description: "Return request.") {
@@ -549,6 +688,7 @@ input HmCreateReturnInput @doc(description: "Return request.") {
     refund_amount_type: HmRefundAmountType @doc(description: "REFUND only; FULL when omitted.")
     refund_custom_amount: Float @doc(description: "CUSTOM amount.")
     tracking_code: String @doc(description: "Return shipment tracking, max 255 characters: letters, digits, spaces, dot, underscore, slash, hash and hyphen only.")
+    attachments: [HmReturnAttachmentInput!] @doc(description: "Files with the first message, e.g. photos: HmReturnConfig.attachment_extensions, at most attachment_max_bytes each and attachment_max_files in all.")
 }
 
 input HmReturnItemInput @doc(description: "Line to return.") {
@@ -559,6 +699,23 @@ input HmReturnItemInput @doc(description: "Line to return.") {
 input HmAddReturnMessageInput @doc(description: "Reply.") {
     return_id: Int! @doc(description: "Return id.")
     message: String! @doc(description: "Plain text, max 5000 chars.")
+    attachments: [HmReturnAttachmentInput!] @doc(description: "Files with the reply, e.g. photos; the same rules as on hmCreateReturn.")
+}
+
+input HmReturnAttachmentInput @doc(description: "A file sent with a message, checked by the website's upload rules.") {
+    name: String! @doc(description: "File name with its extension, e.g. photo-1.jpg; stored cleaned and made unique.")
+    mime_type: String! @doc(description: "MIME type matching the extension, e.g. image/jpeg.")
+    content_base64: String! @doc(description: "The file, base64-encoded.")
+}
+
+input HmEscalateReturnInput @doc(description: "Escalation to Hub Market.") {
+    return_id: Int! @doc(description: "Return id.")
+    message: String! @doc(description: "What Hub Market should know, plain text, max 5000 chars.")
+    attachments: [HmReturnAttachmentInput!] @doc(description: "Files with it, e.g. photos; the same rules as on hmCreateReturn.")
+}
+
+input HmCancelReturnInput @doc(description: "Cancellation.") {
+    return_id: Int! @doc(description: "Return id.")
 }
 
 type HmReturnOutput @doc(description: "Mutation result.") {
@@ -583,6 +740,14 @@ type HmReturnSummary @doc(description: "Return row.") {
     item_count: Int! @doc(description: "Lines.")
     seller: HmSellerSummary @doc(description: "Seller.")
     has_unread_reply: Boolean! @doc(description: "is_customer_read = 0.")
+    status_code: String! @doc(description: "ves_rma_status code, as HmReturn.status_code: pending, approval, resolved, canceled, awaiting ...")
+    refund_amount: Money @doc(description: "Refund amount when set, refunds only, in the order currency; as HmReturn.refund_amount.")
+    first_item: HmReturnSummaryItem @doc(description: "The first line of the return, to picture it; null when its order line is gone.")
+}
+
+type HmReturnSummaryItem @doc(description: "A line shown on a return's card.") {
+    name: String! @doc(description: "Name as ordered.")
+    thumbnail: String @doc(description: "Thumbnail, absolute HTTPS.")
 }
 
 type HmReturn @doc(description: "Return detail.") {
@@ -605,6 +770,17 @@ type HmReturn @doc(description: "Return detail.") {
     items: [HmReturnItem!]! @doc(description: "Lines.")
     history: [HmReturnHistoryEntry!]! @doc(description: "Status history, oldest first.")
     messages: [HmReturnMessage!]! @doc(description: "Thread, oldest first.")
+    can_reply: Boolean! @doc(description: "hmAddReturnMessage is taken: state open, awaiting or being reviewed, when the website shows its reply form.")
+    can_cancel: Boolean! @doc(description: "hmCancelReturn is taken: status pending or approval, when the website shows Cancel.")
+    can_escalate: Boolean! @doc(description: "hmEscalateReturn is taken: not cancelled and never escalated, when the website shows Escalate RMA.")
+    escalation: HmReturnEscalation @doc(description: "The customer's escalation to Hub Market, as the website's RMA Escalate tab shows it; null before one.")
+}
+
+type HmReturnEscalation @doc(description: "The customer's escalation to Hub Market.") {
+    body_html: String! @doc(description: "Sanitised HTML.")
+    body_text: String! @doc(description: "Plain text.")
+    attachments: [HmReturnAttachment!]! @doc(description: "Files sent with it.")
+    created_at: String! @doc(description: "When, UTC.")
 }
 
 type HmReturnItem @doc(description: "Returned line.") {
@@ -630,6 +806,12 @@ type HmReturnMessage @doc(description: "Message.") {
     body_text: String! @doc(description: "Plain text.")
     attachment_urls: [String!]! @doc(description: "Attachment URLs (read-only in P2).")
     created_at: String! @doc(description: "When, UTC.")
+    attachments: [HmReturnAttachment!]! @doc(description: "Files on the message, in the order sent: name and URL.")
+}
+
+type HmReturnAttachment @doc(description: "A file on a message.") {
+    name: String! @doc(description: "File name as stored.")
+    url: String! @doc(description: "Absolute HTTPS URL.")
 }
 
 

@@ -22,6 +22,10 @@ extension StoreCardX on HmStoreCard {
 
   /// The seller's storefront page — what Share sends; null without one.
   String? get webUrl => link.url.trim().isEmpty ? null : link.url;
+
+  /// The category the card names ("Furniture · 38 products"); null when the
+  /// list didn't ask or the seller has none.
+  String? get categoryName => primaryCategory?.name;
 }
 
 /// A seller's store page (`HmStore`): the card plus the banner, the texts and
@@ -35,6 +39,9 @@ class StoreProfile {
     this.aboutHtml,
     this.shippingPolicyHtml,
     this.refundPolicyHtml,
+    this.phone,
+    this.location,
+    this.salesCount,
   });
 
   final HmStoreCard card;
@@ -50,14 +57,34 @@ class StoreProfile {
   final String? shippingPolicyHtml;
   final String? refundPolicyHtml;
 
+  /// The seller's telephone, as the website's store page shows it and its
+  /// "Contact Vendor" button dials it; null while the admin hides seller
+  /// phones, or when the page didn't ask (`storeExtras`).
+  final String? phone;
+
+  /// The website's location line ("Dubai, United Arab Emirates"), in the
+  /// store view's language.
+  final String? location;
+
+  /// The website's "N Sales"; null while the admin hides sales counts.
+  final int? salesCount;
+
   bool get hasPolicies =>
       shippingPolicyHtml != null || refundPolicyHtml != null;
+
+  /// [phone] as a `tel:` link — digits and `+` only, as the website dials it;
+  /// null without a number to dial.
+  Uri? get phoneUri {
+    final dial = phone?.replaceAll(RegExp(r'[^0-9+]'), '') ?? '';
+    return dial.isEmpty ? null : Uri(scheme: 'tel', path: dial);
+  }
 
   /// Null without a JSON object or a usable card.
   static StoreProfile? fromJson(Object? json) {
     if (json is! Map<String, dynamic>) return null;
     final card = HmStoreCard.fromJson(json['card']);
     if (card == null) return null;
+    final contact = json['contact'];
     return StoreProfile(
       card: card,
       bannerUrl: hmImageUrl(json['banner_url']),
@@ -65,6 +92,9 @@ class StoreProfile {
       aboutHtml: hmString(json['about_html']),
       shippingPolicyHtml: hmString(json['shipping_policy_html']),
       refundPolicyHtml: hmString(json['refund_policy_html']),
+      phone: contact is Map<String, dynamic> ? hmString(contact['phone']) : null,
+      location: hmString(json['location']),
+      salesCount: hmInt(json['sales_count']),
     );
   }
 }

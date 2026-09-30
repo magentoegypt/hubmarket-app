@@ -134,6 +134,17 @@
   "storesFeaturedBadge": "FEATURED STORE",
   "storesVisit": "Visit",
   "storesAllTitle": "All stores",
+  "storesCategoryChip": "{category}, {count, plural, =1{1 store} other{{count} stores}}",
+  "@storesCategoryChip": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "storesSortTopRated": "Top rated",
   "storesSortNewest": "Newest",
   "storesSortMostProducts": "Most products",
@@ -161,6 +172,7 @@
   "storeTabProducts": "Products",
   "storeTabAbout": "About",
   "storeTabPolicies": "Policies",
+  "storeTabReviews": "Reviews",
   "storeSearchHint": "Search {store} products",
   "@storeSearchHint": {
     "placeholders": {
@@ -174,6 +186,7 @@
   "storeStatDispatch": "Typical dispatch",
   "storeStatAverageRating": "Average rating",
   "storeStatCustomerReviews": "Customer reviews",
+  "storeStatSales": "Sales",
   "storePoliciesTitle": "Store policies",
   "storeShippingPolicy": "Shipping policy",
   "storeRefundPolicy": "Refund & exchange policy",
@@ -190,6 +203,16 @@
       }
     }
   },
+  "storeContactVendor": "Contact vendor",
+  "storeCallVendor": "Call {store}",
+  "@storeCallVendor": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "storeReviewsOtherLanguage": "This store's reviews were written in the other language.",
   "filtersLabel": "Filters",
   "filterPriceLabel": "Price",
   "filterPriceRangeLabel": "Price Range",
@@ -1275,6 +1298,14 @@
       },
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "productCardSoldBy": "Sold by {seller}",
+  "@productCardSoldBy": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
       }
     }
   },

@@ -1,6 +1,7 @@
 import 'package:gql/ast.dart';
 import 'package:gql/language.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:hubmarket_app/core/graphql/possible_types.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/marketplace/marketplace_features.dart';
 
@@ -22,6 +23,7 @@ class RecordingMarketplaceGate implements MarketplaceGate {
   @override
   void sellersMissing() {
     sellersMissingCalls++;
+    // HubAppVendors is gone: its listing sellers and store extras with it.
     features = MarketplaceFeatures(
       sellers: false,
       bundles: features.bundles,
@@ -36,6 +38,8 @@ class RecordingMarketplaceGate implements MarketplaceGate {
       sellers: features.sellers,
       bundles: false,
       packages: features.packages,
+      listingSellers: features.listingSellers,
+      storeExtras: features.storeExtras,
     );
   }
 
@@ -46,6 +50,8 @@ class RecordingMarketplaceGate implements MarketplaceGate {
       sellers: features.sellers,
       bundles: features.bundles,
       packages: false,
+      listingSellers: features.listingSellers,
+      storeExtras: features.storeExtras,
     );
   }
 }
@@ -78,7 +84,10 @@ class RecordingGraphQLClient {
       );
     }),
     // Canned data may leave out fields and `__typename`s.
-    cache: GraphQLCache(partialDataPolicy: PartialDataCachePolicy.accept),
+    cache: GraphQLCache(
+      partialDataPolicy: PartialDataCachePolicy.accept,
+      possibleTypes: kPossibleTypes,
+    ),
   );
 }
 

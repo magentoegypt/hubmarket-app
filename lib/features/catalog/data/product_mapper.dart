@@ -28,12 +28,18 @@ num? _number(Object? value) =>
 
 /// Maps a listing product (PLP / search / wishlist / PDP rails). [now] only
 /// pins "today" for the NEW badge in tests. The rating fields stay null when
-/// the document didn't ask for `rating_summary` / `review_count`.
+/// the document didn't ask for `rating_summary` / `review_count`, the seller
+/// ones unless it asked for `hm_seller` (`SellerSelections.withCardSellers`).
 Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
   final image = json['image'] as Map<String, dynamic>?;
   final minPrice =
       (json['price_range'] as Map<String, dynamic>?)?['minimum_price']
           as Map<String, dynamic>?;
+  final seller = json['hm_seller'];
+  // Hub Market's own products: the website's card leaves the seller line empty.
+  final sold = seller is Map<String, dynamic> && seller['is_marketplace'] != true
+      ? seller
+      : null;
   return Product(
     sku: (json['sku'] as String?) ?? '',
     name: (json['name'] as String?) ?? '',
@@ -51,7 +57,17 @@ Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
     typeId: productTypeFromTypename(json['__typename']),
     ratingSummary: _number(json['rating_summary'])?.toDouble(),
     reviewCount: _number(json['review_count'])?.toInt(),
+    sellerKnown: json.containsKey('hm_seller'),
+    sellerName: _text(sold?['name']),
+    sellerCode: _text(sold?['code']),
   );
+}
+
+/// A trimmed non-empty string, else null.
+String? _text(Object? value) {
+  if (value is! String) return null;
+  final text = value.trim();
+  return text.isEmpty ? null : text;
 }
 
 /// Magento's product type from a GraphQL item's `__typename` (which the

@@ -30,7 +30,9 @@ class SearchVendor {
   final bool nameMatch;
 }
 
-/// The seller facet's counts by display name, or empty without one.
+/// The seller facet's counts by facet value, or empty without one. Values
+/// are kept as the index has them: [searchVendorsFrom] compares them exactly
+/// with [HmStoreCard.facetValue].
 Map<String, int> sellerFacetCounts(List<Aggregation> facets) {
   final facet = facets
       .where((f) => f.attributeCode == kSellerFacet)
@@ -39,7 +41,7 @@ Map<String, int> sellerFacetCounts(List<Aggregation> facets) {
     for (final option in facet?.options ?? const <AggregationOption>[])
       if (option.count > 0 &&
           (option.value.trim().isNotEmpty || option.label.trim().isNotEmpty))
-        (option.value.trim().isNotEmpty ? option.value : option.label).trim():
+        (option.value.isNotEmpty ? option.value : option.label):
             option.count,
   };
 }
@@ -48,27 +50,38 @@ Map<String, int> sellerFacetCounts(List<Aggregation> facets) {
 /// query (the shopper typed a store's name), then the sellers of the matching
 /// products by how many they sell.
 ///
-/// The seller facet names sellers, so each name is looked up in [directory]
-/// (every approved seller) — both are the storefront's display name in the
-/// same language. A name the directory doesn't know is dropped: the app
-/// could not open that store.
+/// The seller facet counts products by the value AlgoliaVendor indexes for
+/// their seller, so each value is looked up in [directory] (every approved
+/// seller): exactly, by the card's [HmStoreCard.facetValue] — the backend's
+/// own record of that value — and, for cards from a server that doesn't send
+/// it, by display name (the same text in the same language today, compared
+/// loosely). A value the directory doesn't know is dropped: the app could not
+/// open that store.
 List<SearchVendor> searchVendorsFrom({
   required List<HmStoreCard> nameMatches,
   List<HmStoreCard> directory = const <HmStoreCard>[],
   Map<String, int> sellerCounts = const <String, int>{},
 }) {
   String key(String name) => name.trim().toLowerCase();
+  final byFacet = <String, HmStoreCard>{
+    for (final card in nameMatches)
+      if (card.facetValue case final value?) value: card,
+    for (final card in directory)
+      if (card.facetValue case final value?) value: card,
+  };
   final byName = <String, HmStoreCard>{
-    for (final card in nameMatches) key(card.name): card,
-    for (final card in directory) key(card.name): card,
+    for (final card in nameMatches)
+      if (card.facetValue == null) key(card.name): card,
+    for (final card in directory)
+      if (card.facetValue == null) key(card.name): card,
   };
   final byCode = <String, HmStoreCard>{
     for (final card in directory) card.code: card,
     for (final card in nameMatches) card.code: card,
   };
   final counts = <String, int>{};
-  for (final MapEntry(key: name, value: count) in sellerCounts.entries) {
-    final card = byName[key(name)];
+  for (final MapEntry(key: value, value: count) in sellerCounts.entries) {
+    final card = byFacet[value] ?? byName[key(value)];
     if (card != null) counts[card.code] = (counts[card.code] ?? 0) + count;
   }
 

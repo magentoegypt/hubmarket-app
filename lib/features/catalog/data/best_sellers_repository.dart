@@ -4,6 +4,8 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../../../core/graphql/graphql_client.dart';
 import '../../../core/hubapp/hubapp.dart';
+import '../../marketplace/data/listing_sellers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../domain/product.dart';
 import 'product_mapper.dart';
 
@@ -13,9 +15,15 @@ import 'product_mapper.dart';
 /// [HubAppMissing] when the server has no such field, a `Failure` for
 /// anything else.
 class BestSellersRepository {
-  BestSellersRepository(this._client);
+  BestSellersRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
+
+  /// Whether the cards ask who sells each product (`sendListing`).
+  final MarketplaceGate _marketplace;
 
   /// The backend accepts 1–50 per page.
   static const int maxPageSize = 50;
@@ -57,13 +65,17 @@ query HmBestSellers($pageSize: Int, $currentPage: Int) {
     int pageSize = 20,
     int currentPage = 1,
   }) async {
-    final data = await runHubAppQuery(
-      _client,
+    final data = await sendListing(
+      _marketplace,
       query,
-      variables: <String, dynamic>{
-        'pageSize': pageSize.clamp(1, maxPageSize),
-        'currentPage': currentPage < 1 ? 1 : currentPage,
-      },
+      (document, _) => runHubAppQuery(
+        _client,
+        document,
+        variables: <String, dynamic>{
+          'pageSize': pageSize.clamp(1, maxPageSize),
+          'currentPage': currentPage < 1 ? 1 : currentPage,
+        },
+      ),
     );
     return bestSellersPageFromJson(data['hmBestSellers']);
   }
@@ -103,5 +115,8 @@ BestSellersPage bestSellersPageFromJson(Object? json) {
 }
 
 final bestSellersRepositoryProvider = Provider<BestSellersRepository>(
-  (ref) => BestSellersRepository(ref.watch(publicGraphqlClientProvider)),
+  (ref) => BestSellersRepository(
+    ref.watch(publicGraphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );

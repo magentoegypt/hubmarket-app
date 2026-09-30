@@ -67,6 +67,7 @@ Widget _searchHarness(
   required String locale,
   required FakeAlgoliaBackend algolia,
   String? initialQuery,
+  HubAppState hubApp = const HubAppState.available(kSampleHmAppConfig),
 }) {
   final router = GoRouter(
     initialLocation: '/search',
@@ -97,7 +98,7 @@ Widget _searchHarness(
       ),
       cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
-      hubAppOverride(const HubAppState.available(kSampleHmAppConfig)),
+      hubAppOverride(hubApp),
       publicGraphqlClientProvider.overrideWithValue(
         FakeStoresBackend(storesAnswers(store: locale)).client,
       ),
@@ -203,6 +204,137 @@ void main() {
         );
         await tester.pumpAndSettle();
         await captureScreen(tester, key, 'search_09c_vendors_$locale');
+      });
+      expect(find.byType(SearchVendorCard), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    // P3.1: a server that lists the `vendors` capability — the chips' counts
+    // and the cards' categories (12), the location line, Contact vendor and
+    // the Reviews tab (13), Sales and Call (13b), the vendor card's category
+    // and the product cards' seller line (09c).
+    const vendors = HubAppState.available(kVendorsHmAppConfig);
+
+    testWidgets('12 Stores with counts and categories renders in $locale', (
+      tester,
+    ) async {
+      await withRealShadows(() async {
+        _surface(tester);
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          storesHarness(
+            location: '/stores',
+            backend: FakeStoresBackend(storesAnswers(store: locale)),
+            locale: locale,
+            boundary: key,
+            hubApp: vendors,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'stores_12_list_p31_$locale');
+      });
+      expect(
+        find.text(
+          locale == 'ar' ? 'أزياء · 64 منتج' : 'Fashion · 64 products',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('13 Store page with Contact vendor renders in $locale', (
+      tester,
+    ) async {
+      await withRealShadows(() async {
+        _surface(tester);
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          storesHarness(
+            location: '/store/MIA',
+            backend: FakeStoresBackend(storesAnswers(store: locale)),
+            locale: locale,
+            boundary: key,
+            hubApp: vendors,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'stores_13_store_p31_$locale');
+      });
+      expect(
+        find.text(locale == 'ar' ? 'تواصل مع البائع' : 'Contact vendor'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('13 Reviews tab renders in $locale', (tester) async {
+      await withRealShadows(() async {
+        _surface(tester);
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          storesHarness(
+            location: '/store/MIA',
+            backend: FakeStoresBackend(storesAnswers(store: locale)),
+            locale: locale,
+            boundary: key,
+            hubApp: vendors,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(locale == 'ar' ? 'التقييمات' : 'Reviews'));
+        await tester.pumpAndSettle();
+        // Scrolled as 13b is: the header collapsed, the tabs pinned.
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -330));
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'stores_13_reviews_$locale');
+      });
+      expect(find.text(locale == 'ar' ? 'سارة' : 'Sara K.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('13b About with Sales and Call renders in $locale', (
+      tester,
+    ) async {
+      await withRealShadows(() async {
+        _surface(tester, height: 1250);
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          storesHarness(
+            location: '/store/MIA',
+            backend: FakeStoresBackend(storesAnswers(store: locale)),
+            locale: locale,
+            boundary: key,
+            hubApp: vendors,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(locale == 'ar' ? 'عن المتجر' : 'About'));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'stores_13b_about_p31_$locale');
+      });
+      expect(find.text('1,240'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('09c with categories and seller lines renders in $locale', (
+      tester,
+    ) async {
+      await withRealShadows(() async {
+        _surface(tester);
+        final key = GlobalKey();
+        await tester.pumpWidget(
+          _searchHarness(
+            key,
+            locale: locale,
+            algolia: FakeAlgoliaBackend(answer: _algolia(locale)),
+            initialQuery: locale == 'ar' ? 'كنبة' : 'sofa',
+            hubApp: vendors,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'search_09c_vendors_p31_$locale');
       });
       expect(find.byType(SearchVendorCard), findsOneWidget);
       expect(tester.takeException(), isNull);

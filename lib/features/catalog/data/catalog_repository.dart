@@ -4,7 +4,10 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/hubapp/hubapp_query.dart';
 import '../../../core/util/media.dart';
+import '../../marketplace/data/listing_sellers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../domain/aggregation.dart';
 import '../domain/category.dart';
 import '../domain/product.dart';
@@ -37,10 +40,17 @@ const bool kRatingFilterSupported = false;
 
 /// Reads catalogue data via GraphQL and returns domain entities (or throws a
 /// [Failure]). Presentation never sees a raw GraphQL map.
+///
+/// Product listings ask who sells each product while [MarketplaceGate] allows
+/// it (the card's seller line, see `sendListing`).
 class CatalogRepository {
-  CatalogRepository(this._client);
+  CatalogRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
+  final MarketplaceGate _marketplace;
 
   Future<List<Category>> fetchCategoryTree() async {
     final data = await _query(CatalogQueries.categoryTree, const {});
@@ -215,9 +225,10 @@ class CatalogRepository {
     };
     // A search also asks for each hit's categories (the type-ahead's "in …"
     // line); plain listings keep the lighter document.
-    final data = await _query(
+    final data = await sendListing(
+      _marketplace,
       isSearch ? CatalogQueries.searchProducts : CatalogQueries.products,
-      variables,
+      (document, twin) => _query(document, variables, throwMissing: twin),
     );
     final products = data['products'] as Map<String, dynamic>?;
     return products == null ? ProductPage.empty : _parseProductPage(products);
@@ -325,10 +336,13 @@ class CatalogRepository {
     }
   }
 
+  /// [throwMissing]: a "Cannot query field" answer throws [HubAppMissing]
+  /// rather than a [Failure] (a listing's seller twin, see `sendListing`).
   Future<Map<String, dynamic>> _query(
     String document,
-    Map<String, dynamic> variables,
-  ) async {
+    Map<String, dynamic> variables, {
+    bool throwMissing = false,
+  }) async {
     try {
       final result = await _client.query(
         QueryOptions(
@@ -338,10 +352,16 @@ class CatalogRepository {
         ),
       );
       if (result.hasException) {
-        throw mapOperationException(result.exception!);
+        final exception = result.exception!;
+        if (throwMissing) {
+          if (missingOrNull(exception) case final missing?) throw missing;
+        }
+        throw mapOperationException(exception);
       }
       return result.data ?? const <String, dynamic>{};
     } on Failure {
+      rethrow;
+    } on HubAppMissing {
       rethrow;
     } catch (error) {
       throw Failure(FailureKind.unknown, detail: error.toString());
@@ -413,5 +433,8 @@ class CatalogRepository {
 }
 
 final catalogRepositoryProvider = Provider<CatalogRepository>(
-  (ref) => CatalogRepository(ref.watch(graphqlClientProvider)),
+  (ref) => CatalogRepository(
+    ref.watch(graphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );

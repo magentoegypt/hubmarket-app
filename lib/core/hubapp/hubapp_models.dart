@@ -212,6 +212,53 @@ class HmDispatchTime {
   }
 }
 
+/// `HmCategoryCount` — a category with a count (bundle and store chips, a
+/// seller's primary category).
+@immutable
+class HmCategoryCount {
+  const HmCategoryCount({
+    required this.id,
+    required this.uid,
+    required this.name,
+    this.count = 0,
+  });
+
+  final int id;
+  final String uid;
+
+  /// In the store view's language.
+  final String name;
+
+  /// What is counted depends on the field: sellers for a Stores chip, the
+  /// seller's products for a primary category.
+  final int count;
+
+  /// Null without a JSON object, a uid or a name.
+  static HmCategoryCount? fromJson(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    final uid = hmString(json['uid']);
+    final name = hmString(json['name']);
+    if (uid == null || name == null) return null;
+    return HmCategoryCount(
+      id: hmInt(json['id']) ?? 0,
+      uid: uid,
+      name: name,
+      count: hmInt(json['count']) ?? 0,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is HmCategoryCount &&
+      other.id == id &&
+      other.uid == uid &&
+      other.name == name &&
+      other.count == count;
+
+  @override
+  int get hashCode => Object.hash(id, uid, name, count);
+}
+
 /// `HmStoreCard` — a seller card (Home store sections, the stores list, the
 /// head of a store page).
 @immutable
@@ -228,6 +275,8 @@ class HmStoreCard {
     this.dispatchTime,
     this.isFeatured = false,
     this.joinedAt,
+    this.primaryCategory,
+    this.facetValue,
   });
 
   final String code;
@@ -248,6 +297,16 @@ class HmStoreCard {
   final DateTime? joinedAt;
   final HmLink link;
 
+  /// The top-level category holding most of the seller's products, with how
+  /// many ("Furniture · 38 products"); null without one, or when the list
+  /// didn't ask ([HmFragments.storeCardExtras]).
+  final HmCategoryCount? primaryCategory;
+
+  /// The seller's value in the storefront's Algolia seller facet — what a
+  /// search's seller counts are keyed by; null when the list didn't ask or
+  /// the records carry no seller.
+  final String? facetValue;
+
   /// Null without a code, a name or a link.
   static HmStoreCard? fromJson(Object? json) {
     if (json is! Map<String, dynamic>) return null;
@@ -267,6 +326,12 @@ class HmStoreCard {
       dispatchTime: HmDispatchTime.fromJson(json['dispatch_time']),
       isFeatured: json['is_featured'] == true,
       joinedAt: hmDateTime(json['joined_at']),
+      primaryCategory: HmCategoryCount.fromJson(json['primary_category']),
+      // Kept as sent: facet values are compared exactly.
+      facetValue: json['facet_value'] is String &&
+              (json['facet_value'] as String).isNotEmpty
+          ? json['facet_value'] as String
+          : null,
     );
   }
 }
@@ -311,6 +376,20 @@ abstract final class HmFragments {
   /// `...HmStoreCardFields` on any `HmStoreCard` (spreads [link]).
   static const String storeCard =
       r'''fragment HmStoreCardFields on HmStoreCard{code vendor_entity_id name logo_url rating review_count product_count dispatch_time{code label source} is_featured joined_at link{...HmLinkFields}}''';
+
+  /// `...HmStoreCardExtras` on any `HmStoreCard`: the primary category and
+  /// the Algolia facet value. Spread beside [storeCard] only while the
+  /// server lists the `vendors` capability — a server from before them
+  /// rejects the whole document.
+  static const String storeCardExtras =
+      r'''fragment HmStoreCardExtras on HmStoreCard{primary_category{id uid name count} facet_value}''';
+
+  /// `...HmCardSeller` on any product: who sells it, for the listing card's
+  /// seller line (spreads [seller]). Added to listing documents by
+  /// `SellerSelections.withCardSellers` only while the server lists the
+  /// `vendors` capability.
+  static const String cardSeller =
+      r'''fragment HmCardSeller on ProductInterface{hm_seller{...HmSellerFields}}''';
 }
 
 // ───────────────────────────────────────────── tolerant JSON readers

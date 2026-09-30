@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../marketplace/marketplace_features.dart';
 import '../../domain/aggregation.dart';
 import '../../domain/category.dart';
 import '../../domain/search_facets.dart';
@@ -30,6 +31,10 @@ const List<String> _productFields = <String>[
   'categories',
   'in_stock',
   'rating_summary',
+  // The card's seller line (AlgoliaVendor): shown only while the server lists
+  // HubAppVendors, see ProductCard.
+  'seller',
+  'seller_url_key',
 ];
 
 /// Most values a facet brings back — enough for the Categories tab and the
@@ -254,6 +259,7 @@ SearchResultPage resultsFromResponses(
   SearchFilters filters = SearchFilters.none,
   SearchSort sort = SearchSort.relevance,
   List<Category> tree = const <Category>[],
+  bool sellers = false,
 }) {
   final main = results.first;
   final price = settings.priceAttribute;
@@ -325,7 +331,8 @@ SearchResultPage resultsFromResponses(
       for (final hit
           in (main['hits'] as List<dynamic>? ?? const [])
               .whereType<Map<String, dynamic>>())
-        if (productFromAlgoliaHit(hit, settings, now: now) case final product?)
+        if (productFromAlgoliaHit(hit, settings, now: now, sellers: sellers)
+            case final product?)
           product,
     ],
     totalCount: (main['nbHits'] as num?)?.toInt() ?? 0,
@@ -364,11 +371,16 @@ class AlgoliaSearch {
     required this._client,
     required this._settings,
     DateTime Function()? clock,
+    this._marketplace = const FixedMarketplaceGate(),
   }) : _clock = clock ?? DateTime.now;
 
   final AlgoliaClient _client;
   final AlgoliaSettingsRepository _settings;
   final DateTime Function() _clock;
+
+  /// Whether result cards show each record's seller
+  /// ([MarketplaceFeatures.listingSellers]).
+  final MarketplaceGate _marketplace;
 
   static const Duration pause = Duration(seconds: 30);
   DateTime? _pausedUntil;
@@ -436,6 +448,7 @@ class AlgoliaSearch {
       filters: filters,
       sort: sort,
       tree: tree,
+      sellers: _marketplace.features.listingSellers,
     );
   });
 
@@ -476,5 +489,6 @@ final algoliaSearchProvider = Provider<AlgoliaSearch>((ref) {
       userAgent: config.userAgent,
     ),
     settings: ref.watch(algoliaSettingsRepositoryProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
   );
 });

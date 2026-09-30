@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gql/ast.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/graphql/possible_types.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 
 /// Test doubles for the Hub Market App foundation.
@@ -41,6 +42,19 @@ const HmAppConfig kSampleHmAppConfig = HmAppConfig(
     hours: 'Daily 9 am – 11 pm',
   ),
   features: {'returns': true, 'store_credit': false},
+);
+
+/// [kSampleHmAppConfig] on a server that lists its satellites: HubAppVendors
+/// with the P3.1 fields (the store pages' extras, sellers on listing cards).
+const HmAppConfig kVendorsHmAppConfig = HmAppConfig(
+  storeCode: 'en',
+  locale: 'en_US',
+  search: HmSearchConfig(
+    hint: 'Search 20,000+ products',
+    trendingTerms: ['iphone', 'abaya', 'rice'],
+  ),
+  features: {'returns': true, 'store_credit': false},
+  capabilities: {'vendors', 'bundle', 'returns', 'account'},
 );
 
 /// Replaces the probe with a fixed [state] (no request is made).
@@ -116,7 +130,10 @@ class FakeHubAppClient extends GraphQLClient {
           return Stream.error(Exception('offline (test): $name'));
         }),
         // Canned data may leave out the `__typename`s the client adds.
-        cache: GraphQLCache(partialDataPolicy: PartialDataCachePolicy.accept),
+        cache: GraphQLCache(
+      partialDataPolicy: PartialDataCachePolicy.accept,
+      possibleTypes: kPossibleTypes,
+    ),
       );
 
   /// Every request sent, in order.

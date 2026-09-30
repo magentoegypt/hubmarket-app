@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:gql/ast.dart';
 import 'package:gql/language.dart' show printNode;
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:hubmarket_app/core/graphql/possible_types.dart';
 
 import 'search_fixtures.dart';
 
@@ -76,11 +79,16 @@ class FakeStoresBackend {
     }),
     // Canned data may leave out `__typename`s; the ones a fragment needs are
     // in the fixtures below.
-    cache: GraphQLCache(partialDataPolicy: PartialDataCachePolicy.accept),
+    cache: GraphQLCache(
+      partialDataPolicy: PartialDataCachePolicy.accept,
+      possibleTypes: kPossibleTypes,
+    ),
   );
 }
 
-/// `HmStoreCard` JSON.
+/// `HmStoreCard` JSON. The P3.1 fields (primary category, facet value) are
+/// always in the answer; a document that doesn't ask for them never sees
+/// them.
 Map<String, dynamic> storeCardJson({
   required String code,
   required int id,
@@ -93,6 +101,8 @@ Map<String, dynamic> storeCardJson({
   bool featured = false,
   String joined = '2023-06-12T08:00:00Z',
   String store = 'en',
+  ({int id, String name})? category,
+  String? facet,
 }) => {
   '__typename': 'HmStoreCard',
   'code': code,
@@ -113,7 +123,30 @@ Map<String, dynamic> storeCardJson({
     'uid': null,
     'code': code,
   },
+  'primary_category': category == null
+      ? null
+      : {
+          '__typename': 'HmCategoryCount',
+          'id': category.id,
+          'uid': base64.encode(utf8.encode('${category.id}')),
+          'name': category.name,
+          'count': products,
+        },
+  'facet_value': facet ?? name,
 };
+
+/// Top-level categories of the fixtures: Figma 12's chips.
+({int id, String name}) _category(String key, String store) {
+  const names = {
+    'furniture': (id: 34, en: 'Furniture', ar: 'أثاث'),
+    'fashion': (id: 35, en: 'Fashion', ar: 'أزياء'),
+    'lighting': (id: 36, en: 'Lighting', ar: 'إضاءة'),
+    'building': (id: 37, en: 'Building Materials', ar: 'مواد البناء'),
+    'grocery': (id: 38, en: 'Grocery', ar: 'بقالة'),
+  };
+  final c = names[key]!;
+  return (id: c.id, name: store == 'ar' ? c.ar : c.en);
+}
 
 /// The sellers of the Figma frames, in the store view's language.
 Map<String, dynamic> miaCard({String store = 'en'}) => storeCardJson(
@@ -124,6 +157,7 @@ Map<String, dynamic> miaCard({String store = 'en'}) => storeCardJson(
   reviews: 126,
   products: 38,
   featured: true,
+  category: _category('furniture', store),
   dispatch: {
     '__typename': 'HmDispatchTime',
     'code': 'next_day',
@@ -145,6 +179,7 @@ List<Map<String, dynamic>> sampleStoreCards({String store = 'en'}) {
       reviews: 88,
       products: 64,
       store: store,
+      category: _category('fashion', store),
     ),
     storeCardJson(
       code: 'ENARA',
@@ -154,6 +189,7 @@ List<Map<String, dynamic>> sampleStoreCards({String store = 'en'}) {
       reviews: 19,
       products: 19,
       store: store,
+      category: _category('lighting', store),
     ),
     storeCardJson(
       code: 'future_building',
@@ -163,6 +199,7 @@ List<Map<String, dynamic>> sampleStoreCards({String store = 'en'}) {
       reviews: 41,
       products: 22,
       store: store,
+      category: _category('building', store),
     ),
     storeCardJson(
       code: 'walmart',
@@ -170,8 +207,84 @@ List<Map<String, dynamic>> sampleStoreCards({String store = 'en'}) {
       name: ar ? 'وول مارت' : 'walmart',
       products: 120,
       store: store,
+      category: _category('grocery', store),
     ),
   ];
+}
+
+/// `hmStoreCategories` data: Figma 12's chips with their seller counts.
+Map<String, dynamic> storeCategoriesData({String store = 'en'}) => {
+  'hmStoreCategories': {
+    'total_count': 5,
+    'items': [
+      for (final (key, count) in [
+        ('grocery', 1),
+        ('furniture', 1),
+        ('fashion', 1),
+        ('lighting', 1),
+        ('building', 1),
+      ])
+        {
+          'id': _category(key, store).id,
+          'uid': base64.encode(utf8.encode('${_category(key, store).id}')),
+          'name': _category(key, store).name,
+          'count': count,
+        },
+    ],
+  },
+};
+
+/// `hmStoreReviews` data for MIA CO: the card's rating, two reviews shown in
+/// this store view (of three), one about a product the storefront no longer
+/// lists.
+Map<String, dynamic> miaReviewsData({
+  String store = 'en',
+  bool none = false,
+}) {
+  final ar = store == 'ar';
+  return {
+    'hmStoreReviews': {
+      'summary': {'rating': 4.8, 'review_count': 126},
+      'total_count': none ? 0 : 2,
+      'page_info': {
+        'current_page': 1,
+        'page_size': 20,
+        'total_pages': none ? 0 : 1,
+      },
+      'items': none
+          ? const <Object>[]
+          : [
+              {
+                'id': 41,
+                'nickname': ar ? 'سارة' : 'Sara K.',
+                'title': ar ? 'كنبة رائعة' : 'Great sofa',
+                'text': ar
+                    ? 'مريحة ومتينة، ووصلت في موعدها.'
+                    : 'Comfortable and well made, delivered on time.',
+                'rating': 5.0,
+                'created_at': '2026-09-20T08:15:00Z',
+                'product': {
+                  'name': ar ? 'كنبة سرير ركنه' : 'Corner Sofa Bed',
+                  'url_key': 'sofabed123',
+                  'thumbnail_url': null,
+                },
+              },
+              {
+                'id': 40,
+                'nickname': ar ? 'عمر' : 'Omar',
+                'title': null,
+                'text': ar ? 'جيد مقابل السعر.' : 'Good for the price.',
+                'rating': 4.0,
+                'created_at': '2026-09-18T10:00:00Z',
+                'product': {
+                  'name': ar ? 'مصباح قديم' : 'Old Lamp',
+                  'url_key': null,
+                  'thumbnail_url': null,
+                },
+              },
+            ],
+    },
+  };
 }
 
 /// `hmStores` data.
@@ -217,6 +330,10 @@ Map<String, dynamic> miaStoreData({String store = 'en', bool policies = true}) {
                 ? '<p>يمكن إرجاع المنتجات المعيبة أو استبدالها خلال 7 أيام بحالتها الأصلية، دون رسوم شحن إضافية.</p>'
                 : '<p>Defective items can be returned or exchanged within 7 days in original condition, with no extra shipping charge. See <a href="https://hub-market.magento2.click/en/return-policy">our return policy</a>.</p>')
           : null,
+      // P3.1: only a document with the store page extras reads these.
+      'contact': {'phone': '+971 50 123 4567'},
+      'location': ar ? 'دبي، الإمارات العربية المتحدة' : 'Dubai, United Arab Emirates',
+      'sales_count': 1240,
       'card': miaCard(store: store),
     },
   };
@@ -229,6 +346,7 @@ Map<String, dynamic> productJson({
   required double price,
   double? regular,
   String type = 'SimpleProduct',
+  String? seller,
 }) => {
   '__typename': type,
   'sku': sku,
@@ -244,6 +362,21 @@ Map<String, dynamic> productJson({
       'final_price': {'value': price, 'currency': 'AED'},
     },
   },
+  // Read only by a listing's seller twin (a server that lists vendors).
+  'hm_seller': seller == null
+      ? null
+      : {
+          '__typename': 'HmSellerSummary',
+          'code': 'MIA',
+          'vendor_entity_id': 12,
+          'name': seller,
+          'logo_url': null,
+          'rating': 4.8,
+          'review_count': 126,
+          'product_count': 38,
+          'is_marketplace': false,
+          'link': null,
+        },
 };
 
 /// MIA CO's products (Figma 13).
@@ -255,12 +388,14 @@ List<Map<String, dynamic>> miaProducts({String store = 'en'}) {
       name: ar ? 'كنبة سرير ركنه' : 'Corner Sofa Bed',
       price: 425,
       regular: 500,
+      seller: ar ? 'ميا كو' : 'MIA CO',
     ),
     productJson(
       sku: 'living-room-set',
       name: ar ? 'غرفة معيشة 3 قطع' : '3-Piece Living Room Set',
       price: 255,
       regular: 300,
+      seller: ar ? 'ميا كو' : 'MIA CO',
     ),
     productJson(
       sku: 'chairs125',
@@ -269,11 +404,13 @@ List<Map<String, dynamic>> miaProducts({String store = 'en'}) {
           : 'Dining Chair with Gold Metal Legs',
       price: 34,
       regular: 40,
+      seller: ar ? 'ميا كو' : 'MIA CO',
     ),
     productJson(
       sku: 'chairs126',
       name: ar ? 'كرسي هزاز عنابي' : 'Burgundy Rocking Chair',
       price: 180,
+      seller: ar ? 'ميا كو' : 'MIA CO',
     ),
   ];
 }

@@ -31,8 +31,11 @@ import '../widgets/stores_unavailable.dart';
 /// chips, the featured seller's banner, then every approved seller with the
 /// chosen sort, paging on scroll. Everything comes from `hmStores`.
 ///
-/// The frame's "Furniture · 38 products" line shows only the product count:
-/// the seller card carries no category.
+/// While the server lists the `vendors` capability ([storeExtrasProvider]),
+/// the chips are `hmStoreCategories`' — each with how many sellers it holds,
+/// categories without any left out — and each card names the seller's
+/// primary category ("Furniture · 38 products"). Without it: Home's
+/// top-level categories and the product count alone.
 class StoresScreen extends ConsumerStatefulWidget {
   const StoresScreen({super.key});
 
@@ -170,10 +173,26 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
     final featured = _name.isEmpty
         ? ref.watch(featuredStoreProvider(_categoryId)).valueOrNull
         : null;
-    // The top-level categories Home's "Shop by category" shows.
-    final categories =
-        ref.watch(searchCategoryChoicesProvider).valueOrNull ??
-        const <Category>[];
+    // The chips: the seller API's, with their seller counts, while the
+    // server lists them; otherwise (and until they load) the top-level
+    // categories Home's "Shop by category" shows.
+    final counted = ref.watch(storeExtrasProvider)
+        ? ref.watch(storeCategoryChipsProvider).valueOrNull
+        : null;
+    final chips = counted != null && counted.items.isNotEmpty
+        ? [
+            for (final c in counted.items)
+              (uid: c.uid, name: c.name, count: c.count as int?),
+          ]
+        : [
+            for (final c
+                in ref.watch(searchCategoryChoicesProvider).valueOrNull ??
+                    const <Category>[])
+              (uid: c.uid, name: c.name, count: null as int?),
+          ];
+    final allCount = counted != null && counted.items.isNotEmpty
+        ? counted.totalCount
+        : null;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -195,12 +214,13 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
               ),
             ),
           ),
-          if (categories.isNotEmpty)
+          if (chips.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.only(top: 16),
               sliver: SliverToBoxAdapter(
                 child: _CategoryChips(
-                  categories: categories,
+                  chips: chips,
+                  allCount: allCount,
                   selectedUid: _categoryUid,
                   onPick: _pickCategory,
                 ),
@@ -314,7 +334,10 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
             final store = list.items[i];
             return StoreListTile(
               store: store,
-              detail: l10n.categoryProductCount(store.productCount),
+              detail: storeCardDetail(
+                store,
+                l10n.categoryProductCount(store.productCount),
+              ),
               onTap: () => openStore(context, store),
             );
           },
@@ -391,15 +414,19 @@ class _SearchField extends StatelessWidget {
 }
 
 /// "All · Grocery · Furniture · …": the top-level categories as 36 pt pills,
-/// the chosen one navy.
+/// the chosen one navy, each with its seller count when the list has them.
 class _CategoryChips extends StatelessWidget {
   const _CategoryChips({
-    required this.categories,
+    required this.chips,
     required this.selectedUid,
     required this.onPick,
+    this.allCount,
   });
 
-  final List<Category> categories;
+  final List<({String uid, String name, int? count})> chips;
+
+  /// Sellers in all categories: the All chip's count, when known.
+  final int? allCount;
   final String? selectedUid;
   final ValueChanged<String?> onPick;
 
@@ -411,14 +438,20 @@ class _CategoryChips extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length + 1,
+        itemCount: chips.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final category = i == 0 ? null : categories[i - 1];
+          final chip = i == 0 ? null : chips[i - 1];
+          final label = chip?.name ?? l10n.filterAll;
+          final count = chip == null ? allCount : chip.count;
           return StorePill(
-            label: category?.name ?? l10n.filterAll,
-            selected: category?.uid == selectedUid,
-            onTap: () => onPick(category?.uid),
+            label: label,
+            count: count,
+            semanticLabel: count == null
+                ? null
+                : l10n.storesCategoryChip(label, count),
+            selected: chip?.uid == selectedUid,
+            onTap: () => onPick(chip?.uid),
           );
         },
       ),
@@ -584,10 +617,12 @@ class FeaturedStoreBanner extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            // "★ 4.8 · 38 products"
+                            // "Furniture · ★ 4.8 · 38 products"
                             Text.rich(
                               TextSpan(
                                 children: [
+                                  if (store.categoryName case final category?)
+                                    TextSpan(text: '$category · '),
                                   if (store.isRated) ...[
                                     ratingSpan(
                                       store.rating!,

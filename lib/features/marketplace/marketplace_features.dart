@@ -11,6 +11,8 @@ class MarketplaceFeatures {
     this.sellers = false,
     this.bundles = false,
     this.packages = false,
+    this.listingSellers = false,
+    this.storeExtras = false,
   });
 
   /// `hm_seller` on products, cart lines and order lines (HubAppVendors).
@@ -24,11 +26,24 @@ class MarketplaceFeatures {
   /// status, shipments and totals (HubAppOrders).
   final bool packages;
 
+  /// `hm_seller` on listing cards (the seller line): only while the server
+  /// lists the `vendors` capability. Listings are shared with Build 1, and a
+  /// server with HubApp but without HubAppVendors would turn the whole
+  /// listing down — the Home too — for this one field.
+  final bool listingSellers;
+
+  /// The store pages' fields that came with the `vendors` capability: the
+  /// Reviews tab, contact, location and sales, each card's primary category
+  /// and facet value, and the Stores chips' counts.
+  final bool storeExtras;
+
   static const MarketplaceFeatures none = MarketplaceFeatures();
   static const MarketplaceFeatures all = MarketplaceFeatures(
     sellers: true,
     bundles: true,
     packages: true,
+    listingSellers: true,
+    storeExtras: true,
   );
 
   @override
@@ -36,15 +51,19 @@ class MarketplaceFeatures {
       other is MarketplaceFeatures &&
       other.sellers == sellers &&
       other.bundles == bundles &&
-      other.packages == packages;
+      other.packages == packages &&
+      other.listingSellers == listingSellers &&
+      other.storeExtras == storeExtras;
 
   @override
-  int get hashCode => Object.hash(sellers, bundles, packages);
+  int get hashCode =>
+      Object.hash(sellers, bundles, packages, listingSellers, storeExtras);
 
   @override
   String toString() =>
       'MarketplaceFeatures(sellers: $sellers, bundles: $bundles, '
-      'packages: $packages)';
+      'packages: $packages, listingSellers: $listingSellers, '
+      'storeExtras: $storeExtras)';
 }
 
 /// Satellites the server turned down at run time ("Cannot query field
@@ -87,15 +106,30 @@ final marketplaceMissingProvider =
 /// The marketplace features in use now: on once the HubApp probe says the
 /// module is there ([HubAppStatus.available]), minus any satellite the server
 /// turned down since. `unknown` (still probing, or offline) is Build 1.
+///
+/// When the server lists its satellites (`hmAppConfig.capabilities`), a
+/// satellite it doesn't list is off from the start rather than after a
+/// refused request; the fields that came with the list (listing sellers, the
+/// store page extras) are on only when it lists `vendors`.
 final marketplaceFeaturesProvider = Provider<MarketplaceFeatures>((ref) {
   if (ref.watch(hubAppStatusProvider) != HubAppStatus.available) {
     return MarketplaceFeatures.none;
   }
   final missing = ref.watch(marketplaceMissingProvider);
+  final capabilities = ref.watch(hmAppConfigProvider)?.capabilities;
+  final vendors =
+      capabilities?.contains(HubAppCapability.vendors) ?? !missing.sellers;
+  final bundle =
+      capabilities?.contains(HubAppCapability.bundle) ?? !missing.bundles;
+  final orders =
+      capabilities?.contains(HubAppCapability.orders) ?? !missing.packages;
+  final listed = capabilities != null && vendors && !missing.sellers;
   return MarketplaceFeatures(
-    sellers: !missing.sellers,
-    bundles: !missing.bundles,
-    packages: !missing.packages,
+    sellers: vendors && !missing.sellers,
+    bundles: bundle && !missing.bundles,
+    packages: orders && !missing.packages,
+    listingSellers: listed,
+    storeExtras: listed,
   );
 });
 

@@ -48,6 +48,9 @@ class Product {
     this.typeId,
     this.ratingSummary,
     this.reviewCount,
+    this.sellerName,
+    this.sellerCode,
+    this.sellerKnown = false,
   });
 
   final String sku;
@@ -88,6 +91,20 @@ class Product {
   /// Approved reviews (`review_count`). Null when the source doesn't say:
   /// Algolia records carry the average only.
   final int? reviewCount;
+
+  /// Who sells the product, as the card's seller line names it (Figma v3):
+  /// the seller's display name in the store view's language. Null for Hub
+  /// Market's own products — the website's card leaves the line empty for
+  /// them — and when the listing didn't ask ([sellerKnown]).
+  final String? sellerName;
+
+  /// The seller's code (its store page), when known.
+  final String? sellerCode;
+
+  /// Whether the listing said who sells the product (`hm_seller`, or an
+  /// Algolia record): its card then keeps the seller line, empty for Hub
+  /// Market's own products, so the cards of a row stay level.
+  final bool sellerKnown;
 
   /// True for a product that can't go into the cart by SKU alone: a
   /// configurable (size, colour), bundle or grouped product needs its

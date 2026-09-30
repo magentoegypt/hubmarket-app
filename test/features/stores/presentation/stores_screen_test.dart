@@ -233,4 +233,90 @@ void main() {
     expect(name.right, greaterThan(tile.center.dx));
     expect(tester.takeException(), isNull);
   });
+
+  group('with the P3.1 seller fields (the server lists vendors)', () {
+    const vendors = HubAppState.available(kVendorsHmAppConfig);
+
+    testWidgets('12: chips with their seller counts, cards with a category', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1400);
+      final semantics = tester.ensureSemantics();
+      final backend = FakeStoresBackend(storesAnswers());
+      await tester.pumpWidget(
+        storesHarness(location: '/stores', backend: backend, hubApp: vendors),
+      );
+      await tester.pumpAndSettle();
+
+      expect(backend.of('HmStoreCategories'), hasLength(1));
+      // The seller API's chips, in menu order, each with its count.
+      final chips = find.byType(StorePill);
+      expect(
+        find.descendant(of: chips.first, matching: find.text('All')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: chips.first, matching: find.text('5')),
+        findsOneWidget,
+      );
+      expect(find.text('Grocery'), findsOneWidget);
+      expect(find.bySemanticsLabel('Grocery, 1 store'), findsOneWidget);
+      // Every card names the seller's category before its products.
+      expect(find.text('Fashion · 64 products'), findsOneWidget);
+      expect(find.text('Lighting · 19 products'), findsOneWidget);
+      // The banner too.
+      expect(
+        find.text('Furniture · ￼ 4.8 · 38 products'),
+        findsOneWidget,
+      );
+      expect(
+        _lists(backend).single.document,
+        contains('...HmStoreCardExtras'),
+      );
+      semantics.dispose();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a chip from the seller API narrows the list by its id', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1400);
+      final backend = FakeStoresBackend(storesAnswers());
+      await tester.pumpWidget(
+        storesHarness(location: '/stores', backend: backend, hubApp: vendors),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Grocery'));
+      await tester.pumpAndSettle();
+
+      expect(_lists(backend).last.variables['categoryId'], 38);
+    });
+
+    testWidgets('the chips failing to load: Home\'s categories, no counts', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1400);
+      final backend = FakeStoresBackend(
+        (r) => r.operation == 'HmStoreCategories'
+            ? Exception('offline (test)')
+            : storesAnswers()(r),
+      );
+      await tester.pumpWidget(
+        storesHarness(location: '/stores', backend: backend, hubApp: vendors),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Furniture'), findsWidgets);
+      expect(find.text('Promotions'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(StorePill).first,
+          matching: find.text('5'),
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

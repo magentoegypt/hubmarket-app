@@ -14,6 +14,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/network/connectivity.dart';
 import '../../../../core/store/store_controller.dart';
+import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/hub_back_button.dart';
@@ -31,24 +32,31 @@ import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../../catalog/presentation/widgets/sort_sheet.dart';
 import '../../domain/store.dart';
 import '../store_products_controller.dart';
+import '../store_reviews_controller.dart';
 import '../stores_providers.dart';
 import '../widgets/store_about.dart';
+import '../widgets/store_reviews.dart';
 import '../widgets/store_widgets.dart';
 import '../widgets/stores_unavailable.dart';
 
 /// The tabs of a store page, in order.
-enum StoreTab { products, about, policies }
+enum StoreTab { products, reviews, about, policies }
 
 /// One seller's store (Figma 13, and 13b for its About tab): the banner with
-/// the logo, name and figures, then Products (the seller's catalogue with the
-/// PLP's search, filters, sort and paging), About and Policies.
+/// the logo, name, location and figures, "Contact vendor", then Products (the
+/// seller's catalogue with the PLP's search, filters, sort and paging),
+/// Reviews, About and Policies.
 ///
 /// From `hmStore(code)`; the products are core `products` filtered by the
 /// seller's `vendor_id`. A card handed over by the list ([preview]) paints the
-/// header and starts the products at once. The frame's Reviews tab, "Contact
-/// vendor", favourite and "Call" buttons and the location line have no
-/// source in the seller API, so they are left out; Policies shows only when
-/// the seller publishes one.
+/// header and starts the products at once.
+///
+/// The Reviews tab (`hmStoreReviews`), "Contact vendor" and "Call" (the
+/// telephone the website's store page dials), the location line, the
+/// category and the Sales figure need the server to list the `vendors`
+/// capability ([storeExtrasProvider]); without it the page is the P3 one.
+/// There is no favourite: neither the website nor Vnecoms lets a shopper
+/// follow a store. Policies shows only when the seller publishes one.
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key, required this.code, this.preview});
 
@@ -91,6 +99,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     super.dispose();
   }
 
+  /// The seller's code as the backend spells it, once known (keys the
+  /// Reviews tab).
+  String? _sellerCode;
+
   StoreProductsController? get _products => _vendorId == null
       ? null
       : ref.read(storeProductsControllerProvider(_vendorId!).notifier);
@@ -98,9 +110,23 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   void _onScroll() {
     final collapsed = _scroll.offset > _headerHeight - kToolbarHeight - 12;
     if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
-    if (_tab == StoreTab.products &&
-        _scroll.position.pixels >= _scroll.position.maxScrollExtent - 400) {
+    if (_scroll.position.pixels < _scroll.position.maxScrollExtent - 400) {
+      return;
+    }
+    if (_tab == StoreTab.products) {
       _products?.loadMore();
+    } else if (_tab == StoreTab.reviews && _sellerCode != null) {
+      ref.read(storeReviewsControllerProvider(_sellerCode!).notifier).loadMore();
+    }
+  }
+
+  /// Dials the seller (the website's "Contact Vendor" is a `tel:` link).
+  Future<void> _call(Uri phone) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    final opened = await ref.read(externalUriLauncherProvider)(phone);
+    if (!opened && mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
     }
   }
 
@@ -291,6 +317,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       );
     }
     _vendorId = profile.card.vendorEntityId;
+    _sellerCode = profile.card.code;
     return _page(context, l10n, profile);
   }
 
@@ -316,8 +343,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final products = ref.watch(
       storeProductsControllerProvider(store.vendorEntityId),
     );
+    final extras = ref.watch(storeExtrasProvider);
+    final phone = extras ? profile.phoneUri : null;
     final tabs = [
       StoreTab.products,
+      if (extras) StoreTab.reviews,
       StoreTab.about,
       if (profile.hasPolicies) StoreTab.policies,
     ];
@@ -337,7 +367,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           SliverToBoxAdapter(
             child: KeyedSubtree(
               key: _infoKey,
-              child: _StoreInfo(profile: profile),
+              child: _StoreInfo(
+                profile: profile,
+                extras: extras,
+                onContact: phone == null ? null : () => _call(phone),
+              ),
             ),
           ),
           SliverPersistentHeader(
@@ -347,6 +381,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               selected: tab,
               labels: {
                 StoreTab.products: l10n.storeTabProducts,
+                StoreTab.reviews: l10n.storeTabReviews,
                 StoreTab.about: l10n.storeTabAbout,
                 StoreTab.policies: l10n.storeTabPolicies,
               },
@@ -362,12 +397,24 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               store,
               products,
             ),
+            StoreTab.reviews => [
+              ...storeReviewsSlivers(
+                context,
+                ref.watch(storeReviewsControllerProvider(store.code)),
+                onRetry: () => ref
+                    .read(storeReviewsControllerProvider(store.code).notifier)
+                    .refresh(),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
             StoreTab.about => [
               SliverToBoxAdapter(
                 child: StoreAboutTab(
                   profile: profile,
                   onPolicies: () => _selectTab(StoreTab.policies),
                   onCategory: _showCategory,
+                  salesCount: extras ? profile.salesCount : null,
+                  onCall: phone == null ? null : () => _call(phone),
                 ),
               ),
               _fillGrouped(context),
@@ -691,12 +738,23 @@ class _CircleButton extends StatelessWidget {
   );
 }
 
-/// The name with the verified mark, the seller's short description, and the
-/// rating · products · joined figures (Figma 13 "store-info").
+/// The name with the verified mark, the location line ("Dubai, United Arab
+/// Emirates · Furniture"), the seller's short description, the rating ·
+/// products · joined figures and "Contact vendor" (Figma 13 "store-info").
 class _StoreInfo extends StatelessWidget {
-  const _StoreInfo({required this.profile});
+  const _StoreInfo({
+    required this.profile,
+    this.extras = false,
+    this.onContact,
+  });
 
   final StoreProfile profile;
+
+  /// The P3.1 fields may show (the location line and its category).
+  final bool extras;
+
+  /// Dials the seller; null hides "Contact vendor" (no number published).
+  final VoidCallback? onContact;
 
   @override
   Widget build(BuildContext context) {
@@ -705,6 +763,12 @@ class _StoreInfo extends StatelessWidget {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     final joined = store.joinedAt;
     final short = profile.shortDescription;
+    final place = extras
+        ? [
+            ?profile.location,
+            ?store.categoryName,
+          ].join(' · ')
+        : '';
     final stats = <StoreStat>[
       if (store.isRated)
         StoreStat.rating(
@@ -733,6 +797,31 @@ class _StoreInfo extends StatelessWidget {
               color: context.scaffoldHeading,
             ),
           ),
+          if (place.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: context.scaffoldMuted,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    place,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 18 / 12,
+                      color: context.scaffoldMuted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (short != null) ...[
             const SizedBox(height: 2),
             Text(
@@ -755,6 +844,18 @@ class _StoreInfo extends StatelessWidget {
               ],
             ],
           ),
+          if (onContact != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                onPressed: onContact,
+                icon: const Icon(Icons.phone_outlined, size: 20),
+                label: Text(l10n.storeContactVendor),
+              ),
+            ),
+          ],
         ],
       ),
     );
