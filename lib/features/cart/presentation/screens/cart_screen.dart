@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/free_shipping.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/brand_logo.dart';
@@ -15,8 +16,11 @@ import '../../../../core/widgets/summary_row.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
+import '../../../marketplace/domain/seller_groups.dart';
+import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/cart.dart';
 import '../cart_controller.dart';
+import '../cart_store_credit.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -163,6 +167,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     final cart = state.cart;
     final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
+    // Figma 16: lines grouped by store, one package each (HubApp's
+    // `hm_seller`); null keeps today's single list.
+    final groups = groupBySeller<CartItem>(cart.items, (item) => item.seller);
+    final storeCount = groups?.where((g) => g.seller != null).length ?? 0;
+    Widget tile(CartItem item) => _CartItemTile(
+      item: item,
+      busy: state.isMutating,
+      onChangeQty: (q) => _controller.setQuantity(item.uid, q),
+      onRemove: () => _controller.removeItem(item.uid),
+    );
     // Free-shipping threshold comes from the backend (Magento's Free Shipping
     // "Minimum Order Amount") — never hardcoded. Null while loading or when the
     // store doesn't publish one (Hub Market doesn't yet), in which case the
@@ -186,7 +200,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
               ),
               Text(
-                l10n.cartItemCount(itemCount),
+                storeCount > 0
+                    ? '${l10n.cartItemCount(itemCount)} · '
+                          '${l10n.cartStoreCount(storeCount)}'
+                    : l10n.cartItemCount(itemCount),
                 style: const TextStyle(color: AppColors.inkMuted),
               ),
             ],
@@ -202,13 +219,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final item in cart.items)
-                _CartItemTile(
-                  item: item,
-                  busy: state.isMutating,
-                  onChangeQty: (q) => _controller.setQuantity(item.uid, q),
-                  onRemove: () => _controller.removeItem(item.uid),
-                ),
+              if (groups == null)
+                for (final item in cart.items) tile(item)
+              else ...[
+                if (groups.length > 1) ...[
+                  const SplitPackagesNote(),
+                  const SizedBox(height: 12),
+                ],
+                for (final group in groups) ...[
+                  _StoreGroup(group: group, tile: tile),
+                  const SizedBox(height: 12),
+                ],
+              ],
             ],
           ),
         ),
@@ -237,7 +259,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         // Thick grey band (Figma 39:26) — closes the promo section.
         const _SectionBand(),
         // Order Summary (Figma 39:27).
-        _OrderSummary(cart: cart, freeDeliveryThreshold: freeShipThreshold),
+        _OrderSummary(
+          cart: cart,
+          freeDeliveryThreshold: freeShipThreshold,
+          storeCredit: ref.watch(cartStoreCreditProvider).valueOrNull,
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Column(
@@ -263,6 +289,42 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+/// Figma 16 "store-group": one store's lines under its header, as one
+/// package. Outlined rather than filled, so the lines read the same in both
+/// themes.
+class _StoreGroup extends StatelessWidget {
+  const _StoreGroup({required this.group, required this.tile});
+
+  final SellerGroup<CartItem> group;
+  final Widget Function(CartItem item) tile;
+
+  @override
+  Widget build(BuildContext context) {
+    final seller = group.seller;
+    return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(14, 14, 6, 6),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.hairline),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (seller != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8, bottom: 6),
+              child: SellerGroupHeader(seller: seller),
+            ),
+          for (var i = 0; i < group.items.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: context.hairline),
+            tile(group.items[i]),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -618,13 +680,21 @@ class _CouponSection extends StatelessWidget {
 /// delivery line (FREE past the threshold, otherwise "calculated at
 /// checkout"), a divider, then the total in navy.
 class _OrderSummary extends StatelessWidget {
-  const _OrderSummary({required this.cart, this.freeDeliveryThreshold});
+  const _OrderSummary({
+    required this.cart,
+    this.freeDeliveryThreshold,
+    this.storeCredit,
+  });
 
   final Cart cart;
 
   /// Free-shipping threshold (AED) from store config; null when unconfigured/
   /// still loading, in which case delivery falls back to "calculated at checkout".
   final double? freeDeliveryThreshold;
+
+  /// Store credit used on the cart (HubApp), already off [cart]'s total;
+  /// null — no line — in Build 1 and when none is applied.
+  final Money? storeCredit;
 
   @override
   Widget build(BuildContext context) {
@@ -676,6 +746,15 @@ class _OrderSummary extends StatelessWidget {
             valueColor: freeDelivery ? AppColors.brandPrimary : null,
             valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
           ),
+          // Credit used at checkout is already off the total below.
+          if (storeCredit != null) ...[
+            const SizedBox(height: 11),
+            SummaryRow(
+              label: l10n.checkoutStoreCredit,
+              value: '−${storeCredit!.formatted()}',
+              valueColor: AppColors.brandPrimary,
+            ),
+          ],
           const SizedBox(height: 11),
           const Divider(
             height: 1,

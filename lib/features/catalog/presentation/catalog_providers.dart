@@ -1,9 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/failure.dart';
+import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../data/catalog_repository.dart';
+import '../data/product_marketplace_repository.dart';
 import '../domain/category.dart';
 import '../domain/product_detail.dart';
+import '../domain/product_marketplace.dart';
 
 /// Top-level category tree. Refetches when the active store view changes.
 final categoryTreeProvider = FutureProvider.autoDispose<List<Category>>((ref) {
@@ -66,6 +71,28 @@ final productDetailProvider = FutureProvider.autoDispose
     .family<ProductDetail?, String>((ref, urlKey) {
       ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
       return ref.watch(catalogRepositoryProvider).fetchProductDetail(urlKey);
+    });
+
+/// What HubApp adds to the product page — who sells it, a bundle's options —
+/// or null: without HubApp, while its probe runs, or when the read fails (the
+/// page then stays as it is today). A server that turns `hm_seller` down is
+/// remembered, so the cart and orders stop asking too.
+final productMarketplaceProvider = FutureProvider.autoDispose
+    .family<ProductMarketplace?, String>((ref, urlKey) async {
+      ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
+      if (!ref.watch(marketplaceFeaturesProvider.select((f) => f.sellers))) {
+        return null;
+      }
+      try {
+        return await ref
+            .watch(productMarketplaceRepositoryProvider)
+            .fetch(urlKey);
+      } on HubAppMissing {
+        ref.read(marketplaceMissingProvider.notifier).sellersMissing();
+        return null;
+      } on Failure {
+        return null;
+      }
     });
 
 /// Review rating metadata for the "Write a review" star selector.

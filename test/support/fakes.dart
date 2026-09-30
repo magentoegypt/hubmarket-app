@@ -11,6 +11,7 @@ import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/auth/domain/customer.dart';
 import 'package:hubmarket_app/features/auth/domain/password_reset_ticket.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
+import 'package:hubmarket_app/features/cart/domain/bundle_cart_request.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
 import 'package:hubmarket_app/features/checkout/data/checkout_repository.dart';
 import 'package:hubmarket_app/features/checkout/domain/checkout.dart';
@@ -124,6 +125,27 @@ class FakeCartRepository implements CartRepository {
             quantity: (item['quantity'] as int?) ?? 1,
             rowTotal: const Money(amount: 100, currency: 'AED'),
           ),
+      ],
+    );
+    return _cart;
+  }
+
+  /// Every bundle [addBundle] was asked to add, in order.
+  final List<BundleCartRequest> bundleRequests = [];
+
+  @override
+  Future<Cart> addBundle(String cartId, BundleCartRequest request) async {
+    bundleRequests.add(request);
+    _cart = Cart(
+      id: cartId,
+      items: [
+        ..._cart.items,
+        CartItem(
+          uid: 'b-${request.sku}',
+          sku: request.sku,
+          name: request.sku,
+          quantity: request.quantity.round(),
+        ),
       ],
     );
     return _cart;

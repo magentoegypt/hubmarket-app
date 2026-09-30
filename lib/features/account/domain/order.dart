@@ -1,3 +1,4 @@
+import '../../../core/hubapp/hubapp_models.dart';
 import '../../catalog/domain/money.dart';
 
 class OrderLine {
@@ -8,6 +9,7 @@ class OrderLine {
     this.imageUrl,
     this.sku,
     this.urlKey,
+    this.seller,
   });
 
   final String name;
@@ -20,6 +22,10 @@ class OrderLine {
   /// Product sku / url_key — for reorder and product navigation.
   final String? sku;
   final String? urlKey;
+
+  /// Who sold the line (`hm_seller`); null without HubApp, which keeps the
+  /// order's items one list.
+  final HmSellerSummary? seller;
 }
 
 /// A shipment tracking entry (carrier + tracking number) for a shipped order.
