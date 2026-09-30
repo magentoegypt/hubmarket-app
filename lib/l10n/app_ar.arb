@@ -755,6 +755,8 @@
   "pdpYouMayAlsoLike": "قد يعجبك أيضاً",
   "pdpSoldBy": "يباع من",
   "pdpVisitStore": "زيارة المتجر",
+  "pdpBundleOnWebsite": "تُشترى هذه الباقة من موقعنا الإلكتروني حاليًا.",
+  "pdpBundleOpenWebsite": "اشترِ من الموقع",
   "sellerVerified": "بائع موثّق",
   "sellerRating": "التقييم {rating} من 5",
   "bundleItemsTitle": "منتجات هذه الباقة",

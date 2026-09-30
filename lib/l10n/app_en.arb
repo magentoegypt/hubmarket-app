@@ -1211,6 +1211,11 @@
   "pdpYouMayAlsoLike": "You may also like",
   "pdpSoldBy": "Sold by",
   "pdpVisitStore": "Visit store",
+  "pdpBundleOnWebsite": "This bundle is bought on our website for now.",
+  "@pdpBundleOnWebsite": {
+    "description": "Over a bundle's disabled Add to Cart on the plain product page (no Hub Market App bundle support): Magento refuses a bundle SKU without its options."
+  },
+  "pdpBundleOpenWebsite": "Buy on website",
   "sellerVerified": "Verified seller",
   "sellerRating": "Rated {rating} out of 5",
   "@sellerRating": {
