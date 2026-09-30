@@ -213,12 +213,11 @@ class AccountRepository {
   Future<void> deleteAddress(int id) =>
       _run(AccountQueries.deleteAddress, {'id': id}, mutation: true);
 
-  /// The customer's saved N-Genius cards, newest-usable-first.
-  ///
-  /// Filtered to the N-Genius method: the vault is shared by every vaulting
-  /// gateway, and a token we can't hand back to `ngeniusonline_vault` would be
-  /// a card the picker shows but cannot pay with. Rows that don't parse are
-  /// dropped rather than thrown (see [SavedCard.fromToken]).
+  /// The cards Magento's vault holds for the customer, whichever gateway
+  /// saved them — the app takes no card payments yet, so any card here was
+  /// saved on the website. They are listed to be seen and removed, not paid
+  /// with, so no gateway is filtered out. Non-card tokens and rows that
+  /// don't parse are dropped rather than thrown (see [SavedCard.fromToken]).
   Future<List<SavedCard>> fetchSavedCards() async {
     final data = await _run(
       AccountQueries.savedCards,
@@ -230,18 +229,9 @@ class AccountRepository {
             as List<dynamic>?;
     return (items ?? const [])
         .whereType<Map<String, dynamic>>()
-        .where(_isNGeniusToken)
         .map(SavedCard.fromToken)
         .nonNulls
         .toList();
-  }
-
-  /// `ngeniusonline` writes the token; `ngeniusonline_vault` is the code that
-  /// spends it. Accept either so a backend that labels its rows with the vault
-  /// code doesn't silently produce an empty list.
-  static bool _isNGeniusToken(Map<String, dynamic> json) {
-    final code = (json['payment_method_code'] as String?)?.toLowerCase() ?? '';
-    return code.contains('ngenius');
   }
 
   Future<void> deleteSavedCard(String publicHash) => _run(
@@ -716,8 +706,8 @@ final addressesProvider = FutureProvider.autoDispose<List<CustomerAddress>>((
 ///
 /// Error-safe by design: `customerPaymentTokens` 403s for a guest and errors
 /// outright until the gateway is vault-aware, and neither is a reason to break
-/// the screen. An empty list simply hides the Payment Methods rows — degrade,
-/// never fabricate.
+/// the screen. An empty list simply hides Account's Payment Methods row —
+/// degrade, never fabricate.
 final savedCardsProvider = FutureProvider.autoDispose<List<SavedCard>>((
   ref,
 ) async {

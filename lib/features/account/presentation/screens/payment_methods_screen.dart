@@ -12,9 +12,10 @@ import '../../domain/saved_card.dart';
 /// Account → Payment Methods: the cards Magento's vault holds for this
 /// customer, with a remove action.
 ///
-/// There is deliberately no "add card" entry point — a card can only be stored
-/// by paying with it and ticking the save opt-in at checkout, because the token
-/// is minted by the gateway during a real authorization.
+/// There is deliberately no "add card" entry point — the token is minted by a
+/// gateway during a real payment, and the app takes no card payments yet, so
+/// Account shows the row only while there are cards to list. Reached with
+/// none (the last one removed), the screen just says so.
 class PaymentMethodsScreen extends ConsumerWidget {
   const PaymentMethodsScreen({super.key});
 

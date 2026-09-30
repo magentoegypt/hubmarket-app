@@ -93,6 +93,8 @@ class _Authenticated extends ConsumerWidget {
         ? null
         : '\u2066${creditBalance.formatted()}\u2069';
     final returnsAvailable = ref.watch(returnsAvailableProvider);
+    final hasSavedCards =
+        ref.watch(savedCardsProvider).valueOrNull?.isNotEmpty ?? false;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -229,12 +231,17 @@ class _Authenticated extends ConsumerWidget {
           label: l10n.accountAddresses,
           onTap: () => context.push(AppRoutes.addresses),
         ),
-        const _TileDivider(),
-        _AccountTile(
-          icon: Icons.credit_card_outlined,
-          label: l10n.savedCardsTitle,
-          onTap: () => context.push(AppRoutes.paymentMethods),
-        ),
+        // Payment Methods only lists cards the vault already holds: no card
+        // gateway is wired into the app, so none can be saved here. No cards,
+        // no row.
+        if (hasSavedCards) ...[
+          const _TileDivider(),
+          _AccountTile(
+            icon: Icons.credit_card_outlined,
+            label: l10n.savedCardsTitle,
+            onTap: () => context.push(AppRoutes.paymentMethods),
+          ),
+        ],
         // 20d My credit, with the balance (Figma 20), once the backend has
         // store credit (HubAppAccount).
         if (creditEnabled) ...[

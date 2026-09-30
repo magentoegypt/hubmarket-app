@@ -13,6 +13,7 @@ import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
+import 'package:hubmarket_app/features/account/domain/saved_card.dart';
 import 'package:hubmarket_app/features/account/presentation/account_screen.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
@@ -41,6 +42,7 @@ Widget _harness({
   bool push = false,
   bool newsletter = true,
   FakeLocalCache? cache,
+  List<SavedCard> cards = const [],
 }) {
   final router = GoRouter(
     initialLocation: '/account',
@@ -73,6 +75,7 @@ Widget _harness({
       // Keep the authenticated view's quick-stats / nav counts offline so no
       // real GraphQL query schedules a retry-backoff timer.
       customerOrderCountProvider.overrideWith((ref) => 0),
+      savedCardsProvider.overrideWith((ref) async => cards),
       cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
       wishlistRepositoryProvider.overrideWithValue(FakeWishlistRepository()),
       pushNotificationsAvailableProvider.overrideWithValue(push),
@@ -192,6 +195,32 @@ void main() {
     expect(find.text('Wishlist'), findsWidgets);
     // Nothing in Magento counts vouchers: no invented "0 Vouchers".
     expect(find.text('Vouchers'), findsNothing);
+  });
+
+  testWidgets('no Payment Methods row with no saved card', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    // No card gateway in the app, so nothing to list: no row.
+    await tester.pumpWidget(_harness(token: 'persisted'));
+    await tester.pumpAndSettle();
+    expect(find.text('Payment Methods'), findsNothing);
+  });
+
+  testWidgets('Payment Methods once the vault holds a card', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _harness(
+        token: 'persisted',
+        cards: const [
+          SavedCard(publicHash: 'h1', brandCode: 'VI', last4: '1111'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Payment Methods'), findsOneWidget);
   });
 
   testWidgets('links reviews, newsletter, privacy, help and about', (

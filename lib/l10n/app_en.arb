@@ -1096,7 +1096,7 @@
   "savedCardsTitle": "Payment Methods",
   "savedCardsSubtitle": "Cards saved at checkout",
   "savedCardsEmptyTitle": "No saved cards",
-  "savedCardsEmptyBody": "Tick “Save this card for next time” while paying and your card will appear here.",
+  "savedCardsEmptyBody": "Cards saved to your account appear here.",
   "savedCardExpired": "Expired",
   "savedCardRemove": "Remove card",
   "savedCardRemoveConfirmTitle": "Remove this card?",

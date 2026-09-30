@@ -714,7 +714,7 @@
   "savedCardsTitle": "طرق الدفع",
   "savedCardsSubtitle": "البطاقات المحفوظة عند الدفع",
   "savedCardsEmptyTitle": "لا توجد بطاقات محفوظة",
-  "savedCardsEmptyBody": "اختر «احفظ هذه البطاقة للمرة القادمة» أثناء الدفع وستظهر بطاقتك هنا.",
+  "savedCardsEmptyBody": "تظهر هنا البطاقات المحفوظة في حسابك.",
   "savedCardExpired": "منتهية الصلاحية",
   "savedCardRemove": "إزالة البطاقة",
   "savedCardRemoveConfirmTitle": "هل تريد إزالة هذه البطاقة؟",
