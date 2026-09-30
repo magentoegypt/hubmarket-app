@@ -19,12 +19,12 @@ the code, not from memory. Nothing here publishes anything or creates an account
 | Area | State |
 |---|---|
 | Android build | Every push to `main` builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist. `Release · Android` also builds the Play bundle (`.aab`) and can publish it. The push build already proves the production release compiles; the `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
-| iOS build | `Release · iOS` builds a signed App Store or ad-hoc IPA on a hosted Mac and can send it to TestFlight. It has **never run signed**: the Apple secrets do not exist yet. The simulator build runs in the screenshot workflow. |
+| iOS build | `Release · iOS` builds a signed App Store or ad-hoc IPA on a hosted Mac and can send it to TestFlight. It has **never run signed**: the Apple secrets do not exist yet. The simulator build is exercised by the screenshot workflow, which passed on 30 Sep with the new privacy manifest and App Transport Security at its defaults. |
 | Identity | Android `com.hubmarket.app` (`.dev` and `.staging` for the other flavors); iOS `com.hubmarket.app`; name "Hub Market"; version `1.0.0+1`; Android compile and target SDK 36; iOS 15 and up, iPhone only. |
 | Icon and launch screen | Client artwork, correct formats (1024×1024 icon with no alpha; adaptive Android icon; native launch screen). Not present: the Play **feature graphic** (1024×500). |
 | Listing text, privacy answers, review notes | Drafted in English and Arabic (files above); each needs the client to confirm the facts it lists. |
 | iOS privacy | An app privacy manifest is in the project, and the leftover cleartext (HTTP) exception from the Zoonze base is gone: the live server serves only HTTPS. |
-| Screenshots | Capture pipeline for both platforms; the catalogue is still test data, so the shots are not store-ready. |
+| Screenshots | Capture pipeline for both platforms (iOS captured in English and Arabic; Android waits for an unlocked phone). The catalogue is still test data and the hero and seller profiles still say Egypt, so the shots are not store-ready. |
 | Deep links | Templates ready; blocked on the Play signing SHA-256, the Apple Team ID and the web team. |
 | Push notifications | Dormant until a Firebase project exists (section 6). |
 | Payment | Cash on delivery only. Card, Tabby and Tamara wait on DEV08 and DEV09. |
@@ -181,3 +181,8 @@ follows the host.
   Crashlytics (question 8) before the first release rather than after.
 - Home banners, sections, brands and texts are managed in the store admin; a marketing change is
   not an app release.
+- Platform requirements move every year: Apple raises the minimum SDK each spring (CI builds with
+  the latest stable Xcode on `macos-15`, which is what it needs), Google raises the minimum target
+  API each August (the project targets 36), and Google has announced developer verification for apps
+  installed outside Play, which is rolling out country by country: check it for the countries the
+  Loadly testers are in.

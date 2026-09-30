@@ -205,4 +205,5 @@ figures and any store or product count.
 | Privacy policy URL | Client. Required by both stores; see the privacy document for what it must cover. |
 | Account deletion web URL (Play) | Client; a draft page is in the privacy document. |
 | Copyright line (App Store) | "© 2026 <legal entity>". |
+| Content rights (App Store) | Answer yes to "third-party content": product photos and names come from the sellers. It is the client's call that they hold the rights or permissions. |
 | Legal entity, address, phone, email for the EU Digital Services Act (App Store) | Client. Apple removes an app from EU storefronts when the seller is not declared a trader. |

@@ -1,8 +1,8 @@
 # Store screenshots
 
-What each store wants, the shot list the app produces, and how to capture it. The pipeline works
-on both platforms; the shots are **not store-ready** until the client's real catalogue is in the
-store (see "What is not store-ready").
+What each store wants, the shot list the app produces, how to capture it, and where it stands. The
+pipeline works on iOS and is ready on Android; the shots are **not store-ready** until the client's
+real catalogue is in the store (see "What is not store-ready").
 
 ## Rules (as of 30 Sep 2026: re-check the console on the day)
 
@@ -26,12 +26,12 @@ would only show empty states.
 
 | File | Route | Shows |
 |---|---|---|
-| `01-home` | `/home` | Home: delivery strip, hero, rails |
-| `02-deals` | `/deals` | Today's Deals with countdown, department chips and filters |
-| `03-category` | `/category/MTQw` | A category listing (Fashion) |
-| `04-product` | `/product/dress-code-2156` | A product page with "Sold by" and offers |
-| `05-stores` | `/stores` | Stores, with rating and product counts |
-| `06-store` | `/store/loly` | A store page (products, reviews, about) |
+| `01-home` | `/home` | Home as the admin has arranged it (search, delivery strip, hero, promo tiles, categories) |
+| `02-deals` | `/deals` | Today's Deals: countdown, department chips, sort and filters |
+| `03-category` | `/category/MTQw` | A category listing (Fashion) with its sub-categories |
+| `04-product` | `/product/dress-code-2156` | A product page with "Sold by", the store's rating and the price on the Add to Cart button |
+| `05-stores` | `/stores` | Stores: chips with counts, the featured store, ratings and product counts |
+| `06-store` | `/store/loly` | A store page: rating, products, "Contact vendor", tabs |
 | `07-bundles` | `/bundles` | Bundle deals with the saving on each |
 | `08-categories` | `/categories` | Category tiles |
 
@@ -42,9 +42,12 @@ three-line change.
 ## How to capture
 
 **iOS (GitHub Actions, on a hosted Mac):** Actions › **Screenshots · iOS** › Run workflow, once with
-`en` and once with `ar`. It boots an iPhone simulator, drives the app against the live server, and
-uploads the artifact `appstore-screenshots-ios-<locale>`: PNGs scaled to 1284×2778, the 6.5-inch
-slot. The script fails when two shots are identical (a navigation that silently did not happen).
+`en` and once with `ar` (about 18 minutes each). It boots an iPhone simulator, drives the app
+against the live server, and uploads the artifact `appstore-screenshots-ios-<locale>`: PNGs scaled to
+1284×2778, the 6.5-inch slot. The script fails when two shots are identical (a navigation that
+silently did not happen). The PNGs carry an opaque alpha channel; before uploading them to App
+Store Connect drop it with
+`python tool/fit_play_screenshots.py --flatten-only <folder> <out folder>`.
 
 **Android (a phone or emulator on this machine):**
 
@@ -57,17 +60,40 @@ It builds the debug dev flavor, drives the same integration test, and writes the
 `build/screenshots/android/raw` and Play-ready copies to `build/screenshots/android/play`.
 `tool/fit_play_screenshots.py` scales a tall phone capture to fit Play's 2:1 limit on the brand navy
 without cropping (a 1080×2400 capture becomes 1080×2160). **The phone must be unlocked with the
-screen on for the whole run**: a sleeping screen draws no frames, and the test just waits. Use
-`Stay awake` in Developer options while it runs.
+screen on for the whole run**: a sleeping screen draws no frames and the test just waits. Turn on
+*Stay awake* in Developer options while it runs.
+
+The captures show the app only: the system status bar is not part of them, so the top band of each
+shot is empty. A framed screenshot covers it with the headline.
+
+## Where it stands (30 Sep 2026)
+
+- **iOS:** both runs succeeded (`en` run 36723970951, `ar` run 36723984202): 16 distinct, correct
+  screenshots, fonts and right-to-left layout right, real content loaded. The run is also the first
+  simulator build with the new privacy manifest and App Transport Security at its defaults.
+- **Android:** not captured. The test phone's screen was locked, so the run could not draw and was
+  stopped. Unlock the phone and run the command above.
 
 ## What is not store-ready
 
-1. **The catalogue is test data.** Store names such as "Test 1" and "Test3", products named
-   "test61", placeholder photos, a Pharmacy store used for tests. Capture again once the client's
-   real, well-photographed products and stores are in, and point the three constants at good ones.
-2. **Arabic needs Arabic content.** The Arabic set shows product and store names as the catalogue
-   holds them; some are English only today.
-3. **Framing.** Store pages convert better with a headline above the screen. That is design work:
+The captures show what the live server holds today, which is test data mixed with the client's
+first content:
+
+1. **Test data.** Products named "test61" and "Test Product 2" with a black "Test" image or a
+   photographed order slip as their picture, "test Bundle Product" sold by "V8S2", stores named
+   "Test 1" and "Test3", a Pharmacy store used for tests. The bundles shot (`07`) is the weakest
+   until real bundles exist.
+2. **Content that names the wrong market.** The hero says "Fashion From Approved Egyptian Sellers",
+   the store page says "Giza, Egypt", and the delivery strip is cut off ("Fast natio…"). These come
+   from the admin (Hero Banner, the seller profile, the `hm_delivery_promise` block), not the app.
+3. **Arabic needs Arabic content.** The Arabic set shows product and store names as the catalogue
+   holds them; some are English only. One known cosmetic issue: the Arabic category tile's second
+   line is cut ("أكثر من 45 منت…").
+4. **Framing.** Store pages convert better with a headline above the screen. That is design work:
    framed screenshots and the Play feature graphic (brand navy `#0F2144`, orange `#F26522`, the
    logo) come from Figma, using these captures as the source.
-4. **Re-capture on every release that changes the UI.**
+5. **Re-capture on every release that changes the UI.**
+
+So: the client puts real, well-photographed products, stores, bundles and hero banners in the store
+(Arabic names included), someone points the three constants at good examples, and both platforms are
+captured again.

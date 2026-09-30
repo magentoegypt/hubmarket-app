@@ -71,6 +71,9 @@ same list is in `ios/Runner/PrivacyInfo.xcprivacy`.
 | Financial info (payment info, other) | **No** | – | Cash on delivery: no card data. **CONFIRM** if the store credit balance should also be declared as "Other financial info"; we treat it as purchase history. |
 | Location, Contacts, Health, Sensitive info, Browsing history, Usage data, Diagnostics | No | – | Nothing collects them |
 
+**Also on the version page:** "Does this app use the Advertising Identifier (IDFA)?" **No**; export
+compliance is already answered in the app (`ITSAppUsesNonExemptEncryption` false).
+
 **Privacy policy URL** is required and blocks publishing the section: it must be a live page that
 describes what is above (see section 8).
 
