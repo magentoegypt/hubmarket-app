@@ -188,6 +188,29 @@ class CartController extends Notifier<CartState> {
     }
   }
 
+  /// Buys [amount] of store credit (`hmAddCreditToCart`, HubAppAccount) into
+  /// the signed-in customer's cart, the same cart [addToCart] uses. As for
+  /// bundles, only a cached cart the server no longer knows is replaced and
+  /// the add retried; any other refusal leaves the cart alone and rethrows.
+  Future<void> addCreditToCart(double amount) async {
+    state = state.copyWith(isMutating: true, error: null);
+    try {
+      final hadCachedId = _cartId != null;
+      Cart cart;
+      try {
+        cart = await _repo.addCredit(await _ensureCartId(), amount);
+      } on Failure catch (error) {
+        if (!hadCachedId || !_isStaleCart(error)) rethrow;
+        await _resetCart();
+        cart = await _repo.addCredit(await _ensureCartId(), amount);
+      }
+      state = state.copyWith(cart: cart, isMutating: false);
+    } catch (error) {
+      state = state.copyWith(isMutating: false, error: error);
+      rethrow;
+    }
+  }
+
   /// Magento's answers for a cart id that is gone: consumed by an order,
   /// expired, or another customer's.
   static bool _isStaleCart(Failure error) {

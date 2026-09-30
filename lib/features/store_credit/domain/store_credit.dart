@@ -118,6 +118,99 @@ class StoreCreditAccount {
   );
 }
 
+/// One fixed amount of credit on sale (`HmStoreCreditPreset`): a fixed-value
+/// store credit product, or one value of a dropdown product.
+@immutable
+class StoreCreditPreset {
+  const StoreCreditPreset({
+    required this.sku,
+    required this.credit,
+    required this.price,
+  });
+
+  /// Its store credit product.
+  final String sku;
+
+  /// Credit added to the balance once the order is invoiced.
+  final Money credit;
+
+  /// What the cart line costs.
+  final Money price;
+}
+
+/// `HmStoreCreditAccount.top_up`: how credit is bought — the store credit
+/// products the website's Buy Credit page sells. Fixed amounts are [presets];
+/// a custom whole amount from [min] to [max] is allowed when both are set.
+@immutable
+class StoreCreditTopUp {
+  const StoreCreditTopUp({
+    required this.sku,
+    this.min,
+    this.max,
+    this.creditRate,
+    this.presets = const <StoreCreditPreset>[],
+  });
+
+  /// The product a custom amount buys (else the first preset's).
+  final String sku;
+
+  /// The custom amount's range; both null when only [presets] can be bought.
+  final Money? min;
+  final Money? max;
+
+  /// Credit per 1 paid for a custom amount: its price is amount / rate.
+  final double? creditRate;
+
+  /// Smallest first.
+  final List<StoreCreditPreset> presets;
+
+  bool get allowsCustomAmount => min != null && max != null;
+
+  String get currency =>
+      presets.isNotEmpty ? presets.first.credit.currency : min?.currency ?? '';
+
+  /// The preset that sells exactly [amount] of credit, if any.
+  StoreCreditPreset? presetFor(double amount) {
+    for (final preset in presets) {
+      if ((preset.credit.amount - amount).abs() < 0.005) return preset;
+    }
+    return null;
+  }
+
+  /// A whole amount within [min]..[max] — what the website's product page
+  /// lets a customer type.
+  bool acceptsCustom(double amount) =>
+      allowsCustomAmount &&
+      amount.isFinite &&
+      amount == amount.roundToDouble() &&
+      amount >= min!.amount &&
+      amount <= max!.amount;
+
+  /// Whether [amount] of credit can be bought: a preset, or a custom amount.
+  bool accepts(double amount) =>
+      presetFor(amount) != null || acceptsCustom(amount);
+
+  /// What [amount] of credit costs: its preset's price, else amount / rate
+  /// in cents; null when it can't be bought.
+  Money? priceOf(double amount) {
+    final preset = presetFor(amount);
+    if (preset != null) return preset.price;
+    final rate = creditRate;
+    if (!acceptsCustom(amount) || rate == null || rate <= 0) return null;
+    return Money(
+      amount: (amount / rate * 100).roundToDouble() / 100,
+      currency: currency,
+    );
+  }
+
+  /// The amount chosen when the card opens: the middle preset (Figma 20d's
+  /// AED 100 of 50 / 100 / 250), else the smallest custom amount — where the
+  /// website's slider starts.
+  double? get initialAmount => presets.isNotEmpty
+      ? presets[presets.length ~/ 2].credit.amount
+      : min?.amount;
+}
+
 /// `Cart.hm_store_credit`: the credit on the signed-in customer's cart.
 @immutable
 class CartStoreCredit {

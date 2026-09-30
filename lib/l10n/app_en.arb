@@ -1151,6 +1151,49 @@
       }
     }
   },
+  "myCreditBuyTitle": "Buy credit",
+  "myCreditBuyBody": "Top up now and pay for future orders in one tap.",
+  "myCreditBuyAction": "Buy {amount} credit",
+  "@myCreditBuyAction": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "myCreditBuyOther": "Other amount",
+  "myCreditBuyAmountLabel": "Amount of credit",
+  "myCreditBuyAmountRange": "From {min} to {max}",
+  "@myCreditBuyAmountRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "myCreditBuyAmountInvalid": "Enter a whole amount from {min} to {max}.",
+  "@myCreditBuyAmountInvalid": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "myCreditBuyPrice": "You pay {price}",
+  "@myCreditBuyPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "myCreditBuyFailed": "We couldn't add the credit to your cart. Please try again.",
   "orderSuccessTitle": "Order placed!",
   "orderPlacedThanks": "Thank you. Order #{number} is confirmed — we’ve emailed your receipt.",
   "@orderPlacedThanks": {

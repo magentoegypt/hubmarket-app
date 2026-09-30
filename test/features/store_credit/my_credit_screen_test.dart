@@ -75,7 +75,7 @@ void main() {
       expect(find.text('Spent credit on order #000000231'), findsOneWidget);
       expect(find.text('26 Sep 2026'), findsOneWidget);
       expect(credit.calls, ['fetchAccount:1']);
-      // Nothing the backend can't do: no top-up.
+      // The store sells no credit product: no "Buy credit" card.
       expect(find.text('Buy credit'), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -247,8 +247,10 @@ void main() {
         await withRealShadows(() async {
           await _pump(
             tester,
+            // As in the frame: the store sells AED 50, 100 and 250.
             FakeStoreCreditRepository(
               pages: [sampleCreditAccount(arabic: locale == 'ar')],
+              topUp: sampleTopUp(),
             ),
             locale: locale,
             height: 761,

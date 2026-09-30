@@ -299,11 +299,107 @@ void main() {
     });
   });
 
+  group('StoreCreditRepository.fetchTopUp', () {
+    Map<String, dynamic> topUp(Map<String, dynamic>? json) => {
+      'hmStoreCredit': {'__typename': 'HmStoreCreditAccount', 'top_up': json},
+    };
+    Map<String, dynamic> preset(String sku, double credit, double price) => {
+      '__typename': 'HmStoreCreditPreset',
+      'sku': sku,
+      'credit': _money(credit),
+      'price': _money(price),
+    };
+
+    test('reads the presets and the custom range', () async {
+      final client = fakeHubAppClient({
+        'HmStoreCreditTopUp': topUp({
+          '__typename': 'HmStoreCreditTopUp',
+          'sku': 'hm-credit-any',
+          'min': _money(10),
+          'max': _money(1000),
+          'credit_rate': 1.25,
+          'presets': [
+            preset('hm-credit-250', 250, 250),
+            preset('hm-credit-50', 50, 50),
+            preset('hm-credit-100', 100, 90),
+          ],
+        }),
+      });
+      final offer = await StoreCreditRepository(client).fetchTopUp();
+
+      expect(offer, isNotNull);
+      expect(offer!.sku, 'hm-credit-any');
+      expect(offer.presets.map((p) => p.credit.amount), [50, 100, 250]);
+      expect(offer.presets[1].price.amount, 90);
+      expect(offer.allowsCustomAmount, isTrue);
+      expect(offer.min!.amount, 10);
+      expect(offer.max!.amount, 1000);
+      expect(offer.creditRate, 1.25);
+      // Customer data: a query through the token client, never a GET.
+      expect(_operation(client.requests.single).type, OperationType.query);
+      expect(client.requests.single.variables, isEmpty);
+    });
+
+    test('null while the store sells no credit', () async {
+      final client = fakeHubAppClient({'HmStoreCreditTopUp': topUp(null)});
+      expect(await StoreCreditRepository(client).fetchTopUp(), isNull);
+    });
+
+    test('presets only when there is no usable range', () async {
+      for (final range in [
+        {'min': null, 'max': null, 'credit_rate': null},
+        {'min': _money(100), 'max': _money(10), 'credit_rate': 1},
+        {'min': _money(10), 'max': _money(100), 'credit_rate': 0},
+      ]) {
+        final client = fakeHubAppClient({
+          'HmStoreCreditTopUp': topUp({
+            '__typename': 'HmStoreCreditTopUp',
+            'sku': 'hm-credit-50',
+            ...range,
+            'presets': [preset('hm-credit-50', 50, 50)],
+          }),
+        });
+        final offer = await StoreCreditRepository(client).fetchTopUp();
+        expect(offer!.allowsCustomAmount, isFalse, reason: '$range');
+        expect(offer.creditRate, isNull);
+        expect(offer.presets, hasLength(1));
+      }
+    });
+
+    test('nothing that can be bought reads as no top-up', () async {
+      final client = fakeHubAppClient({
+        'HmStoreCreditTopUp': topUp({
+          '__typename': 'HmStoreCreditTopUp',
+          'sku': 'broken',
+          'min': null,
+          'max': null,
+          'credit_rate': null,
+          'presets': [preset('free', 0, 0)],
+        }),
+      });
+      expect(await StoreCreditRepository(client).fetchTopUp(), isNull);
+    });
+
+    test('a server without the field throws HubAppMissing', () async {
+      final client = fakeHubAppClient({
+        'HmStoreCreditTopUp': hubAppMissingResponse(
+          'top_up',
+          type: 'HmStoreCreditAccount',
+        ),
+      });
+      await expectLater(
+        StoreCreditRepository(client).fetchTopUp(),
+        throwsA(isA<HubAppMissing>()),
+      );
+    });
+  });
+
   test('no document declares a variable of an Hm* type', () {
     // While the module is missing Magento answers an unknown variable type
     // with HTTP 500 instead of "Cannot query field" (the Build 1 fallback).
     for (final document in [
       StoreCreditQueries.account,
+      StoreCreditQueries.topUp,
       StoreCreditQueries.balance,
       StoreCreditQueries.cartCredit,
       StoreCreditQueries.apply,

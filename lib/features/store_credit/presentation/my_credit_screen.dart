@@ -12,18 +12,19 @@ import '../../../core/widgets/grouped_list.dart';
 import '../../../l10n/l10n.dart';
 import '../../account/presentation/order_format.dart';
 import '../domain/store_credit.dart';
+import 'buy_credit_card.dart';
 import 'store_credit_providers.dart';
 
 /// Figma `text/subtle` (#535D70): the transaction's second line.
 const Color _inkSubtle = Color(0xFF535D70);
 
 /// 20d My credit: the balance on the navy card, whether it can be spent at
-/// checkout, and every transaction newest first (`hmStoreCredit`, paged as
-/// the list scrolls).
+/// checkout, "Buy credit" when the store sells credit ([BuyCreditCard]), and
+/// every transaction newest first (`hmStoreCredit`, paged as the list
+/// scrolls), each opening the order it records.
 ///
-/// Not built from the frame: "Buy credit" (the backend has no top-up
-/// operation) and the "All" link (this list already pages through every
-/// transaction).
+/// Not built from the frame: the "All" link (this list already pages through
+/// every transaction).
 class MyCreditScreen extends ConsumerStatefulWidget {
   const MyCreditScreen({super.key});
 
@@ -57,6 +58,8 @@ class _MyCreditScreenState extends ConsumerState<MyCreditScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(myCreditControllerProvider);
+    // Shown once it has loaded, and only when the store sells credit.
+    final topUp = ref.watch(storeCreditTopUpProvider).valueOrNull;
     return HubScaffold(
       currentTab: AppTab.account,
       appBar: subpageAppBar(context, l10n.myCreditTitle),
@@ -66,13 +69,20 @@ class _MyCreditScreenState extends ConsumerState<MyCreditScreen> {
           value: state,
           onRetry: () => ref.invalidate(myCreditControllerProvider),
           data: (data) => RefreshIndicator(
-            onRefresh: () => ref.refresh(myCreditControllerProvider.future),
+            onRefresh: () {
+              ref.invalidate(storeCreditTopUpProvider);
+              return ref.refresh(myCreditControllerProvider.future);
+            },
             child: ListView(
               controller: _scroll,
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
               children: [
                 CreditBalanceCard(account: data.account),
+                if (topUp != null) ...[
+                  const SizedBox(height: 16),
+                  BuyCreditCard(key: ObjectKey(topUp), topUp: topUp),
+                ],
                 const SizedBox(height: 16),
                 Text(
                   l10n.myCreditTransactions,

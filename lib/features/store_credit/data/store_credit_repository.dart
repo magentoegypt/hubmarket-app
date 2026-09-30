@@ -43,6 +43,16 @@ class StoreCreditRepository {
     return _account(data['hmStoreCredit']);
   }
 
+  /// How credit is bought here (20d "Buy credit"); null while the store sells
+  /// none, or when what it answered can't be bought.
+  Future<StoreCreditTopUp?> fetchTopUp() async {
+    final data = await runHubAppOperation(_client, StoreCreditQueries.topUp);
+    final json =
+        (data['hmStoreCredit'] as Map<String, dynamic>?)?['top_up']
+            as Map<String, dynamic>?;
+    return json == null ? null : _topUp(json);
+  }
+
   /// The credit on cart [cartId]; null for a guest cart.
   Future<CartStoreCredit?> fetchCartCredit(String cartId) async {
     final data = await runHubAppOperation(
@@ -147,6 +157,47 @@ class StoreCreditRepository {
       description: description.isEmpty ? null : description,
       createdAt: (json['created_at'] as String?)?.trim() ?? '',
       orderNumber: orderNumber.isEmpty ? null : orderNumber,
+    );
+  }
+
+  StoreCreditTopUp? _topUp(Map<String, dynamic> json) {
+    final presets = <StoreCreditPreset>[
+      for (final p
+          in (json['presets'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>())
+        if (_preset(p) case final preset?) preset,
+    ]..sort((a, b) => a.credit.amount.compareTo(b.credit.amount));
+    var min = moneyFromJson(json['min'] as Map<String, dynamic>?);
+    var max = moneyFromJson(json['max'] as Map<String, dynamic>?);
+    final rate = (json['credit_rate'] as num?)?.toDouble();
+    if (min == null ||
+        max == null ||
+        max.amount < min.amount ||
+        min.amount <= 0 ||
+        rate == null ||
+        rate <= 0) {
+      // No usable custom range: presets only.
+      min = null;
+      max = null;
+    }
+    if (presets.isEmpty && min == null) return null;
+    return StoreCreditTopUp(
+      sku: (json['sku'] as String?)?.trim() ?? '',
+      min: min,
+      max: max,
+      creditRate: min == null ? null : rate,
+      presets: presets,
+    );
+  }
+
+  StoreCreditPreset? _preset(Map<String, dynamic> json) {
+    final credit = moneyFromJson(json['credit'] as Map<String, dynamic>?);
+    final price = moneyFromJson(json['price'] as Map<String, dynamic>?);
+    if (credit == null || price == null || credit.amount <= 0) return null;
+    return StoreCreditPreset(
+      sku: (json['sku'] as String?)?.trim() ?? '',
+      credit: credit,
+      price: price,
     );
   }
 
