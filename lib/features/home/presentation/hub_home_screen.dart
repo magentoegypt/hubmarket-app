@@ -25,6 +25,7 @@ import '../../catalog/presentation/search_providers.dart';
 import '../../catalog/presentation/storefront_links.dart';
 import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../domain/hm_home.dart';
 import '../domain/home_content.dart';
 import 'hm_home_providers.dart';
@@ -231,13 +232,10 @@ class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
                   children: [
                     const BrandLogo(height: 34, onDark: true),
                     const Spacer(),
-                    IconButton(
-                      tooltip: l10n.notificationsTitle,
-                      icon: const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => context.push(AppRoutes.notifications),
+                    // With the unread dot, as in the app bar.
+                    const NotificationBell(
+                      color: Colors.white,
+                      icon: Icons.notifications_none_rounded,
                     ),
                   ],
                 ),

@@ -368,6 +368,7 @@
   "helpQSell": "كيف يمكن لمتجري البيع على هب ماركت؟",
   "helpASell": "تسجّل المتاجر كبائعين عبر موقع هب ماركت.",
   "notificationsTitle": "الإشعارات",
+  "notificationsUnread": "{count, plural, =1{الإشعارات، إشعار واحد غير مقروء} =2{الإشعارات، إشعاران غير مقروءين} few{الإشعارات، {count} إشعارات غير مقروءة} other{الإشعارات، {count} إشعار غير مقروء}}",
   "notificationsPromoTitle": "العروض والتخفيضات",
   "notificationsPromoBody": "تلقَّ إشعارات بالتخفيضات والمنتجات الجديدة والعروض الحصرية.",
   "notificationSettingsTitle": "إعدادات الإشعارات",
