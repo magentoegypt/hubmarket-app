@@ -234,7 +234,10 @@ class _AddNewAddressButton extends StatelessWidget {
         side: const BorderSide(color: AppColors.brandPrimary, width: 1.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(vertical: 16),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

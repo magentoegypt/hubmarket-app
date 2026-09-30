@@ -612,7 +612,9 @@ class _CouponSection extends StatelessWidget {
                   ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  textStyle: const TextStyle(
+                  // The theme's label style, so the brand font of the
+                  // language comes along (a bare TextStyle has no family).
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
