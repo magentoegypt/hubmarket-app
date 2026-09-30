@@ -23,12 +23,14 @@ import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
 import '../../../home/presentation/home_providers.dart';
 import '../../../home/presentation/widgets/hm_cms_sections.dart';
 import '../../../marketplace/marketplace_features.dart';
+import '../../../marketplace/presentation/other_sellers.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
 import '../../data/brands_provider.dart';
 import '../../domain/money.dart';
 import '../../domain/product.dart';
 import '../../domain/product_detail.dart';
+import '../../domain/product_marketplace.dart';
 import '../../domain/product_preview.dart';
 import '../brand_navigation.dart';
 import '../catalog_providers.dart';
@@ -81,6 +83,39 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     final pos = _scroll.position;
     final show = pos.maxScrollExtent - pos.pixels > 300;
     if (show != _showBar) setState(() => _showBar = show);
+  }
+
+  /// The other sellers' offers (the website's price comparison). An offer is
+  /// added to the cart the way this page adds — with this page's quantity —
+  /// or opened on its own page, where one bought with options is chosen.
+  Future<void> _showOtherSellers(
+    ProductDetail product,
+    ProductMarketplace extras,
+  ) async {
+    final choice = await OtherSellersSheet.show(
+      context,
+      count: extras.offerCount,
+      offers: extras.offers,
+    );
+    if (choice == null || !mounted) return;
+    final offer = choice.offer;
+    if (!choice.add || !offer.addsDirectly) {
+      unawaited(context.push(AppRoutes.product(offer.urlKey)));
+      return;
+    }
+    await _addAndConfirm(
+      context,
+      ref,
+      sku: offer.sku,
+      quantity: _quantity,
+      item: AddedItem(
+        name: product.name,
+        quantity: _quantity,
+        imageUrl: product.gallery.isEmpty ? null : product.gallery.first,
+        unitPrice: offer.price,
+      ),
+      recommendations: product.alsoLike,
+    );
   }
 
   @override
@@ -143,9 +178,16 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               ),
             );
           }
+          final offers = extras?.offers ?? const [];
           return _Content(
             product: product,
             seller: extras?.seller,
+            // Figma 14 "Sold by N other sellers" (HubApp): the other
+            // sellers' offers on this product, in a sheet.
+            offerCount: offers.isEmpty ? 0 : extras!.offerCount,
+            onOtherSellers: offers.isEmpty
+                ? null
+                : () => _showOtherSellers(product, extras!),
             scrollController: _scroll,
             selection: _selection,
             tab: _tab,
@@ -171,6 +213,8 @@ class _Content extends StatelessWidget {
     required this.onTab,
     required this.onQuantity,
     this.seller,
+    this.offerCount = 0,
+    this.onOtherSellers,
   });
 
   final ProductDetail product;
@@ -178,6 +222,11 @@ class _Content extends StatelessWidget {
   /// Who sells it (HubApp); the "Sold by" row is left out without one, and
   /// for Hub Market's own products.
   final HmSellerSummary? seller;
+
+  /// How many other sellers offer it (HubApp); with [onOtherSellers], the
+  /// "Sold by N other sellers" row under "Sold by".
+  final int offerCount;
+  final VoidCallback? onOtherSellers;
   final ScrollController scrollController;
   final Map<String, int> selection;
   final int tab;
@@ -195,6 +244,7 @@ class _Content extends StatelessWidget {
       ...product.gallery,
     ];
     final soldBy = seller;
+    final otherSellers = offerCount > 0 && onOtherSellers != null;
 
     return ListView(
       controller: scrollController,
@@ -212,9 +262,14 @@ class _Content extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Figma 14 "Sold by" (16:1020), above the title.
+              // Figma 14 "Sold by" (16:1020), above the title, and under it
+              // the other sellers of the same product.
               if (soldBy != null && !soldBy.isMarketplace) ...[
                 SoldByRow(seller: soldBy),
+                SizedBox(height: otherSellers ? 8 : 14),
+              ],
+              if (otherSellers) ...[
+                OtherSellersRow(count: offerCount, onTap: onOtherSellers!),
                 const SizedBox(height: 14),
               ],
               if (product.brand != null && product.brand!.isNotEmpty)
@@ -1031,7 +1086,7 @@ class _StickyAddToCart extends ConsumerWidget {
       const SizedBox(width: 12),
       Expanded(
         child: FilledButton(
-          onPressed: enabled ? () => _add(context, ref, l10n) : null,
+          onPressed: enabled ? () => _add(context, ref) : null,
           child: isMutating
               ? const SizedBox(
                   height: 20,
@@ -1050,11 +1105,7 @@ class _StickyAddToCart extends ConsumerWidget {
     ],
   );
 
-  Future<void> _add(
-    BuildContext context,
-    WidgetRef ref,
-    AppLocalizations l10n,
-  ) async {
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
     final uids = <String>[];
     for (final option in product.options) {
       final selectedIndex = selection[option.attributeCode];
@@ -1064,27 +1115,51 @@ class _StickyAddToCart extends ConsumerWidget {
         }
       }
     }
-    try {
-      await ref
-          .read(cartControllerProvider.notifier)
-          .addToCart(
-            sku: product.sku,
-            quantity: quantity,
-            selectedOptionUids: uids,
-          );
-      if (context.mounted) {
-        AddedToCartSheet.show(
-          context,
-          item: AddedItem.fromDetail(product, selection, quantity),
-          recommendations: product.alsoLike,
+    await _addAndConfirm(
+      context,
+      ref,
+      sku: product.sku,
+      quantity: quantity,
+      selectedOptionUids: uids,
+      item: AddedItem.fromDetail(product, selection, quantity),
+      recommendations: product.alsoLike,
+    );
+  }
+}
+
+/// How the product page adds to the cart — its own product from the sticky
+/// bar, or another seller's offer from the other-sellers sheet: [sku] into
+/// the cart, then "Added to cart" (14c) with [item], or the error.
+Future<void> _addAndConfirm(
+  BuildContext context,
+  WidgetRef ref, {
+  required String sku,
+  required int quantity,
+  required AddedItem item,
+  List<String> selectedOptionUids = const [],
+  List<Product> recommendations = const [],
+}) async {
+  final l10n = AppLocalizations.of(context);
+  try {
+    await ref
+        .read(cartControllerProvider.notifier)
+        .addToCart(
+          sku: sku,
+          quantity: quantity,
+          selectedOptionUids: selectedOptionUids,
         );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
-      }
+    if (context.mounted) {
+      AddedToCartSheet.show(
+        context,
+        item: item,
+        recommendations: recommendations,
+      );
+    }
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
     }
   }
 }
