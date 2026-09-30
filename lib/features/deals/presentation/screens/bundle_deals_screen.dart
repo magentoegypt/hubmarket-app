@@ -323,7 +323,9 @@ class BundleListCard extends StatelessWidget {
                         if (deal.seller != null)
                           Flexible(
                             child: Text(
-                              '· ${l10n.bundleSoldBy(deal.seller!.name)}',
+                              // The dot only separates it from a rating before it.
+                              '${rating != null ? '· ' : ''}'
+                              '${l10n.bundleSoldBy(deal.seller!.name)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: t.caption.copyWith(color: AppColors.info),

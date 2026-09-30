@@ -59,6 +59,7 @@ BundleDeal _bundle(
   String name, {
   int percent = 16,
   String? seller = 'Test 1',
+  bool rated = true,
 }) => BundleDeal(
   uid: name,
   sku: name,
@@ -69,17 +70,25 @@ BundleDeal _bundle(
   saving: const Money(amount: 11, currency: 'AED'),
   discountPercent: percent,
   itemCount: 4,
-  ratingPercent: 90,
-  reviewCount: 12,
+  ratingPercent: rated ? 90 : null,
+  reviewCount: rated ? 12 : 0,
   seller: seller == null ? null : HmSellerSummary(name: seller),
 );
 
 /// The server of hmDeals: filters and sorts the whole ranking, counts the
 /// departments of every filter but the category, pages of [perPage].
 class _FakeDeals implements DealsRepository {
-  _FakeDeals({this.missing = false, this.older = false, this.perPage = 20});
+  _FakeDeals({
+    this.missing = false,
+    this.older = false,
+    this.perPage = 20,
+    this.unrated = false,
+  });
 
   final bool missing;
+
+  /// Bundles that nobody has reviewed yet.
+  final bool unrated;
 
   /// A HubApp older than the filters: the plain ranking.
   final bool older;
@@ -161,7 +170,9 @@ class _FakeDeals implements DealsRepository {
       throw const HubAppMissing('Cannot query field "hmBundleDeals"');
     }
     bundleCategories.add(categoryId);
-    final items = categoryId == 7
+    final items = unrated
+        ? [_bundle('Unrated Pack', seller: 'V8S2', rated: false)]
+        : categoryId == 7
         ? [_bundle('Home Fitness Starter Pack')]
         : [
             _bundle('Home Fitness Starter Pack'),
@@ -483,6 +494,22 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('a bundle without a rating names its store with no leading dot', (
+      tester,
+    ) async {
+      await _phone(tester, height: 1300);
+      await tester.pumpWidget(
+        _harness(const BundleDealsScreen(), deals: _FakeDeals(unrated: true)),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(BundleDealsScreen)),
+      );
+      // The dot only separates the store from a rating before it.
+      expect(find.text(l10n.bundleSoldBy('V8S2')), findsOneWidget);
+    });
 
     testWidgets('the intro takes the admin\'s bundles title and subtitle '
         'from the Home layout', (tester) async {
