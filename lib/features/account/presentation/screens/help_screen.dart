@@ -78,7 +78,9 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
           tint: const Color(0xFFE8F7EE),
           color: const Color(0xFF15803D),
           label: l10n.helpWhatsApp,
-          caption: l10n.helpWhatsAppCaption,
+          // The service hours the admin set (`hmAppConfig.contact.hours`);
+          // no hours claim without them.
+          caption: contact.hours.trim().isEmpty ? null : contact.hours.trim(),
           onTap: () => _open(Uri.parse(contact.whatsapp!)),
         ),
       if (contact.phone != null)
@@ -159,19 +161,23 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             if (channels.isNotEmpty) ...[
               const SizedBox(height: 16),
               // Three equal slots as in the frame, so a store publishing one
-              // channel shows one tile rather than a full-width banner.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var i = 0; i < 3; i++) ...[
-                    if (i > 0) const SizedBox(width: 8),
-                    Expanded(
-                      child: i < channels.length
-                          ? channels[i]
-                          : const SizedBox.shrink(),
-                    ),
+              // channel shows one tile rather than a full-width banner. Equal
+              // heights too: a tile without a caption (WhatsApp with no hours
+              // set) keeps its neighbours' size.
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(
+                        child: i < channels.length
+                            ? channels[i]
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ],
             if (_query.isNotEmpty) ...[
@@ -264,7 +270,9 @@ class _ContactTile extends StatelessWidget {
   final Color tint;
   final Color color;
   final String label;
-  final String caption;
+
+  /// The number, address or hours under the label; none when null.
+  final String? caption;
   final VoidCallback onTap;
 
   @override
@@ -298,14 +306,16 @@ class _ContactTile extends StatelessWidget {
                   color: context.scaffoldHeading,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                caption,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: context.scaffoldMuted),
-              ),
+              if (caption != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  caption!,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: context.scaffoldMuted),
+                ),
+              ],
             ],
           ),
         ),
