@@ -166,7 +166,8 @@ class _Authenticated extends ConsumerWidget {
           ),
         ),
         const _AccountBand(),
-        // Quick stats (Figma 42:17). Vouchers has no backend source → 0.
+        // Quick stats (Figma 42:17): orders and wishlist. The frame's third
+        // cell, Vouchers, has nothing behind it in Magento, so it isn't shown.
         IntrinsicHeight(
           child: Row(
             children: [
@@ -188,16 +189,6 @@ class _Authenticated extends ConsumerWidget {
                   value: '$wishlist',
                   label: l10n.accountStatWishlist,
                 ),
-              ),
-              VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: context.hairline,
-                indent: 16,
-                endIndent: 16,
-              ),
-              Expanded(
-                child: _StatCell(value: '0', label: l10n.accountStatVouchers),
               ),
             ],
           ),

@@ -115,6 +115,21 @@ void main() {
     expect(find.text('Log Out'), findsOneWidget);
   });
 
+  testWidgets('quick stats count orders and wishlist, not vouchers', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_harness(token: 'persisted'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Orders'), findsOneWidget);
+    expect(find.text('Wishlist'), findsWidgets);
+    // Nothing in Magento counts vouchers: no invented "0 Vouchers".
+    expect(find.text('Vouchers'), findsNothing);
+  });
+
   testWidgets('links reviews, newsletter, privacy, help and about', (
     tester,
   ) async {

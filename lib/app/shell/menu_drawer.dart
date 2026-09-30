@@ -466,9 +466,8 @@ class _IconBadge extends StatelessWidget {
   );
 }
 
-/// Three quick-stat tiles (Orders / Wishlist / Vouchers) — Figma. Counts are
-/// bound to real data where the backend exposes it; Vouchers has no source yet
-/// (shows 0 until a backend field is wired).
+/// Quick-stat tiles, Orders and Wishlist (Figma), both real counts. The
+/// frame's Vouchers tile has nothing behind it in Magento, so it isn't shown.
 class _QuickStats extends ConsumerWidget {
   const _QuickStats();
 
@@ -501,12 +500,6 @@ class _QuickStats extends ConsumerWidget {
               Navigator.of(context).maybePop();
               context.go(AppRoutes.wishlist);
             },
-          ),
-          const SizedBox(width: 12),
-          _StatTile(
-            icon: Icons.confirmation_number_outlined,
-            count: 0,
-            label: l10n.drawerVouchers,
           ),
         ],
       ),
