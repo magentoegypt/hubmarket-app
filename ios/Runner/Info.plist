@@ -115,5 +115,13 @@
 		<string>mailto</string>
 		<string>tel</string>
 	</array>
+	<!-- image_picker: photos on a return request and its replies (Figma 23 / 23c).
+	     The library opens in the system photo picker without the full metadata,
+	     so iOS never asks for the library; App Store policy still wants the
+	     string. English only: the project has no localised InfoPlist.strings. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Hub Market uses the photos you choose to show the store what's wrong with an item you're returning.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Hub Market uses the camera when you take a photo of an item you're returning, to show the store what's wrong with it.</string>
 </dict>
 </plist>

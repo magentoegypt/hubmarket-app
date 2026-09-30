@@ -38,6 +38,14 @@ dependencies:
   # Direct (not just transitive via cached_network_image): HubImage installs a
   # dedicated CacheManager — see lib/core/util/image_cache_config.dart.
   flutter_cache_manager: ^3.4.1
+  # Photos on a return and its replies (Figma 23 / 23c): the system photo
+  # picker and the camera. The Android and platform-interface packages are
+  # direct only to switch Android 12 and older to the photo picker too
+  # (features/returns/data/return_photo_picker.dart), so no Android version
+  # asks for storage access.
+  image_picker: ^1.2.3
+  image_picker_android: ^0.8.13
+  image_picker_platform_interface: ^2.11.1
   flutter_local_notifications: ^22.0.1
   firebase_core: ^4.11.0
   firebase_messaging: ^16.4.1
