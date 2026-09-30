@@ -76,7 +76,8 @@ class HubHomeScreen extends ConsumerWidget {
         data: (home) {
           final sections =
               home?.visibleSections(DateTime.now()) ?? const <HmHomeSection>[];
-          return sections.isEmpty
+          // Only placements (the active-order card) is no Home either.
+          return !hmHomeHasContent(sections)
               ? const _Build1Home()
               : HmHomeView(
                   sections: sections,

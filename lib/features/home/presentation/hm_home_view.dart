@@ -11,6 +11,7 @@ import '../../deals/presentation/widgets/bundle_card.dart';
 import '../../deals/presentation/widgets/deal_countdown.dart';
 import '../domain/hm_home.dart';
 import '../domain/home_content.dart';
+import 'active_order_providers.dart';
 import 'widgets/hm_brand_strip.dart';
 import 'widgets/hm_category_chips.dart';
 import 'widgets/hm_cms_sections.dart';
@@ -37,42 +38,115 @@ class HmHomeView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The active-order card (not an admin section) leads the Home, below a
-    // leading delivery strip as in Figma 07.
-    final cardAt =
-        sections.isNotEmpty &&
-            sections.first.type == HmSectionType.deliveryStrip
-        ? 1
-        : 0;
+    // The active-order card is an entry only while there is an order to show,
+    // so the gaps around it are those of the Home actually drawn.
+    final withCard = ref.watch(
+      activeOrderProvider.select((order) => order.valueOrNull != null),
+    );
+    final entries = hmHomeEntries(sections, withActiveOrder: withCard);
     return RefreshIndicator(
       color: AppColors.brandPrimary,
       onRefresh: onRefresh,
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: gap),
-        itemCount: sections.length + 1,
+        itemCount: entries.length,
         itemBuilder: (context, index) {
-          if (index == cardAt) {
-            // Nothing unless signed in with an open recent order; 12 below
-            // plus the next section's 16 make the frame's 28.
-            return const HomeActiveOrder(
-              key: ValueKey('hm-active-order'),
-              padding: EdgeInsetsDirectional.fromSTEB(16, 16, 16, 12),
+          final entry = entries[index];
+          final top = hmHomeGapBefore(entries, index);
+          final section = entry.section;
+          if (entry.isActiveOrder) {
+            return Padding(
+              key: const ValueKey('hm-active-order'),
+              padding: EdgeInsets.only(top: top),
+              child: HmActiveOrderSection(section: section),
             );
           }
-          final i = index > cardAt ? index - 1 : index;
-          final section = sections[i];
-          final top = i == 0
-              ? (section.type == HmSectionType.deliveryStrip ? 0.0 : 16.0)
-              : sections[i - 1].type == HmSectionType.deliveryStrip
-              ? 16.0
-              : gap;
           return Padding(
-            key: ValueKey('hm-section-${section.id}-${section.type.wire}'),
+            key: ValueKey('hm-section-${section!.id}-${section.type.wire}'),
             padding: EdgeInsets.only(top: top),
             child: HmSectionView(section: section, onRefresh: onRefresh),
           );
         },
       ),
+    );
+  }
+}
+
+/// One item of the Build 2 Home list: an admin section, or the active-order
+/// card.
+@immutable
+class HmHomeEntry {
+  const HmHomeEntry.section(HmHomeSection this.section) : isActiveOrder = false;
+
+  /// The card at the admin's ACTIVE_ORDER [section] (its optional title), or
+  /// at the default place when there is none.
+  const HmHomeEntry.activeOrder([this.section]) : isActiveOrder = true;
+
+  final HmHomeSection? section;
+  final bool isActiveOrder;
+
+  bool get isDeliveryStrip =>
+      !isActiveOrder && section?.type == HmSectionType.deliveryStrip;
+}
+
+/// The Home's entries in order. With [withActiveOrder] (a signed-in customer
+/// with an open recent order) the card is drawn once: at the admin's first
+/// ACTIVE_ORDER section, else where Figma 07 puts it — first, or under a
+/// leading delivery strip. Without it no entry is left for the card, and an
+/// ACTIVE_ORDER section never is one.
+List<HmHomeEntry> hmHomeEntries(
+  List<HmHomeSection> sections, {
+  required bool withActiveOrder,
+}) {
+  final placed = sections.indexWhere(
+    (section) => section.type == HmSectionType.activeOrder,
+  );
+  final entries = <HmHomeEntry>[
+    for (final (i, section) in sections.indexed)
+      if (section.type != HmSectionType.activeOrder)
+        HmHomeEntry.section(section)
+      else if (i == placed && withActiveOrder)
+        HmHomeEntry.activeOrder(section),
+  ];
+  if (placed < 0 && withActiveOrder) {
+    final at = entries.isNotEmpty && entries.first.isDeliveryStrip ? 1 : 0;
+    entries.insert(at, const HmHomeEntry.activeOrder());
+  }
+  return entries;
+}
+
+/// The space above entry [index] (Figma 07 "Body"): 16 at the top (none for a
+/// leading delivery strip) and after the strip, [HmHomeView.gap] elsewhere.
+double hmHomeGapBefore(List<HmHomeEntry> entries, int index) {
+  if (index == 0) return entries.first.isDeliveryStrip ? 0 : 16;
+  return entries[index - 1].isDeliveryStrip ? 16 : HmHomeView.gap;
+}
+
+/// The active-order card as a Build 2 Home entry: the admin's optional title
+/// over [ActiveOrderCard]; nothing without an open order (see
+/// [activeOrderProvider]).
+class HmActiveOrderSection extends ConsumerWidget {
+  const HmActiveOrderSection({super.key, this.section});
+
+  /// The admin's ACTIVE_ORDER section; null at the default place.
+  final HmHomeSection? section;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final order = ref.watch(activeOrderProvider).valueOrNull;
+    if (order == null) return const SizedBox.shrink();
+    final card = Padding(
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+      child: ActiveOrderCard(order: order),
+    );
+    final s = section;
+    if (s == null || !s.hasHeader) return card;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HmSectionHeader(title: s.title!, subtitle: s.subtitle),
+        card,
+      ],
     );
   }
 }
@@ -250,6 +324,8 @@ class HmSectionView extends ConsumerWidget {
             : HmTrustGrid(items: items);
       case HmSectionType.cmsBlock:
         return HmCmsBlockView(html: html);
+      case HmSectionType.activeOrder:
+        return HmActiveOrderSection(section: s);
       case HmSectionType.unknown:
         return const SizedBox.shrink();
     }
