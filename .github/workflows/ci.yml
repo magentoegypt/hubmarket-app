@@ -2,8 +2,8 @@ name: CI
 
 # Runs on every pull request (analyze + tests) to catch regressions before
 # merge. On push to main the same checks run as a gate inside the "Build · main
-# (APK + IPA)" workflow, so they aren't duplicated here. Still dispatchable by
-# hand from the Actions tab.
+# (Android APK)" workflow (build-on-push.yml), so they aren't duplicated here.
+# Still dispatchable by hand from the Actions tab.
 on:
   pull_request:
   workflow_dispatch:

@@ -126,7 +126,7 @@ class CustomerOrder {
   /// into the same value.
   final String? shippingCountryCode;
 
-  /// Payment method label (e.g. "Cash on Delivery", "Tabby").
+  /// Payment method label, as the store names it (e.g. "Cash On Delivery").
   final String? paymentMethodName;
 
   /// Billing recipient name + single-line billing address + phone.

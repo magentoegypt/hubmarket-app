@@ -6,11 +6,11 @@ import '../../cms/domain/faq.dart';
 /// The FAQ shipped with the app, used until the store publishes its own in
 /// the CMS block `hm_app_faq` (see `FaqDocument`).
 ///
-/// It only describes what the app does today: cash-on-delivery-style methods
-/// listed at checkout (no card gateway, no Tabby/Tamara), no store pages or
-/// seller badges, cancellation only where the store allows it — and returns
-/// in the app only when [returnsInApp] (the store has HubApp's returns),
-/// otherwise the Help-centre route.
+/// It only states what holds on every backend: cash-on-delivery-style methods
+/// listed at checkout (no card gateway, no Tabby/Tamara), cancellation only
+/// where the store allows it, and returns in the app only when [returnsInApp]
+/// (the store has HubApp's returns), otherwise the Help-centre route. Store
+/// pages and seller rows depend on HubApp too, so no answer promises them.
 List<FaqTopic> bundledHelpFaq(
   AppLocalizations l10n, {
   bool returnsInApp = false,

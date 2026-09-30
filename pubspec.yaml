@@ -74,7 +74,6 @@ flutter:
     # (lib/app/font_licenses.dart).
     - assets/fonts/licenses/
     - assets/branding/
-    - assets/images/
   fonts:
     # The Figma "01 · Cover & Foundations" text styles: DM Sans for Latin (EN)
     # and Tajawal for Arabic (AR) UI text, Playfair Display Bold for the EN

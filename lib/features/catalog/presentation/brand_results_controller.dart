@@ -6,9 +6,9 @@ import 'plp_controller.dart';
 
 /// Owns one brand landing's products — mirrors [BrandNameResultsController] (paged
 /// load, append-on-scroll, aggregation-driven filters + sort) but fetches by the
-/// brand's `manufacturer` attribute option id instead of a text search. This is
+/// brand's `mgs_brand` attribute option id instead of a text search. This is
 /// the real "Shop by Brand" product set: `products(search: "<brand name>")`
-/// returns cross-brand matches, whereas `manufacturer: {eq: <optionId>}` returns
+/// returns cross-brand matches, whereas `mgs_brand: {eq: <optionId>}` returns
 /// exactly that brand's products (matching the website's /shopbrand/ page).
 /// Reuses [PlpState] so the brand landing shares the PLP/search header + filter
 /// UI. Keyed by the brand option id; reloads on store switch.
@@ -16,7 +16,7 @@ class BrandResultsController
     extends AutoDisposeFamilyNotifier<PlpState, int> {
   static const int _pageSize = 20;
 
-  int get _manufacturerId => arg;
+  int get _brandOptionId => arg;
 
   @override
   PlpState build(int arg) {
@@ -31,7 +31,7 @@ class BrandResultsController
     state = state.copyWith(isLoading: true, error: null);
     try {
       final page = await _repo.fetchProducts(
-        manufacturerId: _manufacturerId,
+        brandOptionId: _brandOptionId,
         attributeFilters: state.selectedFilters,
         priceFrom: state.priceFrom,
         priceTo: state.priceTo,
@@ -61,7 +61,7 @@ class BrandResultsController
     state = state.copyWith(isLoadingMore: true);
     try {
       final page = await _repo.fetchProducts(
-        manufacturerId: _manufacturerId,
+        brandOptionId: _brandOptionId,
         attributeFilters: state.selectedFilters,
         priceFrom: state.priceFrom,
         priceTo: state.priceTo,

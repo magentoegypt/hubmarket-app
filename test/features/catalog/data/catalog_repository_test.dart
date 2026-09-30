@@ -58,7 +58,7 @@ void main() {
     test('the brand landing filters on the mgs_brand attribute', () async {
       final recorder = _RecordingClient(_emptyPage);
       await CatalogRepository(recorder.client).fetchProducts(
-        manufacturerId: 222,
+        brandOptionId: 222,
       );
 
       expect(recorder.variables.single['filter'], {

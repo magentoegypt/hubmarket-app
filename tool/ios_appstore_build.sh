@@ -150,27 +150,16 @@ else
   echo "::error::aps-environment still missing after re-sign"; exit 1
 fi
 
-# Apple Pay. Conditional on purpose: the entitlements we sign with come from the
-# PROVISIONING PROFILE, not from ios/Runner/Runner.entitlements, so declaring the
-# merchant id in that file does nothing on its own — the profile has to be
-# regenerated in the Apple Developer portal with the Apple Pay capability. This
-# catches exactly that drift, and stays silent until someone enables Apple Pay.
-# PlistBuddy (not grep) so the commented-out instructions in Runner.entitlements
-# cannot trigger it — only a real, parsed key counts.
+# Universal links. Conditional on purpose: the entitlements we sign with come
+# from the PROVISIONING PROFILE, not from ios/Runner/Runner.entitlements, so
+# declaring Associated Domains in that file does nothing on its own — the
+# profile has to be regenerated with the capability. This catches exactly that
+# drift, and stays silent until the key is declared. PlistBuddy (not grep) so
+# the commented-out runbook in Runner.entitlements cannot trigger it — only a
+# real, parsed key counts. It matters because the failure is INVISIBLE: without
+# the entitlement the app still installs and runs, hub-market.magento2.click
+# links just keep opening Safari.
 ENT_FILE="ios/Runner/Runner.entitlements"
-if /usr/libexec/PlistBuddy -c "Print :com.apple.developer.in-app-payments" "${ENT_FILE}" >/dev/null 2>&1; then
-  if grep -q "in-app-payments" <<<"${EMBEDDED}"; then
-    echo "✅ Apple Pay merchant entitlement embedded"
-  else
-    echo "::error::Runner.entitlements declares com.apple.developer.in-app-payments but the signed app does not carry it — regenerate ios/signing/*.mobileprovision with the Apple Pay merchant id enabled on the App ID"
-    exit 1
-  fi
-fi
-
-# Universal links. Same drift as Apple Pay above, and the same PlistBuddy
-# guard so the commented-out runbook in Runner.entitlements cannot trigger it.
-# This one matters because the failure is INVISIBLE: without the entitlement
-# the app still installs and runs, hub-market.magento2.click links just keep opening Safari.
 if /usr/libexec/PlistBuddy -c "Print :com.apple.developer.associated-domains" "${ENT_FILE}" >/dev/null 2>&1; then
   if grep -q "associated-domains" <<<"${EMBEDDED}"; then
     echo "✅ Associated Domains entitlement embedded"

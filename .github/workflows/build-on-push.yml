@@ -16,8 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # CI gate: analyze + tests must pass before either platform builds. Runs on
-  # ubuntu (reliable) so a macOS-runner hiccup never lets a red build through.
+  # CI gate: analyze + tests must pass before the APK builds.
   analyze-test:
     runs-on: ubuntu-latest
     steps:
@@ -37,10 +36,8 @@ jobs:
   android-apk:
     needs: analyze-test
     runs-on: ubuntu-latest
-    # Builds independently of the iOS job. The two are separate platform
-    # artifacts — a broken (or, more often, a flaky macOS-runner startup)
-    # iOS job must not block shipping the Android APK. Gating Android on iOS
-    # meant a 2-second macOS allocation failure silently skipped the APK.
+    # The only platform built on push; iOS builds are manual (build-ios.yml,
+    # release-ios.yml), so a macOS runner never gates the APK.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

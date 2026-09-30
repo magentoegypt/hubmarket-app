@@ -150,7 +150,7 @@ class CatalogRepository {
   Future<ProductPage> fetchProducts({
     String? search,
     String? categoryUid,
-    int? manufacturerId,
+    int? brandOptionId,
     Map<String, Set<String>> attributeFilters = const {},
     double? priceFrom,
     double? priceTo,
@@ -163,8 +163,8 @@ class CatalogRepository {
     assert(
       (search != null && search.isNotEmpty) ||
           categoryUid != null ||
-          manufacturerId != null,
-      'products query requires a search, a categoryUid, or a manufacturerId',
+          brandOptionId != null,
+      'products query requires a search, a categoryUid, or a brandOptionId',
     );
     final sortInput = _sortInput(sort);
     final filter = <String, dynamic>{};
@@ -176,10 +176,9 @@ class CatalogRepository {
     // name search returns cross-brand matches. `Brand.optionId` supplies this.
     // Hub Market's brand attribute is `mgs_brand` (label "Brand"); core
     // `manufacturer` is not filterable here, so sending it fails the query.
-    // The parameter keeps its old name for the existing callers.
-    if (manufacturerId != null) {
+    if (brandOptionId != null) {
       filter[kBrandAttributeCode] = <String, dynamic>{
-        'eq': manufacturerId.toString(),
+        'eq': brandOptionId.toString(),
       };
     }
     attributeFilters.forEach((code, values) {

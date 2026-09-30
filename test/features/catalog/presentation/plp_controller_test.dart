@@ -92,7 +92,7 @@ class _PagingRepo implements CatalogRepository {
   Future<ProductPage> fetchProducts({
     String? search,
     String? categoryUid,
-    int? manufacturerId,
+    int? brandOptionId,
     Map<String, Set<String>> attributeFilters = const {},
     double? priceFrom,
     double? priceTo,

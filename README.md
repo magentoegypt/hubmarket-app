@@ -66,7 +66,7 @@ lib/
               · account · wishlist · cms · notifications · onboarding · diagnostics
               (each data / domain / presentation)
   l10n/       app_en.arb · app_ar.arb
-assets/       branding (logo, app icon) · fonts (DM Sans, Tajawal, Playfair Display + OFL) · images
+assets/       branding (logo, app icon) · fonts (DM Sans, Tajawal, Playfair Display + OFL)
 config/       dev · staging · prod
 tool/         introspect_to_sdl.py · validate_ops.py · CI / iOS helper scripts
 .github/      ci · build-on-push · release-android · release-ios · iOS screenshot / deep-link checks

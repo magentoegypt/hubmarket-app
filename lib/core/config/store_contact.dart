@@ -6,8 +6,8 @@ import '../hubapp/hubapp_providers.dart';
 import '../store/store_controller.dart';
 import 'app_config.dart';
 
-/// Store contact details + social links — a single source of truth consumed by
-/// the About screen, Help & FAQ, and the marketing footer.
+/// Store contact details — the single source of truth for the Help & FAQ
+/// screen's contact channels.
 ///
 /// Every channel is optional. A null field means the backend doesn't publish
 /// it, and the screens leave that button or row out instead of showing a
@@ -22,9 +22,9 @@ import 'app_config.dart';
 ///   store-scoped, so each language reads its own block;
 /// * **website** — the storefront origin (the GraphQL endpoint's host).
 ///
-/// Core `StoreConfig` has no business name / address / social fields; the
-/// app's first client served them from a custom `magentoegypt_beauty_config`
-/// field that this backend doesn't have.
+/// Core `StoreConfig` has no business name / address fields; the app's first
+/// client served them from a custom `magentoegypt_beauty_config` field that
+/// this backend doesn't have.
 class StoreContact {
   const StoreContact({
     required this.website,
@@ -35,12 +35,6 @@ class StoreContact {
     this.email,
     this.hours = '',
     this.whatsapp,
-    this.facebook,
-    this.instagram,
-    this.tiktok,
-    this.pinterest,
-    this.youtube,
-    this.twitter,
   });
 
   final String? company;
@@ -59,25 +53,6 @@ class StoreContact {
   /// Full `https://wa.me/...` URL.
   final String? whatsapp;
   final String website;
-
-  /// Social profile URLs — null when the store has no presence there.
-  final String? facebook;
-  final String? instagram;
-  final String? tiktok;
-  final String? pinterest;
-  final String? youtube;
-  final String? twitter;
-
-  /// Non-null social links keyed by network, in display order.
-  List<({String key, String url})> get socials => [
-    // Figma footer order: Instagram · X · YouTube · Facebook (then the rest).
-    if (instagram != null) (key: 'instagram', url: instagram!),
-    if (twitter != null) (key: 'twitter', url: twitter!),
-    if (youtube != null) (key: 'youtube', url: youtube!),
-    if (facebook != null) (key: 'facebook', url: facebook!),
-    if (tiktok != null) (key: 'tiktok', url: tiktok!),
-    if (pinterest != null) (key: 'pinterest', url: pinterest!),
-  ];
 }
 
 /// The CMS block carrying the store's WhatsApp support link.
