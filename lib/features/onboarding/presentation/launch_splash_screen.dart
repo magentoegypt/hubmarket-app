@@ -109,16 +109,11 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
             ),
           ),
           // Progress bar near the bottom of the screen (Figma "01 Splash").
+          // No footer line under it: the Figma's "Across all seven emirates"
+          // is a coverage claim the app can't back (QA02).
           const Align(
             alignment: Alignment(0, 0.72),
             child: _SplashProgress(),
-          ),
-          Align(
-            alignment: const Alignment(0, 0.84),
-            child: Text(
-              l10n.launchFooter,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
           ),
         ],
       ),

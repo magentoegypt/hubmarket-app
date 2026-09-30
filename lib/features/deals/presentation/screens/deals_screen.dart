@@ -201,21 +201,12 @@ class DealsEndBanner extends StatelessWidget {
           children: [
             const Icon(Icons.schedule_rounded, size: 22, color: Colors.white),
             const SizedBox(width: 10),
+            // No "new deals every day at midnight" line: when deals refresh
+            // is the store's business, not a promise the app makes (QA02).
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.dealsEndIn,
-                    style: t.captionStrong.copyWith(color: Colors.white),
-                  ),
-                  Text(
-                    l10n.dealsNewEveryDay,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: t.micro.copyWith(color: Colors.white),
-                  ),
-                ],
+              child: Text(
+                l10n.dealsEndIn,
+                style: t.captionStrong.copyWith(color: Colors.white),
               ),
             ),
             const SizedBox(width: 10),

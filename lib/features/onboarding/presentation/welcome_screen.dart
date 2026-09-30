@@ -13,6 +13,7 @@ import '../../../core/widgets/brand_lockup.dart';
 import '../../../core/widgets/network_image.dart';
 import '../../home/domain/hm_home.dart';
 import '../../home/presentation/hm_home_providers.dart';
+import '../../home/presentation/home_providers.dart';
 import '../../home/presentation/widgets/hm_hero.dart';
 import '../../../l10n/l10n.dart';
 
@@ -23,8 +24,9 @@ import '../../../l10n/l10n.dart';
 /// The panel is the storefront's Hero Banner slides (the guest Home's
 /// HERO_BANNERS, Hub Market App API) — each photo with its kicker, the pager
 /// below. Without them (Build 1, or no slide with a photo) it is the reversed
-/// logo on navy with the "same-day delivery" badge: no marketing photo is
-/// bundled with the app.
+/// logo on navy, with the storefront's delivery promise (`hm_delivery_promise`)
+/// as its pill when the store has one: no marketing photo or claim is bundled
+/// with the app.
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -44,6 +46,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final isEn = activeLocale != 'ar';
     final slides =
         ref.watch(welcomeSlidesProvider).valueOrNull ?? const <HmHeroBanner>[];
+    // The logo panel's pill is the storefront's delivery promise (CMS block
+    // `hm_delivery_promise`, warmed by the splash); none without one.
+    final promise = slides.isEmpty ? ref.watch(homePromiseProvider) : '';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -51,7 +56,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         children: [
           Expanded(
             child: slides.isEmpty
-                ? _BrandPanel(kicker: l10n.welcomeKicker)
+                ? _BrandPanel(kicker: promise.isEmpty ? null : promise)
                 : _SlidesPanel(
                     slides: slides,
                     onPageChanged: (page) => setState(() => _page = page),
@@ -235,9 +240,10 @@ class _SlidesPanelState extends State<_SlidesPanel> {
 }
 
 class _BrandPanel extends StatelessWidget {
-  const _BrandPanel({required this.kicker});
+  const _BrandPanel({this.kicker});
 
-  final String kicker;
+  /// The admin's delivery promise; no pill without one.
+  final String? kicker;
 
   @override
   Widget build(BuildContext context) {
@@ -265,26 +271,37 @@ class _BrandPanel extends StatelessWidget {
                     const BrandLockup(color: Colors.white, fontSize: 40),
               ),
             ),
-            PositionedDirectional(
-              start: 20,
-              bottom: 18,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF15803D),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  kicker,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
+            if (kicker != null)
+              PositionedDirectional(
+                start: 20,
+                end: 20,
+                bottom: 18,
+                // Admin text of any length: the pill hugs it, up to two lines.
+                child: Align(
+                  alignment: AlignmentDirectional.bottomStart,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF15803D),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      kicker!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
