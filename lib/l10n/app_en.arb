@@ -367,6 +367,10 @@
   "searchNoResultsBody": "Check the spelling or use fewer words.",
   "searchNoResultsBodyStores": "Check the spelling or use fewer words. You can also browse our stores.",
   "searchBrowseStores": "Browse stores",
+  "searchTryLabel": "Try",
+  "@searchTryLabel": {
+    "description": "No-results page (S2): label above the suggested searches from the store's query-suggestions index."
+  },
   "searchPopularNow": "Popular right now",
   "comingSoon": "Coming soon",
   "comingSoonBody": "This section arrives in a later phase.",

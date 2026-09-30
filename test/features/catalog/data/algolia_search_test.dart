@@ -457,6 +457,103 @@ void main() {
     });
   });
 
+  group('try suggestions (S2)', () {
+    final withIndex = AlgoliaSettings.fromStorefrontConfig({
+      ...storefrontAlgoliaConfig(),
+      'autocomplete': {
+        'nbOfProductsSuggestions': 8,
+        'areSuggestionsEnabled': true,
+        'showAlgoliaSuggestions': false,
+        'nbOfQueriesSuggestions': 5,
+      },
+    });
+
+    test('no suggestions index, no query: nothing is made up', () {
+      expect(_settings.suggestionIndex, isNull);
+      expect(trySuggestionsQuery(_settings, query: 'sofa bed'), isNull);
+      expect(trySuggestionsQuery(withIndex, query: '  '), isNull);
+    });
+
+    test('asks the store\'s suggestions index, every word optional', () {
+      final query = trySuggestionsQuery(withIndex, query: 'sofa bed velvet')!;
+      expect(query.indexName, 'hubmarket_en_suggestions');
+      expect(query.params['query'], 'sofa bed velvet');
+      // Three shown, one more in case the query itself comes back.
+      expect(query.params['hitsPerPage'], 4);
+      expect(query.params['removeWordsIfNoResults'], 'allOptional');
+      expect(query.params['attributesToRetrieve'], ['query']);
+    });
+
+    test('the answer: distinct queries, never the search itself', () {
+      final terms = trySuggestionsFromResult(
+        {
+          'hits': [
+            {'query': 'Sofa Bed Velvet'},
+            {'query': 'sofa bed'},
+            {'query': 'green sofa'},
+            {'query': 'sofa bed'},
+            {'query': ''},
+            {'query': 'furniture'},
+            {'query': 'bed frame'},
+          ],
+        },
+        query: 'sofa bed velvet',
+      );
+      expect(terms, ['sofa bed', 'green sofa', 'furniture']);
+    });
+
+    test('a missing suggestions index answers nothing and never rests '
+        'search', () async {
+      final backend = FakeAlgoliaBackend(
+        configs: {
+          'en': {
+            ...storefrontAlgoliaConfig(),
+            'autocomplete': {
+              'nbOfProductsSuggestions': 8,
+              'nbOfCategoriesSuggestions': 2,
+              'areSuggestionsEnabled': true,
+              'showAlgoliaSuggestions': false,
+              'nbOfQueriesSuggestions': 5,
+            },
+          },
+        },
+        answer: (query) => query.indexName == 'hubmarket_en_suggestions'
+            ? {
+                'hits': [
+                  {'query': 'sofa bed'},
+                  {'query': 'green sofa'},
+                ],
+              }
+            : emptyResult(),
+      );
+      final search = AlgoliaSearch(
+        client: AlgoliaClient(backend.client),
+        settings: AlgoliaSettingsRepository(
+          config: AppConfig.current,
+          client: backend.client,
+          cache: FakeLocalCache(),
+          storefrontPage: (store) =>
+              Uri.parse('https://hub-market.magento2.click/$store/'),
+        ),
+      );
+
+      expect(
+        await search.trySuggestions(storeCode: 'en', query: 'sofa velvet'),
+        ['sofa bed', 'green sofa'],
+      );
+
+      backend.algoliaStatus = 404;
+      expect(
+        await search.trySuggestions(storeCode: 'en', query: 'sofa velvet'),
+        isEmpty,
+      );
+      backend.algoliaStatus = 200;
+      // Search itself carries on at once.
+      await search.typeAhead(storeCode: 'en', query: 'sofa');
+      expect(backend.lastCall.first.indexName, 'hubmarket_en_products');
+    });
+  });
+
   group('AlgoliaSearch', () {
     AppConfig config() => AppConfig.current;
 

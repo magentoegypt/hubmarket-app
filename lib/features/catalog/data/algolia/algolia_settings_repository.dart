@@ -36,10 +36,12 @@ typedef HubAppAlgoliaSource =
 /// The storefront's key is an Algolia *secured* key restricted by
 /// `validUntil` to 24 hours after it was issued, so the app can't ship one.
 ///
-/// * With the Hub Market App API ([hubApp]), the key, its `valid_until` and
-///   the index names come from `hmAppConfig.algolia`. That API has no facets
-///   or sorts, so their layout (store-view labels, sort replicas) is read
-///   once from the storefront page below and kept for [layoutMaxAge].
+/// * With the Hub Market App API ([hubApp]), the key, its `valid_until`, the
+///   index names and the search layout (facets with their store-view labels,
+///   sort replicas, the query-suggestions index) come from
+///   `hmAppConfig.algolia`, and no page is read. From a backend older than
+///   the layout, it is read once from the storefront page below and kept for
+///   [layoutMaxAge].
 /// * Without it — today's fallback — everything is read the way the
 ///   website's own autocomplete reads it: from `window.algoliaConfig` on the
 ///   store view's home page, one GET of about 60 KB (gzip) that Magento's
@@ -151,8 +153,9 @@ class AlgoliaSettingsRepository {
     }
     if (hub == null || hub.searchApiKey == refused) return null;
 
-    var layout = _readLayout(storeCode);
-    if (layout == null) {
+    // The backend serves the layout itself: no storefront page to read.
+    var layout = hub.layout != null ? null : _readLayout(storeCode);
+    if (hub.layout == null && layout == null) {
       try {
         layout = await _readStorefront(storeCode);
       } on AlgoliaUnavailable {

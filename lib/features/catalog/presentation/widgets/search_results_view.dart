@@ -41,12 +41,20 @@ import 'sort_sheet.dart';
 /// search that finds nothing at all (no product, and no store by that name)
 /// shows the no-results page (Figma S2) instead of the tabs.
 class SearchResultsView extends ConsumerWidget {
-  const SearchResultsView({super.key, required this.request, this.scopeName});
+  const SearchResultsView({
+    super.key,
+    required this.request,
+    this.scopeName,
+    this.onSearch,
+  });
 
   final SearchRequest request;
 
   /// Name of the category the search is scoped to, for the results line.
   final String? scopeName;
+
+  /// Submits another search (a no-results "Try" chip).
+  final ValueChanged<String>? onSearch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,7 +76,7 @@ class SearchResultsView extends ConsumerWidget {
     var initialTab = 0;
     if (foundNothing) {
       if (vendors == null || (vendorsCounted && vendorList.isEmpty)) {
-        return SearchNoResults(query: request.query);
+        return SearchNoResults(query: request.query, onTry: onSearch);
       }
       if (!vendorsCounted) {
         return const Center(child: CircularProgressIndicator());

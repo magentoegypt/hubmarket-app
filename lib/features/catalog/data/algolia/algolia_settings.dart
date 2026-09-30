@@ -63,9 +63,11 @@ class AlgoliaSortIndex {
 /// application, the search key, the index name, and the facets and sorts
 /// configured in Magento.
 ///
-/// It comes from the storefront's `window.algoliaConfig` (the same object the
-/// website's autocomplete reads, see [AlgoliaSettings.fromStorefrontConfig])
-/// or, when a static key is configured, from [AppConfig].
+/// It comes from the Hub Market App API (`hmAppConfig.algolia`, key and
+/// layout, see [AlgoliaSettings.fromHubApp]), from the storefront's
+/// `window.algoliaConfig` (the same object the website's autocomplete reads,
+/// see [AlgoliaSettings.fromStorefrontConfig]) or, when a static key is
+/// configured, from [AppConfig].
 @immutable
 class AlgoliaSettings {
   const AlgoliaSettings({
@@ -83,6 +85,8 @@ class AlgoliaSettings {
     this.maxValuesPerFacet = 10,
     this.categorySeparator = ' /// ',
     this.categoriesOutsideMenu = false,
+    this.suggestionIndex,
+    this.suggestionCount = 0,
     this.fromBackend = true,
   });
 
@@ -121,6 +125,12 @@ class AlgoliaSettings {
 
   /// "Show categories that are not included in the navigation menu".
   final bool categoriesOutsideMenu;
+
+  /// The query-suggestions index the website's autocomplete reads — Algolia
+  /// Query Suggestions, or `<index>_suggestions` for Magento's search terms —
+  /// and how many it shows; null when the store's suggestions are off.
+  final String? suggestionIndex;
+  final int suggestionCount;
 
   /// False for settings built from [AppConfig] alone.
   final bool fromBackend;
@@ -177,6 +187,22 @@ class AlgoliaSettings {
         ? config['instant'] as Map<String, dynamic>
         : const <String, dynamic>{};
     final separator = text(instant['categorySeparator']);
+    // As the website's autocomplete.js picks it (getSuggestionsIndexName).
+    String? suggestionIndex;
+    var suggestionCount = 0;
+    if (autocomplete['areSuggestionsEnabled'] == true) {
+      final algolia = autocomplete['showAlgoliaSuggestions'] == true;
+      final name = algolia
+          ? text(autocomplete['suggestionsIndexName'])
+          : '${indexName}_suggestions';
+      suggestionCount = count(
+        algolia
+            ? autocomplete['nbOfAlgoliaSuggestions']
+            : autocomplete['nbOfQueriesSuggestions'],
+        0,
+      );
+      if (name.isNotEmpty && suggestionCount > 0) suggestionIndex = name;
+    }
 
     return AlgoliaSettings(
       appId: appId,
@@ -217,6 +243,8 @@ class AlgoliaSettings {
       maxValuesPerFacet: count(config['maxValuesPerFacet'], 10),
       categorySeparator: separator.isEmpty ? ' /// ' : ' $separator ',
       categoriesOutsideMenu: config['showCatsNotIncludedInNavigation'] == true,
+      suggestionIndex: suggestionIndex,
+      suggestionCount: suggestionIndex == null ? 0 : suggestionCount,
     );
   }
 
@@ -237,10 +265,12 @@ class AlgoliaSettings {
   }
 
   /// Settings from the Hub Market App API (`hmAppConfig.algolia`): its
-  /// application, secured key, `valid_until` and index names. That API
-  /// carries no facets or sorts, so those come from [layout] — the settings
-  /// the storefront page gave last — or, without one, the basic facets and
-  /// the configured sort replicas.
+  /// application, secured key, `valid_until` and index names, and — from a
+  /// backend that has it — the storefront's own search layout
+  /// ([HmAlgoliaConfig.layout]: facets, sorts, suggestions, …), so nothing
+  /// else has to be read. From an older backend the layout comes from
+  /// [layout] — the settings the storefront page gave last — or, without one,
+  /// the basic facets and the configured sort replicas.
   factory AlgoliaSettings.fromHubApp(
     HmAlgoliaConfig hub, {
     required AppConfig config,
@@ -251,6 +281,51 @@ class AlgoliaSettings {
     final indexName = hub.productIndex.endsWith(suffix)
         ? hub.productIndex.substring(0, hub.productIndex.length - suffix.length)
         : '${hub.indexPrefix}$storeCode';
+    final served = hub.layout;
+    if (served != null) {
+      final separator = served.categorySeparator.trim();
+      return AlgoliaSettings(
+        appId: hub.applicationId,
+        searchKey: hub.searchApiKey,
+        indexName: indexName,
+        validUntil: hub.validUntil ?? securedKeyValidUntil(hub.searchApiKey),
+        facets: [
+          for (final facet in served.facets)
+            AlgoliaFacet(
+              attribute: facet.attribute,
+              type: facet.type,
+              label: facet.label,
+            ),
+        ],
+        sorts: [
+          for (final sort in served.sorts)
+            AlgoliaSortIndex(
+              indexName: sort.index,
+              attribute: sort.attribute,
+              descending: sort.descending,
+              label: sort.label,
+            ),
+        ],
+        currencyCode: served.currencyCode.isEmpty ? 'AED' : served.currencyCode,
+        priceGroup: served.priceGroup.isEmpty ? 'default' : served.priceGroup,
+        // A type-ahead without products is a setting that couldn't be read,
+        // not a choice: the extension's own default applies.
+        productSuggestions: served.productSuggestions > 0
+            ? served.productSuggestions
+            : 8,
+        categorySuggestions: served.categorySuggestions,
+        pageSuggestions: served.pageSuggestions,
+        maxValuesPerFacet: served.maxValuesPerFacet > 0
+            ? served.maxValuesPerFacet
+            : 10,
+        categorySeparator: separator.isEmpty ? ' /// ' : ' $separator ',
+        categoriesOutsideMenu: served.categoriesOutsideMenu,
+        suggestionIndex: served.suggestionIndex,
+        suggestionCount: served.suggestionIndex == null
+            ? 0
+            : served.suggestionCount,
+      );
+    }
     return AlgoliaSettings(
       appId: hub.applicationId,
       searchKey: hub.searchApiKey,
@@ -266,6 +341,8 @@ class AlgoliaSettings {
       maxValuesPerFacet: layout?.maxValuesPerFacet ?? 10,
       categorySeparator: layout?.categorySeparator ?? ' /// ',
       categoriesOutsideMenu: layout?.categoriesOutsideMenu ?? false,
+      suggestionIndex: layout?.suggestionIndex,
+      suggestionCount: layout?.suggestionCount ?? 0,
     );
   }
 
@@ -304,6 +381,11 @@ class AlgoliaSettings {
       'sections': [
         {'name': 'pages', 'hitsPerPage': pageSuggestions},
       ],
+      // Written as an Algolia Query Suggestions index, which names it as is.
+      'areSuggestionsEnabled': suggestionIndex != null,
+      'showAlgoliaSuggestions': suggestionIndex != null,
+      'suggestionsIndexName': suggestionIndex ?? '',
+      'nbOfAlgoliaSuggestions': suggestionCount,
     },
   };
 }

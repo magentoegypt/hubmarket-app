@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/hubapp/hubapp_providers.dart';
 import '../../../core/store/store_controller.dart';
 import '../data/best_sellers_repository.dart';
+import '../data/catalog_search.dart';
 import '../domain/category.dart';
 import '../domain/product.dart';
 import 'catalog_providers.dart';
@@ -46,3 +47,18 @@ final searchPopularNowProvider = FutureProvider.autoDispose<List<Product>>((
     return const <Product>[];
   }
 });
+
+/// The no-results page's "Try" chips (Figma S2) for a query: queries from
+/// the store's Algolia query-suggestions index — the one the website's
+/// autocomplete reads — that share words with it. Empty when the store has no
+/// suggestions index (Hub Market's are off today) or it can't be read, and
+/// the row then isn't shown: no suggestion is ever made up.
+final searchTrySuggestionsProvider = FutureProvider.autoDispose
+    .family<List<String>, String>((ref, query) async {
+      final storeCode = ref.watch(
+        storeControllerProvider.select((s) => s.activeStoreCode),
+      );
+      return ref
+          .watch(catalogSearchProvider)
+          .trySuggestions(storeCode: storeCode, query: query);
+    });

@@ -38,6 +38,7 @@ class SearchTypeAhead extends ConsumerStatefulWidget {
     required this.scope,
     required this.onScopeTap,
     required this.onViewAll,
+    this.onSearch,
   });
 
   /// The debounced text — empty while the first keystrokes settle.
@@ -49,6 +50,9 @@ class SearchTypeAhead extends ConsumerStatefulWidget {
 
   /// Opens the full results (Figma 09c).
   final VoidCallback onViewAll;
+
+  /// Submits another search (a no-results "Try" chip).
+  final ValueChanged<String>? onSearch;
 
   /// Categories linked in the "See products in … or in A, B" line — the
   /// website's autocomplete footer names two.
@@ -123,7 +127,12 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
         children: [
           if (loading) const _Pending() else const SizedBox(height: 6),
           if (widget.scope != null) scopeChip,
-          Expanded(child: SearchNoResults(query: answer.request.query)),
+          Expanded(
+            child: SearchNoResults(
+              query: answer.request.query,
+              onTry: widget.onSearch,
+            ),
+          ),
           // Matching categories and pages still help when no product does.
           if (!result.isEmpty) pinned,
         ],
