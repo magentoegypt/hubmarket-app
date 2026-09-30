@@ -105,6 +105,10 @@ class AppConfig {
 
   bool get isProd => flavor == 'prod';
 
+  /// The dev and staging builds carry developer tools — Settings' connection
+  /// test and theme switch. The customer build (prod) doesn't.
+  bool get showsDeveloperTools => flavor == 'dev' || flavor == 'staging';
+
   /// Whether the app may search Algolia at all (an application and a prefix
   /// are configured). The key may still have to come from the backend.
   bool get algoliaConfigured =>
@@ -125,3 +129,8 @@ class AppConfig {
 }
 
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.current);
+
+/// Whether this build shows developer tools ([AppConfig.showsDeveloperTools]).
+final developerToolsProvider = Provider<bool>(
+  (ref) => ref.watch(appConfigProvider).showsDeveloperTools,
+);

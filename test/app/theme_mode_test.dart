@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/theme/theme_mode_controller.dart';
+import 'package:hubmarket_app/core/config/app_config.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 
 import '../support/fakes.dart';
 
-ProviderContainer _container([FakeLocalCache? cache]) {
+ProviderContainer _container([
+  FakeLocalCache? cache,
+  bool developerTools = true,
+]) {
   final c = ProviderContainer(
     overrides: [
       localCacheProvider.overrideWithValue(cache ?? FakeLocalCache()),
+      developerToolsProvider.overrideWithValue(developerTools),
     ],
   );
   addTearDown(c.dispose);
@@ -25,6 +30,14 @@ void main() {
     test('honours a persisted choice', () {
       final cache = FakeLocalCache()..writeString(kThemeModePrefKey, 'dark');
       expect(_container(cache).read(themeModeProvider), ThemeMode.dark);
+    });
+
+    test('the customer build stays light: it has no switch', () {
+      final cache = FakeLocalCache()..writeString(kThemeModePrefKey, 'dark');
+      expect(
+        _container(cache, false).read(themeModeProvider),
+        ThemeMode.light,
+      );
     });
 
     test('set persists the choice', () async {

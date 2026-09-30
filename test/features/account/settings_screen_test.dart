@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/config/app_config.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/settings_screen.dart';
@@ -14,6 +15,7 @@ Future<void> _pump(
   WidgetTester tester, {
   String locale = 'en',
   bool push = false,
+  bool developerTools = false,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -21,6 +23,7 @@ Future<void> _pump(
         localCacheProvider.overrideWithValue(FakeLocalCache()),
         localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
         pushNotificationsAvailableProvider.overrideWithValue(push),
+        developerToolsProvider.overrideWithValue(developerTools),
       ],
       child: MaterialApp(
         locale: Locale(locale),
@@ -45,6 +48,27 @@ void main() {
     expect(find.byType(SegmentedButton<String>), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
     expect(find.text('العربية'), findsOneWidget);
+  });
+
+  testWidgets('the customer build has no theme switch or connection test', (
+    tester,
+  ) async {
+    await _pump(tester);
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(find.byType(SegmentedButton<ThemeMode>), findsNothing);
+    expect(find.text(en.settingsConnectionTest), findsNothing);
+    // Customers keep the language switch.
+    expect(find.byType(SegmentedButton<String>), findsOneWidget);
+  });
+
+  testWidgets('dev and staging builds add both developer tools', (
+    tester,
+  ) async {
+    await _pump(tester, developerTools: true);
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(find.byType(SegmentedButton<ThemeMode>), findsOneWidget);
+    expect(find.text(en.settingsConnectionTest), findsOneWidget);
+    expect(find.byType(SegmentedButton<String>), findsOneWidget);
   });
 
   testWidgets('no push switch while push is unavailable', (tester) async {
