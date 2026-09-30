@@ -33,6 +33,8 @@ query HmBestSellers($pageSize: Int, $currentPage: Int) {
       stock_status
       new_from_date
       new_to_date
+      rating_summary
+      review_count
       image { url label }
       price_range {
         minimum_price {

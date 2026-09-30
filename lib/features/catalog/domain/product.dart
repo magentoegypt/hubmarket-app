@@ -46,6 +46,8 @@ class Product {
     this.badge = ProductBadge.none,
     this.categories = const <ProductCategoryRef>[],
     this.typeId,
+    this.ratingSummary,
+    this.reviewCount,
   });
 
   final String sku;
@@ -79,11 +81,32 @@ class Product {
   /// `__typename`); null when unknown.
   final String? typeId;
 
+  /// Magento's `rating_summary`: the average of the approved reviews on a
+  /// 0–100 scale (4★ is 80). Null when the listing didn't ask for it.
+  final double? ratingSummary;
+
+  /// Approved reviews (`review_count`). Null when the source doesn't say:
+  /// Algolia records carry the average only.
+  final int? reviewCount;
+
   /// True for a product that can't go into the cart by SKU alone: a
   /// configurable (size, colour), bundle or grouped product needs its
-  /// choices made on the product page first.
-  bool get requiresOptions =>
-      typeId == 'configurable' || typeId == 'bundle' || typeId == 'grouped';
+  /// choices made on the product page first. Hub Market's own `new_bundle`
+  /// type (as Algolia records name it) is a bundle too.
+  bool get requiresOptions => const {
+    'configurable',
+    'bundle',
+    'new_bundle',
+    'grouped',
+  }.contains(typeId);
+
+  /// The average in stars (4.7 for a `rating_summary` of 94), or null when
+  /// there is no rating to show — no reviews, or a listing that didn't ask.
+  double? get starRating {
+    final summary = ratingSummary;
+    if (summary == null || summary <= 0 || reviewCount == 0) return null;
+    return (summary / 20).clamp(0, 5).toDouble();
+  }
 
   /// The category a search hit names in its "in Home Furniture" line: the
   /// deepest one shown in the menu, else the deepest of any. Null without

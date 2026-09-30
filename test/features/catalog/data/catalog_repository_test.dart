@@ -106,6 +106,8 @@ void main() {
             'stock_status': 'IN_STOCK',
             'new_from_date': null,
             'new_to_date': null,
+            'rating_summary': 87,
+            'review_count': 3,
             'image': null,
             'price_range': null,
             'categories': [
@@ -158,6 +160,9 @@ void main() {
       });
       expect(page.totalCount, 23);
       expect(page.items.single.primaryCategory?.name, "Women's Bags");
+      // The card's stars (Figma v3) ride along with every listing.
+      expect(page.items.single.reviewCount, 3);
+      expect(page.items.single.starRating, closeTo(4.35, 1e-9));
       expect(page.aggregations.single.options.single.count, 12);
     });
 

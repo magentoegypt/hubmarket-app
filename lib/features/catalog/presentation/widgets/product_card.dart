@@ -15,9 +15,10 @@ import 'price_view.dart';
 
 /// Product card per Figma: a bordered white card with a full-bleed image
 /// carrying NEW/BESTSELLER + discount badges (top-start) and stacked wishlist +
-/// share actions (top-end), then a name + stacked-price panel. Image degrades
-/// to a neutral placeholder and the merchandising badge only shows when the
-/// catalogue actually flags it (no fabricated imagery or badges).
+/// share actions (top-end), then the name, the star rating (v3) when the
+/// product has reviews, and the stacked price. Image degrades to a neutral
+/// placeholder and the merchandising badge only shows when the catalogue
+/// actually flags it (no fabricated imagery, badges or ratings).
 class ProductCard extends ConsumerStatefulWidget {
   const ProductCard({
     super.key,
@@ -169,6 +170,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       color: AppColors.inkHeading,
                     ),
                   ),
+                  if (product.starRating case final stars?) ...[
+                    const SizedBox(height: 4),
+                    _RatingLine(stars: stars, count: product.reviewCount),
+                  ],
                   const SizedBox(height: 6),
                   if (!product.inStock)
                     Text(
@@ -205,9 +210,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   /// Adds the product to the cart by SKU (the cart controller self-heals a
   /// stale/consumed cart) and confirms with the added-to-cart sheet.
   ///
-  /// A product that needs choices first — a configurable's size or colour
-  /// ([Product.requiresOptions]) — can't go in by SKU, so its "+" opens the
-  /// product page, as tapping the card does. When the listing doesn't know
+  /// A product that needs choices first — a configurable's size or colour,
+  /// a bundle's selections ([Product.requiresOptions]) — can't go in by SKU:
+  /// Magento refuses it. Its "+" opens the product page instead, as tapping
+  /// the card does, and never calls the cart. When the listing doesn't know
   /// the product's type, the add is attempted and a refusal shows the
   /// generic error.
   Future<void> _add() async {
@@ -242,6 +248,52 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final url = productUrl(ref.read(storeControllerProvider), product.urlKey);
     await SharePlus.instance.share(
       ShareParams(text: url == null ? message : '$message\n$url'),
+    );
+  }
+}
+
+/// "★ 4.7 (3)" under the name (Figma v3 card): the average of the approved
+/// reviews and, when the source says, how many there are.
+class _RatingLine extends StatelessWidget {
+  const _RatingLine({required this.stars, this.count});
+
+  /// 0–5.
+  final double stars;
+
+  /// Null (or 0) when the source doesn't say — Algolia records.
+  final int? count;
+
+  @override
+  Widget build(BuildContext context) {
+    final average = stars.toStringAsFixed(1);
+    final reviews = count ?? 0;
+    const style = TextStyle(fontSize: 11, height: 1.3);
+    return Semantics(
+      label: AppLocalizations.of(context).productCardRating(average, reviews),
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, size: 14, color: AppColors.accentGold),
+          const SizedBox(width: 2),
+          Text(
+            average,
+            textDirection: TextDirection.ltr,
+            style: style.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.inkHeading,
+            ),
+          ),
+          if (reviews > 0) ...[
+            const SizedBox(width: 3),
+            Text(
+              '($reviews)',
+              textDirection: TextDirection.ltr,
+              style: style.copyWith(color: AppColors.inkMuted),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

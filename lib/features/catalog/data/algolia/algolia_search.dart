@@ -29,6 +29,7 @@ const List<String> _productFields = <String>[
   'price',
   'categories',
   'in_stock',
+  'rating_summary',
 ];
 
 /// Most values a facet brings back — enough for the Categories tab and the

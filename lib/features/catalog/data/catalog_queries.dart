@@ -113,6 +113,8 @@ query Products(
       stock_status
       new_from_date
       new_to_date
+      rating_summary
+      review_count
       image {
         url
         label
@@ -180,6 +182,8 @@ query SearchProducts(
       stock_status
       new_from_date
       new_to_date
+      rating_summary
+      review_count
       image {
         url
         label
@@ -338,6 +342,8 @@ fragment LinkedProductFields on ProductInterface {
   stock_status
   new_from_date
   new_to_date
+  rating_summary
+  review_count
   image {
     url
   }

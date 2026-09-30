@@ -586,6 +586,15 @@
   "helpQSell": "How can my store sell on Hub Market?",
   "helpASell": "Stores register as sellers on the Hub Market website.",
   "notificationsTitle": "Notifications",
+  "notificationsUnread": "{count, plural, =1{Notifications, 1 unread} other{Notifications, {count} unread}}",
+  "@notificationsUnread": {
+    "description": "Tooltip and screen-reader label of the bell while it shows the unread dot.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notificationsPromoTitle": "Promotions & offers",
   "notificationsPromoBody": "Get notified about sales, new arrivals and exclusive offers.",
   "notificationSettingsTitle": "Notification settings",
@@ -1218,6 +1227,18 @@
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",
+  "productCardRating": "{count, plural, =0{Rated {rating} out of 5} =1{Rated {rating} out of 5, from 1 review} other{Rated {rating} out of 5, from {count} reviews}}",
+  "@productCardRating": {
+    "description": "Screen-reader label of a product card's stars. count is 0 when the source doesn't say how many reviews there are.",
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tabDescription": "Description",
   "tabDetails": "Details",
   "tabKeyFeatures": "Key Features",

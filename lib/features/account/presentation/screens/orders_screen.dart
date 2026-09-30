@@ -7,9 +7,9 @@ import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/config/store_timezone.dart';
 import '../../../../core/widgets/network_image.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/empty_state.dart';
-import '../../../../core/widgets/failure_message.dart';
+import '../../../../core/widgets/load_failure_view.dart';
+import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../data/account_repository.dart';
@@ -86,26 +86,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     );
   }
 
-  Widget _errorBlock(AppLocalizations l10n, Object? error, VoidCallback retry) =>
-      Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                error is Failure
-                    ? failureMessage(context, error)
-                    : l10n.errorGeneric,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: retry, child: Text(l10n.actionRetry)),
-            ],
-          ),
-        ),
-      );
-
   Widget _card(CustomerOrder order) => _OrderCard(
     order: order,
     onDetails: () => context.push(AppRoutes.orderDetail, extra: order),
@@ -115,13 +95,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
   Widget _customerBody(AppLocalizations l10n, OrdersState state) {
     if (state.isLoading && state.orders.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const _OrdersSkeleton();
     }
     if (state.error != null && state.orders.isEmpty) {
-      return _errorBlock(
-        l10n,
-        state.error,
-        ref.read(ordersControllerProvider.notifier).refresh,
+      // Offline: the S3 page, which reloads by itself once the network is back.
+      return LoadFailureView(
+        error: state.error,
+        onRetry: ref.read(ordersControllerProvider.notifier).refresh,
       );
     }
     if (state.orders.isEmpty) {
@@ -167,12 +147,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   Widget _guestBody(AppLocalizations l10n, GuestOrdersState state) {
     final notifier = ref.read(guestOrdersControllerProvider.notifier);
     if (state.isLoading && state.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const _OrdersSkeleton();
     }
     // Nothing resolved at all: a transient failure worth retrying — unlike the
     // old guest path, this Retry can actually succeed.
     if (state.error != null && state.orders.isEmpty) {
-      return _errorBlock(l10n, state.error, notifier.refresh);
+      return LoadFailureView(error: state.error, onRetry: notifier.refresh);
     }
     return ListView(
       padding: EdgeInsets.zero,
@@ -276,6 +256,94 @@ class _Band extends StatelessWidget {
     height: 8,
     child: ColoredBox(color: AppColors.surfaceMuted),
   );
+}
+
+/// The orders' first load: three cards shaped like [_OrderCard] — number and
+/// date, a line, the total and the two actions — shimmering in place of a
+/// spinner. White cards like the real ones, in both themes.
+class _OrdersSkeleton extends StatelessWidget {
+  const _OrdersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget part(double factor, {double height = 12}) => FractionallySizedBox(
+      alignment: AlignmentDirectional.centerStart,
+      widthFactor: factor,
+      child: SkeletonBox(height: height, borderRadius: 4),
+    );
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      children: [
+        for (var i = 0; i < 3; i++)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderDefault),
+            ),
+            child: Shimmer(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            part(0.45, height: 14),
+                            const SizedBox(height: 6),
+                            part(0.6),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const SkeletonBox(width: 72, height: 22, borderRadius: 11),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      const SkeletonBox(width: 48, height: 48),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            part(0.85),
+                            const SizedBox(height: 6),
+                            part(0.3),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Row(
+                    children: [
+                      SkeletonBox(width: 40, height: 11, borderRadius: 4),
+                      Spacer(),
+                      SkeletonBox(width: 84, height: 15, borderRadius: 4),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      Expanded(child: SkeletonBox(height: 36, borderRadius: 18)),
+                      SizedBox(width: 10),
+                      Expanded(child: SkeletonBox(height: 36, borderRadius: 18)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 /// Horizontal status filter pills (All / To Receive / Delivered / Cancelled).

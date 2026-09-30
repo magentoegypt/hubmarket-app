@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/notification_routes.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/theme_x.dart';
 import '../../../core/widgets/hub_back_button.dart';
 import '../../../l10n/l10n.dart';
 import '../data/notification_inbox.dart';
@@ -68,8 +69,10 @@ class NotificationsScreen extends ConsumerWidget {
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: hasUnread
-                              ? AppColors.brandPrimary
-                              : AppColors.inkFaint,
+                              ? (context.isDarkMode
+                                    ? Colors.white
+                                    : AppColors.brandPrimary)
+                              : context.scaffoldFaint,
                         ),
                       ),
                     ),
@@ -116,7 +119,10 @@ class _NotificationTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        color: unread ? AppColors.surfaceTint : Colors.white,
+        // Read rows show the scaffold (white, or dark in dark mode).
+        color: unread
+            ? (context.isDarkMode ? Colors.white10 : AppColors.surfaceTint)
+            : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,29 +148,29 @@ class _NotificationTile extends StatelessWidget {
                 children: [
                   Text(
                     item.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.inkHeading,
+                      color: context.scaffoldHeading,
                     ),
                   ),
                   if (item.body.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(
                       item.body,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         height: 1.45,
-                        color: AppColors.inkMuted,
+                        color: context.scaffoldMuted,
                       ),
                     ),
                   ],
                   const SizedBox(height: 3),
                   Text(
                     _relativeTime(context, item.receivedAt),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10.5,
-                      color: AppColors.inkFaint,
+                      color: context.scaffoldFaint,
                     ),
                   ),
                 ],
@@ -175,8 +181,10 @@ class _NotificationTile extends StatelessWidget {
                 margin: const EdgeInsetsDirectional.only(start: 8, top: 5),
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.brandPrimary,
+                decoration: BoxDecoration(
+                  color: context.isDarkMode
+                      ? Colors.white
+                      : AppColors.brandPrimary,
                   shape: BoxShape.circle,
                 ),
               ),

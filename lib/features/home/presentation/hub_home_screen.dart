@@ -25,11 +25,14 @@ import '../../catalog/presentation/search_providers.dart';
 import '../../catalog/presentation/storefront_links.dart';
 import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
+import '../../notifications/presentation/notification_bell.dart';
 import '../domain/hm_home.dart';
 import '../domain/home_content.dart';
+import 'active_order_providers.dart';
 import 'hm_home_providers.dart';
 import 'hm_home_view.dart';
 import 'home_providers.dart';
+import 'widgets/home_active_order.dart';
 
 /// Carousel card width (Figma v2/v3): 152 pt so the next card peeks ~30%.
 const double _kCardWidth = 152;
@@ -48,7 +51,9 @@ class HubHomeScreen extends ConsumerWidget {
   const HubHomeScreen({super.key});
 
   Future<void> _reloadHubApp(WidgetRef ref) async {
-    ref.invalidate(hmHomeProvider);
+    ref
+      ..invalidate(hmHomeProvider)
+      ..invalidate(activeOrderProvider);
     try {
       await ref.read(hmHomeProvider.future);
     } catch (_) {
@@ -99,7 +104,8 @@ class _Build1Home extends ConsumerWidget {
     ref
       ..invalidate(homeCmsBlocksProvider)
       ..invalidate(categoryTreeProvider)
-      ..invalidate(homeCategoryRailProvider);
+      ..invalidate(homeCategoryRailProvider)
+      ..invalidate(activeOrderProvider);
     // The Hub Market App may be back (a probe that couldn't tell, or an
     // hmAppHome that failed): ask again alongside.
     final hubApp = ref.read(hubAppProvider).valueOrNull;
@@ -140,6 +146,8 @@ class _Build1Home extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 28),
               children: [
                 const _PromiseStrip(),
+                // Signed in with an open recent order only.
+                const HomeActiveOrder(),
                 const _ShopByCategory(),
                 for (final c in categories.take(kHomeRailCount))
                   _CategoryRail(key: ValueKey(c.uid), category: c),
@@ -231,13 +239,10 @@ class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
                   children: [
                     const BrandLogo(height: 34, onDark: true),
                     const Spacer(),
-                    IconButton(
-                      tooltip: l10n.notificationsTitle,
-                      icon: const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => context.push(AppRoutes.notifications),
+                    // With the unread dot, as in the app bar.
+                    const NotificationBell(
+                      color: Colors.white,
+                      icon: Icons.notifications_none_rounded,
                     ),
                   ],
                 ),

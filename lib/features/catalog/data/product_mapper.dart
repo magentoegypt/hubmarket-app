@@ -21,8 +21,14 @@ Money? moneyFromJson(Map<String, dynamic>? json) {
   );
 }
 
+/// A GraphQL number that may come as a numeric string; null for anything
+/// else.
+num? _number(Object? value) =>
+    value is num ? value : (value is String ? num.tryParse(value.trim()) : null);
+
 /// Maps a listing product (PLP / search / wishlist / PDP rails). [now] only
-/// pins "today" for the NEW badge in tests.
+/// pins "today" for the NEW badge in tests. The rating fields stay null when
+/// the document didn't ask for `rating_summary` / `review_count`.
 Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
   final image = json['image'] as Map<String, dynamic>?;
   final minPrice =
@@ -43,6 +49,8 @@ Product productFromJson(Map<String, dynamic> json, {DateTime? now}) {
     badge: badgeFromJson(json, now: now),
     categories: productCategoriesFromJson(json['categories']),
     typeId: productTypeFromTypename(json['__typename']),
+    ratingSummary: _number(json['rating_summary'])?.toDouble(),
+    reviewCount: _number(json['review_count'])?.toInt(),
   );
 }
 

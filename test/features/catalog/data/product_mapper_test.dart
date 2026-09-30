@@ -469,5 +469,62 @@ void main() {
       expect(productTypeFromTypename('Product'), isNull);
       expect(productTypeFromTypename('GroupedProduct'), 'grouped');
     });
+
+    test("a bundle needs its selections chosen, Hub Market's new_bundle too", () {
+      // "house tools" answers as a BundleProduct on the live store.
+      final bundle = productFromJson(
+        _json(extra: {'__typename': 'BundleProduct'}),
+      );
+      expect(bundle.typeId, 'bundle');
+      expect(bundle.requiresOptions, isTrue);
+      const newBundle = Product(
+        sku: 'house tools',
+        name: 'house tools',
+        urlKey: 'house-tools',
+        typeId: 'new_bundle',
+      );
+      expect(newBundle.requiresOptions, isTrue);
+    });
+  });
+
+  group('listing rating from rating_summary / review_count', () {
+    test('an average and a count => the card shows stars', () {
+      final product = productFromJson(
+        _json(extra: {'rating_summary': 94, 'review_count': 3}),
+      );
+      expect(product.ratingSummary, 94);
+      expect(product.reviewCount, 3);
+      expect(product.starRating, closeTo(4.7, 1e-9));
+    });
+
+    test('a Float average and a numeric string are tolerated', () {
+      final product = productFromJson(
+        _json(extra: {'rating_summary': 86.67, 'review_count': '3'}),
+      );
+      expect(product.starRating, closeTo(4.33, 0.01));
+      expect(product.reviewCount, 3);
+    });
+
+    test("no reviews, or a document that didn't ask => no stars", () {
+      final none = productFromJson(
+        _json(extra: {'rating_summary': 0, 'review_count': 0}),
+      );
+      expect(none.starRating, isNull);
+      final plain = productFromJson(_json());
+      expect(plain.ratingSummary, isNull);
+      expect(plain.reviewCount, isNull);
+      expect(plain.starRating, isNull);
+    });
+
+    test('"You may also like" cards carry it too', () {
+      final detail = productDetailFromJson({
+        'sku': 'SELF',
+        'related_products': [
+          {..._linked('A'), 'rating_summary': 100, 'review_count': 2},
+        ],
+      });
+      expect(detail.alsoLike.single.starRating, 5);
+      expect(detail.alsoLike.single.reviewCount, 2);
+    });
   });
 }

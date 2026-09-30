@@ -116,6 +116,23 @@ query CustomerOrderByNumber($number: String!) {
   }
 }''');
 
+  /// The customer's newest orders, newest first (both store views), for the
+  /// Home's active-order card. The sort is explicit: without one Magento
+  /// returns orders in database order, oldest first.
+  static final String recentOrders = _withOrderFields(r'''
+query CustomerRecentOrders($pageSize: Int!) {
+  customer {
+    orders(
+      pageSize: $pageSize
+      currentPage: 1
+      scope: WEBSITE
+      sort: { sort_field: CREATED_AT, sort_direction: DESC }
+    ) {
+      items { ...OrderFields }
+    }
+  }
+}''');
+
   /// Guest order lookup by the Magento order token (`placeOrder.orderV2.token`)
   /// captured at checkout. Native Magento 2.4.8 query — no custom module.
   static final String guestOrderByToken = _withOrderFields(r'''

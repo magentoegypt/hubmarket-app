@@ -8,10 +8,10 @@ import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/free_shipping.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/brand_logo.dart';
-import '../../../../core/widgets/failure_message.dart';
+import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../core/widgets/network_image.dart';
+import '../../../../core/widgets/shimmer.dart';
 import '../../../../core/widgets/summary_row.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
@@ -76,31 +76,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Widget _body(AppLocalizations l10n, CartState state) {
     if (state.isLoading && state.cart.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const _CartSkeleton();
     }
     if (state.error != null && state.cart.isEmpty) {
-      final error = state.error;
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                error is Failure
-                    ? failureMessage(context, error)
-                    : l10n.errorGeneric,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _controller.refresh,
-                child: Text(l10n.actionRetry),
-              ),
-            ],
-          ),
-        ),
-      );
+      // Offline: the S3 page, which reloads by itself once the network is back.
+      return LoadFailureView(error: state.error, onRetry: _controller.refresh);
     }
     if (state.cart.isEmpty) {
       // Empty state (Figma "Cart — Empty"): blush cart pill, copy, full-width
@@ -383,10 +363,10 @@ class _CartItemTile extends StatelessWidget {
                       Text(
                         item.unitPrice!.formatted(),
                         textDirection: TextDirection.ltr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
-                          color: AppColors.brandPrimary,
+                          color: _cartAccent(context),
                         ),
                       ),
                       if (item.isDiscounted) ...[
@@ -453,14 +433,83 @@ class _QtyButton extends StatelessWidget {
   );
 }
 
+/// The cart's first load: the heading and three lines shaped like
+/// [_CartItemTile], shimmering, in place of a spinner. The lines sit on the
+/// scaffold, so the blocks follow the theme instead of glaring in dark mode.
+class _CartSkeleton extends StatelessWidget {
+  const _CartSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = context.isDarkMode;
+    final base = dark ? Colors.white10 : AppColors.surfaceMuted;
+    Widget box({double? width, double height = 12, double radius = 4}) =>
+        SkeletonBox(
+          width: width,
+          height: height,
+          borderRadius: radius,
+          color: base,
+        );
+    Widget part(double factor, {double height = 12}) => FractionallySizedBox(
+      alignment: AlignmentDirectional.centerStart,
+      widthFactor: factor,
+      child: box(height: height),
+    );
+    return Shimmer(
+      base: base,
+      highlight: dark ? Colors.white24 : Colors.white,
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          part(0.4, height: 22),
+          const SizedBox(height: 8),
+          part(0.2),
+          const SizedBox(height: 16),
+          for (var i = 0; i < 3; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  box(width: 72, height: 72, radius: 8),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        part(0.9),
+                        const SizedBox(height: 8),
+                        part(0.55),
+                        const SizedBox(height: 12),
+                        part(0.35, height: 15),
+                        const SizedBox(height: 12),
+                        box(width: 88, height: 24, radius: 6),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Full-bleed 8px grey band that separates cart sections (Figma 39:2 / 39:26).
 class _SectionBand extends StatelessWidget {
   const _SectionBand();
 
   @override
   Widget build(BuildContext context) =>
-      Container(height: 8, color: AppColors.surfaceMuted);
+      Container(height: 8, color: context.sectionBand);
 }
+
+/// The cart's navy accent (prices, totals, Apply) where it sits on the
+/// scaffold: navy on white, white in dark mode, where navy disappears.
+Color _cartAccent(BuildContext context) =>
+    context.isDarkMode ? Colors.white : AppColors.brandPrimary;
 
 /// Copy-to-clipboard affordance at the trailing edge of the promo-code field
 /// (CL042-DEV13). Copies whatever code is in play — what the shopper has typed,
@@ -598,11 +647,8 @@ class _CouponSection extends StatelessWidget {
               OutlinedButton(
                 onPressed: busy ? null : onApply,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.brandPrimary,
-                  side: const BorderSide(
-                    color: AppColors.brandPrimary,
-                    width: 1.4,
-                  ),
+                  foregroundColor: _cartAccent(context),
+                  side: BorderSide(color: _cartAccent(context), width: 1.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -712,6 +758,9 @@ class _OrderSummary extends StatelessWidget {
     final freeDelivery = shipping != null
         ? shipping.amount <= 0.0001
         : subtotal != null && threshold != null && subtotal.amount >= threshold;
+    // On the scaffold: the Figma inks in light mode, legible ones in dark.
+    final ink = context.scaffoldHeading;
+    final accent = _cartAccent(context);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -720,16 +769,17 @@ class _OrderSummary extends StatelessWidget {
         children: [
           Text(
             l10n.cartOrderSummary,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.inkHeading,
+              color: ink,
             ),
           ),
           const SizedBox(height: 11),
           SummaryRow(
             label: l10n.cartSubtotalCount(itemCount),
             value: subtotal?.formatted(),
+            valueColor: ink,
           ),
           if (totals.discount != null) ...[
             const SizedBox(height: 11),
@@ -738,7 +788,7 @@ class _OrderSummary extends StatelessWidget {
                   ? l10n.cartPromoCode(totals.appliedCoupon!)
                   : l10n.cartDiscount,
               value: '−${totals.discount!.formatted()}',
-              valueColor: AppColors.brandPrimary,
+              valueColor: accent,
             ),
           ],
           // Delivery line always shows. Once a delivery method was chosen at
@@ -751,7 +801,7 @@ class _OrderSummary extends StatelessWidget {
             value: freeDelivery
                 ? l10n.cartDeliveryFree
                 : shipping?.formatted() ?? l10n.cartDeliveryCalculated,
-            valueColor: freeDelivery ? AppColors.brandPrimary : null,
+            valueColor: freeDelivery ? accent : ink,
             valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
           ),
           // Credit used at checkout is already off the total below.
@@ -760,34 +810,30 @@ class _OrderSummary extends StatelessWidget {
             SummaryRow(
               label: l10n.checkoutStoreCredit,
               value: '−${storeCredit!.formatted()}',
-              valueColor: AppColors.brandPrimary,
+              valueColor: accent,
             ),
           ],
           const SizedBox(height: 11),
-          const Divider(
-            height: 1,
-            thickness: 1,
-            color: AppColors.borderDefault,
-          ),
+          Divider(height: 1, thickness: 1, color: context.hairline),
           const SizedBox(height: 11),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 l10n.cartTotal,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.inkHeading,
+                  color: ink,
                 ),
               ),
               Text(
                 totals.grandTotal?.formatted() ?? '—',
                 textDirection: TextDirection.ltr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.brandPrimary,
+                  color: accent,
                 ),
               ),
             ],
@@ -800,6 +846,8 @@ class _OrderSummary extends StatelessWidget {
 
 /// Blush progress banner toward the free 3-hour delivery threshold (Figma).
 /// Shows remaining-to-go with a partial bar, or an unlocked state once met.
+/// It sits on the scaffold, so in dark mode its tint, text, icon and bar
+/// track follow the theme (a white track glared there).
 class _FreeDeliveryBanner extends StatelessWidget {
   const _FreeDeliveryBanner({required this.subtotal, required this.threshold});
 
@@ -818,15 +866,21 @@ class _FreeDeliveryBanner extends StatelessWidget {
       amount: (threshold - amount).clamp(0.0, threshold),
       currency: subtotal.currency,
     );
+    final dark = context.isDarkMode;
+    final accent = _cartAccent(context);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.brandPrimary.withValues(alpha: 0.06),
+        color: dark
+            ? Colors.white.withValues(alpha: 0.06)
+            : AppColors.brandPrimary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.brandPrimary.withValues(alpha: 0.12),
+          color: dark
+              ? context.hairline
+              : AppColors.brandPrimary.withValues(alpha: 0.12),
         ),
       ),
       child: Column(
@@ -837,7 +891,7 @@ class _FreeDeliveryBanner extends StatelessWidget {
               Icon(
                 unlocked ? Icons.check_circle : Icons.local_shipping_outlined,
                 size: 18,
-                color: unlocked ? AppColors.success : AppColors.brandPrimary,
+                color: unlocked ? AppColors.success : accent,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -845,10 +899,10 @@ class _FreeDeliveryBanner extends StatelessWidget {
                   unlocked
                       ? l10n.cartFreeDeliveryUnlocked
                       : l10n.cartFreeDeliveryRemaining(remaining.formatted()),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    color: AppColors.inkHeading,
+                    color: context.scaffoldHeading,
                   ),
                 ),
               ),
@@ -860,9 +914,9 @@ class _FreeDeliveryBanner extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: Colors.white,
+              backgroundColor: dark ? Colors.white24 : Colors.white,
               valueColor: AlwaysStoppedAnimation(
-                unlocked ? AppColors.success : AppColors.brandPrimary,
+                unlocked ? AppColors.success : accent,
               ),
             ),
           ),

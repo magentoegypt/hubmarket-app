@@ -6,10 +6,9 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/empty_state.dart';
-import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -85,26 +84,10 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     }
     final error = state.error;
     if (error != null && state.items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                error is Failure
-                    ? failureMessage(context, error)
-                    : l10n.errorGeneric,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: ref.read(myReviewsControllerProvider.notifier).refresh,
-                child: Text(l10n.actionRetry),
-              ),
-            ],
-          ),
-        ),
+      // Offline: the S3 page, which reloads by itself once the network is back.
+      return LoadFailureView(
+        error: error,
+        onRetry: ref.read(myReviewsControllerProvider.notifier).refresh,
       );
     }
     if (state.items.isEmpty) {

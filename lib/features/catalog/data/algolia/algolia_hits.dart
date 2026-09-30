@@ -175,6 +175,13 @@ Product? productFromAlgoliaHit(
       _ => true,
     },
     typeId: type.isEmpty ? null : type,
+    // The average only (0–100, like core `rating_summary`): the records
+    // carry no review count.
+    ratingSummary: switch (hit['rating_summary']) {
+      final num value => value.toDouble(),
+      final String value => double.tryParse(value.trim()),
+      _ => null,
+    },
   );
 }
 
