@@ -61,6 +61,12 @@ Widget storeCreditHarness({
           path: path,
           builder: (_, __) => Scaffold(body: Text('route $path')),
         ),
+      // One order by its number (`AppRoutes.orderByNumber`).
+      GoRoute(
+        path: '${AppRoutes.orders}/:number',
+        builder: (_, state) =>
+            Scaffold(body: Text('order ${state.pathParameters['number']}')),
+      ),
     ],
   );
   final app = MaterialApp.router(

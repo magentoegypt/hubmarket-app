@@ -33,6 +33,7 @@ class StoreCreditTransaction {
     required this.balanceAfter,
     this.description,
     this.createdAt = '',
+    this.orderNumber,
   });
 
   final int id;
@@ -52,6 +53,11 @@ class StoreCreditTransaction {
 
   /// ISO-8601 UTC (`2026-09-26T08:14:00Z`); empty when unknown.
   final String createdAt;
+
+  /// The customer's own order the transaction records — spent on, refunded,
+  /// cancelled or credit bought (`order_number`); null for anything else,
+  /// such as the admin's adjustments or a seller's sales.
+  final String? orderNumber;
 
   bool get isCredit => amount.amount > 0;
 

@@ -1143,6 +1143,14 @@
       }
     }
   },
+  "myCreditOpenOrder": "Opens order {number}",
+  "@myCreditOpenOrder": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "orderSuccessTitle": "Order placed!",
   "orderPlacedThanks": "Thank you. Order #{number} is confirmed — we’ve emailed your receipt.",
   "@orderPlacedThanks": {

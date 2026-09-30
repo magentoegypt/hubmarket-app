@@ -61,6 +61,7 @@ List<StoreCreditTransaction> sampleCreditTransactions({bool arabic = false}) =>
             ? 'إرجاع #R-000031 · تيشيرت قصير ياقة مربع'
             : 'Return #R-000031 · Short Square-Neck T-Shirt',
         createdAt: '2026-09-26T08:14:00Z',
+        orderNumber: '000000031',
       ),
       StoreCreditTransaction(
         id: 30,
@@ -72,6 +73,7 @@ List<StoreCreditTransaction> sampleCreditTransactions({bool arabic = false}) =>
             ? 'طلب \u200E#000000231'
             : 'Spent credit on order #000000231',
         createdAt: '2026-09-20T11:02:00Z',
+        orderNumber: '000000231',
       ),
       StoreCreditTransaction(
         id: 29,

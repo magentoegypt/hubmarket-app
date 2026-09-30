@@ -136,6 +136,42 @@ void main() {
       expect(credit.calls, ['fetchAccount:1', 'fetchAccount:2']);
     });
 
+    testWidgets('a transaction that records an order opens it', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pump(tester, FakeStoreCreditRepository());
+
+      final row = find
+          .ancestor(
+            of: find.text('Used at checkout'),
+            matching: find.byType(InkWell),
+          )
+          .first;
+      final node = tester.getSemantics(row);
+      expect(node.hint, 'Opens order 000000231');
+      expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
+
+      await tester.tap(find.text('Used at checkout'));
+      await tester.pumpAndSettle();
+      expect(find.text('order 000000231'), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('a transaction without an order opens nothing', (tester) async {
+      await _pump(tester, FakeStoreCreditRepository());
+
+      expect(
+        find.ancestor(
+          of: find.text('Credit added'),
+          matching: find.byType(InkWell),
+        ),
+        findsNothing,
+      );
+      await tester.tap(find.text('Credit added'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MyCreditScreen), findsOneWidget);
+      expect(find.textContaining('order 0'), findsNothing);
+    });
+
     testWidgets('a failed load offers a retry', (tester) async {
       final credit = FakeStoreCreditRepository()
         ..nextError = const Failure(FailureKind.server, detail: 'boom');

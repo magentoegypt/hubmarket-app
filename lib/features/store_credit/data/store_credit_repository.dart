@@ -135,6 +135,7 @@ class StoreCreditRepository {
     final type = (json['type'] as String?)?.trim() ?? '';
     final label = (json['type_label'] as String?)?.trim() ?? '';
     final description = (json['description'] as String?)?.trim() ?? '';
+    final orderNumber = (json['order_number'] as String?)?.trim() ?? '';
     return StoreCreditTransaction(
       id: id,
       type: type,
@@ -145,6 +146,7 @@ class StoreCreditRepository {
           Money(amount: 0, currency: amount.currency),
       description: description.isEmpty ? null : description,
       createdAt: (json['created_at'] as String?)?.trim() ?? '',
+      orderNumber: orderNumber.isEmpty ? null : orderNumber,
     );
   }
 

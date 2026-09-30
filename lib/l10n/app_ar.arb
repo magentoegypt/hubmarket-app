@@ -717,6 +717,7 @@
   "myCreditNoTransactions": "لا توجد معاملات بعد",
   "myCreditNoTransactionsBody": "تظهر هنا المبالغ المستردة إلى رصيدك والرصيد الذي تستخدمه عند الدفع.",
   "myCreditBalanceAfter": "الرصيد {amount}",
+  "myCreditOpenOrder": "يفتح الطلب {number}",
   "orderSuccessTitle": "تم تأكيد طلبك!",
   "orderPlacedThanks": "شكرًا لك. تم تأكيد الطلب #{number} – أرسلنا الإيصال إلى بريدك.",
   "orderPlacedThanksNamed": "شكرًا {name}. تم تأكيد الطلب #{number} – أرسلنا الإيصال إلى بريدك.",

@@ -23,6 +23,7 @@ query HmStoreCredit($pageSize: Int!, $currentPage: Int!) {
       balance_after { value currency }
       description
       created_at
+      order_number
     }
   }
 }

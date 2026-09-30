@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/shell/hub_scaffold.dart';
@@ -220,7 +221,8 @@ class _TransactionsCard extends StatelessWidget {
 }
 
 /// One transaction: the kind's icon, the server's label, description and
-/// date, then the signed amount and the balance it left.
+/// date, then the signed amount and the balance it left. A transaction that
+/// records one of the customer's orders opens it (`/orders/<number>`).
 class CreditTransactionRow extends StatelessWidget {
   const CreditTransactionRow({super.key, required this.transaction});
 
@@ -228,6 +230,23 @@ class CreditTransactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final orderNumber = transaction.orderNumber;
+    final content = _content(context);
+    if (orderNumber == null) return content;
+    return Semantics(
+      button: true,
+      hint: AppLocalizations.of(context).myCreditOpenOrder(orderNumber),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: () => context.push(AppRoutes.orderByNumber(orderNumber)),
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;

@@ -42,6 +42,7 @@ Map<String, dynamic> _account({
         'balance_after': _money(120),
         'description': 'Order refunded #000000031, Creditmemo #000000004',
         'created_at': '2026-09-26T08:14:00Z',
+        'order_number': '000000031',
       },
       {
         '__typename': 'HmStoreCreditTransaction',
@@ -52,6 +53,7 @@ Map<String, dynamic> _account({
         'balance_after': _money(77),
         'description': null,
         'created_at': '2026-09-20T11:02:00Z',
+        'order_number': null,
       },
     ],
   },
@@ -110,10 +112,13 @@ void main() {
         expect(refund.isCredit, isTrue);
         expect(refund.typeLabel, 'Refund By Credit');
         expect(refund.createdAt, '2026-09-26T08:14:00Z');
+        // The customer's own order it records; none on the other line.
+        expect(refund.orderNumber, '000000031');
         final spend = account.transactions.last;
         expect(spend.kind, StoreCreditTransactionKind.spent);
         expect(spend.magnitude.amount, 23);
         expect(spend.description, isNull);
+        expect(spend.orderNumber, isNull);
         expect(client.requests.single.variables, {
           'pageSize': 20,
           'currentPage': 1,
