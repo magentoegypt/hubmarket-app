@@ -39,6 +39,10 @@ final brandByUrlKeyProvider = FutureProvider.autoDispose.family<Brand?, String>(
 
 /// A brand's page (Figma 10e): its logo, product and store counts, category
 /// chips, sort and filters over `products(filter: {mgs_brand: {eq: id}})`.
+///
+/// The counts are `hmBrands`' own (`product_count`, `seller_count`): "from N
+/// stores" whenever the brand has products. A brand handed over without them
+/// (the Home's brand strip) takes them from [brandsProvider].
 class BrandPageScreen extends ConsumerWidget {
   const BrandPageScreen({super.key, required this.urlKey, this.brand});
 
@@ -118,9 +122,18 @@ class _BrandPage extends ConsumerWidget {
 
     final state = ref.watch(brandResultsControllerProvider(optionId));
     final controller = ref.read(brandResultsControllerProvider(optionId).notifier);
-    final stores = ref.watch(brandSellerCountProvider(optionId)).valueOrNull;
+    final counted = brand.sellerCount != null
+        ? brand
+        : ref
+                  .watch(brandsProvider)
+                  .valueOrNull
+                  ?.where((b) => b.optionId == optionId)
+                  .firstOrNull ??
+              brand;
+    final products = counted.productCount;
+    final stores = counted.sellerCount;
     final summary = [
-      l10n.hmProductCount(state.totalCount),
+      l10n.hmProductCount(products ?? state.totalCount),
       if (stores != null && stores > 0) l10n.brandFromStores(stores),
     ].join(' · ');
 
@@ -194,7 +207,9 @@ class _BrandPage extends ConsumerWidget {
                               style: t.heading2.copyWith(color: AppColors.inkHeading),
                             ),
                             const SizedBox(height: 2),
-                            if (!state.isLoading || state.totalCount > 0)
+                            if (products != null ||
+                                !state.isLoading ||
+                                state.totalCount > 0)
                               Text(
                                 summary,
                                 style: t.caption.copyWith(color: AppColors.inkMuted),
