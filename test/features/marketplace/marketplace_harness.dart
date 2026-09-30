@@ -95,7 +95,12 @@ Cart twoStoreCart(String id) => Cart(
       seller: seller('loly', 'loly store'),
     ),
   ],
-  totals: CartTotals(subtotal: aed(543), grandTotal: aed(553)),
+  // Delivery chosen at checkout: 543 + 10.
+  totals: CartTotals(
+    subtotal: aed(543),
+    shipping: aed(10),
+    grandTotal: aed(553),
+  ),
 );
 
 /// Figma 22: an order of three lines from two stores.

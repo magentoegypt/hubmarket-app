@@ -31,6 +31,9 @@ fragment CartFields on Cart {
     }
   }
   applied_coupons { code }
+  shipping_addresses {
+    selected_shipping_method { amount { value currency } }
+  }
   prices {
     grand_total { value currency }
     subtotal_including_tax { value currency }

@@ -39,7 +39,7 @@ import 'marketplace_harness.dart';
         chair: 'Dining Chair with Gold Metal Legs',
       );
 
-Cart _cart(String locale, String id) {
+Cart _cart(String locale, String id, {CartTotals? totals}) {
   final n = _names(locale);
   final base = twoStoreCart(id);
   final names = {'SOFA': n.sofa, 'CHAIR': n.chair, 'DRESS': n.dress};
@@ -51,7 +51,7 @@ Cart _cart(String locale, String id) {
   return Cart(
     id: base.id,
     totalQuantity: base.totalQuantity,
-    totals: base.totals,
+    totals: totals ?? base.totals,
     items: [
       for (final item in base.items)
         CartItem(
@@ -285,12 +285,26 @@ void main() {
           storeCredit: FakeStoreCreditRepository(
             cartCredit: sampleCartCredit(applied: 50),
           ),
-          cartRepository: CannedCartRepository(_cart(locale, 'customer-1')),
+          // What the server answers once credit is used: 543 + 10 − 50.
+          cartRepository: CannedCartRepository(
+            _cart(
+              locale,
+              'customer-1',
+              totals: CartTotals(
+                subtotal: aed(543),
+                shipping: aed(10),
+                grandTotal: aed(503),
+              ),
+            ),
+          ),
         ),
         'p3_16_cart_credit_$locale',
         height: 1400,
         locale: locale,
       );
+      // The summary adds up: the delivery fee chosen at checkout is shown.
+      expect(find.text('AED 10.00'), findsOneWidget);
+      expect(find.text('AED 503.00'), findsOneWidget);
     });
 
     testWidgets('18b review by store ($locale)', (tester) async {

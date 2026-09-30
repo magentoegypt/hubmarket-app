@@ -48,12 +48,18 @@ class CartTotals {
     this.subtotal,
     this.discount,
     this.appliedCoupon,
+    this.shipping,
   });
 
   final Money? grandTotal;
   final Money? subtotal;
   final Money? discount;
   final String? appliedCoupon;
+
+  /// The fee of the delivery method chosen at checkout
+  /// (`shipping_addresses[0].selected_shipping_method.amount`), which
+  /// [grandTotal] then includes; null until one is chosen.
+  final Money? shipping;
 }
 
 class Cart {

@@ -278,6 +278,12 @@ class CartRepository {
     final prices = json['prices'] as Map<String, dynamic>?;
     final discounts = prices?['discounts'] as List<dynamic>?;
     final coupons = json['applied_coupons'] as List<dynamic>?;
+    final addresses = json['shipping_addresses'] as List<dynamic>?;
+    final shippingAddress = (addresses != null && addresses.isNotEmpty)
+        ? addresses.first as Map<String, dynamic>?
+        : null;
+    final shippingMethod =
+        shippingAddress?['selected_shipping_method'] as Map<String, dynamic>?;
     return Cart(
       id: (json['id'] as String?) ?? fallbackId,
       items: items,
@@ -298,6 +304,9 @@ class CartRepository {
         appliedCoupon: (coupons != null && coupons.isNotEmpty)
             ? (coupons.first as Map<String, dynamic>)['code'] as String?
             : null,
+        shipping: _parseMoney(
+          shippingMethod?['amount'] as Map<String, dynamic>?,
+        ),
       ),
     );
   }

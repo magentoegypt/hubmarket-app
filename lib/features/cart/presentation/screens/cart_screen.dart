@@ -470,7 +470,10 @@ class _SectionBand extends StatelessWidget {
 /// It listens to the field's own [TextEditingController] so it appears the
 /// moment there is something to copy, and takes no space when there isn't.
 class _CopyCodeButton extends StatelessWidget {
-  const _CopyCodeButton({required this.controller, required this.appliedCoupon});
+  const _CopyCodeButton({
+    required this.controller,
+    required this.appliedCoupon,
+  });
 
   final TextEditingController controller;
   final String? appliedCoupon;
@@ -703,8 +706,10 @@ class _OrderSummary extends StatelessWidget {
     final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
     final subtotal = totals.subtotal;
     final threshold = freeDeliveryThreshold;
-    final freeDelivery =
-        subtotal != null && threshold != null && subtotal.amount >= threshold;
+    final shipping = totals.shipping;
+    final freeDelivery = shipping != null
+        ? shipping.amount <= 0.0001
+        : subtotal != null && threshold != null && subtotal.amount >= threshold;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -734,15 +739,16 @@ class _OrderSummary extends StatelessWidget {
               valueColor: AppColors.brandPrimary,
             ),
           ],
-          // Delivery line always shows: FREE once the threshold is met,
-          // otherwise the fee is resolved at checkout (it depends on the
-          // emirate, so the cart can't know the amount yet).
+          // Delivery line always shows. Once a delivery method was chosen at
+          // checkout, its fee (the total below includes it); before that,
+          // FREE once the threshold is met, otherwise the fee is resolved at
+          // checkout (it depends on the emirate).
           const SizedBox(height: 11),
           SummaryRow(
             label: l10n.cartDelivery,
             value: freeDelivery
                 ? l10n.cartDeliveryFree
-                : l10n.cartDeliveryCalculated,
+                : shipping?.formatted() ?? l10n.cartDeliveryCalculated,
             valueColor: freeDelivery ? AppColors.brandPrimary : null,
             valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
           ),
@@ -817,7 +823,9 @@ class _FreeDeliveryBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.brandPrimary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.12)),
+        border: Border.all(
+          color: AppColors.brandPrimary.withValues(alpha: 0.12),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -825,9 +833,7 @@ class _FreeDeliveryBanner extends StatelessWidget {
           Row(
             children: [
               Icon(
-                unlocked
-                    ? Icons.check_circle
-                    : Icons.local_shipping_outlined,
+                unlocked ? Icons.check_circle : Icons.local_shipping_outlined,
                 size: 18,
                 color: unlocked ? AppColors.success : AppColors.brandPrimary,
               ),
