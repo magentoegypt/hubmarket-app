@@ -708,6 +708,15 @@
     }
   },
   "orderDetailsTitle": "Order Details",
+  "orderNotFoundTitle": "Order not found",
+  "orderNotFoundBody": "We couldn't find order #{number} in your account.",
+  "@orderNotFoundBody": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "orderItemsSection": "Items",
   "orderPackageTitle": "Package {index} · {store}",
   "@orderPackageTitle": {

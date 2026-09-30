@@ -469,6 +469,8 @@
   "orderStatus": "الحالة",
   "orderNumber": "الطلب رقم {number}",
   "orderDetailsTitle": "تفاصيل الطلب",
+  "orderNotFoundTitle": "لم يتم العثور على الطلب",
+  "orderNotFoundBody": "لم نعثر على الطلب رقم {number} في حسابك.",
   "orderItemsSection": "العناصر",
   "orderPackageTitle": "الطرد {index} · {store}",
   "orderPackageTitleNoStore": "الطرد {index}",

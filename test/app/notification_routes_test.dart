@@ -13,10 +13,13 @@ void main() {
     });
 
     test('maps typed payloads to routes', () {
+      // An order's id is its number: the order itself opens.
       expect(
-        notificationRoute({'type': 'order', 'id': '123'}),
-        AppRoutes.orders,
+        notificationRoute({'type': 'order', 'id': '000000123'}),
+        AppRoutes.orderByNumber('000000123'),
       );
+      expect(AppRoutes.orderByNumber('000000123'), '/orders/000000123');
+      expect(notificationRoute({'type': 'order'}), AppRoutes.orders);
       expect(
         notificationRoute({'type': 'product', 'id': 'coco'}),
         AppRoutes.product('coco'),

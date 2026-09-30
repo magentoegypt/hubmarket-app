@@ -104,6 +104,18 @@ query CustomerOrders($pageSize: Int!, $currentPage: Int!) {
   }
 }''');
 
+  /// One of the signed-in customer's orders by its number (the increment id
+  /// customers see, e.g. `000000248`): an order opened from a push, a link or
+  /// Order placed. `scope: WEBSITE` for the same reason as [orders].
+  static final String orderByNumber = _withOrderFields(r'''
+query CustomerOrderByNumber($number: String!) {
+  customer {
+    orders(filter: { number: { eq: $number } }, pageSize: 1, scope: WEBSITE) {
+      items { ...OrderFields }
+    }
+  }
+}''');
+
   /// Guest order lookup by the Magento order token (`placeOrder.orderV2.token`)
   /// captured at checkout. Native Magento 2.4.8 query — no custom module.
   static final String guestOrderByToken = _withOrderFields(r'''

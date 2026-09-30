@@ -22,6 +22,9 @@ abstract final class AppRoutes {
   /// Figma 05 — carries a `VerifyCodeFlow` in `extra`.
   static const String verifyCode = '/verify-code';
   static const String orders = '/orders';
+
+  /// Carries a `CustomerOrder` in `extra`; without one, `?number=` opens
+  /// [orderByNumber].
   static const String orderDetail = '/order-detail';
   static const String orderTracking = '/order-tracking';
   static const String guestTrackOrder = '/track-order';
@@ -72,6 +75,18 @@ abstract final class AppRoutes {
   /// `BRAND` link). A `Brand` in `extra` skips the brand lookup.
   static String brandPage(String urlKey) =>
       '/brand/${Uri.encodeComponent(urlKey)}';
+
+  /// One order by its number (increment id), e.g. `/orders/000000248` — from
+  /// a push, a link or Order placed. Under My Orders, so going there leaves
+  /// the list beneath (see `OrderLinkScreen`).
+  static String orderByNumber(String number) =>
+      '$orders/${Uri.encodeComponent(number)}';
+
+  /// Track order (26) with the order number [number] filled in.
+  static String guestTrackOrderFor(String number) => Uri(
+    path: guestTrackOrder,
+    queryParameters: {'number': number},
+  ).toString();
 
   /// The return form opened on order [orderNumber].
   static String returnRequestFor(String orderNumber) => Uri(

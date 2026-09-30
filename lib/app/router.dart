@@ -12,6 +12,7 @@ import '../features/account/presentation/screens/help_screen.dart';
 import '../features/account/presentation/screens/help_topic_screen.dart';
 import '../features/account/presentation/screens/my_reviews_screen.dart';
 import '../features/account/presentation/screens/order_detail_screen.dart';
+import '../features/account/presentation/screens/order_link_screen.dart';
 import '../features/account/presentation/screens/order_tracking_screen.dart';
 import '../features/account/presentation/screens/guest_track_order_screen.dart';
 import '../features/account/presentation/screens/orders_screen.dart';
@@ -227,14 +228,29 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.orders,
         builder: (context, state) => const OrdersScreen(),
+        routes: [
+          // One order by its number (a push, a link, Order placed): going
+          // here leaves My Orders beneath it.
+          GoRoute(
+            path: ':number',
+            builder: (context, state) =>
+                OrderLinkScreen(number: state.pathParameters['number']!),
+          ),
+        ],
       ),
       // Both carry a fully-hydrated order in `extra`, which is in-process memory
-      // only: a cold start or an OS deep link arrives with none. Bounce to the
-      // list instead of throwing on the cast.
+      // only: a cold start or an OS deep link arrives with none. The detail
+      // then opens the order by its `?number=` when there is one; anything
+      // else bounces to the list instead of throwing on the cast.
       GoRoute(
         path: AppRoutes.orderDetail,
-        redirect: (context, state) =>
-            state.extra is CustomerOrder ? null : AppRoutes.orders,
+        redirect: (context, state) {
+          if (state.extra is CustomerOrder) return null;
+          final number = state.uri.queryParameters['number']?.trim() ?? '';
+          return number.isEmpty
+              ? AppRoutes.orders
+              : AppRoutes.orderByNumber(number);
+        },
         builder: (context, state) =>
             OrderDetailScreen(order: state.extra! as CustomerOrder),
       ),
@@ -247,7 +263,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.guestTrackOrder,
-        builder: (context, state) => const GuestTrackOrderScreen(),
+        builder: (context, state) => GuestTrackOrderScreen(
+          initialNumber: state.uri.queryParameters['number'],
+        ),
       ),
       // Returns (Figma 23b / 23 / 23c). Each screen shows "not available"
       // itself when the store has no returns, so a stale link lands softly.
