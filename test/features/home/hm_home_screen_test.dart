@@ -189,8 +189,7 @@ void main() {
         'All Deals',
         'remaining',
         'Egyptian Rice 1 kg',
-        'AI ENGINE', // PICKED_FOR_YOU
-        'Picked For You',
+        'Picked For You', // PICKED_FOR_YOU
         'Featured Stores', // FEATURED_STORES
         'ENARA',
         'Visit Store',
@@ -215,6 +214,8 @@ void main() {
       ]) {
         expect(find.text(text), findsWidgets, reason: text);
       }
+      // Picked For You is top-rated products: no "AI" badge (QA02).
+      expect(find.text('AI ENGINE'), findsNothing);
       // The countdown, days and clock.
       expect(find.text('2d'), findsOneWidget);
       expect(find.textContaining(RegExp(r'^14:3\d:\d\d$')), findsOneWidget);

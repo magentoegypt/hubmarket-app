@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/config/store_features.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
@@ -106,6 +107,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // The store's password rules (core storeConfig), once read.
+    final policy = ref.watch(passwordPolicyProvider);
     return Form(
       key: _formKey,
       autovalidateMode: _submitted
@@ -150,12 +153,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   obscured: _obscure,
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
-                validator: (v) => Validators.newPassword(context, v),
+                validator: (v) =>
+                    Validators.newPassword(context, v, policy: policy),
               ),
               const SizedBox(height: 10),
               AuthHelperLine.rule(
-                l10n.validationPasswordRule,
-                met: Validators.meetsPasswordRule(_password.text),
+                Validators.passwordRuleText(l10n, policy),
+                met: Validators.meetsPasswordRule(_password.text, policy),
                 failed: _submitted,
               ),
             ],

@@ -11,8 +11,9 @@ import '../../domain/hm_home.dart';
 import 'hm_product_rail.dart';
 
 /// Picked For You (Figma 07 "Picked For You (AI)"): a tinted band — the
-/// engine badge, the admin's title and subtitle, Refresh, the customer's own
-/// recent searches as chips, and the products.
+/// admin's title and subtitle, Refresh, the customer's own recent searches as
+/// chips, and the products. No "AI" badge: the backend fills the section with
+/// top-rated products, not a recommendation engine (QA02).
 class HmPickedForYou extends ConsumerWidget {
   const HmPickedForYou({super.key, required this.section, this.onRefresh});
 
@@ -46,44 +47,15 @@ class HmPickedForYou extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.brandPrimary,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            children: [
-                              const Text(
-                                '✨',
-                                style: TextStyle(fontSize: 11, height: 1),
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  l10n.homeAiEngine,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: t.micro.copyWith(color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (section.hasHeader) ...[
-                          const SizedBox(height: 6),
+                        if (section.hasHeader)
                           Text(
                             section.title!,
                             style: t.heading1.copyWith(
                               color: AppColors.inkHeading,
                             ),
                           ),
-                        ],
                         if (section.subtitle != null) ...[
-                          const SizedBox(height: 6),
+                          if (section.hasHeader) const SizedBox(height: 6),
                           Text(
                             section.subtitle!,
                             style: t.caption.copyWith(

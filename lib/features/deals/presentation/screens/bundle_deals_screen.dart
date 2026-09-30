@@ -8,15 +8,19 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../home/domain/hm_home.dart';
+import '../../../home/presentation/hm_home_providers.dart';
 import '../../domain/deals.dart';
 import '../bundle_deals_controller.dart';
 import '../widgets/bundle_card.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
 
-/// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro with the live
-/// stats, category chips, and one card per bundle — its items side by side,
-/// saving, rating, seller, price and "Add bundle".
+/// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro (the Home's
+/// bundles title and subtitle when the admin set them — see
+/// [bundlesSectionHeader]) with the live stats, category chips, and one card
+/// per bundle — its items side by side, saving, rating, seller, price and
+/// "Add bundle".
 class BundleDealsScreen extends ConsumerWidget {
   const BundleDealsScreen({super.key});
 
@@ -114,15 +118,45 @@ class BundleDealsScreen extends ConsumerWidget {
   }
 }
 
-class _BundlesIntro extends StatelessWidget {
+/// The admin's own words for bundles: the title and subtitle of the Home
+/// layout's BUNDLE_DEALS section (`hmAppHome`), when the Home has read it —
+/// this screen never loads the Home just for them. Null without a titled
+/// section; the intro then keeps neutral interface wording (QA02: no
+/// marketing claims written into the app).
+({String title, String? subtitle})? bundlesSectionHeader(WidgetRef ref) {
+  if (!ref.exists(hmHomeProvider)) return null;
+  final home = ref.watch(hmHomeProvider).valueOrNull;
+  if (home == null) return null;
+  final now = DateTime.now();
+  for (final section in home.sections) {
+    if (section.type != HmSectionType.bundleDeals ||
+        !section.isLiveAt(now) ||
+        !section.hasHeader) {
+      continue;
+    }
+    final subtitle = section.subtitle?.trim();
+    return (
+      title: section.title!.trim(),
+      subtitle: subtitle == null || subtitle.isEmpty ? null : subtitle,
+    );
+  }
+  return null;
+}
+
+class _BundlesIntro extends ConsumerWidget {
   const _BundlesIntro({required this.page});
 
   final BundleDealPage page;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final t = AppTextStyles.of(context);
+    final admin = bundlesSectionHeader(ref);
+    final title = admin?.title ?? l10n.bundlesHeroTitle;
+    // The admin's subtitle goes with their title; without either, the app's
+    // neutral line.
+    final body = admin == null ? l10n.bundlesHeroBody : admin.subtitle;
     Widget stat(String value, String label) => Expanded(
       child: Column(
         children: [
@@ -145,15 +179,14 @@ class _BundlesIntro extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.bundlesHeroTitle,
-            style: t.heading2.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            l10n.bundlesHeroBody,
-            style: t.caption.copyWith(color: const Color(0xFFCBD3E2)),
-          ),
+          Text(title, style: t.heading2.copyWith(color: Colors.white)),
+          if (body != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              body,
+              style: t.caption.copyWith(color: const Color(0xFFCBD3E2)),
+            ),
+          ],
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.only(top: 10),

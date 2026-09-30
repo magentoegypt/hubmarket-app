@@ -9,10 +9,10 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
-import '../../../../core/config/free_shipping.dart';
 import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/store/store_urls.dart';
+import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/network_image.dart';
@@ -20,13 +20,17 @@ import '../../../../core/util/image_prefetch.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
+import '../../../home/presentation/home_providers.dart';
+import '../../../home/presentation/widgets/hm_cms_sections.dart';
 import '../../../marketplace/marketplace_features.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
+import '../../data/brands_provider.dart';
 import '../../domain/money.dart';
 import '../../domain/product.dart';
 import '../../domain/product_detail.dart';
 import '../../domain/product_preview.dart';
+import '../brand_navigation.dart';
 import '../catalog_providers.dart';
 import '../product_navigation.dart';
 import '../widgets/product_card.dart';
@@ -214,9 +218,9 @@ class _Content extends StatelessWidget {
                 const SizedBox(height: 14),
               ],
               if (product.brand != null && product.brand!.isNotEmpty)
-                Text(
-                  product.brand!,
-                  style: const TextStyle(color: AppColors.inkMuted),
+                _BrandLink(
+                  name: product.brand!,
+                  optionId: product.brandOptionId,
                 ),
               Text(
                 product.name,
@@ -248,8 +252,7 @@ class _Content extends StatelessWidget {
                 ),
               const _SectionDivider(),
               _QuantityStepper(quantity: quantity, onChanged: onQuantity),
-              const SizedBox(height: 16),
-              const _TrustRow(),
+              const PdpTrustRow(),
               const SizedBox(height: 24),
               _Tabs(current: tab, onTab: onTab),
               const SizedBox(height: 12),
@@ -333,6 +336,56 @@ class _RelatedProductsState extends State<_RelatedProducts> {
         ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+/// The brand line above the title: a link to the brand's page, or its
+/// products (see [openProductBrand]).
+class _BrandLink extends ConsumerWidget {
+  const _BrandLink({required this.name, this.optionId});
+
+  final String name;
+  final int? optionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Warms the brand list (Hub Market App only; empty at once without it),
+    // so a tap opens the brand page without waiting for it.
+    ref.watch(brandsProvider);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: InkWell(
+        onTap: () => openProductBrand(
+          context,
+          ref,
+          name: name,
+          optionId: optionId,
+        ),
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(top: 2, bottom: 2, end: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    color: AppColors.brandPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.brandPrimary,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -908,6 +961,11 @@ class _Tabs extends StatelessWidget {
 /// Sticky bottom Add-to-Cart bar (Figma): wishlist heart + a full-width button
 /// showing "Add to Cart · price". Recomputes the variant/price from the live
 /// swatch selection.
+///
+/// A bundle reaches this plain page only when its own page (Figma 14b) can't
+/// be used — Build 1, or its options couldn't be read. Its SKU alone is
+/// refused by Magento, so the button stays off and a note sends the customer
+/// to the bundle on the website.
 class _StickyAddToCart extends ConsumerWidget {
   const _StickyAddToCart({
     required this.product,
@@ -926,10 +984,11 @@ class _StickyAddToCart extends ConsumerWidget {
     final price = variant?.price ?? product.finalPrice ?? product.regularPrice;
     final inStock = variant?.inStock ?? product.inStock;
     final needsSelection = product.isConfigurable && variant == null;
+    final webOnly = product.isBundle;
     final isMutating = ref.watch(
       cartControllerProvider.select((s) => s.isMutating),
     );
-    final enabled = inStock && !needsSelection && !isMutating;
+    final enabled = inStock && !needsSelection && !webOnly && !isMutating;
 
     // No SafeArea here — this bar sits *above* the bottom nav, which already
     // applies the system bottom inset. Wrapping it again added a large empty
@@ -939,44 +998,57 @@ class _StickyAddToCart extends ConsumerWidget {
       elevation: 8,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: context.hairline),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              // Dark mode: the default ink heart was invisible on the dark bar
-              // (QA "Add to Wishlist icon on the product page").
-              child: WishlistHeart(
-                sku: product.sku,
-                color: context.scaffoldHeading,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: enabled ? () => _add(context, ref, l10n) : null,
-                child: isMutating
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        !inStock
-                            ? l10n.productOutOfStock
-                            : price == null
-                            ? l10n.productAddToCart
-                            : '${l10n.productAddToCart} · ${price.formatted()}',
-                      ),
-              ),
-            ),
+            if (webOnly && inStock) _BundleOnWebsiteNote(product: product),
+            _barRow(context, ref, l10n, price, inStock, enabled, isMutating),
           ],
         ),
       ),
     );
   }
+
+  Widget _barRow(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    Money? price,
+    bool inStock,
+    bool enabled,
+    bool isMutating,
+  ) => Row(
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: context.hairline),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        // Dark mode: the default ink heart was invisible on the dark bar
+        // (QA "Add to Wishlist icon on the product page").
+        child: WishlistHeart(sku: product.sku, color: context.scaffoldHeading),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: FilledButton(
+          onPressed: enabled ? () => _add(context, ref, l10n) : null,
+          child: isMutating
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  !inStock
+                      ? l10n.productOutOfStock
+                      : price == null
+                      ? l10n.productAddToCart
+                      : '${l10n.productAddToCart} · ${price.formatted()}',
+                ),
+        ),
+      ),
+    ],
+  );
 
   Future<void> _add(
     BuildContext context,
@@ -1017,46 +1089,111 @@ class _StickyAddToCart extends ConsumerWidget {
   }
 }
 
-/// Compact trust row on the PDP (Figma): authenticity, delivery, service.
-class _TrustRow extends ConsumerWidget {
-  const _TrustRow();
+/// Over a bundle's disabled Add to Cart: it is bought on the website for now,
+/// with a button that opens its storefront page in the browser.
+class _BundleOnWebsiteNote extends ConsumerWidget {
+  const _BundleOnWebsiteNote({required this.product});
+
+  final ProductDetail product;
+
+  Future<void> _open(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    // The canonical storefront URL of the active store view (its language
+    // path and `.html`), as Share uses — once the store views are known.
+    await ref.read(storeControllerProvider.notifier).ensureStoresLoaded();
+    if (!context.mounted) return;
+    final url = productUrl(ref.read(storeControllerProvider), product.urlKey);
+    final uri = url == null ? null : Uri.tryParse(url);
+    final opened =
+        uri != null && await ref.read(externalUriLauncherProvider)(uri);
+    if (!opened) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    // The free-shipping caption follows the real store threshold (never
-    // hardcoded); falls back to a neutral label while it loads / if unset.
-    final threshold = ref.watch(freeShippingThresholdProvider).valueOrNull;
-    final freeLabel = threshold != null
-        ? l10n.pdpTrustFreeOver(threshold.round())
-        : l10n.pdpTrustFreeLabel;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceTint,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        // Top-align so the three seals line up at the top even when one caption
-        // (e.g. the AR delivery line) wraps to more rows than the others.
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _TrustItem(
-            icon: Icons.verified_user_outlined,
-            value: l10n.pdpTrustAuthenticValue,
-            label: l10n.pdpTrustAuthenticLabel,
+          const Icon(Icons.info_outline, size: 16, color: AppColors.inkMuted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.pdpBundleOnWebsite,
+              style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
+            ),
           ),
-          _TrustItem(
-            icon: Icons.local_shipping_outlined,
-            value: l10n.pdpTrustFreeValue,
-            label: freeLabel,
-          ),
-          _TrustItem(
-            icon: Icons.schedule,
-            value: l10n.pdpTrustDeliveryValue,
-            label: l10n.pdpTrustDeliveryLabel,
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () => _open(context, ref),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(l10n.pdpBundleOpenWebsite),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accentStrong,
+              visualDensity: VisualDensity.compact,
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact trust row on the PDP (Figma 14): the storefront's own trust items,
+/// from the CMS block `hm_home_trust` (Content › Blocks) that the Home and the
+/// website show — so marketing edits them once, and the page promises only
+/// what the store says (no "Free Delivery" the store never offered). Hidden
+/// when the block is empty, disabled or unreadable (QA02).
+class PdpTrustRow extends ConsumerWidget {
+  const PdpTrustRow({super.key});
+
+  /// Items across the row, as in the Figma; more scroll sideways.
+  static const int across = 3;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(homeTrustProvider);
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceTint,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Up to three share the width; beyond that the next one peeks in
+            // at the edge, so the row reads as scrollable.
+            final width = items.length <= across
+                ? constraints.maxWidth / items.length
+                : constraints.maxWidth / (across + 0.4);
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                // Top-align so the seals line up even when one caption wraps
+                // to more lines than the others.
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < items.length; i++)
+                    SizedBox(
+                      width: width,
+                      child: _TrustItem(
+                        icon: HmTrustGrid.iconFor(items[i], i),
+                        title: items[i].title,
+                        text: items[i].text,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1065,21 +1202,22 @@ class _TrustRow extends ConsumerWidget {
 class _TrustItem extends StatelessWidget {
   const _TrustItem({
     required this.icon,
-    required this.value,
-    required this.label,
+    required this.title,
+    required this.text,
   });
   final IconData icon;
-  final String value;
-  final String label;
+  final String title;
+  final String text;
 
   @override
-  Widget build(BuildContext context) => Expanded(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 6),
     child: Column(
       children: [
         Icon(icon, color: AppColors.brandPrimary, size: 22),
         const SizedBox(height: 6),
         Text(
-          value,
+          title,
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 13,
@@ -1087,11 +1225,12 @@ class _TrustItem extends StatelessWidget {
             color: AppColors.inkHeading,
           ),
         ),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
-        ),
+        if (text.isNotEmpty)
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
+          ),
       ],
     ),
   );

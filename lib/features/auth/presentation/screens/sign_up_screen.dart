@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/config/store_features.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../l10n/l10n.dart';
@@ -143,6 +144,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final l10n = AppLocalizations.of(context);
     final t = AppTextStyles.of(context);
     final termsMissing = _submitted && !_agreedToTerms;
+    // The store's password rules (core storeConfig), once read.
+    final policy = ref.watch(passwordPolicyProvider);
     return Form(
       key: _formKey,
       autovalidateMode: _submitted
@@ -220,11 +223,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               obscured: _obscure,
               onPressed: () => setState(() => _obscure = !_obscure),
             ),
-            validator: (v) => Validators.newPassword(context, v),
+            validator: (v) =>
+                Validators.newPassword(context, v, policy: policy),
           ),
           AuthHelperLine.rule(
-            l10n.validationPasswordRule,
-            met: Validators.meetsPasswordRule(_password.text),
+            Validators.passwordRuleText(l10n, policy),
+            met: Validators.meetsPasswordRule(_password.text, policy),
             failed: _submitted,
           ),
           AuthCheckRow(

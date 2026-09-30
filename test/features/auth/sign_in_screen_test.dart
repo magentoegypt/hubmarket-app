@@ -114,8 +114,9 @@ void main() {
 
       expect(find.byType(AuthErrorBanner), findsOneWidget);
       expect(find.text('Email or password is incorrect'), findsOneWidget);
+      // Generic: the lockout's length is an admin setting.
       expect(
-        find.text('Repeated failures lock sign-in for 10 minutes.'),
+        find.text('Repeated failures temporarily lock sign-in.'),
         findsOneWidget,
       );
       expect(find.byType(SnackBar), findsNothing);
@@ -139,7 +140,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Enter a valid email address'), findsOneWidget);
-      expect(find.text('Password must be at least 8 characters'), findsOneWidget);
+      expect(find.text('Password is too short'), findsOneWidget);
       expect(repo.calls, isEmpty, reason: 'nothing is sent');
     });
 
@@ -230,10 +231,11 @@ void main() {
       tester,
     ) async {
       final repo = await fill(tester, password: 'sarapassword');
+      // The store's own rule, from storeConfig (8 characters, 3 classes).
       final rule = tester.widget<AuthHelperLine>(
         find.widgetWithText(
           AuthHelperLine,
-          '8+ characters, one number, one symbol',
+          'At least 8 characters, with 3 of: a–z, A–Z, 0–9, symbols',
         ),
       );
       expect(rule.color, AppColors.danger);

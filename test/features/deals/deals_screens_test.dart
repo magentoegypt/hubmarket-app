@@ -15,6 +15,8 @@ import 'package:hubmarket_app/features/deals/data/deals_repository.dart';
 import 'package:hubmarket_app/features/deals/domain/deals.dart';
 import 'package:hubmarket_app/features/deals/presentation/screens/bundle_deals_screen.dart';
 import 'package:hubmarket_app/features/deals/presentation/screens/deals_screen.dart';
+import 'package:hubmarket_app/features/home/domain/hm_home.dart';
+import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -130,6 +132,7 @@ Widget _harness(
   required _FakeDeals deals,
   String locale = 'en',
   GlobalKey? boundary,
+  HmHome? home,
 }) {
   final router = GoRouter(
     initialLocation: '/screen',
@@ -160,6 +163,7 @@ Widget _harness(
       publicGraphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(const HubAppState.available(kSampleHmAppConfig)),
       dealsRepositoryProvider.overrideWithValue(deals),
+      if (home != null) hmHomeProvider.overrideWith((ref) async => home),
     ],
     child: RepaintBoundary(
       key: boundary,
@@ -213,6 +217,11 @@ void main() {
         );
         expect(find.text(l10n.homeTodaysDeals), findsOneWidget);
         expect(find.text(l10n.dealsEndIn), findsOneWidget);
+        // No promise about when deals refresh (QA02).
+        expect(
+          find.textContaining(locale == 'ar' ? 'منتصف الليل' : 'midnight'),
+          findsNothing,
+        );
         expect(find.text(l10n.dealsCount(5)), findsOneWidget);
         expect(find.text(l10n.dealsAllChip), findsOneWidget);
         // Chips from the deals' own top-level categories, busiest first.
@@ -284,7 +293,9 @@ void main() {
         final l10n = AppLocalizations.of(
           tester.element(find.byType(BundleDealsScreen)),
         );
+        // Neutral interface wording: the Home hasn't named the section.
         expect(find.text(l10n.bundlesHeroTitle), findsOneWidget);
+        expect(find.text(l10n.bundlesHeroBody), findsOneWidget);
         expect(find.text(l10n.bundlesStatUpTo(16)), findsOneWidget);
         expect(find.text('3'), findsOneWidget); // vendors
         expect(find.text('House Tools Set'), findsOneWidget);
@@ -296,6 +307,42 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('the intro takes the admin\'s bundles title and subtitle '
+        'from the Home layout', (tester) async {
+      await _phone(tester, height: 1300);
+      const home = HmHome(
+        storeCode: 'en',
+        sections: [
+          HmHomeSection(
+            id: 7,
+            type: HmSectionType.bundleDeals,
+            title: 'Ramadan Bundles',
+            subtitle: 'Packs put together by our sellers',
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        _harness(
+          // Home read the layout first; the list never loads it itself.
+          Consumer(
+            builder: (_, ref, __) {
+              ref.watch(hmHomeProvider);
+              return const BundleDealsScreen();
+            },
+          ),
+          deals: _FakeDeals(),
+          home: home,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text('Ramadan Bundles'), findsOneWidget);
+      expect(find.text('Packs put together by our sellers'), findsOneWidget);
+      expect(find.text(l10n.bundlesHeroTitle), findsNothing);
+      expect(find.text(l10n.bundlesHeroBody), findsNothing);
+    });
 
     testWidgets('a chip reloads that category from the server', (tester) async {
       await _phone(tester, height: 1300);

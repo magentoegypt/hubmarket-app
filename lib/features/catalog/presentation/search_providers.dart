@@ -26,7 +26,7 @@ final searchHintProvider = Provider<String?>(
 
 /// The admin's trending searches, in their order (`hmAppConfig.search
 /// .trending_terms`); empty without the Hub Market App API or a configured
-/// list — the landing then shows the app's own.
+/// list — the landing then leaves its Trending section out.
 final trendingSearchesProvider = Provider<List<String>>(
   (ref) =>
       ref.watch(hmAppConfigProvider)?.search.trendingTerms ?? const <String>[],

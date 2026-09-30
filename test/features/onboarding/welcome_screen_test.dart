@@ -16,6 +16,7 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
+import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_hero.dart';
 import 'package:hubmarket_app/features/onboarding/presentation/welcome_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
@@ -42,6 +43,7 @@ Widget _harness({
   required List<HmHeroBanner> slides,
   String locale = 'en',
   GlobalKey? boundary,
+  Map<String, String>? blocks,
 }) {
   final router = GoRouter(
     initialLocation: '/welcome',
@@ -64,6 +66,9 @@ Widget _harness({
             : const HubAppState.available(kSampleHmAppConfig),
       ),
       welcomeSlidesProvider.overrideWith((ref) async => slides),
+      // The Home CMS blocks (the splash warms them); unread without [blocks].
+      if (blocks != null)
+        homeCmsBlocksProvider.overrideWith((ref) async => blocks),
     ],
     child: RepaintBoundary(
       key: boundary,
@@ -168,14 +173,50 @@ void main() {
     });
   }
 
-  testWidgets('without slides: the logo panel (Build 1)', (tester) async {
+  testWidgets('without slides: the logo panel (Build 1), no invented pill', (
+    tester,
+  ) async {
     await _phone(tester);
     await tester.pumpWidget(_harness(slides: const []));
     await tester.pumpAndSettle();
 
     expect(find.byType(PageView), findsNothing);
     expect(find.byType(HmPagerDots), findsNothing);
-    expect(find.text('SAME-DAY DELIVERY'), findsOneWidget); // the app's kicker
+    // No delivery promise from the store → no pill: the app has no
+    // delivery claim of its own (QA02).
+    expect(find.text('SAME-DAY DELIVERY'), findsNothing);
     expect(find.text('Continue as guest'), findsOneWidget);
   });
+
+  for (final locale in ['en', 'ar']) {
+    testWidgets('the logo panel pill is the store\'s delivery promise '
+        '($locale)', (tester) async {
+      await _phone(tester);
+      final key = GlobalKey();
+      final promise = locale == 'ar'
+          ? 'توصيل مجاني على الطلبات المؤهلة &middot; شحن سريع'
+          : 'Free delivery on qualifying orders &middot; Fast nationwide '
+                'shipping';
+      await tester.pumpWidget(
+        _harness(
+          slides: const [],
+          locale: locale,
+          boundary: key,
+          blocks: {'hm_delivery_promise': '<p>$promise</p>'},
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _capture(tester, key, 'welcome_logo_panel_$locale');
+
+      expect(
+        find.text(
+          locale == 'ar'
+              ? 'توصيل مجاني على الطلبات المؤهلة · شحن سريع'
+              : 'Free delivery on qualifying orders · Fast nationwide shipping',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

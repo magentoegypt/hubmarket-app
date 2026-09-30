@@ -112,7 +112,8 @@ void main() {
 
     expect(find.text(en.helpCentreTitle), findsOneWidget);
     expect(find.text(en.helpWhatsApp), findsOneWidget);
-    expect(find.text(en.helpWhatsAppCaption), findsOneWidget);
+    // No service hours from the store → no hours claim under WhatsApp.
+    expect(find.text('24/7 customer care'), findsNothing);
     expect(find.text(en.helpCallUs), findsOneWidget);
     expect(find.text('+971 50 000 0000'), findsOneWidget);
     expect(find.text(en.helpEmailUs), findsOneWidget);
@@ -143,6 +144,23 @@ void main() {
     expect(find.text(en.helpWhatsApp), findsOneWidget);
     expect(find.text(en.helpCallUs), findsNothing);
     expect(find.text(en.helpEmailUs), findsNothing);
+  });
+
+  testWidgets('WhatsApp shows the service hours the admin set (HubApp)', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      contact: const StoreContact(
+        website: 'https://hub-market.magento2.click',
+        whatsapp: 'https://wa.me/971501234567',
+        hours: 'Daily 9 am – 11 pm',
+      ),
+    );
+    expect(find.text(en.helpWhatsApp), findsOneWidget);
+    expect(find.text('Daily 9 am – 11 pm'), findsOneWidget);
+    expect(find.text('24/7 customer care'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the bundled FAQ makes no claims the app cannot keep', (

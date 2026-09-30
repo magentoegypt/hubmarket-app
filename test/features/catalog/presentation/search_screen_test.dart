@@ -219,6 +219,8 @@ Widget _harness({
       catalogRepositoryProvider.overrideWithValue(catalog ?? _SearchCatalog()),
       cartRepositoryProvider.overrideWithValue(cart ?? _Cart()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+      // HubApp's public reads (store-name matches) stay offline too.
+      publicGraphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(hubApp),
       algoliaHttpClientProvider.overrideWithValue(
         (algolia ?? FakeAlgoliaBackend(pageStatus: 503)).client,
@@ -331,7 +333,7 @@ void main() {
       ]);
     });
 
-    testWidgets('numbered trending searches and popular category tiles', (
+    testWidgets('Build 1: no trending list to show, popular category tiles', (
       tester,
     ) async {
       await _phone(tester);
@@ -340,10 +342,11 @@ void main() {
 
       // No history yet → no Recent section.
       expect(find.text('Recent searches'), findsNothing);
-      expect(find.text('Trending searches'), findsOneWidget);
-      expect(find.text('1'), findsOneWidget);
-      expect(find.text('bag'), findsOneWidget);
-      expect(find.text('Samsung'), findsOneWidget);
+      // Without the admin's list the section is left out: the app has no
+      // trending terms of its own (QA02).
+      expect(find.text('Trending searches'), findsNothing);
+      expect(find.text('bag'), findsNothing);
+      expect(find.text('Samsung'), findsNothing);
 
       expect(find.text('Popular categories'), findsOneWidget);
       expect(find.text('Furniture'), findsOneWidget);
@@ -367,11 +370,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Search 20,000+ products'), findsOneWidget);
+        expect(find.text('Trending searches'), findsOneWidget);
+        // Numbered in the admin's order.
+        expect(find.text('1'), findsOneWidget);
         expect(find.text('iphone'), findsOneWidget);
         expect(find.text('abaya'), findsOneWidget);
         expect(find.text('3'), findsOneWidget);
-        // The app's own list only stands in when the admin has none.
-        expect(find.text('Samsung'), findsNothing);
+        expect(find.text('rice'), findsOneWidget);
       },
     );
 
@@ -379,15 +384,21 @@ void main() {
       await _phone(tester);
       final cache = FakeLocalCache();
       final algolia = _algolia();
-      await tester.pumpWidget(_harness(algolia: algolia, cache: cache));
+      await tester.pumpWidget(
+        _harness(
+          algolia: algolia,
+          cache: cache,
+          hubApp: const HubAppState.available(kSampleHmAppConfig),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('bag'));
+      await tester.tap(find.text('abaya'));
       await tester.pumpAndSettle();
 
       expect(find.text('Products (12)'), findsOneWidget);
-      expect(jsonDecode(cache.readString('search_history')!), ['bag']);
-      expect(_productSearches(algolia).last.query, 'bag');
+      expect(jsonDecode(cache.readString('search_history')!), ['abaya']);
+      expect(_productSearches(algolia).last.query, 'abaya');
     });
 
     testWidgets('opening search loads the store view\'s Algolia settings', (
@@ -620,9 +631,11 @@ void main() {
       await tester.pumpWidget(_harness(algolia: algolia, locale: 'ar'));
       await tester.pumpAndSettle();
 
-      expect(find.text('الأكثر بحثًا'), findsOneWidget);
+      // Build 1: no trending list, so the categories head the landing.
+      expect(find.text('الأكثر بحثًا'), findsNothing);
+      expect(find.text('الأقسام الأكثر رواجًا'), findsOneWidget);
       expect(
-        Directionality.of(tester.element(find.text('الأكثر بحثًا'))),
+        Directionality.of(tester.element(find.text('الأقسام الأكثر رواجًا'))),
         TextDirection.rtl,
       );
 
