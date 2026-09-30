@@ -15,8 +15,13 @@ Two modes:
   implements it, and new types, enums and inputs are added;
 * `--live-only` — only what the server supports today.
 
+`--schema-file PATH` reads the base schema from an SDL file instead of
+introspecting the endpoint — offline, e.g. in CI against the committed
+`lib/core/graphql/schema.graphql` (refreshed by `tool/introspect_to_sdl.py`).
+Both modes work on it.
+
 Usage:
-  python tool/validate_ops.py [endpoint] [--live-only] [--sdl PATH]
+  python tool/validate_ops.py [endpoint] [--live-only] [--sdl PATH] [--schema-file PATH]
       (default endpoint: Hub Market live GraphQL)
 Exit code 1 when any operation references something the schema doesn't have.
 """
@@ -258,7 +263,10 @@ class SdlParser(P):
         return fields
 
     def definitions(self):
+        """The type definitions; a `schema { query: … }` block's root types
+        land in `self.roots` ({'query': 'Query', …})."""
         defs = []
+        self.roots = {}
         while self.peek()[0]:
             self.descriptions()
             keyword = self.take()[1]
@@ -269,7 +277,9 @@ class SdlParser(P):
                 self.directives()
                 self.take('{')
                 while self.peek()[1] != '}':
-                    self.take()
+                    operation = self.take()[1]
+                    self.take(':')
+                    self.roots[operation] = self.take()[1]
                 self.take('}')
                 continue
             if keyword == 'directive':
@@ -327,6 +337,22 @@ class SdlParser(P):
 
 def parse_sdl(src):
     return SdlParser(tokenize(src)).definitions()
+
+
+def schema_from_sdl(src):
+    """An introspection-shaped `__schema` (what fetch_schema returns) built
+    from a whole SDL document, e.g. the committed schema.graphql — the offline
+    stand-in for introspection. The root types are the `schema { … }` block's,
+    else `Query` and `Mutation`. Interfaces list their implementations as
+    `possibleTypes`, unions their members."""
+    parser = SdlParser(tokenize(src))
+    types = {}
+    merge_sdl(types, parser.definitions())
+    query = parser.roots.get('query', 'Query')
+    mutation = parser.roots.get('mutation', 'Mutation' if 'Mutation' in types else None)
+    return {'queryType': {'name': query},
+            'mutationType': {'name': mutation} if mutation else None,
+            'types': list(types.values())}
 
 
 def _add_named(items, new, stats, label):
@@ -485,15 +511,25 @@ def main(argv=None):
     ap.add_argument('--live-only', action='store_true',
                     help='check against the live schema alone, without the Hub Market App contract')
     ap.add_argument('--sdl', default=DEFAULT_SDL, help='the contract SDL to overlay (default: %(default)s)')
+    ap.add_argument('--schema-file', metavar='PATH',
+                    help='read the base schema from this SDL file (e.g. lib/core/graphql/schema.graphql) '
+                         'instead of introspecting the endpoint; no network')
     args = ap.parse_args(argv)
 
-    types, qroot, mroot = index_schema(fetch_schema(args.endpoint))
+    if args.schema_file:
+        with open(args.schema_file, encoding='utf-8') as f:
+            schema = schema_from_sdl(f.read())
+        base, where = 'schema file', os.path.relpath(args.schema_file, ROOT)
+    else:
+        schema = fetch_schema(args.endpoint)
+        base, where = 'live', args.endpoint
+    types, qroot, mroot = index_schema(schema)
     if args.live_only:
-        mode = f'live only ({args.endpoint})'
+        mode = f'{base} only ({where})'
     else:
         with open(args.sdl, encoding='utf-8') as f:
             merged = merge_sdl(types, parse_sdl(f.read()))
-        mode = (f'live ({args.endpoint}) + {os.path.relpath(args.sdl, ROOT)} '
+        mode = (f'{base} ({where}) + {os.path.relpath(args.sdl, ROOT)} '
                 f'({len(merged["types"])} types, {len(merged["fields"])} fields overlaid)')
     parsed, fragments, parse_errors, n_files = collect(ROOT)
     problems, n_ops = validate(types, qroot, mroot, parsed, fragments)

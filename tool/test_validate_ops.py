@@ -46,6 +46,12 @@ def field_names(types, name):
     return [f['name'] for f in (types[name].get('fields') or [])]
 
 
+def sdl_schema():
+    """live_schema.json's twin, read the way --schema-file reads an SDL."""
+    with open(os.path.join(FIXTURES, 'live_schema.graphql'), encoding='utf-8') as f:
+        return v.schema_from_sdl(f.read())
+
+
 def run(schema, merge):
     types, qroot, mroot = v.index_schema(copy.deepcopy(schema))
     if merge:
@@ -131,6 +137,62 @@ class ValidateTest(unittest.TestCase):
                 code = v.main(argv)
             self.assertIn(expected_mode, out.getvalue())
             self.assertEqual(code, expected_exit, out.getvalue())
+
+
+class SchemaFileTest(unittest.TestCase):
+    """--schema-file: the base schema from an SDL file, without the network."""
+
+    def test_an_sdl_validates_like_its_introspection(self):
+        for merge in (True, False):
+            self.assertEqual(run(sdl_schema(), merge), run(live_schema(), merge), f'merge={merge}')
+
+    def test_roots_interfaces_and_inputs(self):
+        schema = sdl_schema()
+        self.assertEqual(schema['queryType'], {'name': 'Query'})
+        self.assertEqual(schema['mutationType'], {'name': 'Mutation'})
+        types, _, _ = v.index_schema(schema)
+        self.assertEqual([t['name'] for t in types['ProductInterface']['possibleTypes']],
+                         ['SimpleProduct', 'BundleProduct'])
+        self.assertEqual([a['name'] for a in field_names_args(types, 'Query', 'products')],
+                         ['filter', 'pageSize'])
+        self.assertEqual([i['name'] for i in types['ProductAttributeFilterInput']['inputFields']], ['sku'])
+
+    def test_a_schema_block_names_the_roots(self):
+        schema = v.schema_from_sdl('schema { query: Root mutation: Change }\n'
+                                   'type Root { a: Int }\ntype Change { b: Int }\n')
+        self.assertEqual(schema['queryType'], {'name': 'Root'})
+        self.assertEqual(schema['mutationType'], {'name': 'Change'})
+        self.assertIsNone(v.schema_from_sdl('type Query { a: Int }')['mutationType'])
+
+    def test_the_committed_schema_loads(self):
+        with open(os.path.join(v.ROOT, 'lib', 'core', 'graphql', 'schema.graphql'), encoding='utf-8') as f:
+            types, qroot, mroot = v.index_schema(v.schema_from_sdl(f.read()))
+        self.assertEqual((qroot, mroot), ('Query', 'Mutation'))
+        self.assertIn('products', field_names(types, 'Query'))
+        self.assertIn('placeOrder', field_names(types, 'Mutation'))
+        self.assertIn('SimpleProduct', [t['name'] for t in types['ProductInterface']['possibleTypes']])
+
+    def test_main_reads_the_file_and_never_the_network(self):
+        ops, frags = v.P(v.tokenize(OPERATION)).document()
+        collected = ([('x.dart', ops, frags)], frags, [], 1)
+        schema_file = os.path.join(FIXTURES, 'live_schema.graphql')
+        cases = (
+            (['--schema-file', schema_file, '--sdl', os.path.join(FIXTURES, 'overlay.graphql')],
+             'mode: schema file (', 0),
+            (['--schema-file', schema_file, '--live-only'], 'mode: schema file only (', 1),
+        )
+        for argv, expected_mode, expected_exit in cases:
+            out = io.StringIO()
+            with mock.patch.object(v, 'fetch_schema', side_effect=AssertionError('network used')), \
+                    mock.patch.object(v, 'collect', return_value=collected), \
+                    contextlib.redirect_stdout(out):
+                code = v.main(argv)
+            self.assertIn(expected_mode, out.getvalue())
+            self.assertEqual(code, expected_exit, out.getvalue())
+
+
+def field_names_args(types, type_name, field):
+    return {f['name']: f for f in types[type_name]['fields']}[field]['args']
 
 
 if __name__ == '__main__':

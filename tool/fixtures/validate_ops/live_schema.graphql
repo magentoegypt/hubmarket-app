@@ -1,0 +1,38 @@
+"""
+live_schema.json as SDL, the way tool/introspect_to_sdl.py writes
+lib/core/graphql/schema.graphql: descriptions, default values, deprecations.
+"""
+type Query {
+  """Products matching the filter."""
+  products(filter: ProductAttributeFilterInput, pageSize: Int = 20): Products
+}
+
+type Mutation {
+  ping: Boolean @deprecated(reason: "No longer used.")
+}
+
+type Products {
+  items: [ProductInterface]
+}
+
+interface ProductInterface {
+  sku: String
+}
+
+type SimpleProduct implements ProductInterface {
+  sku: String
+}
+
+type BundleProduct implements ProductInterface {
+  sku: String
+  dynamic_sku: Boolean
+}
+
+input ProductAttributeFilterInput {
+  sku: FilterEqualTypeInput
+}
+
+input FilterEqualTypeInput {
+  eq: String
+  in: [String]
+}

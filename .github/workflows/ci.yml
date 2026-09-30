@@ -28,3 +28,10 @@ jobs:
       - run: flutter gen-l10n
       - run: flutter analyze
       - run: flutter test
+      # Same offline GraphQL checks as build-on-push.yml.
+      - name: Tool tests
+        run: python3 -m unittest discover -s tool -p "test_*.py"
+      - name: GraphQL operations vs committed schema + HubApp contract
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python3 tool/validate_ops.py --schema-file lib/core/graphql/schema.graphql

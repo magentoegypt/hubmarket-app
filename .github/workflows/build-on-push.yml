@@ -1,7 +1,8 @@
 name: Build · main (Android APK)
 
-# On every push to main: run the CI gate (analyze + tests), then build the
-# Android APK (debug-signed until the ANDROID_* secrets are set) and, when the
+# On every push to main: run the CI gate (analyze, tests, the tool tests and
+# the offline GraphQL operation check), then build the Android APK
+# (debug-signed until the ANDROID_* secrets are set) and, when the
 # LOADLY_API_KEY secret is set, publish an install link on Loadly.
 # Artifact: apk-prod (download from the run). iOS is manual for now —
 # .github/workflows/build-ios.yml — until Hub Market's Apple signing exists.
@@ -32,6 +33,16 @@ jobs:
       - run: flutter gen-l10n
       - run: flutter analyze
       - run: flutter test
+      # The GraphQL tooling's own tests, then every operation against the
+      # committed schema.graphql + the HubApp contract. Offline, so the live
+      # server can't fail the gate; `python tool/validate_ops.py` (live) is
+      # still the pre-push check.
+      - name: Tool tests
+        run: python3 -m unittest discover -s tool -p "test_*.py"
+      - name: GraphQL operations vs committed schema + HubApp contract
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python3 tool/validate_ops.py --schema-file lib/core/graphql/schema.graphql
 
   android-apk:
     needs: analyze-test
