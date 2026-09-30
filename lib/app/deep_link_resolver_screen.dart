@@ -25,8 +25,10 @@ import 'theme/app_colors.dart';
 /// Resolution order:
 ///  1. an Arabic/English store segment (`/uae-ar/`) switches the app language,
 ///     so a shared Arabic link opens in Arabic;
-///  2. `urlResolver` maps the path to a PRODUCT (PDP), CATEGORY (PLP) or
-///     CMS_PAGE (the native content page);
+///  2. a seller's page (`/shop/<code>/`) opens the native store page while
+///     the Hub Market App's seller API is there; `urlResolver` maps the path
+///     to a PRODUCT (PDP), CATEGORY (PLP) or CMS_PAGE (the native content
+///     page);
 ///  3. anything else on our own domain (`shopbrand`, the blog) opens in the
 ///     in-app [WebViewScreen] rather than dead-ending;
 ///  4. only a foreign host or an unparseable URL falls through to a branded
@@ -90,6 +92,16 @@ class _DeepLinkResolverScreenState
       return;
     }
 
+    // A seller's page (`/en/shop/loly/`) has no `url_rewrite` either. With
+    // the Hub Market App's seller API it opens the native store page (Figma
+    // 13) — no round trip; without it, the page in the in-app browser, as
+    // before.
+    final sellerCode = sellerCodeOf(url);
+    final storePath = sellerCode != null && await hubAppStoresReady(ref)
+        ? (sellerCode.isEmpty ? AppRoutes.stores : AppRoutes.store(sellerCode))
+        : null;
+    if (!mounted) return;
+
     // A `shopbrand` path has no `url_rewrite`, so `urlResolver` can only
     // answer null for it. Map it to the app's own brand listing instead, and
     // skip the round trip entirely (CL042-DEV19/QA01).
@@ -97,7 +109,7 @@ class _DeepLinkResolverScreenState
     final brand = isBrandUrl ? await lookUpBrand(ref, url) : null;
     if (!mounted) return;
 
-    final resolved = isBrandUrl
+    final resolved = isBrandUrl || storePath != null
         ? null
         : await ref.read(catalogRepositoryProvider).resolveUrl(url);
     if (!mounted) return;
@@ -109,7 +121,9 @@ class _DeepLinkResolverScreenState
 
     final String path;
     Object? extra;
-    if (resolved != null &&
+    if (storePath != null) {
+      path = storePath;
+    } else if (resolved != null &&
         resolved.type == 'PRODUCT' &&
         resolved.urlKey != null) {
       path = AppRoutes.product(resolved.urlKey!);
