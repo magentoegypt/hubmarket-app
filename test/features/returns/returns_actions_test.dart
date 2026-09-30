@@ -93,7 +93,7 @@ void main() {
       expect(
         find.text(
           '${en.returnsRequestedOn('24 Sep')} · '
-          '${en.returnsTypeRefund} ⁦AED 29.00⁩',
+          '${en.returnsTypeRefund} \u2066AED 29.00\u2069',
         ),
         findsOneWidget,
       );
