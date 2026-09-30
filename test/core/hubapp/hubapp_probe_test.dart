@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gql/language.dart' show printNode;
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
@@ -164,6 +165,79 @@ void main() {
         contains('hmAppConfig {'),
       );
       expect(HubAppConfigRepository.document, isNot(contains(r'$')));
+    });
+
+    test('asks for capabilities and reads them', () async {
+      final log = <Request>[];
+      final container = _container({
+        'HmAppConfig': {
+          'hmAppConfig': hmAppConfigJson(capabilities: ['bundle', 'vendors']),
+        },
+      }, log: log);
+
+      await container.read(hubAppProvider.future);
+
+      expect(printNode(log.single.operation.document), contains('capabilities'));
+      expect(container.read(hubAppCapabilityProvider('vendors')), isTrue);
+      expect(container.read(hubAppCapabilityProvider('returns')), isFalse);
+    });
+
+    test('a HubApp from before capabilities is asked again without them', () async {
+      final sent = <String>[];
+      final container = ProviderContainer(
+        overrides: [
+          localCacheProvider.overrideWithValue(FakeLocalCache()),
+          localePrefsProvider.overrideWithValue(FakeLocalePrefs('en')),
+          secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
+          networkStatusSourceProvider.overrideWithValue(
+            () => Stream<bool>.value(true),
+          ),
+          publicGraphqlClientProvider.overrideWithValue(
+            GraphQLClient(
+              link: Link.function((request, [forward]) {
+                final document = printNode(request.operation.document);
+                sent.add(document);
+                return Stream.value(
+                  document.contains('capabilities')
+                      ? hubAppMissingResponse(
+                          'capabilities',
+                          type: 'HmAppConfig',
+                        )
+                      : Response(
+                          data: {'hmAppConfig': hmAppConfigJson()},
+                          response: const <String, dynamic>{},
+                        ),
+                );
+              }),
+              // Canned data leaves out the `__typename`s the client adds.
+              cache: GraphQLCache(
+                partialDataPolicy: PartialDataCachePolicy.accept,
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final state = await container.read(hubAppProvider.future);
+
+      expect(sent, hasLength(2));
+      expect(sent.last, isNot(contains('capabilities')));
+      expect(state.status, HubAppStatus.available);
+      expect(state.config!.capabilities, isNull);
+      expect(container.read(hubAppCapabilityProvider('vendors')), isFalse);
+    });
+
+    test('without hmAppConfig itself the retry is not made', () async {
+      final log = <Request>[];
+      final container = _container({
+        'HmAppConfig': hubAppMissingResponse('hmAppConfig'),
+      }, log: log);
+
+      final state = await container.read(hubAppProvider.future);
+
+      expect(log, hasLength(1));
+      expect(state.status, HubAppStatus.unavailable);
     });
 
     test('algoliaFor re-reads the config when its key is expiring', () async {

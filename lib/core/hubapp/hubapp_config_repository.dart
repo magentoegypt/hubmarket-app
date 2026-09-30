@@ -38,29 +38,51 @@ query HmAppConfig {
     version { platform min_version latest_version store_url message }
     maintenance { enabled message retry_after_minutes }
     features { code enabled }
+    capabilities
   }
 }
 ''';
 
   /// [document] for [platform]; without one the server returns every
-  /// platform's version policy and only the all-platform flags.
-  static String documentFor(HmPlatform? platform) => switch (platform) {
-    HmPlatform.android => document,
-    null => document.replaceFirst('(platform: ANDROID)', ''),
-    final other => document.replaceFirst(
-      '(platform: ANDROID)',
-      '(platform: ${other.wire})',
-    ),
-  };
+  /// platform's version policy and only the all-platform flags. Without
+  /// [capabilities], the document a server from before
+  /// `hmAppConfig.capabilities` accepts.
+  static String documentFor(HmPlatform? platform, {bool capabilities = true}) {
+    final base = capabilities
+        ? document
+        : document.replaceFirst(RegExp(r'\s+capabilities\b'), '');
+    return switch (platform) {
+      HmPlatform.android => base,
+      null => base.replaceFirst('(platform: ANDROID)', ''),
+      final other => base.replaceFirst(
+        '(platform: ANDROID)',
+        '(platform: ${other.wire})',
+      ),
+    };
+  }
 
   /// This store view's settings (the `Store` header). Throws [HubAppMissing]
   /// when the server has no `hmAppConfig`, a `Failure` for anything else.
+  ///
+  /// A server with HubApp from before `capabilities` turns the whole
+  /// document down for that one field; it is asked again without it, and its
+  /// config has no capabilities (every satellite field stays off).
   Future<HmAppConfig> fetch({HmPlatform? platform}) async {
-    final data = await runHubAppQuery(
-      _client,
-      documentFor(platform),
-      timeout: timeout,
-    );
+    Map<String, dynamic> data;
+    try {
+      data = await runHubAppQuery(
+        _client,
+        documentFor(platform),
+        timeout: timeout,
+      );
+    } on HubAppMissing catch (missing) {
+      if (!missing.message.contains('"capabilities"')) rethrow;
+      data = await runHubAppQuery(
+        _client,
+        documentFor(platform, capabilities: false),
+        timeout: timeout,
+      );
+    }
     final json = data['hmAppConfig'];
     try {
       if (json is Map<String, dynamic>) return HmAppConfig.fromJson(json);

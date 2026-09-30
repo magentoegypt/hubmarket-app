@@ -55,6 +55,24 @@ void main() {
       expect(config.features, isEmpty);
     });
 
+    test('capabilities: the satellites listed, none on an older server', () {
+      final listed = HmAppConfig.fromJson(
+        hmAppConfigJson(capabilities: ['account', ' ', 'vendors']),
+      );
+      expect(listed.capabilities, {'account', 'vendors'});
+      expect(listed.hasCapability(HubAppCapability.vendors), isTrue);
+      expect(listed.hasCapability(HubAppCapability.bundle), isFalse);
+
+      final none = HmAppConfig.fromJson(hmAppConfigJson(capabilities: []));
+      expect(none.capabilities, isEmpty);
+      expect(none.hasCapability(HubAppCapability.vendors), isFalse);
+
+      // A server from before the list: unknown, not "none".
+      final older = HmAppConfig.fromJson(hmAppConfigJson());
+      expect(older.capabilities, isNull);
+      expect(older.hasCapability(HubAppCapability.vendors), isFalse);
+    });
+
     test('an Algolia block without its key is no Algolia at all', () {
       final config = HmAppConfig.fromJson(
         hmAppConfigJson(

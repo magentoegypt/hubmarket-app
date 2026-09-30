@@ -176,6 +176,13 @@ final hmAppConfigProvider = Provider<HmAppConfig?>(
   (ref) => ref.watch(hubAppProvider).valueOrNull?.config,
 );
 
+/// Whether the server runs the HubApp satellite [code] ([HubAppCapability]):
+/// HubApp is available and `hmAppConfig.capabilities` lists it. False while
+/// probing, without HubApp, and on a server from before the list.
+final hubAppCapabilityProvider = Provider.family<bool, String>(
+  (ref, code) => ref.watch(hmAppConfigProvider)?.hasCapability(code) ?? false,
+);
+
 /// A remote feature switch (`store_credit`, `returns`, `whatsapp_login`,
 /// `push`, …): null when HubApp isn't available or the backend doesn't list
 /// the code — each feature decides its own default (`?? false` for "off

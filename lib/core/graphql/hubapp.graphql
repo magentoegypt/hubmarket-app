@@ -49,6 +49,17 @@
 #   - vendor_id is a MATCH filter in the live ProductAttributeFilterInput
 #     (FilterMatchTypeInput), so a seller's products are
 #     products(filter: vendor_id match <id>, match_type FULL), not eq.
+#
+# P3.1, store pages (additions only):
+#   - HmAppConfig.capabilities lists the enabled satellites (vendors, bundle,
+#     returns, account). A server with HubApp but without a satellite rejects
+#     a whole document naming one of its fields, so the app adds a satellite's
+#     fields to shared documents (hm_seller on listing cards) only when its
+#     code is listed;
+#   - HubAppVendors: hmStoreReviews (the Reviews tab), hmStoreCategories (the
+#     Stores chips), HmStore contact / location / sales_count (only what the
+#     website's store page publishes), HmStoreCard primary_category and
+#     facet_value (the Algolia seller facet's value).
 # =============================================================================
 
 
@@ -159,6 +170,7 @@ type HmAppConfig @doc(description: "App settings for one store view.") {
     version: [HmVersionPolicy!]! @doc(description: "Version policy per platform.")
     maintenance: HmMaintenance! @doc(description: "Maintenance mode.")
     features: [HmFeatureFlag!]! @doc(description: "Feature flags; codes unknown to the app mean off.")
+    capabilities: [String!]! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\Capabilities") @doc(description: "HubApp satellites enabled on this server, A-Z: vendors (HubAppVendors), bundle (HubAppBundle), returns (HubAppReturns), account (HubAppAccount). Ask for a satellite's fields only when its code is listed.")
 }
 
 type HmSearchConfig @doc(description: "Search settings.") {
@@ -337,6 +349,12 @@ type Query {
     hmStore(
         code: String! @doc(description: "Seller code, case-insensitive.")
     ): HmStore @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Store") @doc(description: "An approved seller's store page; null otherwise. For its products, filter products by vendor_id match card.vendor_entity_id (a match filter in the live schema, not eq).") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\StoreIdentity")
+    hmStoreReviews(
+        code: String! @doc(description: "Seller code, case-insensitive."),
+        pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
+        currentPage: Int = 1 @doc(description: "Page number from 1.")
+    ): HmStoreReviewPage @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreReviews") @doc(description: "A store page's Reviews tab: approved reviews of the seller's products that this store view shows, newest first, with the seller's rating as the card counts it; null for a code that is not an approved seller. Public; GET.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\StoreReviewsIdentity")
+    hmStoreCategories: HmStoreCategories! @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreCategories") @doc(description: "The Stores chips: top-level menu categories in menu order with how many sellers each holds, as the hmStores category_id filter counts them; categories with none are left out. Public; GET.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\StoreCategoriesIdentity")
 }
 
 input HmStoreFilterInput @doc(description: "Store filters.") {
@@ -377,6 +395,8 @@ type HmStoreCard @doc(description: "Seller card.") {
     is_featured: Boolean! @doc(description: "Show on Home flag.")
     joined_at: String! @doc(description: "Joined, ISO-8601 UTC.")
     link: HmLink! @doc(description: "Store page link.")
+    primary_category: HmCategoryCount @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreCardCategory") @doc(description: "Top-level menu category holding most of the seller's listable products, count being how many are in it; null when none is filed in one.") @cache(cacheIdentity: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\Identity\\CategoryCountIdentity")
+    facet_value: String @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreCardFacetValue") @doc(description: "The seller's value in the storefront's Algolia seller facet, the product records' seller attribute, in this store view: match facet counts to stores on it, not on name. Null when records carry no seller.")
 }
 
 type HmStore @doc(description: "Store page.") {
@@ -386,11 +406,51 @@ type HmStore @doc(description: "Store page.") {
     about_html: String @doc(description: "About HTML when shown.")
     shipping_policy_html: String @doc(description: "Shipping policy HTML when enabled.")
     refund_policy_html: String @doc(description: "Refund policy HTML when enabled.")
+    contact: HmStoreContact @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreContact") @doc(description: "Ways to reach the seller that the store page publishes; null when it publishes none.")
+    location: String @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreLocation") @doc(description: "The store page's location line: the admin's address template in this store view's language, city and region translated as the website shows them; null when empty.")
+    sales_count: Int @resolver(class: "MagentoEgypt\\HubAppVendors\\Model\\Resolver\\StoreSalesCount") @doc(description: "The store page's sales count, the seller's orders with a paid amount; null while the admin hides sales counts.")
+}
+
+type HmStoreContact @doc(description: "Seller contact the store page publishes.") {
+    phone: String @doc(description: "Telephone as the seller typed it; the page's Contact Vendor button dials it. Null while the admin hides seller phones.")
 }
 
 type HmStorePage @doc(description: "Seller cards page.") {
     items: [HmStoreCard!]! @doc(description: "Cards.")
     total_count: Int! @doc(description: "Sellers matching.")
+    page_info: SearchResultPageInfo! @doc(description: "Paging.")
+}
+
+type HmStoreCategories @doc(description: "Seller counts for the Stores chips.") {
+    total_count: Int! @doc(description: "Sellers with a listable product, the All chip: hmStores total_count without filters.")
+    items: [HmCategoryCount!]! @doc(description: "Categories in menu order; count is the number of sellers in each.")
+}
+
+type HmStoreReviewSummary @doc(description: "The seller's rating, the figures of HmStoreCard.") {
+    rating: Float @doc(description: "Out of 5, one decimal; null when unrated.")
+    review_count: Int! @doc(description: "Approved reviews in every store view.")
+}
+
+type HmStoreReviewProduct @doc(description: "The product a review is about.") {
+    name: String! @doc(description: "Name in this store view.")
+    url_key: String @doc(description: "URL key; null when the storefront does not list the product.")
+    thumbnail_url: String @doc(description: "Absolute HTTPS thumbnail or null.")
+}
+
+type HmStoreReview @doc(description: "A review of one of the seller's products.") {
+    id: Int! @doc(description: "Review id.")
+    nickname: String! @doc(description: "Reviewer's nickname.")
+    title: String @doc(description: "Title, plain text.")
+    text: String @doc(description: "Review text, plain text.")
+    rating: Float @doc(description: "Average of the review's votes out of 5, one decimal; null without votes.")
+    created_at: String! @doc(description: "Written, ISO-8601 UTC.")
+    product: HmStoreReviewProduct @doc(description: "Reviewed product.")
+}
+
+type HmStoreReviewPage @doc(description: "A seller's reviews.") {
+    summary: HmStoreReviewSummary! @doc(description: "The seller's rating.")
+    items: [HmStoreReview!]! @doc(description: "Reviews, newest first.")
+    total_count: Int! @doc(description: "Reviews this store view shows.")
     page_info: SearchResultPageInfo! @doc(description: "Paging.")
 }
 

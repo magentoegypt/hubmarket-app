@@ -5,6 +5,7 @@ Map<String, dynamic> hmAppConfigJson({
   String? minVersion = '1.0.0',
   String? latestVersion = '1.2.0',
   Map<String, dynamic>? algolia,
+  List<String>? capabilities,
 }) => {
   'store_code': storeCode,
   'locale': storeCode == 'ar' ? 'ar_SA' : 'en_US',
@@ -40,4 +41,6 @@ Map<String, dynamic> hmAppConfigJson({
     {'code': 'store_credit', 'enabled': false},
     {'code': '', 'enabled': true},
   ],
+  // A server from before hmAppConfig.capabilities leaves the field out.
+  if (capabilities != null) 'capabilities': capabilities,
 };
