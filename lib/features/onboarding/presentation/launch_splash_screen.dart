@@ -10,6 +10,8 @@ import '../../../core/assets/app_images.dart';
 import '../../../core/storage/secure_token_store.dart';
 import '../../catalog/domain/category.dart';
 import '../../catalog/presentation/catalog_providers.dart';
+import '../../../core/hubapp/hubapp_providers.dart';
+import '../../home/presentation/hm_home_providers.dart';
 import '../../home/presentation/home_providers.dart';
 import '../../../core/widgets/brand_lockup.dart';
 import '../../../l10n/l10n.dart';
@@ -48,6 +50,15 @@ class _LaunchSplashScreenState extends ConsumerState<LaunchSplashScreen> {
     unawaited(ref.read(homeCmsBlocksProvider.future).catchError((_) {
       return const <String, String>{};
     }));
+    // The Hub Market App probe decides which Home to draw; when it finds the
+    // module, the admin's Home (and Welcome's slides) load meanwhile too.
+    unawaited(
+      ref.read(hubAppProvider.future).then((hubApp) async {
+        if (hubApp.isAvailable && mounted) {
+          await ref.read(hmHomeProvider.future);
+        }
+      }).catchError((_) {}),
+    );
   }
 
   Future<void> _routeOnboarding() async {

@@ -29,6 +29,7 @@ import '../features/auth/domain/password_reset_ticket.dart';
 import '../features/auth/presentation/screens/verify_code_screen.dart';
 import '../features/catalog/domain/brand.dart';
 import '../features/catalog/domain/product_preview.dart';
+import '../features/catalog/presentation/screens/brand_page_screen.dart';
 import '../features/catalog/presentation/screens/brands_screen.dart';
 import '../features/catalog/presentation/screens/categories_screen.dart';
 import '../features/home/presentation/hub_home_screen.dart';
@@ -38,6 +39,8 @@ import '../features/catalog/presentation/screens/product_reviews_screen.dart';
 import '../features/catalog/presentation/screens/search_screen.dart';
 import '../features/catalog/presentation/screens/write_review_screen.dart';
 import '../features/cms/domain/cms_links.dart';
+import '../features/deals/presentation/screens/bundle_deals_screen.dart';
+import '../features/deals/presentation/screens/deals_screen.dart';
 import '../features/cms/domain/faq.dart';
 import '../features/cms/presentation/cms_page_screen.dart';
 import '../features/notifications/presentation/notification_settings_screen.dart';
@@ -125,10 +128,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.brands,
         builder: (context, state) => const BrandsScreen(),
       ),
+      // Figma 10e. `/brand` carries the Brand in `extra` (storefront brand
+      // links, deep links); `/brand/<url_key>` looks it up when it has none.
       GoRoute(
         path: AppRoutes.brand,
-        builder: (context, state) =>
-            SearchScreen(brand: state.extra as Brand?),
+        redirect: (context, state) =>
+            state.extra is Brand ? null : AppRoutes.brands,
+        builder: (context, state) {
+          final brand = state.extra! as Brand;
+          return BrandPageScreen(urlKey: brand.urlKey, brand: brand);
+        },
+      ),
+      GoRoute(
+        path: '/brand/:urlKey',
+        builder: (context, state) => BrandPageScreen(
+          urlKey: state.pathParameters['urlKey']!,
+          brand: state.extra is Brand ? state.extra! as Brand : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.deals,
+        builder: (context, state) => const DealsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bundles,
+        builder: (context, state) => const BundleDealsScreen(),
       ),
       GoRoute(
         path: AppRoutes.stores,

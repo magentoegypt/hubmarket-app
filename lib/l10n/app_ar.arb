@@ -77,11 +77,26 @@
   "welcomeSubtitle": "بقالة وأثاث وأزياء والمزيد — من بائعين موثّقين على Hub Market، حتى باب بيتك.",
   "homeShopByCategory": "تسوّق حسب الفئة",
   "homeSeeAll": "عرض الكل",
-  "brandsTitle": "علامتنا التجارية",
-  "brandsSubtitle": "تسوّق ماركاتك المفضلة من كل المتاجر",
-  "brandsSearchHint": "ابحث عن علامة تجارية",
   "brandsFilterAll": "الكل",
   "brandsEmpty": "لا توجد علامات تجارية",
+  "brandsScreenTitle": "العلامات التجارية",
+  "brandsSearchLabel": "ابحث عن علامة تجارية",
+  "brandsWithProducts": "{count, plural, =1{علامة تجارية واحدة لها منتجات} other{{count} علامات تجارية لها منتجات}}",
+  "@brandsWithProducts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "brandFromStores": "{count, plural, =1{من متجر واحد} other{من {count} متاجر}}",
+  "@brandFromStores": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeDealBadge": "خصم",
   "reviewsScreenTitle": "التقييمات",
   "categoriesSubtitle": "تسوّقي حسب ما تحبين",
@@ -790,6 +805,135 @@
   "homeDeliverTo": "التوصيل إلى",
   "homeChooseArea": "اختر منطقتك",
   "homeTodaysDeals": "عروض اليوم",
+  "homeAllDeals": "كل العروض",
+  "homeAllStores": "كل المتاجر",
+  "homeAllBundles": "كل الباقات",
+  "homeAllBrands": "كل العلامات التجارية",
+  "homeAllVendors": "كل البائعين",
+  "homeViewAll": "عرض الكل",
+  "homeCountdownRemaining": "متبقية",
+  "dealsCountdownDays": "{days} يوم",
+  "@dealsCountdownDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAiEngine": "محرّك الذكاء الاصطناعي",
+  "homeRefresh": "تحديث",
+  "homeYourSearches": "عمليات بحثك:",
+  "homeVisitStore": "زيارة المتجر",
+  "homeTopVendorBadge": "البائع الأول",
+  "homeVerified": "موثّق",
+  "homeTrackOrder": "تتبّع الطلب",
+  "homeBestSellerFirst": "الأكثر مبيعًا #1",
+  "homeBestSellerRank": "#{rank}",
+  "@homeBestSellerRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "hmProductCount": "{count, plural, =1{منتج واحد} other{{count} منتجات}}",
+  "@hmProductCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dealsEndIn": "تنتهي العروض خلال",
+  "dealsNewEveryDay": "عروض جديدة كل يوم عند منتصف الليل",
+  "dealsAllChip": "كل العروض",
+  "dealsCount": "{count, plural, =1{عرض واحد} other{{count} عروض}}",
+  "@dealsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dealsSortBiggestDiscount": "أكبر خصم",
+  "dealsEmpty": "لا توجد عروض اليوم — عُد غدًا.",
+  "bundlesTitle": "عروض الباقات",
+  "bundlesHeroTitle": "اشترِ أكثر، ووفّر أكثر",
+  "bundlesHeroBody": "باقات مختارة بعناية من بائعين موثّقين — كل باقة مجمّعة لتمنحك أفضل قيمة.",
+  "bundlesStatActive": "باقات متاحة",
+  "bundlesStatMaxSaving": "أقصى توفير",
+  "bundlesStatUpTo": "حتى {percent}%",
+  "@bundlesStatUpTo": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundlesStatVendors": "بائعون",
+  "bundlesAllChip": "كل الباقات",
+  "bundlesEmpty": "لا توجد عروض باقات حاليًا.",
+  "@bundleDiscountBadge": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "@bundleSaveBadge": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "@bundleItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@bundleYouSave": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleFromPrice": "ابتداءً من {price}",
+  "@bundleFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleAdd": "أضف الباقة",
+  "bundleCardDiscount": "باقة ‎-{percent}%",
+  "@bundleCardDiscount": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleCardSave": "وفّر {amount}",
+  "@bundleCardSave": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleSoldBy": "يبيعه {seller}",
+  "@bundleSoldBy": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
   "launchFooter": "في جميع الإمارات السبع",
   "welcomeKicker": "توصيل في نفس اليوم",
   "welcomeCreateAccount": "إنشاء حساب"

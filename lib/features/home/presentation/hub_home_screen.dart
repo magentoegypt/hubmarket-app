@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/error/failure.dart';
+import '../../../core/hubapp/hubapp_providers.dart';
 import '../../../core/network/connectivity.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/failure_message.dart';
@@ -22,30 +25,89 @@ import '../../catalog/presentation/search_providers.dart';
 import '../../catalog/presentation/storefront_links.dart';
 import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
+import '../domain/hm_home.dart';
 import '../domain/home_content.dart';
+import 'hm_home_providers.dart';
+import 'hm_home_view.dart';
 import 'home_providers.dart';
 
 /// Carousel card width (Figma v2/v3): 152 pt so the next card peeks ~30%.
 const double _kCardWidth = 152;
 const double _kRailHeight = 292;
 
-/// Hub Market Home (Figma "07 Home", v3). Every section is fed by Magento:
-/// categories and products from the catalogue, the promise strip, promo cards
-/// and trust row from the storefront's own CMS blocks. A section whose source
-/// is empty collapses — nothing is hard-coded or invented.
+/// Hub Market Home (Figma "07 Home", v3).
 ///
-/// Today's Deals is Build 2: the website ranks live special prices with SQL,
-/// and core GraphQL can neither filter nor sort by them — scanning the whole
-/// catalogue for discounts is far too slow on this backend. It returns with
-/// the Hub Market App module's Home feed.
+/// With the Hub Market App API (Build 2) the Home is the admin's layout from
+/// `hmAppHome` ([HmHomeView]). Without it — the module not deployed, the probe
+/// unable to tell, or `hmAppHome` failing or empty — it is Build 1
+/// ([_Build1Home]), exactly as before: categories and products from the
+/// catalogue, the promise strip, promo cards and trust row from the
+/// storefront's own CMS blocks, with lazy rails and Retry. A section whose
+/// source is empty collapses — nothing is hard-coded or invented.
 class HubHomeScreen extends ConsumerWidget {
   const HubHomeScreen({super.key});
+
+  Future<void> _reloadHubApp(WidgetRef ref) async {
+    ref.invalidate(hmHomeProvider);
+    try {
+      await ref.read(hmHomeProvider.future);
+    } catch (_) {
+      // A failed Home falls back to Build 1, which has its own retry.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hubApp = ref.watch(hubAppProvider);
+    final Widget body;
+    if (hubApp.isLoading && !hubApp.hasValue) {
+      // The first probe is still out (usually settled during the splash).
+      body = const _HomeLoading();
+    } else if (hubApp.valueOrNull?.isAvailable ?? false) {
+      body = ref.watch(hmHomeProvider).when(
+        skipLoadingOnRefresh: true,
+        loading: () => const _HomeLoading(),
+        error: (_, __) => const _Build1Home(),
+        data: (home) {
+          final sections =
+              home?.visibleSections(DateTime.now()) ?? const <HmHomeSection>[];
+          return sections.isEmpty
+              ? const _Build1Home()
+              : HmHomeView(
+                  sections: sections,
+                  onRefresh: () => _reloadHubApp(ref),
+                );
+        },
+      );
+    } else {
+      body = const _Build1Home();
+    }
+    return HubScaffold(
+      currentTab: AppTab.home,
+      showSearch: false,
+      appBar: const _HomeHeader(),
+      body: body,
+    );
+  }
+}
+
+/// The Build 1 Home: catalogue rails and the storefront's CMS blocks.
+class _Build1Home extends ConsumerWidget {
+  const _Build1Home();
 
   Future<void> _reload(WidgetRef ref) async {
     ref
       ..invalidate(homeCmsBlocksProvider)
       ..invalidate(categoryTreeProvider)
       ..invalidate(homeCategoryRailProvider);
+    // The Hub Market App may be back (a probe that couldn't tell, or an
+    // hmAppHome that failed): ask again alongside.
+    final hubApp = ref.read(hubAppProvider).valueOrNull;
+    if (hubApp?.isAvailable ?? false) {
+      ref.invalidate(hmHomeProvider);
+    } else {
+      unawaited(ref.read(hubAppProvider.notifier).retryIfUnknown());
+    }
     try {
       await ref.read(homeCategoriesProvider.future);
     } catch (_) {
@@ -63,35 +125,42 @@ class HubHomeScreen extends ConsumerWidget {
     final unavailable = categoriesAsync.hasError &&
         !categoriesAsync.hasValue &&
         !categoriesAsync.isLoading;
-    return HubScaffold(
-      currentTab: AppTab.home,
-      showSearch: false,
-      appBar: const _HomeHeader(),
-      body: unavailable
-          ? _HomeUnavailable(
-              error: categoriesAsync.error!,
-              onRetry: () => _reload(ref),
-            )
-          : RefreshIndicator(
-              color: AppColors.brandPrimary,
-              onRefresh: () => _reload(ref),
-              // Each rail is its own list child, so its product query only
-              // starts when it scrolls near the viewport instead of all six
-              // at launch.
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: 28),
-                children: [
-                  const _PromiseStrip(),
-                  const _ShopByCategory(),
-                  for (final c in categories.take(kHomeRailCount))
-                    _CategoryRail(key: ValueKey(c.uid), category: c),
-                  const _PromoBanners(),
-                  const _TrustRow(),
-                ],
-              ),
+    return unavailable
+        ? _HomeUnavailable(
+            error: categoriesAsync.error!,
+            onRetry: () => _reload(ref),
+          )
+        : RefreshIndicator(
+            color: AppColors.brandPrimary,
+            onRefresh: () => _reload(ref),
+            // Each rail is its own list child, so its product query only
+            // starts when it scrolls near the viewport instead of all six
+            // at launch.
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 28),
+              children: [
+                const _PromiseStrip(),
+                const _ShopByCategory(),
+                for (final c in categories.take(kHomeRailCount))
+                  _CategoryRail(key: ValueKey(c.uid), category: c),
+                const _PromoBanners(),
+                const _TrustRow(),
+              ],
             ),
-    );
+          );
   }
+}
+
+/// While the Home's source is being decided: the category and rail
+/// skeletons.
+class _HomeLoading extends StatelessWidget {
+  const _HomeLoading();
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    physics: const NeverScrollableScrollPhysics(),
+    children: const [_CategorySkeleton(), _RailSkeleton(), _RailSkeleton()],
+  );
 }
 
 class _HomeUnavailable extends ConsumerWidget {

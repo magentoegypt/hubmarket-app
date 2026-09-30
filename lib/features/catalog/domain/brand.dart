@@ -1,6 +1,5 @@
-/// A storefront brand (manufacturer), returned by the `brands` query and shown
-/// in the home "Explore Our Brands" rail. [optionId] is the manufacturer
-/// attribute option used to filter products by this brand.
+/// A storefront brand (MGS › Shop by Brand), as `hmBrands` serves it. [optionId]
+/// is the `mgs_brand` attribute option used to filter products by this brand.
 class Brand {
   const Brand({
     required this.brandId,
@@ -10,19 +9,23 @@ class Brand {
     required this.imageUrl,
     required this.optionId,
     required this.position,
+    this.isFeatured = false,
   });
 
   final int brandId;
   final String title;
   final String urlKey;
 
-  /// Absolute, store-prefixed brand page URL (`/uae-en/shopbrand/<url_key>.html`).
+  /// Absolute, store-prefixed brand page URL.
   final String url;
 
-  /// Absolute logo image URL.
+  /// Absolute logo image URL (the small image, else the large one).
   final String imageUrl;
 
-  /// Manufacturer attribute option id → filter products by this brand.
+  /// `mgs_brand` attribute option id → filter products by this brand.
   final int? optionId;
   final int position;
+
+  /// Flagged Featured in MGS › Shop by Brand.
+  final bool isFeatured;
 }

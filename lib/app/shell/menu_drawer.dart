@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/hubapp/hubapp_providers.dart';
 import '../../core/store/store_controller.dart';
 import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/customer_avatar.dart';
@@ -30,6 +31,7 @@ class MenuDrawer extends ConsumerWidget {
     final store = ref.watch(storeControllerProvider);
     final categories = ref.watch(categoryTreeProvider);
     final auth = ref.watch(authControllerProvider);
+    final hubApp = ref.watch(hubAppStatusProvider) == HubAppStatus.available;
 
     return Drawer(
       // Figma: white panel; only the profile strip is tinted (Material 3 would
@@ -106,6 +108,33 @@ class MenuDrawer extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // The Hub Market App's own lists (Build 2).
+                  if (hubApp) ...[
+                    _DrawerTile(
+                      icon: Icons.sell_outlined,
+                      label: l10n.homeTodaysDeals,
+                      onTap: () {
+                        _close(context);
+                        context.push(AppRoutes.deals);
+                      },
+                    ),
+                    _DrawerTile(
+                      icon: Icons.inventory_2_outlined,
+                      label: l10n.bundlesTitle,
+                      onTap: () {
+                        _close(context);
+                        context.push(AppRoutes.bundles);
+                      },
+                    ),
+                    _DrawerTile(
+                      icon: Icons.verified_outlined,
+                      label: l10n.brandsScreenTitle,
+                      onTap: () {
+                        _close(context);
+                        context.push(AppRoutes.brands);
+                      },
+                    ),
+                  ],
                   const Divider(height: 1),
                   _SectionHeader(label: l10n.menuAccountSection),
                   _DrawerTile(

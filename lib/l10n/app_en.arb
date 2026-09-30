@@ -83,11 +83,26 @@
   "welcomeSubtitle": "Groceries, furniture, fashion and more — from verified Hub Market vendors, delivered to your door.",
   "homeShopByCategory": "Shop by category",
   "homeSeeAll": "See all",
-  "brandsTitle": "Our Brands",
-  "brandsSubtitle": "Shop your favourite brands from every store",
-  "brandsSearchHint": "Search a brand",
   "brandsFilterAll": "All",
   "brandsEmpty": "No brands found",
+  "brandsScreenTitle": "Brands",
+  "brandsSearchLabel": "Search brands",
+  "brandsWithProducts": "{count, plural, =1{1 brand with products} other{{count} brands with products}}",
+  "@brandsWithProducts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "brandFromStores": "{count, plural, =1{from 1 store} other{from {count} stores}}",
+  "@brandFromStores": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "homeDealBadge": "DEAL",
   "reviewsScreenTitle": "Reviews",
   "categoriesSubtitle": "Shop by what you love",
@@ -1360,6 +1375,107 @@
   "homeDeliverTo": "Deliver to",
   "homeChooseArea": "Choose your area",
   "homeTodaysDeals": "Today's Deals",
+  "homeAllDeals": "All Deals",
+  "homeAllStores": "All Stores",
+  "homeAllBundles": "All Bundles",
+  "homeAllBrands": "All Brands",
+  "homeAllVendors": "All Vendors",
+  "homeViewAll": "View All",
+  "homeCountdownRemaining": "remaining",
+  "dealsCountdownDays": "{days}d",
+  "@dealsCountdownDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAiEngine": "AI ENGINE",
+  "homeRefresh": "Refresh",
+  "homeYourSearches": "YOUR SEARCHES:",
+  "homeVisitStore": "Visit Store",
+  "homeTopVendorBadge": "#1 VENDOR",
+  "homeVerified": "Verified",
+  "homeTrackOrder": "Track order",
+  "homeBestSellerFirst": "#1 Best seller",
+  "homeBestSellerRank": "#{rank}",
+  "@homeBestSellerRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "hmProductCount": "{count, plural, =1{1 product} other{{count} products}}",
+  "@hmProductCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dealsEndIn": "Deals end in",
+  "dealsNewEveryDay": "New deals every day at midnight",
+  "dealsAllChip": "All deals",
+  "dealsCount": "{count, plural, =1{1 deal} other{{count} deals}}",
+  "@dealsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dealsSortBiggestDiscount": "Biggest discount",
+  "dealsEmpty": "No deals today — check back tomorrow.",
+  "bundlesTitle": "Bundle Deals",
+  "bundlesHeroTitle": "Buy more, save more",
+  "bundlesHeroBody": "Hand-curated bundles from verified vendors — each one assembled for maximum value.",
+  "bundlesStatActive": "Active bundles",
+  "bundlesStatMaxSaving": "Max savings",
+  "bundlesStatUpTo": "Up to {percent}%",
+  "@bundlesStatUpTo": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundlesStatVendors": "Vendors",
+  "bundlesAllChip": "All bundles",
+  "bundlesEmpty": "No bundle deals right now.",
+  "bundleFromPrice": "From {price}",
+  "@bundleFromPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleAdd": "Add Bundle",
+  "bundleCardDiscount": "-{percent}% Bundle",
+  "@bundleCardDiscount": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleCardSave": "Save {amount}",
+  "@bundleCardSave": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bundleSoldBy": "Sold by {seller}",
+  "@bundleSoldBy": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
   "launchFooter": "Across all seven emirates",
   "welcomeKicker": "SAME-DAY DELIVERY",
   "welcomeCreateAccount": "Create account"

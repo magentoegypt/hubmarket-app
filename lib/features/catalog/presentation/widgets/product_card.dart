@@ -25,6 +25,7 @@ class ProductCard extends ConsumerStatefulWidget {
     this.onTap,
     this.onAddedToCart,
     this.dealBadge = false,
+    this.rank,
   });
 
   final Product product;
@@ -38,6 +39,10 @@ class ProductCard extends ConsumerStatefulWidget {
   /// by the home "Deals of the Day" grid.
   final bool dealBadge;
 
+  /// A best-seller rank (1-based): "#1 Best seller" in gold, "#N" in navy,
+  /// in place of the merchandising and discount badges.
+  final int? rank;
+
   @override
   ConsumerState<ProductCard> createState() => _ProductCardState();
 }
@@ -50,8 +55,9 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final discount = product.discountPercent;
-    final badgeLabel = _badgeLabel(l10n);
+    final rank = widget.rank;
+    final discount = rank == null ? product.discountPercent : null;
+    final badgeLabel = rank == null ? _badgeLabel(l10n) : null;
 
     return Material(
       color: Colors.white,
@@ -78,6 +84,18 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (rank != null)
+                          _Badge(
+                            label: rank == 1
+                                ? l10n.homeBestSellerFirst
+                                : l10n.homeBestSellerRank(rank),
+                            color: rank == 1
+                                ? AppColors.accentGold
+                                : AppColors.brandPrimary,
+                            textColor: rank == 1
+                                ? AppColors.inkHeading
+                                : Colors.white,
+                          ),
                         if (widget.dealBadge) ...[
                           _Badge(
                             label: l10n.homeDealBadge,
@@ -291,9 +309,14 @@ class _CircleAction extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
+  const _Badge({
+    required this.label,
+    required this.color,
+    this.textColor = Colors.white,
+  });
   final String label;
   final Color color;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -304,8 +327,8 @@ class _Badge extends StatelessWidget {
     ),
     child: Text(
       label,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: textColor,
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.1,
