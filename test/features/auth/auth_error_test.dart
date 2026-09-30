@@ -162,4 +162,30 @@ void main() {
       );
     });
   });
+
+  group("the backend's own code messages (PR #22), in both store views", () {
+    // HubAppAccount and SmsExtend words, as deployed (their i18n CSVs).
+    const cases = <String, AuthErrorKind>{
+      'Too many code requests. Please try again in 5 minutes.':
+          AuthErrorKind.tooManyAttempts,
+      'طلبات رموز كثيرة جدًا. يرجى المحاولة مرة أخرى بعد 5 دقيقة.':
+          AuthErrorKind.tooManyAttempts,
+      // Five wrong codes lock the number's code checks for 15 minutes.
+      'Too many incorrect codes. Please try again in 15 minutes.':
+          AuthErrorKind.tooManyAttempts,
+      'رموز غير صحيحة كثيرة جدًا. يرجى المحاولة مرة أخرى بعد 15 دقيقة.':
+          AuthErrorKind.tooManyAttempts,
+      'That code is incorrect or has expired. Check it, or ask for a new code.':
+          AuthErrorKind.invalidCode,
+      'الرمز غير صحيح أو انتهت صلاحيته. تحقق منه أو اطلب رمزًا جديدًا.':
+          AuthErrorKind.invalidCode,
+      'No account uses this mobile number.': AuthErrorKind.noAccount,
+      'لا يوجد حساب يستخدم رقم الهاتف المحمول هذا.': AuthErrorKind.noAccount,
+    };
+    cases.forEach((message, kind) {
+      test(message, () {
+        expect(_kind(FailureKind.server, message), kind);
+      });
+    });
+  });
 }

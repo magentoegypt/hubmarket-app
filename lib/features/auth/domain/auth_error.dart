@@ -148,6 +148,9 @@ class AuthError {
         RegExp(r'يرجى الانتظار \d+|انتظر \d+'),
         // HubAppAccount's send limits: "طلبات رموز كثيرة جدًا. …"
         RegExp(r'طلبات رموز كثيرة'),
+        // and its lock after five wrong codes (English: "Too many incorrect
+        // codes. …"): "رموز غير صحيحة كثيرة جدًا. …"
+        RegExp(r'رموز غير صحيحة كثيرة'),
       ],
     ),
     (
