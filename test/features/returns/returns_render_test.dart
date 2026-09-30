@@ -4,6 +4,7 @@ import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/returns/domain/returns.dart';
+import 'package:hubmarket_app/features/returns/presentation/widgets/return_photos.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fonts.dart';
@@ -15,6 +16,10 @@ import 'returns_harness.dart';
 /// comparison with the frames (nothing is asserted on the images). Each
 /// render also fails on any layout exception, so it doubles as an RTL and
 /// overflow check.
+///
+/// Tests can't load network images: product thumbnails and the thread's
+/// photos show their placeholders, so the thread here carries none; the
+/// photos a customer picks (in memory) show as they are.
 
 HmSellerSummary _loly(bool ar) => HmSellerSummary(
   name: ar ? 'متجر لولي' : 'loly store',
@@ -28,7 +33,9 @@ HmSellerSummary _test1(bool ar) => HmSellerSummary(
   vendorEntityId: 14,
 );
 
-/// The frame's order: one T-shirt from loly store.
+Money _aed(double amount) => Money(amount: amount, currency: 'AED');
+
+/// The frame's order: one T-shirt from loly store, AED 43.
 ReturnableOrder _order(bool ar) => ReturnableOrder(
   number: '000000150',
   createdAt: '2026-09-22T08:30:00Z',
@@ -48,6 +55,9 @@ ReturnableOrder _order(bool ar) => ReturnableOrder(
       qtyOrdered: 1,
       qtyReturnable: 1,
       seller: _loly(ar),
+      unitPrice: _aed(43),
+      rowTotal: _aed(43),
+      maxRefund: _aed(43),
     ),
   ],
 );
@@ -65,6 +75,9 @@ ReturnableOrder _twoSellers(bool ar) => ReturnableOrder(
       qtyOrdered: 2,
       qtyReturnable: 2,
       seller: _loly(ar),
+      unitPrice: _aed(50),
+      rowTotal: _aed(100),
+      maxRefund: _aed(100),
     ),
     ReturnableItem(
       orderItemId: 602,
@@ -73,6 +86,9 @@ ReturnableOrder _twoSellers(bool ar) => ReturnableOrder(
       qtyReturnable: 0,
       openReturnNumbers: const ['R-000027'],
       seller: _loly(ar),
+      unitPrice: _aed(29),
+      rowTotal: _aed(29),
+      maxRefund: _aed(0),
     ),
     ReturnableItem(
       orderItemId: 603,
@@ -80,15 +96,19 @@ ReturnableOrder _twoSellers(bool ar) => ReturnableOrder(
       options: [ReturnOption(label: 'Color', value: ar ? 'أزرق مخضر' : 'Teal')],
       qtyOrdered: 1,
       qtyReturnable: 1,
-      seller: HmSellerSummary(
+      seller: const HmSellerSummary(
         name: 'MIA CO',
         code: 'miaco',
         vendorEntityId: 31,
       ),
+      unitPrice: _aed(425),
+      rowTotal: _aed(425),
+      maxRefund: _aed(425),
     ),
   ],
 );
 
+/// The store's settings, with the website's default upload rules: photos on.
 ReturnConfig _config(bool ar) => ReturnConfig(
   reasonsEnabled: true,
   otherReasonAllowed: true,
@@ -100,57 +120,91 @@ ReturnConfig _config(bool ar) => ReturnConfig(
     ),
     ReturnReason(id: 2, label: ar ? 'وصل تالفًا' : 'Arrived damaged'),
   ],
+  attachmentExtensions: kPhotoReturnConfig.attachmentExtensions,
+  attachmentMaxBytes: kPhotoReturnConfig.attachmentMaxBytes,
+  attachmentMaxFiles: kPhotoReturnConfig.attachmentMaxFiles,
 );
 
-FakeReturnsRepository _repo(bool ar, {bool closed = false}) =>
-    FakeReturnsRepository(
-      config: _config(ar),
-      orders: [_order(ar), _twoSellers(ar)],
-      units: const {
-        '000000150': {501: Money(amount: 43, currency: 'AED')},
-        '000000248': {
-          601: Money(amount: 50, currency: 'AED'),
-          602: Money(amount: 29, currency: 'AED'),
-          603: Money(amount: 425, currency: 'AED'),
-        },
-      },
-      summaries: [
-        sampleReturnSummary(
-          statusLabel: ar ? 'بانتظار المتجر' : 'Awaiting store',
-          seller: _loly(ar),
-          unread: true,
-        ),
-        sampleReturnSummary(
-          id: 27,
-          number: 'R-000027',
-          state: ReturnState.closed,
-          statusLabel: ar ? 'تم الاسترداد' : 'Refunded',
-          seller: _test1(ar),
-          createdAt: '2026-09-09T09:00:00Z',
-        ),
-        sampleReturnSummary(
-          id: 19,
-          number: 'R-000019',
-          state: ReturnState.canceled,
-          statusLabel: ar ? 'ملغي' : 'Canceled',
-          type: ReturnType.replace,
-          seller: _loly(ar),
-          createdAt: '2026-09-02T09:00:00Z',
-        ),
-      ],
-      details: {
-        31: closed
-            ? sampleReturnDetail(
-                arabic: ar,
-                state: ReturnState.closed,
-                statusLabel: ar ? 'تم الحل' : 'Resolved',
-              )
-            : sampleReturnDetail(
-                arabic: ar,
-                statusLabel: ar ? 'بانتظار المتجر' : 'Awaiting store',
-              ),
-      },
+ReturnDetail _detail(bool ar, {bool closed = false, bool escalated = false}) {
+  if (closed) {
+    return sampleReturnDetail(
+      arabic: ar,
+      state: ReturnState.closed,
+      statusLabel: ar ? 'تم الحل' : 'Resolved',
+      photo: false,
     );
+  }
+  final open = sampleReturnDetail(
+    arabic: ar,
+    statusLabel: ar ? 'بانتظار المتجر' : 'Awaiting store',
+    photo: false,
+  );
+  if (!escalated) return open;
+  return changedReturn(
+    open,
+    statusCode: 'awaiting',
+    statusLabel: ar ? 'تم التصعيد' : 'Escalated',
+    history: [
+      ...open.history,
+      ReturnHistoryEntry(
+        statusCode: 'awaiting',
+        statusLabel: ar ? 'تم التصعيد' : 'Escalated',
+        changedBy: ReturnActor.customer,
+        createdAt: '2026-09-26T08:00:00Z',
+      ),
+    ],
+    canCancel: false,
+    canEscalate: false,
+    escalation: ReturnEscalation(
+      bodyText: ar
+          ? 'لم يرد المتجر منذ يومين ولم يأتِ المندوب.'
+          : 'The store hasn’t answered for two days and no courier came.',
+      createdAt: '2026-09-26T08:00:00Z',
+    ),
+  );
+}
+
+FakeReturnsRepository _repo(
+  bool ar, {
+  bool closed = false,
+  bool escalated = false,
+}) => FakeReturnsRepository(
+  config: _config(ar),
+  orders: [_order(ar), _twoSellers(ar)],
+  summaries: [
+    sampleReturnSummary(
+      statusLabel: ar ? 'بانتظار المتجر' : 'Awaiting store',
+      seller: _loly(ar),
+      unread: true,
+      firstItem: ReturnSummaryItem(
+        name: ar ? 'تيشيرت قصير ياقة مربع' : 'Short Square-Neck T-Shirt',
+      ),
+    ),
+    sampleReturnSummary(
+      id: 27,
+      number: 'R-000027',
+      state: ReturnState.closed,
+      statusLabel: ar ? 'تم الاسترداد' : 'Refunded',
+      seller: _test1(ar),
+      createdAt: '2026-09-09T09:00:00Z',
+      refundAmount: _aed(29),
+      firstItem: ReturnSummaryItem(name: ar ? 'حقيبة سفر' : 'Joust Duffle Bag'),
+    ),
+    sampleReturnSummary(
+      id: 19,
+      number: 'R-000019',
+      state: ReturnState.canceled,
+      statusCode: 'canceled',
+      statusLabel: ar ? 'مرفوض' : 'Rejected',
+      type: ReturnType.replace,
+      seller: _loly(ar),
+      createdAt: '2026-09-02T09:00:00Z',
+      firstItem: ReturnSummaryItem(name: ar ? 'قميص بولو' : 'Polo Shirt'),
+      itemCount: 2,
+    ),
+  ],
+  details: {31: _detail(ar, closed: closed, escalated: escalated)},
+);
 
 Future<void> _render(
   WidgetTester tester, {
@@ -160,6 +214,7 @@ Future<void> _render(
   Object? extra,
   double height = 844,
   bool closed = false,
+  bool escalated = false,
   bool dark = false,
   Future<void> Function(WidgetTester tester, AppLocalizations l10n)? then,
 }) async {
@@ -170,7 +225,8 @@ Future<void> _render(
       location: location,
       extra: extra,
       locale: locale,
-      returns: _repo(locale == 'ar', closed: closed),
+      returns: _repo(locale == 'ar', closed: closed, escalated: escalated),
+      photoPicker: FakeReturnPhotoPicker(photos: [kGreenPhoto, kGreyPhoto]),
       size: Size(390, height),
       boundary: boundary,
       dark: dark,
@@ -187,6 +243,25 @@ Future<void> _render(
   });
 }
 
+/// Adds the picker's photos through the Add tile or the camera button,
+/// scrolling [scrollable] to it first when it is given.
+Future<void> _addPhotos(
+  WidgetTester tester,
+  AppLocalizations l10n,
+  Finder button, {
+  Finder? scrollable,
+}) async {
+  if (scrollable != null) {
+    await tester.scrollUntilVisible(button, 200, scrollable: scrollable);
+  }
+  await tester.ensureVisible(button);
+  await tester.pumpAndSettle();
+  await tester.tap(button);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(l10n.returnsChoosePhotos));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(loadAppFonts);
 
@@ -200,13 +275,25 @@ void main() {
         locale: locale,
         location: AppRoutes.returnRequestFor('000000150'),
         extra: _order(ar),
-        height: 1340,
+        height: 1480,
         then: (tester, l10n) async {
           await tester.tap(find.text(l10n.returnsChooseReason));
           await tester.pumpAndSettle();
           await tester.tap(find.text(_config(ar).reasons.first.label));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.returnsAnswerYes));
+          await tester.pumpAndSettle();
+          await _addPhotos(
+            tester,
+            l10n,
+            find.byType(ReturnAddPhotoTile),
+            scrollable: find.byType(Scrollable).first,
+          );
+          // Back to the top, as the frame shows it.
+          await tester.drag(
+            find.byType(Scrollable).first,
+            const Offset(0, 3000),
+          );
           await tester.pumpAndSettle();
         },
       );
@@ -219,7 +306,7 @@ void main() {
         locale: locale,
         location: AppRoutes.returnRequest,
         extra: _twoSellers(ar),
-        height: 1000,
+        height: 1100,
         then: (tester, l10n) async {
           await tester.tap(find.text(_twoSellers(ar).items.first.name));
           await tester.pumpAndSettle();
@@ -242,7 +329,58 @@ void main() {
         name: '23c_return_detail',
         locale: locale,
         location: AppRoutes.returnDetail(31),
-        height: 1000,
+        height: 1100,
+      );
+    });
+
+    testWidgets('23c Return detail, a photo to send ($locale)', (tester) async {
+      await _render(
+        tester,
+        name: '23c_return_detail_photo_reply',
+        locale: locale,
+        location: AppRoutes.returnDetail(31),
+        height: 1100,
+        then: (tester, l10n) async {
+          await _addPhotos(tester, l10n, find.byTooltip(l10n.returnsAddPhotos));
+          await tester.enterText(
+            find.byType(TextField),
+            ar ? 'هذه صورة الضرر.' : 'Here is the damage.',
+          );
+          await tester.pump();
+        },
+      );
+    });
+
+    testWidgets('23c Escalate to Hub Market ($locale)', (tester) async {
+      await _render(
+        tester,
+        name: '23c_escalate_sheet',
+        locale: locale,
+        location: AppRoutes.returnDetail(31),
+        then: (tester, l10n) async {
+          await tester.ensureVisible(find.text(l10n.returnsEscalate));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.returnsEscalate));
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.widgetWithText(TextField, l10n.returnsEscalateHint),
+            ar
+                ? 'لم يرد المتجر منذ يومين.'
+                : 'The store hasn’t answered for two days.',
+          );
+          await _addPhotos(tester, l10n, find.byType(ReturnAddPhotoTile));
+        },
+      );
+    });
+
+    testWidgets('23c Return detail, escalated ($locale)', (tester) async {
+      await _render(
+        tester,
+        name: '23c_return_detail_escalated',
+        locale: locale,
+        location: AppRoutes.returnDetail(31),
+        height: 1100,
+        escalated: true,
       );
     });
 
@@ -285,10 +423,10 @@ void main() {
       '23_request_return',
       AppRoutes.returnRequest,
       _twoSellers(false) as Object?,
-      1000.0,
+      1100.0,
     ),
     ('23b_my_returns', AppRoutes.returns, null, 844.0),
-    ('23c_return_detail', AppRoutes.returnDetail(31), null, 1000.0),
+    ('23c_return_detail', AppRoutes.returnDetail(31), null, 1100.0),
   ]) {
     testWidgets('$name (en, dark)', (tester) async {
       await _render(
