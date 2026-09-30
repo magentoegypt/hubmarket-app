@@ -85,7 +85,7 @@ valid TLS:
 capability, which is why the entitlement stays commented out until the last step). **Shortcut:** if
 the App ID is created with **Associated Domains** already on, and the profiles are made after that,
 steps 2 and 3 are already done. A profile that has a capability the app does not use is harmless, so
-turn it on together with Push Notifications when the App ID is registered.
+turn it on together with Push Notifications when the App ID is registered. For Hub Market that is already the case: `com.hubmarket.app` was registered on 30 Sep 2026 with both on, and the App Store profile was generated after that, so steps 2 and 3 are done for it (an Ad Hoc profile made later picks the capability up too).
 
 1. Publish the file on both hosts and check it with `IOS_TEAM_ID=<TEAMID> bash tool/verify_applinks.sh`.
 2. developer.apple.com › Identifiers › `com.hubmarket.app`: turn on **Associated Domains**.
