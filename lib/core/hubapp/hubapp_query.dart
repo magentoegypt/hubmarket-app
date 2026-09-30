@@ -59,11 +59,17 @@ bool isHubAppMissing(OperationException exception) {
 /// variable of an unknown type with HTTP 500 "Internal server error" instead
 /// of "Cannot query field", and the missing module then looks like an outage.
 /// Inline enum and input values, or use scalar variables.
+///
+/// [fetchPolicy] `noCache` hands back the response as the server sent it. A
+/// document with fragments on an interface (`... on ProductInterface`) needs
+/// it: the client's cache keeps no `possibleTypes`, so reading the answer back
+/// from the cache drops every field under such a type condition.
 Future<Map<String, dynamic>> runHubAppQuery(
   GraphQLClient client,
   String document, {
   Map<String, dynamic> variables = const <String, dynamic>{},
   Duration? timeout,
+  FetchPolicy fetchPolicy = FetchPolicy.networkOnly,
 }) async {
   final QueryResult result;
   try {
@@ -71,7 +77,7 @@ Future<Map<String, dynamic>> runHubAppQuery(
       QueryOptions(
         document: gql(document),
         variables: variables,
-        fetchPolicy: FetchPolicy.networkOnly,
+        fetchPolicy: fetchPolicy,
       ),
     );
     result = timeout == null ? await pending : await pending.timeout(timeout);
