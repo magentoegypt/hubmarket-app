@@ -76,6 +76,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'the header buttons sit below the status bar of an edge-to-edge phone',
+    (tester) async {
+      // Android 15+ draws under the status bar: 24 logical pixels of it here
+      // (48 physical at 2x). The page's zero-size scaffold app bar hides that
+      // inset from its body, so the back, search and share buttons used to
+      // sit under the clock.
+      await phoneSurface(tester, height: 1400);
+      tester.view.devicePixelRatio = 2;
+      tester.view.padding = const FakeViewPadding(top: 48);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final backend = FakeStoresBackend(storesAnswers());
+      await tester.pumpWidget(
+        storesHarness(location: '/store/MIA', backend: backend),
+      );
+      await tester.pumpAndSettle();
+
+      final back = find.byIcon(Icons.arrow_back);
+      expect(back, findsOneWidget);
+      expect(tester.getTopLeft(back).dy, greaterThanOrEqualTo(24));
+      expect(
+        tester.getTopLeft(find.byIcon(Icons.search).first).dy,
+        greaterThanOrEqualTo(24),
+      );
+    },
+  );
+
   testWidgets('13b About: text, figures, policy summaries, categories', (
     tester,
   ) async {

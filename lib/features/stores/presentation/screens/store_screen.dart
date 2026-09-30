@@ -38,6 +38,7 @@ import '../widgets/store_about.dart';
 import '../widgets/store_reviews.dart';
 import '../widgets/store_widgets.dart';
 import '../widgets/stores_unavailable.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// The tabs of a store page, in order.
 enum StoreTab { products, reviews, about, policies }
@@ -203,7 +204,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final products = _products;
     if (products == null) return;
     final currency = ref.read(storeControllerProvider).currency;
-    final result = await showModalBottomSheet<FilterResult>(
+    final result = await showHubBottomSheet<FilterResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -228,7 +229,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final products = _products;
     if (products == null) return;
     final l10n = AppLocalizations.of(context);
-    final picked = await showModalBottomSheet<ProductSortField>(
+    final picked = await showHubBottomSheet<ProductSortField>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,
@@ -447,6 +448,27 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     StoreProfile profile,
   ) {
     final store = profile.card;
+    // The scaffold's zero-size app bar (see [_page]) makes it hide the status
+    // bar inset from the body, so a SliverAppBar would put its toolbar — the
+    // back, search and share buttons — under the clock on a phone that draws
+    // edge-to-edge (Android 15+). The real inset is read from the view. It
+    // adds to the expanded and the collapsed height alike, so the collapse
+    // and tab-pin offsets below (header minus toolbar) do not change.
+    final view = View.of(context);
+    final media = MediaQuery.of(context);
+    final inset = view.padding.top / view.devicePixelRatio;
+    return MediaQuery(
+      data: media.copyWith(padding: media.padding.copyWith(top: inset)),
+      child: _headerBar(context, l10n, store, profile),
+    );
+  }
+
+  Widget _headerBar(
+    BuildContext context,
+    AppLocalizations l10n,
+    HmStoreCard store,
+    StoreProfile profile,
+  ) {
     return SliverAppBar(
       pinned: true,
       expandedHeight: _headerHeight,
@@ -498,7 +520,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
-        background: _Banner(profile: profile, bannerHeight: _bannerHeight),
+        // The banner runs up behind the status bar too, so the white strip
+        // the logo overhangs into keeps its height.
+        background: _Banner(
+          profile: profile,
+          bannerHeight: _bannerHeight + MediaQuery.paddingOf(context).top,
+        ),
       ),
     );
   }
