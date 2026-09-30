@@ -49,7 +49,7 @@ query HmBrandsP2($pageSize: Int!, $currentPage: Int!) {
     } on HubAppMissing catch (missing) {
       // "Cannot query field "product_count" on type "HmBrand"": HubApp is
       // there, only older.
-      if (missing.message.contains('"hmBrands"')) rethrow;
+      if (isMissingRootField(missing, 'hmBrands')) rethrow;
       return _fetchAll(_brandsDocumentP2);
     }
   }

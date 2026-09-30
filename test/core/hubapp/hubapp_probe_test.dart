@@ -246,6 +246,23 @@ void main() {
     });
   });
 
+  test('a missing module is its root field; anything else is an older one', () {
+    expect(
+      isMissingRootField(
+        const HubAppMissing('Cannot query field "hmDeals" on type "Query".'),
+        'hmDeals',
+      ),
+      isTrue,
+    );
+    for (final older in [
+      'Unknown argument "category_id" on field "hmDeals" of type "Query".',
+      'Cannot query field "categories" on type "HmProductPage".',
+      'Cannot query field "product_count" on type "HmBrand".',
+    ]) {
+      expect(isMissingRootField(HubAppMissing(older), 'hmDeals'), isFalse);
+    }
+  });
+
   group('runHubAppQuery', () {
     test('HubAppMissing only when every error is a missing field', () async {
       final client = fakeHubAppClient({

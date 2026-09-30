@@ -100,7 +100,7 @@ query HmAppConfigP2 {
         timeout: timeout,
       );
     } on HubAppMissing catch (missing) {
-      if (!isOlderModule(missing)) rethrow;
+      if (isMissingRootField(missing, 'hmAppConfig')) rethrow;
       data = await runHubAppQuery(
         _client,
         documentFor(platform, base: p2Document),
@@ -117,11 +117,6 @@ query HmAppConfigP2 {
     // a missing module.
     throw const Failure(FailureKind.server, detail: 'hmAppConfig is empty');
   }
-
-  /// Whether [missing] is about one of hmAppConfig's own fields (an older
-  /// HubApp) rather than `hmAppConfig` itself (no HubApp at all).
-  static bool isOlderModule(HubAppMissing missing) =>
-      !missing.message.contains('"hmAppConfig"');
 }
 
 final hubAppConfigRepositoryProvider = Provider<HubAppConfigRepository>(
