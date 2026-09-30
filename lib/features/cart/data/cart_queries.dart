@@ -89,7 +89,7 @@ mutation AddProducts($cartId: String!, $items: [CartItemInput!]!) {
   /// selection, each with its own scalar variables. The input is never a
   /// variable — see `BundleCartMutation`.
   static final String addBundle = _doc(r'''
-mutation AddBundleToCart($cartId: String!, $sku: String!, $quantity: Float) {
+mutation HmAddBundleToCart($cartId: String!, $sku: String!, $quantity: Float) {
   hmAddBundleToCart(
     input: { cart_id: $cartId, sku: $sku, quantity: $quantity, selections: [] }
   ) {
