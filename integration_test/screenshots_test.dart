@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +16,8 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/store/store_controller.dart';
 import 'package:hubmarket_app/features/notifications/data/notification_inbox.dart';
 
-/// Captures App Store product-page screenshots against the LIVE backend.
+/// Captures the store-listing screenshots (App Store and Google Play) against
+/// the LIVE backend, in the language set by SHOT_LOCALE.
 ///
 /// This mirrors bootstrap() with two deliberate differences:
 ///   * NotificationService.init() is NOT called, so iOS never raises the
@@ -25,7 +27,9 @@ import 'package:hubmarket_app/features/notifications/data/notification_inbox.dar
 ///     openURL handler), which is why the earlier simctl-based driver produced
 ///     eight identical screenshots of the welcome screen.
 ///
-/// Run via tool/ios_screenshots.sh, not `flutter test`.
+/// Run via tool/ios_screenshots.sh (CI, macOS) or tool/android_screenshots.sh
+/// (a phone or emulator), not `flutter test`. The shot list and what to
+/// replace once the store has its real catalogue: docs/release/screenshots.md.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -52,6 +56,9 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(container: container, child: const HubApp()),
     );
+    // On Android the Flutter surface has to be converted to an image before
+    // takeScreenshot can read it; iOS captures without it.
+    if (Platform.isAndroid) await binding.convertFlutterSurfaceToImage();
 
     // pumpAndSettle() would time out: the loading skeletons shimmer and the
     // home hero auto-advances, so the tree never goes quiet. Pump on a clock
@@ -75,17 +82,27 @@ void main() {
     await settle(25);
 
     // Ordered as they should appear on the product page — Apple shows the
-    // first three on the install sheet.
+    // first three on the install sheet. Wishlist, cart and account are left
+    // out on purpose: a fresh install has nothing in them, so they would only
+    // show empty states.
+    //
+    // The three data-dependent routes use the live catalogue of 30 Sep 2026,
+    // which is test data: the Fashion category (uid MTQw, "أزياء" in Arabic),
+    // one of its in-stock products ("Square-Neck Dress with Lapel", three
+    // gallery images) and the store "loly". Point them at real, well
+    // photographed content once the client's catalogue is in
+    // (docs/release/screenshots.md).
+    const category = '/category/MTQw';
+    const product = '/product/dress-code-2156';
+    const store = '/store/loly';
+
     await shot('01-home', '/home', wait: 10);
-    // Live Hub Market data (checked 30 Sep 2026): the Fashion category (uid
-    // MTQw, "أزياء" in Arabic) and one of its in-stock simple products,
-    // "Square-Neck Dress with Lapel", which has three gallery images.
-    await shot('02-category', '/category/MTQw', wait: 12);
-    await shot('03-product', '/product/dress-code-2156', wait: 12);
-    await shot('04-categories', '/categories', wait: 8);
-    await shot('05-brands', '/brands', wait: 10);
-    await shot('06-wishlist', '/wishlist', wait: 6);
-    await shot('07-cart', '/cart', wait: 6);
-    await shot('08-account', '/account', wait: 6);
+    await shot('02-deals', '/deals', wait: 12);
+    await shot('03-category', category, wait: 12);
+    await shot('04-product', product, wait: 12);
+    await shot('05-stores', '/stores', wait: 12);
+    await shot('06-store', store, wait: 12);
+    await shot('07-bundles', '/bundles', wait: 12);
+    await shot('08-categories', '/categories', wait: 8);
   }, timeout: const Timeout(Duration(minutes: 10)));
 }

@@ -16,6 +16,8 @@
 set -euo pipefail
 
 OUT_DIR="${OUT_DIR:-build/screenshots/ios}"
+# The driver (test_driver/screenshot_driver.dart) reads this to know where to write.
+export SHOT_OUT_DIR="$OUT_DIR"
 CONFIG_FILE="${CONFIG_FILE:-config/prod.json}"
 LOCALE="${SHOT_LOCALE:-en}"
 
