@@ -32,6 +32,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # First, so a missing secret fails in seconds, not after the toolchain
       # setup.
@@ -91,7 +93,9 @@ jobs:
         if: ${{ inputs.distribution == 'testflight' }}
         env:
           IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-        run: bash tool/ios_appstore_build.sh
+        run: |
+          export BUILD_NUMBER="$(bash tool/build_number.sh)"
+          bash tool/ios_appstore_build.sh
 
       - name: Upload to TestFlight (fastlane pilot)
         if: ${{ inputs.distribution == 'testflight' }}
@@ -109,7 +113,9 @@ jobs:
         if: ${{ inputs.distribution == 'adhoc' }}
         env:
           IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-        run: bash tool/ios_sign_build.sh
+        run: |
+          export BUILD_NUMBER="$(bash tool/build_number.sh)"
+          bash tool/ios_sign_build.sh
 
       - name: Upload IPA (ad-hoc) artifact
         if: ${{ inputs.distribution == 'adhoc' }}

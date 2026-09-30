@@ -1,23 +1,35 @@
-name: Build · main (Android APK)
+name: Build and deploy · main
 
-# On every push to main: run the CI gate (analyze, tests, the tool tests and
-# the offline GraphQL operation check), then build the Android APK
-# (debug-signed until the ANDROID_* secrets are set) and, when the
-# LOADLY_API_KEY secret is set, publish an install link on Loadly.
-# Artifact: apk-prod (download from the run). iOS is manual for now —
-# .github/workflows/build-ios.yml — until Hub Market's Apple signing exists.
+# On every push to main (put [skip ci] in the commit message to skip one):
+#   1. the CI gate: analyze, tests, the tool tests and the offline GraphQL check;
+#   2. Android APK  -> Loadly                     (LOADLY_API_KEY);
+#   3. iOS App Store IPA -> TestFlight            (the six IOS_* / APP_STORE_CONNECT_* secrets);
+#   4. iOS ad-hoc IPA -> Loadly                   (IOS_ADHOC_PROFILE_BASE64 + LOADLY_API_KEY);
+#   5. Android app bundle -> Google Play internal (ANDROID_* + PLAY_SERVICE_ACCOUNT_JSON, and the
+#      repository variable PLAY_AUTO_PUBLISH = true, set after the first release was uploaded by
+#      hand: Play refuses an API upload for an app that has never been released).
+# A deployment whose secrets are missing is skipped with a notice, so this file can stay as it is
+# while accounts arrive. Pause the TestFlight, Play and iOS Loadly uploads without editing
+# anything: repository variable DEPLOY_ON_PUSH = false. The Android Loadly upload always runs.
+#
+# Every build is numbered by tool/build_number.sh (the number of commits on main), so each upload
+# is higher than the last, as both stores require; the +N in pubspec.yaml no longer matters here.
+# The manual workflows (release-android.yml, release-ios.yml, build-ios.yml) stay for one-off runs.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# A newer push to main cancels an older in-progress run.
+permissions:
+  contents: read
+
+# A newer push to main cancels an older in-progress run: only the latest commit is deployed.
 concurrency:
   group: build-on-push-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # CI gate: analyze + tests must pass before the APK builds.
+  # CI gate: analyze + tests must pass before anything is built or uploaded.
   analyze-test:
     runs-on: ubuntu-latest
     steps:
@@ -44,13 +56,82 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: python3 tool/validate_ops.py --schema-file lib/core/graphql/schema.graphql
 
+  # Which of the optional deployments can run: a secret is only ever tested for being set, never
+  # printed, and a missing one is named in a notice.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      testflight: ${{ steps.flags.outputs.testflight }}
+      ios_loadly: ${{ steps.flags.outputs.ios_loadly }}
+      play: ${{ steps.flags.outputs.play }}
+    steps:
+      - name: Decide which deployments run
+        id: flags
+        env:
+          DEPLOY_ON_PUSH: ${{ vars.DEPLOY_ON_PUSH }}
+          PLAY_AUTO_PUBLISH: ${{ vars.PLAY_AUTO_PUBLISH }}
+          IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          IOS_APPSTORE_PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+          IOS_ADHOC_PROFILE_BASE64: ${{ secrets.IOS_ADHOC_PROFILE_BASE64 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_CONTENT_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT_BASE64 }}
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -eu
+          # Names of the empty variables among the arguments.
+          missing() {
+            out=""
+            for v in "$@"; do
+              [ -n "${!v:-}" ] || out="$out $v"
+            done
+            echo "$out"
+          }
+          # decide <flag> <label> <required variables...>
+          decide() {
+            flag="$1"; label="$2"; shift 2
+            if [ "${DEPLOY_ON_PUSH:-}" = "false" ]; then
+              echo "$flag=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::$label is paused: the repository variable DEPLOY_ON_PUSH is false."
+              return 0
+            fi
+            gaps="$(missing "$@")"
+            if [ -n "$gaps" ]; then
+              echo "$flag=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::$label is skipped; missing:$gaps"
+            else
+              echo "$flag=true" >> "$GITHUB_OUTPUT"
+              echo "$label will run."
+            fi
+          }
+          decide testflight "iOS TestFlight upload" \
+            IOS_P12_BASE64 IOS_P12_PASSWORD IOS_APPSTORE_PROFILE_BASE64 \
+            APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_CONTENT_BASE64
+          decide ios_loadly "iOS ad-hoc build on Loadly" \
+            IOS_P12_BASE64 IOS_P12_PASSWORD IOS_ADHOC_PROFILE_BASE64 LOADLY_API_KEY
+          if [ "${PLAY_AUTO_PUBLISH:-}" = "true" ]; then
+            decide play "Google Play internal testing" \
+              ANDROID_KEYSTORE_BASE64 ANDROID_STORE_PASSWORD ANDROID_KEY_PASSWORD ANDROID_KEY_ALIAS \
+              PLAY_SERVICE_ACCOUNT_JSON
+          else
+            echo "play=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Google Play internal testing is off: set the repository variable PLAY_AUTO_PUBLISH to true once the first release has been uploaded by hand."
+          fi
+
   android-apk:
     needs: analyze-test
     runs-on: ubuntu-latest
-    # The only platform built on push; iOS builds are manual (build-ios.yml,
-    # release-ios.yml), so a macOS runner never gates the APK.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the build number is the commit count
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -88,6 +169,7 @@ jobs:
           flutter build apk --release
           --flavor prod -t lib/main_prod.dart
           --dart-define-from-file=config/prod.json
+          --build-number="$(bash tool/build_number.sh)"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -96,11 +178,181 @@ jobs:
           if-no-files-found: error
 
       # OTA-distribute the APK to Loadly. Skips itself when LOADLY_API_KEY is
-      # unset (see tool/loadly_upload.sh), so this is inert until the secret
-      # is added — same opt-in-by-secret pattern as the keystore step above.
+      # unset (see tool/loadly_upload.sh).
       - name: Distribute APK to Loadly (when configured)
         env:
           LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
         run: |
           apk="$(ls build/app/outputs/flutter-apk/*-release.apk | head -n1)"
           bash tool/loadly_upload.sh "$apk" "main @ ${GITHUB_SHA::7}"
+
+  # Google Play internal testing. Off until the app exists in Play Console with one release
+  # uploaded by hand and PLAY_AUTO_PUBLISH is true (see the plan job).
+  android-play-internal:
+    needs: [analyze-test, plan]
+    if: needs.plan.outputs.play == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Generate GraphQL typed Dart (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # The upload key: without it Play rejects the bundle, so the plan job only
+      # lets this job run when all four ANDROID_* secrets are set.
+      - name: Write keystore + key.properties
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=release.jks
+          EOF
+
+      - name: Build app bundle (prod)
+        run: >
+          flutter build appbundle --release
+          --flavor prod -t lib/main_prod.dart
+          --dart-define-from-file=config/prod.json
+          --build-number="$(bash tool/build_number.sh)"
+
+      - name: Publish to Play (internal testing)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.hubmarket.app
+          releaseFiles: build/app/outputs/bundle/prodRelease/*.aab
+          track: internal
+          status: completed
+          changesNotSentForReview: false
+
+  # iOS App Store IPA -> TestFlight. Internal testers get the build once Apple has processed it.
+  ios-testflight:
+    needs: [analyze-test, plan]
+    if: needs.plan.outputs.testflight == 'true'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # First, so a bad secret fails in seconds, not after the toolchain setup.
+      - name: Decode the signing certificate and the App Store profile
+        env:
+          IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          IOS_APPSTORE_PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+        run: |
+          mkdir -p ios/signing
+          printf '%s' "$IOS_P12_BASE64" | base64 --decode > ios/signing/distribution.p12
+          printf '%s' "$IOS_APPSTORE_PROFILE_BASE64" | base64 --decode > ios/signing/testflight.mobileprovision
+          if [ ! -s ios/signing/distribution.p12 ] || [ ! -s ios/signing/testflight.mobileprovision ]; then
+            echo "::error::A signing secret did not decode to a file: check IOS_P12_BASE64 and IOS_APPSTORE_PROFILE_BASE64 are base64."
+            exit 1
+          fi
+
+      # firebase-ios-sdk 12.15 (via firebase_messaging 16.4.1) needs Xcode 16.3+.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      # Flutter's SPM plugin copy rsyncs into build/ios/SourcePackages/ during pub get;
+      # pre-create it so the copy doesn't fail on a fresh checkout (see build-ios.yml).
+      - name: Pre-create SPM SourcePackages dir (flutter/flutter rsync workaround)
+        run: mkdir -p build/ios/SourcePackages
+      - run: flutter pub get
+      - name: Generate GraphQL typed Dart (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build signed App Store IPA
+        env:
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+        run: |
+          export BUILD_NUMBER="$(bash tool/build_number.sh)"
+          echo "Build number: $BUILD_NUMBER"
+          bash tool/ios_appstore_build.sh
+
+      - name: Upload to TestFlight (fastlane pilot)
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT_BASE64 }}
+        run: |
+          bundle install
+          bundle exec fastlane beta
+
+  # iOS ad-hoc IPA -> Loadly, for the iPhones in the ad-hoc profile.
+  ios-loadly:
+    needs: [analyze-test, plan]
+    if: needs.plan.outputs.ios_loadly == 'true'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decode the signing certificate and the ad-hoc profile
+        env:
+          IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          IOS_ADHOC_PROFILE_BASE64: ${{ secrets.IOS_ADHOC_PROFILE_BASE64 }}
+        run: |
+          mkdir -p ios/signing
+          printf '%s' "$IOS_P12_BASE64" | base64 --decode > ios/signing/distribution.p12
+          printf '%s' "$IOS_ADHOC_PROFILE_BASE64" | base64 --decode > ios/signing/adhoc.mobileprovision
+          if [ ! -s ios/signing/distribution.p12 ] || [ ! -s ios/signing/adhoc.mobileprovision ]; then
+            echo "::error::A signing secret did not decode to a file: check IOS_P12_BASE64 and IOS_ADHOC_PROFILE_BASE64 are base64."
+            exit 1
+          fi
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      - name: Pre-create SPM SourcePackages dir (flutter/flutter rsync workaround)
+        run: mkdir -p build/ios/SourcePackages
+      - run: flutter pub get
+      - name: Generate GraphQL typed Dart (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build signed ad-hoc IPA
+        env:
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+        run: |
+          export BUILD_NUMBER="$(bash tool/build_number.sh)"
+          echo "Build number: $BUILD_NUMBER"
+          bash tool/ios_sign_build.sh
+
+      - name: Distribute IPA to Loadly
+        env:
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+        run: |
+          ipa="$(ls build/ios/ipa/*.ipa | head -n1)"
+          bash tool/loadly_upload.sh "$ipa" "main @ ${GITHUB_SHA::7}"

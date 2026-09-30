@@ -18,8 +18,8 @@ the code, not from memory. Nothing here publishes anything or creates an account
 
 | Area | State |
 |---|---|
-| Android build | Every push to `main` builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist. `Release · Android` also builds the Play bundle (`.aab`) and can publish it. The push build already proves the production release compiles; the `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
-| iOS build | `Release · iOS` builds a signed App Store or ad-hoc IPA on a hosted Mac and can send it to TestFlight. It has **never run signed**: the iOS secrets are not all in place yet. **The Apple side is set up (30 Sep 2026):** the App ID `com.hubmarket.app` (Push Notifications and Associated Domains on), an App Store provisioning profile made after that, and the App Store Connect app record "Hub Market" (iOS 1.0, Prepare for Submission). Still to do: set the `IOS_*` and `APP_STORE_CONNECT_*` secrets (section 3), then the first TestFlight run. The simulator build is exercised by the screenshot workflow, which passed on 30 Sep with the new privacy manifest and App Transport Security at its defaults. |
+| Android build | Every push to `main` (except `[skip ci]`) runs the gate, builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist. The same push also builds the Play bundle and uploads it to **internal testing** once that is switched on (section 3b). `Release · Android` stays for a one-off bundle; its `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
+| iOS build | Every push to `main` builds the signed App Store IPA and uploads it to **TestFlight** (the first one, 1.0.0 (1), went through on 30 Sep 2026), and, once `IOS_ADHOC_PROFILE_BASE64` exists, an ad-hoc IPA to Loadly (section 3b). **The Apple side is set up:** the App ID `com.hubmarket.app` (Push Notifications and Associated Domains on), an App Store profile and the App Store Connect app record "Hub Market". `Release · iOS` stays for one-off runs. |
 | Identity | Android `com.hubmarket.app` (`.dev` and `.staging` for the other flavors); iOS `com.hubmarket.app`; name "Hub Market"; version `1.0.0+1`; Android compile and target SDK 36; iOS 15 and up, iPhone only. |
 | Icon and launch screen | Client artwork, correct formats (1024×1024 icon with no alpha; adaptive Android icon; native launch screen). Not present: the Play **feature graphic** (1024×500). |
 | Listing text, privacy answers, review notes | Drafted in English and Arabic (files above); each needs the client to confirm the facts it lists. |
@@ -95,6 +95,33 @@ debug-signed build must uninstall it once, or Android refuses the update.
 **Files that are not secrets but do not exist yet** (push): `android/app/google-services.json` and
 `ios/Runner/GoogleService-Info.plist`. See section 6.
 
+## 3b. Automatic deployment on every push to main
+
+`.github/workflows/build-on-push.yml` runs on every push to `main` (put `[skip ci]` in a commit
+message to skip it) and deploys the same commit everywhere it can:
+
+| Step | Needs | State |
+|---|---|---|
+| Gate: analyze, tests, tool tests, offline GraphQL check | nothing | always |
+| Android APK → Loadly | `LOADLY_API_KEY` | on |
+| iOS App Store IPA → TestFlight | the six `IOS_*` and `APP_STORE_CONNECT_*` secrets | on |
+| iOS ad-hoc IPA → Loadly | `IOS_ADHOC_PROFILE_BASE64`, the two p12 secrets, `LOADLY_API_KEY` | waits for the ad-hoc profile secret |
+| Android app bundle → Google Play internal testing | the four `ANDROID_*` secrets, `PLAY_SERVICE_ACCOUNT_JSON`, and the repository variable `PLAY_AUTO_PUBLISH` = `true` | off until the first release was uploaded by hand |
+
+A step whose secrets are missing is skipped with a notice that names them, so the file stays as it
+is while accounts arrive. To pause the TestFlight, iOS Loadly and Play uploads without editing
+anything, set the repository variable `DEPLOY_ON_PUSH` to `false` (`gh variable set DEPLOY_ON_PUSH
+--body false`; delete it to resume). The Android Loadly upload always runs. A newer push cancels an
+older run that is still going, so only the latest commit is deployed.
+
+**Build numbers.** Every build gets `tool/build_number.sh`, the number of commits on `main`, so each
+upload is higher than the last, as App Store Connect and Google Play require. The `+N` in
+`pubspec.yaml` only matters for local builds. The manual workflows use the same rule, so they never
+collide with the automatic ones. The marketing version (`x.y.z`) is still a `pubspec.yaml` edit.
+
+**TestFlight testers.** Internal testers need a TestFlight group (Create Group, in the app's
+TestFlight tab) with *automatic distribution* on; otherwise each build has to be added by hand.
+
 ## 4. First Android release
 
 1. **Play Console:** create the app (name, English as the default language, Arabic as a second,
@@ -109,8 +136,10 @@ debug-signed build must uninstall it once, or Android refuses the update.
 5. **First upload by hand:** Play refuses an API upload for a package that has never been released.
    In Play Console › Testing › **Internal testing**, create a release and upload that bundle; add the
    testers' emails.
-6. **From then on:** run the same workflow with `play_track` `internal` (then `alpha`, `beta`); it
-   uploads for you. Only `prod` may publish (the other flavors are different packages).
+6. **From then on:** set the repository variable `PLAY_AUTO_PUBLISH` to `true`
+   (`gh variable set PLAY_AUTO_PUBLISH --body true`): every push to `main` then uploads the bundle to
+   internal testing (section 3b). The same workflow with `play_track` (`internal`, `alpha`, `beta`)
+   still works for one-offs. Only `prod` may publish (the other flavors are different packages).
 7. **App Links:** copy the **App signing key certificate SHA-256** from Play Console › Setup › App
    signing to the web team for `assetlinks.json` ([deep-links.md](deep-links.md)).
 8. **Store listing:** paste the text from [store-listing.md](store-listing.md) in both languages,
@@ -163,10 +192,10 @@ follows the host.
 
 - `flutter analyze` and `flutter test` clean; `PYTHONIOENCODING=utf-8 python tool/validate_ops.py`
   reports 0 problems; CI green on `main`.
-- **Version numbers.** Play needs a higher `versionCode` on every upload, which is the `+N` in
-  `pubspec.yaml`. App Store Connect needs a higher **build** number within a version, and once a
-  version (`x.y.z`) has been through review or release its train is **closed**: the next upload needs
-  a new `x.y.z`, not just a new `+N` (Zoonze hit exactly this).
+- **Version numbers.** CI numbers every build by the commit count (section 3b), so the `+N` in
+  `pubspec.yaml` does not matter for CI builds. The marketing version (`x.y.z`) does: once a version
+  has been through App Store review or release its train is **closed**, and the next upload needs a
+  new `x.y.z`, not just a new build number (Zoonze hit exactly this). Bump it in `pubspec.yaml`.
 - A real-device pass on the **release** build (the signed one): sign in, guest checkout on cash on
   delivery, deletion of a throw-away account, English and Arabic, a store link.
 - Listing, screenshots and review notes match the build being submitted.

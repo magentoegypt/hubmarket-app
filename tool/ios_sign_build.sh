@@ -107,7 +107,8 @@ rm -rf "${ARCHIVE}"
 # signing-disable flag into Generated.xcconfig, so the archive still signs.
 flutter build ios --release --config-only --no-codesign \
   -t lib/main_prod.dart \
-  --dart-define-from-file=config/prod.json
+  --dart-define-from-file=config/prod.json \
+  ${BUILD_NUMBER:+--build-number="${BUILD_NUMBER}"}
 
 # 5b) Archive WITHOUT code signing.
 # Command-line build settings (KEY=VALUE) apply to EVERY target in the

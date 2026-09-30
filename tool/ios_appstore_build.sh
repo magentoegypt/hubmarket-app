@@ -96,7 +96,8 @@ rm -rf "${ARCHIVE}"
 # 5a) Prepare Generated.xcconfig (entrypoint + dart-defines) without building.
 flutter build ios --release --config-only --no-codesign \
   -t lib/main_prod.dart \
-  --dart-define-from-file=config/prod.json
+  --dart-define-from-file=config/prod.json \
+  ${BUILD_NUMBER:+--build-number="${BUILD_NUMBER}"}
 
 # 5b) Archive WITHOUT code signing (framework/plugin targets can't take a
 # provisioning profile; sign only the app bundle, at the export step).
