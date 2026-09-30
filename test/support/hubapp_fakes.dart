@@ -43,6 +43,19 @@ const HmAppConfig kSampleHmAppConfig = HmAppConfig(
   features: {'returns': true, 'store_credit': false},
 );
 
+/// [kSampleHmAppConfig] on a server that lists its satellites: HubAppVendors
+/// with the P3.1 fields (the store pages' extras, sellers on listing cards).
+const HmAppConfig kVendorsHmAppConfig = HmAppConfig(
+  storeCode: 'en',
+  locale: 'en_US',
+  search: HmSearchConfig(
+    hint: 'Search 20,000+ products',
+    trendingTerms: ['iphone', 'abaya', 'rice'],
+  ),
+  features: {'returns': true, 'store_credit': false},
+  capabilities: {'vendors', 'bundle', 'returns', 'account'},
+);
+
 /// Replaces the probe with a fixed [state] (no request is made).
 Override hubAppOverride(HubAppState state) =>
     hubAppProvider.overrideWith(() => FakeHubAppController(state));

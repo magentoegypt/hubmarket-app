@@ -33,6 +33,8 @@ Object Function(RecordedRequest) storesAnswers({String store = 'en'}) =>
           if (_named(card, request.variables['name'] as String?)) card,
       ]),
       'HmStore' => miaStoreData(store: store),
+      'HmStoreReviews' => miaReviewsData(store: store),
+      'HmStoreCategories' => storeCategoriesData(store: store),
       'Products' => productsData(miaProducts(store: store), store: store),
       'HmBestSellers' => bestSellersData(store: store),
       _ => Exception('offline (test): ${request.operation}'),
@@ -62,6 +64,7 @@ Widget storesHarness({
   Object? extra,
   GlobalKey? boundary,
   ({String type, String uid, String? urlKey})? resolved,
+  List<Override> overrides = const <Override>[],
 }) {
   Widget stub(String text) => Scaffold(
     appBar: AppBar(),
@@ -128,6 +131,7 @@ Widget storesHarness({
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(hubApp),
       publicGraphqlClientProvider.overrideWithValue(backend.client),
+      ...overrides,
     ],
     child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
   );

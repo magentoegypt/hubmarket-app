@@ -3,6 +3,7 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/catalog/data/best_sellers_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart'
     show ProductSortField;
+import 'package:hubmarket_app/features/marketplace/marketplace_features.dart';
 import 'package:hubmarket_app/features/stores/data/store_products_repository.dart';
 import 'package:hubmarket_app/features/stores/data/stores_repository.dart';
 import 'package:hubmarket_app/features/stores/domain/store.dart';
@@ -231,6 +232,160 @@ void main() {
         BestSellersRepository(backend.client).fetch(),
         throwsA(isA<HubAppMissing>()),
       );
+    });
+  });
+
+  group('the P3.1 fields (the server lists vendors)', () {
+    const on = FixedMarketplaceGate(MarketplaceFeatures(storeExtras: true));
+
+    test('without them the documents are the P3 ones', () async {
+      final backend = FakeStoresBackend(
+        (r) => r.operation == 'HmStore'
+            ? miaStoreData()
+            : storesData(sampleStoreCards()),
+      );
+      final repository = StoresRepository(backend.client);
+      final page = await repository.fetchStores();
+      final profile = await repository.fetchStore('MIA');
+
+      for (final request in backend.requests) {
+        expect(request.document, isNot(contains('HmStoreCardExtras')));
+        expect(request.document, isNot(contains('HmStorePageExtras')));
+      }
+      expect(page.items.first.primaryCategory, isNull);
+      expect(page.items.first.facetValue, isNull);
+      expect(profile!.phone, isNull);
+      expect(profile.location, isNull);
+      expect(profile.salesCount, isNull);
+    });
+
+    test('cards carry their category and facet value', () async {
+      final backend = FakeStoresBackend((_) => storesData(sampleStoreCards()));
+      final page = await StoresRepository(
+        backend.client,
+        marketplace: on,
+      ).fetchStores(query: const StoreListQuery(sort: StoreSort.topRated));
+
+      final request = backend.requests.single;
+      expect(request.document, contains('...HmStoreCardExtras'));
+      expect(request.document, contains('sort: TOP_RATED'));
+      expect(request.variableTypes, isNot(contains(startsWith('Hm'))));
+      final mia = page.items.first;
+      expect(mia.primaryCategory!.name, 'Furniture');
+      expect(mia.primaryCategory!.uid, 'MzQ=');
+      expect(mia.primaryCategory!.count, 38);
+      expect(mia.categoryName, 'Furniture');
+      expect(mia.facetValue, 'MIA CO');
+    });
+
+    test(
+      'the page carries what the website publishes: phone, location, sales',
+      () async {
+        final backend = FakeStoresBackend((_) => miaStoreData());
+        final profile = await StoresRepository(
+          backend.client,
+          marketplace: on,
+        ).fetchStore('MIA');
+
+        expect(
+          backend.requests.single.document,
+          contains('...HmStorePageExtras'),
+        );
+        expect(profile!.phone, '+971 50 123 4567');
+        // Dialled as the website's tel: link does: digits and + only.
+        expect(profile.phoneUri, Uri.parse('tel:+971501234567'));
+        expect(profile.location, 'Dubai, United Arab Emirates');
+        expect(profile.salesCount, 1240);
+        expect(profile.card.categoryName, 'Furniture');
+      },
+    );
+
+    test(
+      'a server that turns them down is asked again without them',
+      () async {
+        final backend = FakeStoresBackend(
+          (r) => r.document.contains('HmStoreCardExtras')
+              ? hubAppMissingResponse('primary_category', type: 'HmStoreCard')
+              : storesData(sampleStoreCards()),
+        );
+        final page = await StoresRepository(
+          backend.client,
+          marketplace: on,
+        ).fetchStores();
+
+        expect(backend.requests, hasLength(2));
+        expect(
+          backend.requests.last.document,
+          isNot(contains('HmStoreCardExtras')),
+        );
+        expect(page.items, hasLength(5));
+        expect(page.items.first.primaryCategory, isNull);
+      },
+    );
+
+    test(
+      "the Reviews tab: the card's rating and this store view's reviews",
+      () async {
+        final backend = FakeStoresBackend((_) => miaReviewsData());
+        final page = await StoresRepository(backend.client).fetchStoreReviews(
+          ' MIA ',
+          pageSize: 80,
+          currentPage: 2,
+        );
+
+        final request = backend.requests.single;
+        expect(request.operation, 'HmStoreReviews');
+        expect(request.variables, {
+          'code': 'MIA',
+          'pageSize': 50,
+          'currentPage': 2,
+        });
+        expect(request.variableTypes, ['String', 'Int', 'Int']);
+        expect(page!.rating, 4.8);
+        expect(page.reviewCount, 126);
+        expect(page.totalCount, 2);
+        final first = page.items.first;
+        expect(first.nickname, 'Sara K.');
+        expect(first.title, 'Great sofa');
+        expect(first.stars, 5);
+        expect(first.createdAt, DateTime.utc(2026, 9, 20, 8, 15));
+        expect(first.product!.urlKey, 'sofabed123');
+        // A product the storefront no longer lists is named, not linked.
+        expect(page.items.last.title, isNull);
+        expect(page.items.last.product!.urlKey, isNull);
+      },
+    );
+
+    test(
+      'reviews of a code that is no approved seller: null; empty asks nothing',
+      () async {
+        final backend = FakeStoresBackend((_) => {'hmStoreReviews': null});
+        final repository = StoresRepository(backend.client);
+        expect(await repository.fetchStoreReviews('gone'), isNull);
+        expect(await repository.fetchStoreReviews(' '), isNull);
+        expect(backend.requests, hasLength(1));
+      },
+    );
+
+    test('the chips: sellers per category, none with zero', () async {
+      final backend = FakeStoresBackend(
+        (_) => {
+          'hmStoreCategories': {
+            'total_count': 22,
+            'items': [
+              {'id': 34, 'uid': 'MzQ=', 'name': 'Furniture', 'count': 3},
+              {'id': 38, 'uid': 'Mzg=', 'name': 'Grocery', 'count': 0},
+            ],
+          },
+        },
+      );
+      final chips = await StoresRepository(
+        backend.client,
+      ).fetchStoreCategories();
+
+      expect(backend.requests.single.operation, 'HmStoreCategories');
+      expect(chips.totalCount, 22);
+      expect(chips.items.map((c) => (c.name, c.count)), [('Furniture', 3)]);
     });
   });
 }
