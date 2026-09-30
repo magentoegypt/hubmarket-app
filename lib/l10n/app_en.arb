@@ -1457,6 +1457,11 @@
     }
   },
   "dealsSortBiggestDiscount": "Biggest discount",
+  "dealsSortEndingSoon": "Ending soon",
+  "dealsFilterSortBy": "Sort by",
+  "dealsFilterCategory": "Category",
+  "dealsFilterAnyDiscount": "Any discount",
+  "dealsNoMatch": "No deals match these filters.",
   "dealsEmpty": "No deals today — check back tomorrow.",
   "bundlesTitle": "Bundle Deals",
   "bundlesHeroTitle": "Product bundles",

@@ -4,8 +4,82 @@ import '../../../core/hubapp/hubapp_models.dart';
 import '../../catalog/domain/money.dart';
 import '../../catalog/domain/product.dart';
 
-/// One page of `hmDeals`: products whose special price is live today, deepest
-/// percentage discount first (Figma 10b).
+/// How Today's Deals are ordered (`HmDealSort`), always over the day's whole
+/// ranking on the server.
+enum DealsSort {
+  /// The ranking itself: deepest percentage discount first.
+  biggestDiscount('DISCOUNT'),
+  priceLowHigh('PRICE_ASC'),
+  priceHighLow('PRICE_DESC'),
+
+  /// Soonest-ending offer first; offers without an end last.
+  endingSoon('ENDING_SOON'),
+
+  /// Newest products first, as the storefront's "Newest" sort.
+  newest('NEWEST');
+
+  const DealsSort(this.wire);
+
+  /// The `HmDealSort` value, written inline in the document.
+  final String wire;
+}
+
+/// What Today's Deals are narrowed to (Figma 10b chips and Filters sheet).
+@immutable
+class DealsFilters {
+  const DealsFilters({
+    this.categoryId,
+    this.minDiscount,
+    this.sort = DealsSort.biggestDiscount,
+  });
+
+  /// A department chip's category id; null is "All deals".
+  final int? categoryId;
+
+  /// "N% or more"; null is any discount.
+  final int? minDiscount;
+  final DealsSort sort;
+
+  /// Nothing narrows the list (the sort aside).
+  bool get isEmpty => categoryId == null && minDiscount == null;
+
+  /// Discount thresholds the Filters sheet offers ("N% or more"), as the
+  /// catalogue filter sheet's.
+  static const List<int> discountSteps = [20, 30, 40, 50];
+
+  DealsFilters copyWith({
+    Object? categoryId = _keep,
+    Object? minDiscount = _keep,
+    DealsSort? sort,
+  }) => DealsFilters(
+    categoryId: identical(categoryId, _keep)
+        ? this.categoryId
+        : categoryId as int?,
+    minDiscount: identical(minDiscount, _keep)
+        ? this.minDiscount
+        : minDiscount as int?,
+    sort: sort ?? this.sort,
+  );
+
+  static const Object _keep = Object();
+
+  @override
+  bool operator ==(Object other) =>
+      other is DealsFilters &&
+      other.categoryId == categoryId &&
+      other.minDiscount == minDiscount &&
+      other.sort == sort;
+
+  @override
+  int get hashCode => Object.hash(categoryId, minDiscount, sort);
+
+  @override
+  String toString() =>
+      'DealsFilters(category: $categoryId, min: $minDiscount, ${sort.wire})';
+}
+
+/// One page of `hmDeals`: products whose special price is live today, in the
+/// asked order, filtered on the server (Figma 10b).
 @immutable
 class DealsPage {
   const DealsPage({
@@ -13,16 +87,26 @@ class DealsPage {
     required this.totalCount,
     this.pageInfo = const HmPageInfo(),
     this.countdownEndsAt,
+    this.categories = const <DealCategory>[],
+    this.filtered = true,
   });
 
   final List<Product> items;
 
-  /// Ranked deals available (the backend caps the ranking at 200).
+  /// Deals matching the filters (the backend ranks at most 200 a day).
   final int totalCount;
   final HmPageInfo pageInfo;
 
   /// The soonest offer end on this page (end of that day, store timezone).
   final DateTime? countdownEndsAt;
+
+  /// Department chips of the deals matching every filter but the category,
+  /// catalogue order, with counts; empty when fewer than two.
+  final List<DealCategory> categories;
+
+  /// False from a HubApp older than the filters: the page is the plain
+  /// ranking, and the screen offers no chips, sort or filters.
+  final bool filtered;
 
   static const DealsPage empty = DealsPage(items: <Product>[], totalCount: 0);
 }

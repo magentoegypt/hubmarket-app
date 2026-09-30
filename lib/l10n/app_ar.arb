@@ -837,6 +837,11 @@
     }
   },
   "dealsSortBiggestDiscount": "أكبر خصم",
+  "dealsSortEndingSoon": "ينتهي قريبًا",
+  "dealsFilterSortBy": "ترتيب حسب",
+  "dealsFilterCategory": "الفئة",
+  "dealsFilterAnyDiscount": "أي خصم",
+  "dealsNoMatch": "لا توجد عروض تطابق هذه الفلاتر.",
   "dealsEmpty": "لا توجد عروض اليوم — عُد غدًا.",
   "bundlesTitle": "عروض الباقات",
   "bundlesHeroTitle": "باقات المنتجات",

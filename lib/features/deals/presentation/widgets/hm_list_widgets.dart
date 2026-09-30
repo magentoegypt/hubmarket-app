@@ -91,14 +91,19 @@ class HmFilterChip extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Container(
+          child: SizedBox(
             height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              style: t.bodyStrong.copyWith(
-                color: selected ? Colors.white : AppColors.inkHeading,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              // As wide as its label, in a row or in a Wrap alike.
+              child: Center(
+                widthFactor: 1,
+                child: Text(
+                  label,
+                  style: t.bodyStrong.copyWith(
+                    color: selected ? Colors.white : AppColors.inkHeading,
+                  ),
+                ),
               ),
             ),
           ),
