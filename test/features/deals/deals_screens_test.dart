@@ -218,7 +218,10 @@ void main() {
         expect(find.text(l10n.homeTodaysDeals), findsOneWidget);
         expect(find.text(l10n.dealsEndIn), findsOneWidget);
         // No promise about when deals refresh (QA02).
-        expect(find.text(l10n.dealsNewEveryDay), findsNothing);
+        expect(
+          find.textContaining(locale == 'ar' ? 'منتصف الليل' : 'midnight'),
+          findsNothing,
+        );
         expect(find.text(l10n.dealsCount(5)), findsOneWidget);
         expect(find.text(l10n.dealsAllChip), findsOneWidget);
         // Chips from the deals' own top-level categories, busiest first.

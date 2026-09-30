@@ -113,7 +113,7 @@ void main() {
     expect(find.text(en.helpCentreTitle), findsOneWidget);
     expect(find.text(en.helpWhatsApp), findsOneWidget);
     // No service hours from the store → no hours claim under WhatsApp.
-    expect(find.text(en.helpWhatsAppCaption), findsNothing);
+    expect(find.text('24/7 customer care'), findsNothing);
     expect(find.text(en.helpCallUs), findsOneWidget);
     expect(find.text('+971 50 000 0000'), findsOneWidget);
     expect(find.text(en.helpEmailUs), findsOneWidget);
@@ -159,7 +159,7 @@ void main() {
     );
     expect(find.text(en.helpWhatsApp), findsOneWidget);
     expect(find.text('Daily 9 am – 11 pm'), findsOneWidget);
-    expect(find.text(en.helpWhatsAppCaption), findsNothing);
+    expect(find.text('24/7 customer care'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
