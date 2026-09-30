@@ -78,10 +78,11 @@ final dealsRepositoryProvider = Provider<DealsRepository>(
 
 /// GraphQL fragments of the deal cards, shared with the Home document.
 abstract final class DealsFragments {
-  /// `...HmCardProduct` — a listing card (the catalogue `products` card
-  /// fields) plus who sells it.
+  /// `...HmCardProduct` — a listing card: the catalogue `products` card
+  /// fields. No `hm_seller`: listing cards don't show the seller yet, and
+  /// asking for it would make these lists depend on HubAppVendors too.
   static const String cardProduct =
-      r'''fragment HmCardProduct on ProductInterface{sku name url_key stock_status new_from_date new_to_date image{url} price_range{minimum_price{regular_price{value currency} final_price{value currency}}} hm_seller{code name}}''';
+      r'''fragment HmCardProduct on ProductInterface{sku name url_key stock_status new_from_date new_to_date image{url} price_range{minimum_price{regular_price{value currency} final_price{value currency}}}}''';
 
   /// `...HmBundleCard` on `HmBundleDeal` (spreads `HmLinkFields`).
   static const String bundleCard =
