@@ -1,0 +1,327 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../app/routes.dart';
+import '../../../../app/shell/hub_scaffold.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/network_image.dart';
+import '../../../../l10n/l10n.dart';
+import '../../domain/deals.dart';
+import '../bundle_deals_controller.dart';
+import '../widgets/bundle_card.dart';
+import '../widgets/hm_list_widgets.dart';
+import '../widgets/list_states.dart';
+
+/// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro with the live
+/// stats, category chips, and one card per bundle — its items side by side,
+/// saving, rating, seller, price and "Add bundle".
+class BundleDealsScreen extends ConsumerWidget {
+  const BundleDealsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final state = ref.watch(bundleDealsControllerProvider);
+    final controller = ref.read(bundleDealsControllerProvider.notifier);
+    final error = state.error;
+    final firstLoad = state.isLoading && state.items.isEmpty;
+
+    final Widget body;
+    if (error != null && state.items.isEmpty && !state.isLoading) {
+      body = HmListError(
+        error: error,
+        onRetry: controller.refresh,
+        emptyTitle: l10n.bundlesEmpty,
+        emptyIcon: Icons.inventory_2_outlined,
+      );
+    } else {
+      body = RefreshIndicator(
+        color: AppColors.brandPrimary,
+        onRefresh: controller.refresh,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.metrics.extentAfter < 600) controller.loadMore();
+            return false;
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            children: [
+              if (!firstLoad) ...[
+                _BundlesIntro(page: state.page),
+                const SizedBox(height: 14),
+              ],
+              if (state.categories.length > 1) ...[
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: state.categories.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      if (i == 0) {
+                        return HmFilterChip(
+                          label: l10n.bundlesAllChip,
+                          selected: state.categoryId == null,
+                          onTap: () => controller.selectCategory(null),
+                        );
+                      }
+                      final c = state.categories[i - 1];
+                      return HmFilterChip(
+                        label: c.name,
+                        selected: state.categoryId == c.id,
+                        onTap: () => controller.selectCategory(
+                          state.categoryId == c.id ? null : c.id,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+              if (state.isLoading && state.items.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (state.items.isEmpty)
+                EmptyState(
+                  icon: Icons.inventory_2_outlined,
+                  title: l10n.bundlesEmpty,
+                )
+              else
+                for (final (i, deal) in state.items.indexed) ...[
+                  if (i > 0) const SizedBox(height: 14),
+                  BundleListCard(deal: deal),
+                ],
+              if (state.isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return HubScaffold(
+      currentTab: AppTab.home,
+      appBar: HmTitleAppBar(title: l10n.bundlesTitle),
+      body: body,
+    );
+  }
+}
+
+class _BundlesIntro extends StatelessWidget {
+  const _BundlesIntro({required this.page});
+
+  final BundleDealPage page;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    Widget stat(String value, String label) => Expanded(
+      child: Column(
+        children: [
+          Text(value, style: t.title.copyWith(color: Colors.white)),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: t.micro.copyWith(color: const Color(0xFFCBD3E2)),
+          ),
+        ],
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.brandPrimary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.bundlesHeroTitle,
+            style: t.heading2.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l10n.bundlesHeroBody,
+            style: t.caption.copyWith(color: const Color(0xFFCBD3E2)),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.only(top: 10),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFF2A3B5E))),
+            ),
+            child: Row(
+              children: [
+                stat('${page.totalCount}', l10n.bundlesStatActive),
+                if (page.maxDiscountPercent > 0) ...[
+                  const SizedBox(width: 8),
+                  stat(
+                    l10n.bundlesStatUpTo(page.maxDiscountPercent),
+                    l10n.bundlesStatMaxSaving,
+                  ),
+                ],
+                if (page.sellerCount > 0) ...[
+                  const SizedBox(width: 8),
+                  stat('${page.sellerCount}', l10n.bundlesStatVendors),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A bundle in the 10c list: its items side by side, the discount and count,
+/// name, rating and seller, price with the saving, and "Add bundle".
+class BundleListCard extends StatelessWidget {
+  const BundleListCard({super.key, required this.deal});
+
+  final BundleDeal deal;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    final images = deal.thumbnails.isNotEmpty
+        ? deal.thumbnails.take(3).toList()
+        : [if (deal.imageUrl != null) deal.imageUrl!];
+    final rating = deal.rating;
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: AppColors.borderSubtle),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => openBundle(context, deal),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 112,
+              color: AppColors.surfaceSubtle,
+              child: Row(
+                children: [
+                  if (images.isEmpty)
+                    const Expanded(child: HubImage(url: null))
+                  else
+                    for (final (i, url) in images.indexed) ...[
+                      if (i > 0) const SizedBox(width: 2),
+                      Expanded(child: HubImage(url: url, fit: BoxFit.cover)),
+                    ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (deal.hasSaving) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentSale,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            l10n
+                                .bundleDiscountBadge(deal.discountPercent)
+                                .toUpperCase(),
+                            style: t.micro.copyWith(color: Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      if (deal.itemCount > 0)
+                        Text(
+                          l10n.bundleItemCount(deal.itemCount),
+                          style: t.caption.copyWith(color: AppColors.inkMuted),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    deal.name,
+                    style: t.title.copyWith(color: AppColors.inkHeading),
+                  ),
+                  if (rating != null || deal.seller != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (rating != null) ...[
+                          for (var s = 1; s <= 5; s++)
+                            Icon(
+                              rating >= s - 0.25
+                                  ? Icons.star_rounded
+                                  : rating >= s - 0.75
+                                  ? Icons.star_half_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 14,
+                              color: AppColors.accentGold,
+                            ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${rating.toStringAsFixed(1)} (${deal.reviewCount})',
+                            style: t.caption.copyWith(color: AppColors.inkMuted),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        if (deal.seller != null)
+                          Flexible(
+                            child: Text(
+                              '· ${l10n.bundleSoldBy(deal.seller!.name)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.caption.copyWith(color: AppColors.info),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  BundlePriceRow(deal: deal, compactSaving: true),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    height: 52,
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => openBundle(context, deal),
+                      icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+                      label: Text(l10n.bundleAdd),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.brandPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: t.button,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

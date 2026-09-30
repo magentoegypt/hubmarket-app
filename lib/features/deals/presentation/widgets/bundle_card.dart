@@ -251,11 +251,16 @@ class BundleThumbnails extends StatelessWidget {
 
 /// Price (or "From …"), the struck regular total, and "You save …".
 class BundlePriceRow extends StatelessWidget {
-  const BundlePriceRow({super.key, required this.deal, this.compactSaving = false});
+  const BundlePriceRow({
+    super.key,
+    required this.deal,
+    this.compactSaving = false,
+  });
 
   final BundleDeal deal;
 
-  /// "Save AED 11" (10c) instead of "You save AED 11" (Home).
+  /// The 10c list: "Save AED 11" instead of "You save AED 11", and the price
+  /// in ink rather than the sale orange (as the frames draw them).
   final bool compactSaving;
 
   @override
@@ -270,7 +275,9 @@ class BundlePriceRow extends StatelessWidget {
         Text(
           deal.priceIsFrom ? l10n.bundleFromPrice(price) : price,
           style: t.button.copyWith(
-            color: deal.hasSaving ? AppColors.accentStrong : AppColors.inkHeading,
+            color: deal.hasSaving && !compactSaving
+                ? AppColors.accentStrong
+                : AppColors.inkHeading,
           ),
         ),
         if (deal.hasSaving && deal.regularTotal != null) ...[
