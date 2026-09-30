@@ -5,11 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/empty_state.dart';
-import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../domain/returns.dart';
@@ -100,28 +99,10 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
       );
     }
     if (error != null && state.items.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                error is Failure
-                    ? failureMessage(context, error)
-                    : l10n.errorGeneric,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: ref
-                    .read(myReturnsControllerProvider.notifier)
-                    .refresh,
-                child: Text(l10n.actionRetry),
-              ),
-            ],
-          ),
-        ),
+      // Offline: the S3 page, which reloads by itself once the network is back.
+      return LoadFailureView(
+        error: error,
+        onRetry: ref.read(myReturnsControllerProvider.notifier).refresh,
       );
     }
     if (state.items.isEmpty) {

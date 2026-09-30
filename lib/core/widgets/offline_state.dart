@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../app/theme/theme_x.dart';
 import '../../l10n/l10n.dart';
 import '../network/connectivity.dart';
 
@@ -48,16 +49,17 @@ class _OfflineStateState extends ConsumerState<OfflineState> {
               ),
             ),
             const SizedBox(height: 14),
+            // On the scaffold: ink in light mode, light text in dark mode.
             Text(
               l10n.offlineTitle,
               textAlign: TextAlign.center,
-              style: t.heading1.copyWith(color: AppColors.inkHeading),
+              style: t.heading1.copyWith(color: context.scaffoldHeading),
             ),
             const SizedBox(height: 14),
             Text(
               l10n.offlineBody,
               textAlign: TextAlign.center,
-              style: t.body.copyWith(color: AppColors.inkMuted),
+              style: t.body.copyWith(color: context.scaffoldMuted),
             ),
             if (widget.onRetry != null) ...[
               const SizedBox(height: 22),

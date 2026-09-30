@@ -8,10 +8,10 @@ import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/free_shipping.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/brand_logo.dart';
-import '../../../../core/widgets/failure_message.dart';
+import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../core/widgets/network_image.dart';
+import '../../../../core/widgets/shimmer.dart';
 import '../../../../core/widgets/summary_row.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
@@ -76,31 +76,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   Widget _body(AppLocalizations l10n, CartState state) {
     if (state.isLoading && state.cart.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const _CartSkeleton();
     }
     if (state.error != null && state.cart.isEmpty) {
-      final error = state.error;
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                error is Failure
-                    ? failureMessage(context, error)
-                    : l10n.errorGeneric,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _controller.refresh,
-                child: Text(l10n.actionRetry),
-              ),
-            ],
-          ),
-        ),
-      );
+      // Offline: the S3 page, which reloads by itself once the network is back.
+      return LoadFailureView(error: state.error, onRetry: _controller.refresh);
     }
     if (state.cart.isEmpty) {
       // Empty state (Figma "Cart — Empty"): blush cart pill, copy, full-width
@@ -451,6 +431,70 @@ class _QtyButton extends StatelessWidget {
       child: Icon(icon, size: 16),
     ),
   );
+}
+
+/// The cart's first load: the heading and three lines shaped like
+/// [_CartItemTile], shimmering, in place of a spinner. The lines sit on the
+/// scaffold, so the blocks follow the theme instead of glaring in dark mode.
+class _CartSkeleton extends StatelessWidget {
+  const _CartSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = context.isDarkMode;
+    final base = dark ? Colors.white10 : AppColors.surfaceMuted;
+    Widget box({double? width, double height = 12, double radius = 4}) =>
+        SkeletonBox(
+          width: width,
+          height: height,
+          borderRadius: radius,
+          color: base,
+        );
+    Widget part(double factor, {double height = 12}) => FractionallySizedBox(
+      alignment: AlignmentDirectional.centerStart,
+      widthFactor: factor,
+      child: box(height: height),
+    );
+    return Shimmer(
+      base: base,
+      highlight: dark ? Colors.white24 : Colors.white,
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          part(0.4, height: 22),
+          const SizedBox(height: 8),
+          part(0.2),
+          const SizedBox(height: 16),
+          for (var i = 0; i < 3; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  box(width: 72, height: 72, radius: 8),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        part(0.9),
+                        const SizedBox(height: 8),
+                        part(0.55),
+                        const SizedBox(height: 12),
+                        part(0.35, height: 15),
+                        const SizedBox(height: 12),
+                        box(width: 88, height: 24, radius: 6),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Full-bleed 8px grey band that separates cart sections (Figma 39:2 / 39:26).

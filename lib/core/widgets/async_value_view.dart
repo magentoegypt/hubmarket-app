@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../l10n/l10n.dart';
-import '../error/failure.dart';
-import '../network/connectivity.dart';
-import 'failure_message.dart';
-import 'offline_state.dart';
+import 'load_failure_view.dart';
 
 /// Renders an [AsyncValue] with consistent loading / localized-error (+ retry) /
 /// data states, so screens don't repeat the boilerplate. A request that never
 /// reached the store — or any failure while the OS reports no network — shows
-/// the designed offline state (Figma S3) instead of an error line.
-class AsyncValueView<T> extends ConsumerWidget {
+/// the designed offline state (Figma S3) instead of an error line
+/// ([LoadFailureView]).
+class AsyncValueView<T> extends StatelessWidget {
   const AsyncValueView({
     super.key,
     required this.value,
@@ -29,9 +26,7 @@ class AsyncValueView<T> extends ConsumerWidget {
   final Widget Function()? loading;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final offline = ref.watch(isOfflineProvider);
+  Widget build(BuildContext context) {
     return value.when(
       loading: loading ??
           () => const Center(
@@ -40,34 +35,7 @@ class AsyncValueView<T> extends ConsumerWidget {
               child: CircularProgressIndicator(),
             ),
           ),
-      error: (error, _) {
-        if (offline || isNetworkFailure(error)) {
-          return OfflineState(onRetry: onRetry);
-        }
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  error is Failure
-                      ? failureMessage(context, error)
-                      : l10n.errorGeneric,
-                  textAlign: TextAlign.center,
-                ),
-                if (onRetry != null) ...[
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: onRetry,
-                    child: Text(l10n.actionRetry),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
+      error: (error, _) => LoadFailureView(error: error, onRetry: onRetry),
       data: data,
     );
   }
