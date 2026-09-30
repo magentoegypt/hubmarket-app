@@ -10,7 +10,10 @@ void main() {
       expect(config.defaultLocale, 'en');
       expect(config.currency, 'AED');
       expect(config.bootstrapStoreCode, 'en');
-      expect(config.graphqlEndpoint, 'https://hub-market.magento2.click/graphql');
+      expect(
+        config.graphqlEndpoint,
+        'https://hub-market.magento2.click/graphql',
+      );
     });
 
     test('exposes provisional locale -> store_code fallback', () {
@@ -33,5 +36,52 @@ void main() {
         'created_at_desc',
       ]);
     });
+
+    test('User-Agent has no version until the build is read', () {
+      expect(config.userAgent, 'HubMarketApp-dev (Flutter)');
+      expect(config.userAgent, AppConfig.userAgentFor('dev', null));
+    });
+  });
+
+  group('User-Agent', () {
+    test('names the flavor outside prod and the version when known', () {
+      expect(
+        AppConfig.userAgentFor('prod', '1.0.0'),
+        'HubMarketApp/1.0.0 (Flutter)',
+      );
+      expect(
+        AppConfig.userAgentFor('staging', '1.0.0'),
+        'HubMarketApp-staging/1.0.0 (Flutter)',
+      );
+      expect(AppConfig.userAgentFor('prod', ' '), 'HubMarketApp (Flutter)');
+    });
+
+    test(
+      'forVersion puts the installed version in, and changes nothing else',
+      () {
+        final config = AppConfig.forVersion('1.0.0');
+        expect(config.userAgent, 'HubMarketApp-dev/1.0.0 (Flutter)');
+        expect(
+          AppConfig.forVersion(null).userAgent,
+          AppConfig.current.userAgent,
+        );
+        expect(config.flavor, AppConfig.current.flavor);
+        expect(config.graphqlEndpoint, AppConfig.current.graphqlEndpoint);
+        expect(
+          config.provisionalStoreCodes,
+          AppConfig.current.provisionalStoreCodes,
+        );
+        expect(config.currency, AppConfig.current.currency);
+        expect(config.algoliaAppId, AppConfig.current.algoliaAppId);
+        expect(config.algoliaSearchKey, AppConfig.current.algoliaSearchKey);
+        expect(config.algoliaIndexPrefix, AppConfig.current.algoliaIndexPrefix);
+        expect(
+          config.algoliaSortReplicas,
+          AppConfig.current.algoliaSortReplicas,
+        );
+        expect(config.defaultLocale, AppConfig.current.defaultLocale);
+        expect(config.bootstrapStoreCode, AppConfig.current.bootstrapStoreCode);
+      },
+    );
   });
 }

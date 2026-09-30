@@ -19,13 +19,15 @@
 #      → + → "Apple Distribution" (or "Apple Development") → upload the
 #      .certSigningRequest → download the resulting .cer.
 #   2. Bundle the .cer with the .key from step above into a password-protected
-#      .p12 that this project's CI consumes (ios/signing/*.p12 + IOS_P12_PASSWORD):
+#      .p12 (ios/signing/ is git-ignored: the repo is public):
 #        openssl x509 -in distribution.cer -inform DER -out distribution.pem -outform PEM
 #        openssl pkcs12 -export -legacy \
 #          -inkey ios/signing/<name>.key \
 #          -in distribution.pem \
 #          -out ios/signing/<name>.p12
-#      Use the export password as the GitHub secret IOS_P12_PASSWORD.
+#      CI reads it from GitHub secrets, never from git: the .p12's base64 as
+#      IOS_P12_BASE64 and the export password as IOS_P12_PASSWORD
+#      (see .github/workflows/release-ios.yml).
 #
 # Usage:
 #   tool/ios_make_csr.sh
@@ -93,9 +95,11 @@ echo
 echo "Next:"
 echo "  1) developer.apple.com → Certificates → + → Apple Distribution →"
 echo "     upload ${CSR} → download the .cer."
-echo "  2) Make the CI-ready .p12 (set the password as GitHub secret IOS_P12_PASSWORD):"
+echo "  2) Make the CI-ready .p12:"
 echo "       openssl x509 -in distribution.cer -inform DER -out distribution.pem -outform PEM"
 echo "       openssl pkcs12 -export -legacy -inkey ${KEY} -in distribution.pem -out ${OUT}/${SLUG}.p12"
+echo "  3) Never commit it (public repo): set GitHub secrets IOS_P12_BASE64 (its"
+echo "     base64) and IOS_P12_PASSWORD (the export password)."
 echo
 echo "Verify the CSR any time with:"
 echo "  openssl req -in ${CSR} -noout -text"

@@ -5,9 +5,6 @@ import '../../app/theme/app_theme.dart';
 
 /// The `HUB MARKET` wordmark in Playfair Display — the brand lockup used in app bars
 /// and the drawer header. Stays English/Latin in both languages (per design).
-///
-/// (The favicon Z-mark is `.ico`, which Flutter can't render as an image asset;
-/// a PNG/SVG mark can be slotted in front of the wordmark when available.)
 class BrandLockup extends StatelessWidget {
   const BrandLockup({super.key, this.color, this.fontSize = 22});
 

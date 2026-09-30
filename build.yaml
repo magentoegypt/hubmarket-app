@@ -2,7 +2,7 @@
 #
 # graphql_codegen turns the `.graphql` files in the repo into typed Dart:
 #   - lib/core/graphql/schema.graphql   ← the live-introspected SDL (type system),
-#     produced by tool/introspect.sh → tool/json_to_sdl.mjs (CI commits it).
+#     written by `python tool/introspect_to_sdl.py` and committed.
 #   - lib/<feature>/data/graphql/*.graphql  ← executable operations (Phase 1+).
 # Output: a `<name>.graphql.dart` next to each operation file (gitignored).
 #
@@ -10,7 +10,9 @@
 # yet) is kept out of both: it re-declares live types the Magento way
 # (`type Query { hm… }`), which would replace the live definitions in the
 # codegen schema. Its operations are inline Dart strings, checked by
-# tool/validate_ops.py against live + contract.
+# tool/validate_ops.py against live + contract. The `.graphql` fixtures of
+# tool/validate_ops.py's own tests (tool/fixtures/) are SDL too, and
+# graphql_codegen crashes on them, so tool/ is excluded as well.
 #
 # Run: dart run build_runner build --delete-conflicting-outputs
 #
@@ -22,6 +24,7 @@ targets:
         generate_for:
           exclude:
             - lib/core/graphql/hubapp.graphql
+            - tool/**
         options:
           # The schema and operation files codegen reads (default: every
           # `.graphql` under lib/, which would include hubapp.graphql).

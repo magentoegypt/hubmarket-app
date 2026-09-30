@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Fetch the live Magento GraphQL schema and write it as SDL for graphql_codegen.
 
-Pure-Python stand-in for `tool/introspect.sh` + `tool/json_to_sdl.mjs` (no Node
-packages needed). Types are sorted by name so re-running only diffs when the
-live schema changes.
+Pure Python, no packages needed. Types are sorted by name so re-running only
+diffs when the live schema changes.
 
 Usage:
   python tool/introspect_to_sdl.py [endpoint] [out.graphql]

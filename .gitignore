@@ -44,9 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Firebase client config (google-services.json / GoogleService-Info.plist) is
-# intentionally committed for this private repo + CI. Real signing secrets stay
-# out of git:
+# This repo is PUBLIC: signing material never goes into git. CI decodes the
+# Android keystore and the iOS certificate + profiles from base64 GitHub
+# secrets (build-on-push.yml, release-android.yml, release-ios.yml,
+# build-ios.yml). No Firebase client config (google-services.json /
+# GoogleService-Info.plist) exists yet: push is dormant.
 android/key.properties
 **/*.jks
 **/*.keystore
@@ -57,13 +59,10 @@ android/key.properties
 # (*.certSigningRequest) is a transient upload artifact; keep it out of git too.
 *.key
 *.certSigningRequest
-
-# Exception: the iOS ad-hoc signing material lives in ios/signing/ for CI
-# (manual signing without fastlane match). The .p12 is password-protected and
-# its password is a GitHub secret (IOS_P12_PASSWORD), never committed.
-!ios/signing/
-!ios/signing/*.p12
-!ios/signing/*.mobileprovision
+# Where tool/ios_sign_build.sh / ios_appstore_build.sh read the .p12 and the
+# provisioning profile: put there by hand on a Mac, or decoded from secrets by
+# the iOS workflows. Never committed.
+/ios/signing/
 
 
 # GraphQL codegen: schema.graphql (SDL) IS committed (codegen input, from CI);

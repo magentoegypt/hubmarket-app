@@ -8,6 +8,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hubmarket_app/app/app.dart';
 import 'package:hubmarket_app/app/router.dart';
+import 'package:hubmarket_app/core/app_info.dart';
+import 'package:hubmarket_app/core/config/app_config.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/store/store_controller.dart';
@@ -36,9 +38,11 @@ void main() {
     final cache = await LocalCache.open();
     final prefs = await SharedPreferences.getInstance();
     await NotificationInbox.instance.init(cache);
+    final appVersion = await readAppSemver();
 
     final container = ProviderContainer(
       overrides: <Override>[
+        appConfigProvider.overrideWithValue(AppConfig.forVersion(appVersion)),
         localCacheProvider.overrideWithValue(cache),
         localePrefsProvider.overrideWithValue(LocalePrefs(prefs)),
       ],
@@ -73,8 +77,11 @@ void main() {
     // Ordered as they should appear on the product page — Apple shows the
     // first three on the install sheet.
     await shot('01-home', '/home', wait: 10);
-    await shot('02-category', '/category/Mw==', wait: 12); // Fragrance, 1796
-    await shot('03-product', '/product/3616306115934', wait: 12); // Gucci Bloom
+    // Live Hub Market data (checked 30 Sep 2026): the Fashion category (uid
+    // MTQw, "أزياء" in Arabic) and one of its in-stock simple products,
+    // "Square-Neck Dress with Lapel", which has three gallery images.
+    await shot('02-category', '/category/MTQw', wait: 12);
+    await shot('03-product', '/product/dress-code-2156', wait: 12);
     await shot('04-categories', '/categories', wait: 8);
     await shot('05-brands', '/brands', wait: 10);
     await shot('06-wishlist', '/wishlist', wait: 6);

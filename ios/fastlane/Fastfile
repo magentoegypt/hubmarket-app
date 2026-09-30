@@ -1,6 +1,6 @@
 default_platform(:ios)
 
-APP_ID = "com.zoonze.shop"
+APP_ID = "com.hubmarket.app"
 
 # App Store Connect API key (no Apple ID / 2FA needed). Values come from the
 # APP_STORE_CONNECT_* GitHub Actions secrets; the key content is base64.
@@ -14,9 +14,9 @@ def asc_api_key
 end
 
 platform :ios do
-  # Signing is done by tool/ios_appstore_build.sh (committed Apple Distribution
-  # cert + App Store profile — no fastlane `match`). This lane only uploads the
-  # already-signed IPA it produced in build/ios/ipa/.
+  # Signing is done by tool/ios_appstore_build.sh (Apple Distribution cert +
+  # App Store profile from GitHub secrets — no fastlane `match`). This lane
+  # only uploads the already-signed IPA it produced in build/ios/ipa/.
   desc "Upload the pre-built prod App Store IPA to TestFlight"
   lane :beta do
     # Anchor to an absolute path: fastlane's CWD depends on where it's invoked

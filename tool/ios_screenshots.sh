@@ -58,7 +58,7 @@ xcrun simctl bootstatus "$UDID" -b
 # Override it (and the store it bootstraps against) to capture the RTL set.
 LOCALE_DEFINES=(--dart-define="SHOT_LOCALE=${LOCALE}")
 if [[ "$LOCALE" == "ar" ]]; then
-  LOCALE_DEFINES+=(--dart-define=DEFAULT_LOCALE=ar --dart-define=BOOTSTRAP_STORE_CODE=eg_ar)
+  LOCALE_DEFINES+=(--dart-define=DEFAULT_LOCALE=ar --dart-define=BOOTSTRAP_STORE_CODE=ar)
 fi
 
 echo "Driving screenshots (${CONFIG_FILE}, locale=${LOCALE})…"

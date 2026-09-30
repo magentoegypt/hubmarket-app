@@ -1,19 +1,28 @@
 name: Release · iOS
 
 # Builds the prod iOS app on a hosted macOS runner — no local Mac needed.
-# Signs with the committed Apple Distribution cert (ios/signing/*.p12 +
-# IOS_P12_PASSWORD) — no fastlane `match`, no separate signing repo.
-#   - testflight → App Store IPA (Hub Market Shop AppStore profile) → TestFlight
+#   - testflight → App Store IPA (the App Store profile) → TestFlight
 #   - adhoc      → ad-hoc IPA (device UDIDs in the ad-hoc profile) → artifact / Loadly
 #
-# testflight needs the APP_STORE_CONNECT_* secrets (see docs/zoonze-reference/decisions/ci.md) and
-# an existing App Store Connect app record for com.hubmarket.app. adhoc needs only
-# IOS_P12_PASSWORD (installs on the ad-hoc profile's registered device UDIDs).
+# The repo is PUBLIC, so no signing material is committed: the Apple
+# Distribution certificate and the provisioning profile come from base64
+# GitHub secrets, decoded into ios/signing/ (git-ignored) on the runner, where
+# tool/ios_appstore_build.sh and tool/ios_sign_build.sh read them. No fastlane
+# `match`, no separate signing repo.
+#   IOS_P12_BASE64               Apple Distribution cert + private key (.p12)
+#   IOS_P12_PASSWORD             the .p12's password
+#   IOS_APPSTORE_PROFILE_BASE64  App Store provisioning profile (testflight)
+#   IOS_ADHOC_PROFILE_BASE64     ad-hoc provisioning profile (adhoc)
+# Encode a file with `base64 -i <file>` (macOS) or `base64 -w0 <file>` (Linux).
+#
+# testflight also needs the APP_STORE_CONNECT_* secrets (see
+# docs/zoonze-reference/decisions/ci.md) and an existing App Store Connect app
+# record for com.hubmarket.app.
 on:
   workflow_dispatch:
     inputs:
       distribution:
-        description: "testflight (App Store) or adhoc (Diawi / device install)"
+        description: "testflight (App Store) or adhoc (Loadly / device install)"
         type: choice
         default: testflight
         options: [testflight, adhoc]
@@ -23,6 +32,39 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+
+      # First, so a missing secret fails in seconds, not after the toolchain
+      # setup.
+      - name: Decode the signing certificate and profile (secrets)
+        env:
+          DISTRIBUTION: ${{ inputs.distribution }}
+          IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          IOS_APPSTORE_PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+          IOS_ADHOC_PROFILE_BASE64: ${{ secrets.IOS_ADHOC_PROFILE_BASE64 }}
+        run: |
+          if [ "$DISTRIBUTION" = adhoc ]; then
+            profile_secret=IOS_ADHOC_PROFILE_BASE64
+            profile="$IOS_ADHOC_PROFILE_BASE64"
+          else
+            profile_secret=IOS_APPSTORE_PROFILE_BASE64
+            profile="$IOS_APPSTORE_PROFILE_BASE64"
+          fi
+          missing=""
+          [ -n "$IOS_P12_BASE64" ] || missing="$missing IOS_P12_BASE64"
+          [ -n "$IOS_P12_PASSWORD" ] || missing="$missing IOS_P12_PASSWORD"
+          [ -n "$profile" ] || missing="$missing $profile_secret"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing iOS signing secret(s):$missing. Add them under Settings > Secrets and variables > Actions: the base64 of the .p12 / .mobileprovision and the .p12 password (see the header of release-ios.yml). Signing files are never committed: this repo is public."
+            exit 1
+          fi
+          mkdir -p ios/signing
+          printf '%s' "$IOS_P12_BASE64" | base64 --decode > ios/signing/distribution.p12
+          printf '%s' "$profile" | base64 --decode > "ios/signing/$DISTRIBUTION.mobileprovision"
+          [ -s ios/signing/distribution.p12 ] && [ -s "ios/signing/$DISTRIBUTION.mobileprovision" ] || {
+            echo "::error::A signing secret did not decode to a file: check IOS_P12_BASE64 and $profile_secret are base64."
+            exit 1
+          }
 
       # firebase-ios-sdk 12.15 (via firebase_messaging 16.4.1) needs Xcode
       # 16.3+ (swift-tools 6.1); macos-15 + latest stable Xcode satisfies it.
@@ -37,7 +79,7 @@ jobs:
 
       # Flutter 3.44's SPM plugin copy rsyncs into build/ios/SourcePackages/
       # during pub get; pre-create it so the copy doesn't fail on a fresh
-      # checkout (see build-on-push.yml for the full note).
+      # checkout (see build-ios.yml for the full note).
       - name: Pre-create SPM SourcePackages dir (flutter/flutter rsync workaround)
         run: mkdir -p build/ios/SourcePackages
       - run: flutter pub get
@@ -62,7 +104,7 @@ jobs:
           bundle install
           bundle exec fastlane beta
 
-      # ---- Ad-hoc (Diawi / device install) ----
+      # ---- Ad-hoc (Loadly / device install) ----
       - name: Build signed ad-hoc IPA
         if: ${{ inputs.distribution == 'adhoc' }}
         env:

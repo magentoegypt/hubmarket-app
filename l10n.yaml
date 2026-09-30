@@ -5,3 +5,6 @@ template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 nullable-getter: false
+# Messages app_ar.arb lacks, listed on every generation (the ARB parity test
+# in test/l10n/ fails on them too).
+untranslated-messages-file: build/l10n_untranslated.json

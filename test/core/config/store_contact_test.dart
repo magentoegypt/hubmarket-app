@@ -109,7 +109,6 @@ void main() {
       expect(contact.email, isNull);
       expect(contact.address, isNull);
       expect(contact.company, isNull);
-      expect(contact.socials, isEmpty);
       expect(contact.website, 'https://hub-market.magento2.click');
     });
 

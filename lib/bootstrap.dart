@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'app/font_licenses.dart';
+import 'core/app_info.dart';
+import 'core/config/app_config.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/local_cache.dart';
 import 'core/storage/locale_prefs.dart';
@@ -36,8 +38,16 @@ Future<void> bootstrap() async {
   // incoming pushes immediately (independent of the feed screen).
   await NotificationInbox.instance.init(cache);
 
+  // The installed build's version, for the User-Agent of every request.
+  // A local platform call; the timeout only guards startup against a hang.
+  final appVersion = await readAppSemver().timeout(
+    const Duration(seconds: 2),
+    onTimeout: () => null,
+  );
+
   final container = ProviderContainer(
     overrides: <Override>[
+      appConfigProvider.overrideWithValue(AppConfig.forVersion(appVersion)),
       localCacheProvider.overrideWithValue(cache),
       localePrefsProvider.overrideWithValue(LocalePrefs(prefs)),
     ],

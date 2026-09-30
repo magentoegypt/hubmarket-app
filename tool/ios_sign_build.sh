@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Build a SIGNED ad-hoc IPA from a distribution certificate (.p12) + ad-hoc
-# provisioning profile (.mobileprovision) committed under ios/signing/ — no
-# fastlane `match`, no separate signing repo. macOS only.
+# provisioning profile (.mobileprovision) in ios/signing/ — no fastlane
+# `match`, no separate signing repo. macOS only. ios/signing/ is git-ignored
+# (the repo is public): release-ios.yml / build-ios.yml decode the files there
+# from secrets; locally, copy them in by hand.
 #
 # Required:
 #   - ios/signing/*.p12              Apple Distribution cert exported WITH its
@@ -19,8 +21,8 @@ P12="$(ls "${SIGN_DIR}"/*.p12 2>/dev/null | head -1 || true)"
 [ -n "${P12}" ] || { echo "::error::No .p12 found in ${SIGN_DIR}"; exit 1; }
 
 # Select the AD-HOC profile: pick the first .mobileprovision whose decoded plist
-# HAS a `ProvisionedDevices` key (ad-hoc/dev profiles list device UDIDs; the
-# App Store profile committed alongside it never does). Without this, a plain
+# HAS a `ProvisionedDevices` key (ad-hoc/dev profiles list device UDIDs; an
+# App Store profile lying next to it never does). Without this, a plain
 # `ls | head -1` would alphabetically pick the App Store profile and this ad-hoc
 # build would sign with the wrong (device-less) profile.
 PROFILE=""
@@ -166,23 +168,6 @@ if grep -q "aps-environment" <<<"${EMBEDDED}"; then
   echo "✅ aps-environment entitlement embedded"
 else
   echo "::error::aps-environment still missing after re-sign"; exit 1
-fi
-
-# Apple Pay. Conditional on purpose: the entitlements we sign with come from the
-# PROVISIONING PROFILE, not from ios/Runner/Runner.entitlements, so declaring the
-# merchant id in that file does nothing on its own — the profile has to be
-# regenerated in the Apple Developer portal with the Apple Pay capability. This
-# catches exactly that drift, and stays silent until someone enables Apple Pay.
-# PlistBuddy (not grep) so the commented-out instructions in Runner.entitlements
-# cannot trigger it — only a real, parsed key counts.
-ENT_FILE="ios/Runner/Runner.entitlements"
-if /usr/libexec/PlistBuddy -c "Print :com.apple.developer.in-app-payments" "${ENT_FILE}" >/dev/null 2>&1; then
-  if grep -q "in-app-payments" <<<"${EMBEDDED}"; then
-    echo "✅ Apple Pay merchant entitlement embedded"
-  else
-    echo "::error::Runner.entitlements declares com.apple.developer.in-app-payments but the signed app does not carry it — regenerate ios/signing/*.mobileprovision with the Apple Pay merchant id enabled on the App ID"
-    exit 1
-  fi
 fi
 
 echo "✅ Signed ad-hoc IPA → ${IPA}"

@@ -3,9 +3,10 @@
 <plist version="1.0">
 <dict>
 	<!-- Push notifications (FCM/APNs). Must match the provisioning profile's
-	     environment. Every CI build is DISTRIBUTION-signed — the ad-hoc
-	     `hubmarket-shop-adhoc` profile (build-on-push) and the TestFlight/App Store
-	     profiles all carry `aps-environment=production` (get-task-allow=false).
+	     environment. Every signed CI build is DISTRIBUTION-signed — the ad-hoc
+	     profile (release-ios.yml `adhoc`, build-ios.yml) and the App Store
+	     profile (release-ios.yml `testflight`) both carry
+	     `aps-environment=production` (get-task-allow=false).
 	     A `development` value on a distribution-signed build makes
 	     `registerForRemoteNotifications` fail, so APNs hands over no device token
 	     (the FCM token then stays null). Use `production`. (Only a local Xcode

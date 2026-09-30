@@ -45,9 +45,9 @@
                 <data android:scheme="hubmarket" android:host="app"/>
             </intent-filter>
             <!-- Scoped to paths the app can actually serve: both store views
-                 (base_link_url = .../uae-en/, .../uae-ar/), the storefront
-                 root, and root-level .html rewrites. The prefixes omit the
-                 trailing slash so a shared ".../uae-en" also opens the app.
+                 (base_link_url = .../en/, .../ar/), the storefront root, and
+                 root-level .html rewrites. A bare ".../en" without the
+                 trailing slash is not matched and opens the browser.
                  An unscoped host filter also claimed
                  /media, /static, /rest and /graphql, which the router
                  cannot resolve (CL042-DEV10). -->
