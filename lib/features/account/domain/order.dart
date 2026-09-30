@@ -1,5 +1,8 @@
 import '../../../core/hubapp/hubapp_models.dart';
 import '../../catalog/domain/money.dart';
+import 'order_package.dart';
+
+export 'order_package.dart';
 
 class OrderLine {
   const OrderLine({
@@ -10,6 +13,7 @@ class OrderLine {
     this.sku,
     this.urlKey,
     this.seller,
+    this.uid,
   });
 
   final String name;
@@ -26,6 +30,10 @@ class OrderLine {
   /// Who sold the line (`hm_seller`); null without HubApp, which keeps the
   /// order's items one list.
   final HmSellerSummary? seller;
+
+  /// `OrderItemInterface.id`, which [OrderPackage.itemUids] name; asked for
+  /// only with the packages (HubAppOrders), null otherwise.
+  final String? uid;
 }
 
 /// A shipment tracking entry (carrier + tracking number) for a shipped order.
@@ -79,6 +87,7 @@ class CustomerOrder {
     this.comments = const <OrderComment>[],
     this.invoiceCount = 0,
     this.shipmentCount = 0,
+    this.packages = const <OrderPackage>[],
   });
 
   final String number;
@@ -151,6 +160,10 @@ class CustomerOrder {
   /// tracking number is still a shipment.
   final int invoiceCount;
   final int shipmentCount;
+
+  /// The order split by store (`hm_packages`, HubAppOrders): each store's
+  /// status, shipments and totals. Empty without it.
+  final List<OrderPackage> packages;
 
   bool get hasTracking => trackings.isNotEmpty;
   bool get hasInvoice => invoiceCount > 0;

@@ -90,6 +90,59 @@ fragment HmOrderSellers on CustomerOrder {
     fragments: '$hmOrderSellers\n${HmFragments.seller}\n${HmFragments.link}',
   );
 
+  /// The order split by store (HubAppOrders `hm_packages`, Figma 22): each
+  /// store's status, shipments with their tracking, totals and the comments
+  /// it made visible. `items { id }` is what `item_uids` points at; GraphQL
+  /// merges these `items` with [_orderFields]'.
+  static const String hmOrderPackages = r'''
+fragment HmOrderPackages on CustomerOrder {
+  items { id }
+  hm_packages {
+    seller { ...HmSellerFields }
+    status_code
+    status_label
+    state
+    item_uids
+    subtotal { value currency }
+    discount { value currency }
+    tax { value currency }
+    shipping_amount { value currency }
+    shipping_method
+    grand_total { value currency }
+    shipments {
+      id
+      number
+      created_at
+      tracks { carrier_code carrier_title number tracking_url }
+    }
+    comments { message created_at }
+  }
+}
+''';
+
+  /// [document] with `...HmOrderPackages` beside each `...OrderFields`; sent
+  /// only while HubApp serves `hm_packages` (see [withHubApp]).
+  static String withPackages(String document) => SellerSelections.beside(
+    document,
+    anchor: 'OrderFields',
+    spread: 'HmOrderPackages',
+    fragments: '$hmOrderPackages\n${HmFragments.seller}\n${HmFragments.link}',
+  );
+
+  /// The order [document] as the server can take it: plus each line's seller
+  /// when [sellers], plus the per-store packages when [packages]; [document]
+  /// itself when neither (today's server).
+  static String withHubApp(
+    String document, {
+    required bool sellers,
+    required bool packages,
+  }) {
+    var twin = document;
+    if (sellers) twin = withSellers(twin);
+    if (packages) twin = withPackages(twin);
+    return twin;
+  }
+
   // scope: WEBSITE unifies orders across both store views (`en` / `ar` share
   // one website) — without it `orders` defaults to STORE and each language only
   // sees the orders placed under its own Store header. Newest first: without a

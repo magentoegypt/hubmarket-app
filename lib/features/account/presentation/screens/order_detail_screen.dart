@@ -7,7 +7,6 @@ import '../../../../core/config/store_timezone.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
-import '../../../marketplace/domain/seller_groups.dart';
 import '../../../returns/presentation/widgets/return_items_button.dart';
 import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../../domain/order.dart';
@@ -40,6 +39,17 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final locale = Localizations.localeOf(context).languageCode;
     // Magento stamps order times in the store's zone — see orderFmtDate.
     final storeZone = ref.watch(storeTimezoneProvider).valueOrNull ?? '';
+    // Figma 22: one package per store — the server's own split when HubApp
+    // has it, else the lines by seller; null keeps one list.
+    final packages = orderPackageViews(order);
+    // Numbers a package card shows are not listed again below.
+    final packaged = packagedTrackingNumbers(packages);
+    final looseTrackings = [
+      for (final t in order.trackings)
+        if (!packaged.contains(t.number)) t,
+    ];
+    final showTracking =
+        looseTrackings.isNotEmpty || !anyPackageShipped(packages);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.orderDetailsTitle)),
       body: ListView(
@@ -70,13 +80,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           const SizedBox(height: 24),
 
           _SectionTitle(l10n.orderItemsSection),
-          // Figma 22: with HubApp, one package per store.
-          if (groupBySeller<OrderLine>(order.lines, (l) => l.seller)
-              case final packages?)
+          if (packages != null)
             for (var i = 0; i < packages.length; i++)
               OrderPackageCard(
                 index: i + 1,
-                package: packages[i],
+                view: packages[i],
                 line: (line) => _OrderLineRow(line: line),
               )
           else
@@ -154,15 +162,18 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
           ],
 
-          const Divider(height: 32),
-          _SectionTitle(l10n.orderTrackingSection),
-          if (!order.hasTracking)
+          // A package card shows its own tracking numbers.
+          if (showTracking) ...[
+            const Divider(height: 32),
+            _SectionTitle(l10n.orderTrackingSection),
+          ],
+          if (showTracking && looseTrackings.isEmpty)
             Text(
               l10n.orderNoTracking,
               style: const TextStyle(color: AppColors.inkMuted),
             )
-          else
-            for (final t in order.trackings)
+          else if (showTracking)
+            for (final t in looseTrackings)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(

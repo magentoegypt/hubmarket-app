@@ -10,7 +10,6 @@ import '../../../../core/config/store_timezone.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../core/widgets/hub_back_button.dart';
-import '../../../marketplace/domain/seller_groups.dart';
 import '../../domain/order.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
@@ -126,6 +125,17 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     // always did (device-local) rather than jumping once it arrives.
     final storeZone = ref.watch(storeTimezoneProvider).valueOrNull ?? '';
     final steps = _steps(l10n, locale, storeZone);
+    // One package per store, as on the order detail (22): the server's own
+    // split when HubApp has it, else the lines by seller; null keeps one list.
+    final packages = orderPackageViews(order);
+    // Numbers a package card shows are not listed again in Tracking.
+    final packaged = packagedTrackingNumbers(packages);
+    final looseTrackings = [
+      for (final t in order.trackings)
+        if (!packaged.contains(t.number)) t,
+    ];
+    final showTracking =
+        looseTrackings.isNotEmpty || !anyPackageShipped(packages);
 
     return HubScaffold(
       currentTab: AppTab.account,
@@ -214,28 +224,31 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
           // Carrier + tracking number(s) — the whole point of this screen. Only
           // rendered once Magento has a shipment; no fabricated placeholder.
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
-            child: Text(
-              l10n.orderTrackingSection,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: AppColors.inkHeading,
+          // With per-store packages each card carries its own shipments.
+          if (showTracking) ...[
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+              child: Text(
+                l10n.orderTrackingSection,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppColors.inkHeading,
+                ),
               ),
             ),
-          ),
-          if (!order.hasTracking)
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-              child: Text(
-                l10n.orderNoTracking,
-                style: const TextStyle(color: AppColors.inkMuted),
-              ),
-            )
-          else
-            for (final t in order.trackings) _TrackingRow(tracking: t),
-          const _Band(),
+            if (looseTrackings.isEmpty)
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+                child: Text(
+                  l10n.orderNoTracking,
+                  style: const TextStyle(color: AppColors.inkMuted),
+                ),
+              )
+            else
+              for (final t in looseTrackings) _TrackingRow(tracking: t),
+            const _Band(),
+          ],
 
           // Delivery address.
           if (order.shippingAddress != null)
@@ -293,8 +306,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
             ),
           ),
           // With HubApp, one package per store, as on the order detail (22).
-          if (groupBySeller<OrderLine>(order.lines, (l) => l.seller)
-              case final packages?)
+          if (packages != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -302,7 +314,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                   for (var i = 0; i < packages.length; i++)
                     OrderPackageCard(
                       index: i + 1,
-                      package: packages[i],
+                      view: packages[i],
                       line: (line) =>
                           _ItemRow(line: line, l10n: l10n, inset: false),
                     ),

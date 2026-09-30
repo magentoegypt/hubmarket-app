@@ -17,17 +17,36 @@ class RecordingMarketplaceGate implements MarketplaceGate {
 
   int sellersMissingCalls = 0;
   int bundlesMissingCalls = 0;
+  int packagesMissingCalls = 0;
 
   @override
   void sellersMissing() {
     sellersMissingCalls++;
-    features = MarketplaceFeatures(sellers: false, bundles: features.bundles);
+    features = MarketplaceFeatures(
+      sellers: false,
+      bundles: features.bundles,
+      packages: features.packages,
+    );
   }
 
   @override
   void bundlesMissing() {
     bundlesMissingCalls++;
-    features = MarketplaceFeatures(sellers: features.sellers, bundles: false);
+    features = MarketplaceFeatures(
+      sellers: features.sellers,
+      bundles: false,
+      packages: features.packages,
+    );
+  }
+
+  @override
+  void packagesMissing() {
+    packagesMissingCalls++;
+    features = MarketplaceFeatures(
+      sellers: features.sellers,
+      bundles: features.bundles,
+      packages: false,
+    );
   }
 }
 

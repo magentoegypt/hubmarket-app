@@ -772,6 +772,19 @@
       }
     }
   },
+  "orderPackageShipment": "Shipment #{number}",
+  "@orderPackageShipment": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPackageUpdates": "Updates from the store",
+  "orderPackageTax": "Tax",
+  "orderPackageTotal": "Package total",
+  "orderTrackParcel": "Track parcel",
+  "orderCopyTrackingNumber": "Copy tracking number",
   "orderTrackingSection": "Tracking",
   "orderShippingLabel": "Shipping",
   "orderNoTracking": "Tracking details appear here once your order ships.",

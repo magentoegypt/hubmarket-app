@@ -362,6 +362,7 @@ class AccountRepository {
             sku: l['product_sku'] as String?,
             urlKey: l['product_url_key'] as String?,
             seller: HmSellerSummary.fromJson(l['hm_seller']),
+            uid: l['id'] as String?,
           ),
         )
         .toList();
@@ -468,6 +469,7 @@ class AccountRepository {
           .whereType<Map<String, dynamic>>()
           .length,
       shipmentCount: shipmentCount,
+      packages: OrderPackage.listFromJson(json['hm_packages']),
     );
   }
 
@@ -557,29 +559,54 @@ class AccountRepository {
   }
 
   /// Runs an order [document], asking for each line's seller while HubApp
-  /// serves `hm_seller`. A server that turns the seller selection down
-  /// ("Cannot query field") ran nothing — validation comes first — so the
-  /// plain [document] goes out instead, and the gate stops asking.
+  /// serves `hm_seller` and for the per-store packages while it serves
+  /// `hm_packages` (two satellites, each deployable on its own). A server that
+  /// turns a selection down ("Cannot query field") ran nothing — validation
+  /// comes first — so the document goes out again without what it named, and
+  /// the gate stops asking for it; without either, the plain [document].
   Future<Map<String, dynamic>> _orderRun(
     String document,
     Map<String, dynamic> variables, {
     required bool mutation,
   }) async {
-    if (!_marketplace.features.sellers) {
-      return _run(document, variables, mutation: mutation);
+    final features = _marketplace.features;
+    var sellers = features.sellers;
+    var packages = features.packages;
+    while (sellers || packages) {
+      try {
+        return await _run(
+          AccountQueries.withHubApp(
+            document,
+            sellers: sellers,
+            packages: packages,
+          ),
+          variables,
+          mutation: mutation,
+          throwMissing: true,
+        );
+      } on HubAppMissing catch (missing) {
+        final message = missing.message;
+        final noPackages = packages && _namesPackages(message);
+        final noSellers = sellers && _namesSellers(message);
+        // A refusal naming neither: drop both rather than guess.
+        if (noPackages || !noSellers) {
+          if (packages) _marketplace.packagesMissing();
+          packages = false;
+        }
+        if (noSellers || !noPackages) {
+          if (sellers) _marketplace.sellersMissing();
+          sellers = false;
+        }
+      }
     }
-    try {
-      return await _run(
-        AccountQueries.withSellers(document),
-        variables,
-        mutation: mutation,
-        throwMissing: true,
-      );
-    } on HubAppMissing {
-      _marketplace.sellersMissing();
-      return _run(document, variables, mutation: mutation);
-    }
+    return _run(document, variables, mutation: mutation);
   }
+
+  static bool _namesPackages(String message) =>
+      message.contains('hm_packages') || message.contains('HmOrderPackage');
+
+  static bool _namesSellers(String message) =>
+      message.contains('hm_seller') || message.contains('HmSellerSummary');
 
   /// [throwMissing]: a "Cannot query field" answer throws [HubAppMissing]
   /// rather than a [Failure]. [credentialCheck]: the request checks a
@@ -616,8 +643,12 @@ class AccountRepository {
       if (result.hasException) {
         final exception = result.exception!;
         if (throwMissing && isHubAppMissing(exception)) {
+          // Every message: a twin can name more than one missing field.
+          final messages = [
+            for (final error in exception.graphqlErrors) error.message,
+          ];
           throw HubAppMissing(
-            exception.graphqlErrors.firstOrNull?.message ?? 'hm_seller',
+            messages.isEmpty ? 'hm_seller' : messages.join('\n'),
           );
         }
         if (credentialCheck) {
