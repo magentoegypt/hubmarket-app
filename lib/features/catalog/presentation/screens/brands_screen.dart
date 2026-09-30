@@ -5,20 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/network_image.dart';
-import '../../../../app/theme/app_theme.dart';
-import '../../../../core/widgets/brand_logo.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
-import '../../../../core/widgets/hub_back_button.dart';
+import '../../../deals/presentation/widgets/hm_list_widgets.dart';
+import '../../../deals/presentation/widgets/list_states.dart';
 import '../../data/brands_provider.dart';
 import '../../domain/brand.dart';
 
-/// "Our Brands" directory (Figma `420:2`): hero + "Search a brand" filter +
-/// A–Z filter chips + brand-logo cards grouped by first letter. Reached from
-/// the home "Explore Our Brands" See More. Tapping a brand searches the
-/// catalogue for it (consistent with the home rail). Bidirectional: directional
-/// insets + the display font apply only to EN, so it mirrors cleanly in AR.
+/// All brands (Figma 10d, `hmBrands`): search, A–Z initials, and every brand
+/// that has products, with how many — the catalogue's own `mgs_brand` facet.
 class BrandsScreen extends ConsumerStatefulWidget {
   const BrandsScreen({super.key});
 
@@ -29,7 +26,7 @@ class BrandsScreen extends ConsumerStatefulWidget {
 class _BrandsScreenState extends ConsumerState<BrandsScreen> {
   final TextEditingController _search = TextEditingController();
   String _query = '';
-  String? _letter; // null = "All"
+  String? _initial; // null = "All"
 
   @override
   void dispose() {
@@ -37,40 +34,32 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
     super.dispose();
   }
 
-  /// First A–Z letter of a brand title; anything else groups under '#'.
-  static String _initial(String title) {
-    final trimmed = title.trimLeft();
-    if (trimmed.isEmpty) return '#';
-    final c = trimmed[0].toUpperCase();
-    return RegExp(r'[A-Z]').hasMatch(c) ? c : '#';
+  /// The upper-cased first letter of a brand's name.
+  static String initialOf(Brand brand) {
+    final name = brand.title.trim();
+    return name.isEmpty ? '#' : name.characters.first.toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final brands = ref.watch(brandsProvider);
+    final counts = ref.watch(brandProductCountsProvider).valueOrNull;
     return HubScaffold(
       currentTab: AppTab.home,
-      // Figma appbar: back chevron + centered HUB MARKET lockup (no search/bell).
-      appBar: AppBar(
-        toolbarHeight: 60,
-        centerTitle: false,
-        titleSpacing: 4,
-        leading: const HubBackButton(),
-        title: const BrandLogo(height: 44),
+      appBar: HmTitleAppBar(
+        title: l10n.brandsScreenTitle,
+        actions: const <Widget>[],
       ),
       body: brands.when(
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(40),
-            child: CircularProgressIndicator(),
-          ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => HmListError(
+          error: error,
+          onRetry: () => ref.invalidate(brandsProvider),
+          emptyTitle: l10n.brandsEmpty,
+          emptyIcon: Icons.storefront_outlined,
         ),
-        error: (_, __) => EmptyState(
-          icon: Icons.storefront_outlined,
-          title: l10n.brandsEmpty,
-        ),
-        data: (all) => _content(context, l10n, all),
+        data: (all) => _content(context, l10n, all, counts),
       ),
     );
   }
@@ -79,149 +68,113 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
     BuildContext context,
     AppLocalizations l10n,
     List<Brand> all,
+    Map<int, int>? counts,
   ) {
-    // Letters present in the catalogue (drives the A–Z chip row).
-    final letters = all.map((b) => _initial(b.title)).toSet().toList()..sort();
+    final t = AppTextStyles.of(context);
+    // Brands with products when the counts are known; all of them otherwise.
+    final known = counts != null && counts.isNotEmpty;
+    final listed = known
+        ? [for (final b in all) if ((counts[b.optionId] ?? 0) > 0) b]
+        : all;
+    if (listed.isEmpty) {
+      return EmptyState(icon: Icons.storefront_outlined, title: l10n.brandsEmpty);
+    }
 
+    final initials = listed.map(initialOf).toSet().toList()..sort();
     final query = _query.trim().toLowerCase();
-    // Alphabetical for a directory (the provider sorts by position).
-    var filtered = [...all]
-      ..sort(
-        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-      );
-    if (query.isNotEmpty) {
-      filtered = filtered
-          .where((b) => b.title.toLowerCase().contains(query))
-          .toList();
-    }
-    if (_letter != null) {
-      filtered = filtered.where((b) => _initial(b.title) == _letter).toList();
-    }
-
-    final groups = <String, List<Brand>>{};
-    for (final b in filtered) {
-      groups.putIfAbsent(_initial(b.title), () => <Brand>[]).add(b);
-    }
-    final keys = groups.keys.toList()..sort();
-
-    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    final shown = [
+      for (final b in listed)
+        if ((query.isEmpty || b.title.toLowerCase().contains(query)) &&
+            (_initial == null || initialOf(b) == _initial))
+          b,
+    ];
+    final hint = '${listed.take(3).map((b) => b.title).join(', ')}…';
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        // Hero.
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 18),
-          child: Column(
-            children: [
-              Text(
-                l10n.brandsTitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: isEn ? AppTheme.displayFont : null,
-                  fontSize: 27,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkHeading,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.brandsSubtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: AppColors.inkMuted),
-              ),
-            ],
-          ),
+        Text(
+          l10n.brandsSearchLabel,
+          style: t.captionStrong.copyWith(color: AppColors.inkHeading),
         ),
-        // Search a brand.
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-          child: TextField(
-            controller: _search,
-            onChanged: (v) => setState(() => _query = v),
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.surfaceMuted,
-              hintText: l10n.brandsSearchHint,
-              hintStyle: const TextStyle(
-                color: AppColors.inkFaint,
-                fontSize: 13.5,
-              ),
-              prefixIcon: const Icon(
-                Icons.search,
-                size: 20,
-                color: AppColors.inkFaint,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 13),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _search,
+          onChanged: (v) => setState(() => _query = v),
+          textInputAction: TextInputAction.search,
+          style: t.body.copyWith(color: AppColors.inkHeading),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: t.body.copyWith(color: AppColors.inkMuted),
+            prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.inkMuted),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(vertical: 16),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.borderStrong),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
             ),
           ),
         ),
-        // A–Z filter chips.
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsetsDirectional.only(bottom: 12),
-          child: SingleChildScrollView(
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 32,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsetsDirectional.only(start: 16, end: 16),
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: l10n.brandsFilterAll,
-                  selected: _letter == null,
-                  onTap: () => setState(() => _letter = null),
+            itemCount: initials.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            itemBuilder: (context, i) {
+              final letter = i == 0 ? null : initials[i - 1];
+              return _InitialChip(
+                label: letter ?? l10n.brandsFilterAll,
+                selected: _initial == letter,
+                onTap: () => setState(
+                  () => _initial = (letter == null || _initial == letter)
+                      ? null
+                      : letter,
                 ),
-                for (final letter in letters) ...[
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: letter,
-                    selected: _letter == letter,
-                    onTap: () => setState(
-                      () => _letter = _letter == letter ? null : letter,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              );
+            },
           ),
         ),
-        // Brand grid, grouped by letter (on the light neutral band).
-        Container(
-          color: const Color(0xFFF9FAFB),
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 18, 16, 22),
-          child: keys.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 36),
-                  child: EmptyState(
-                    icon: Icons.search_off,
-                    title: l10n.brandsEmpty,
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < keys.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 20),
-                      _BrandGroup(letter: keys[i], brands: groups[keys[i]]!),
-                    ],
-                  ],
-                ),
+        const SizedBox(height: 14),
+        Text(
+          l10n.brandsWithProducts(listed.length),
+          style: t.caption.copyWith(color: AppColors.inkMuted),
         ),
+        const SizedBox(height: 14),
+        if (shown.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: EmptyState(icon: Icons.search_off, title: l10n.brandsEmpty),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 14,
+              mainAxisExtent: 132,
+            ),
+            itemCount: shown.length,
+            itemBuilder: (context, i) => BrandCard(
+              brand: shown[i],
+              productCount: known ? counts[shown[i].optionId] : null,
+            ),
+          ),
       ],
     );
   }
 }
 
-/// A–Z pill: navy when active, hairline-bordered white otherwise.
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class _InitialChip extends StatelessWidget {
+  const _InitialChip({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -232,120 +185,87 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.brandPrimary : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: selected
-              ? null
-              : Border.all(color: AppColors.borderDefault),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.26,
-            color: selected ? Colors.white : AppColors.inkHeading,
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: Material(
+      color: selected ? AppColors.brandPrimary : AppColors.surfaceSubtle,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 32),
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTextStyles.of(context).captionStrong.copyWith(
+              color: selected ? Colors.white : AppColors.inkHeading,
+            ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
-/// A lettered group: navy letter header + 2-column rows of brand cards.
-class _BrandGroup extends StatelessWidget {
-  const _BrandGroup({required this.letter, required this.brands});
-
-  final String letter;
-  final List<Brand> brands;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          letter,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
-            color: AppColors.brandPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        for (var i = 0; i < brands.length; i += 2) ...[
-          if (i > 0) const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _BrandTile(brand: brands[i])),
-              const SizedBox(width: 12),
-              Expanded(
-                child: i + 1 < brands.length
-                    ? _BrandTile(brand: brands[i + 1])
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// Brand logo card; falls back to the brand name if the logo can't load.
-class _BrandTile extends StatelessWidget {
-  const _BrandTile({required this.brand});
+/// A brand in the 10d grid: logo, name and product count; opens its page.
+class BrandCard extends StatelessWidget {
+  const BrandCard({super.key, required this.brand, this.productCount});
 
   final Brand brand;
+  final int? productCount;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => context.push(AppRoutes.brand, extra: brand),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        height: 104,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.borderDefault),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: HubImage(
-                url: brand.imageUrl,
-                fit: BoxFit.contain,
-                placeholder: (_) => const SizedBox.shrink(),
-                error: (_) => const SizedBox.shrink(),
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: AppColors.borderSubtle),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () =>
+            context.push(AppRoutes.brandPage(brand.urlKey), extra: brand),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 60,
+                width: double.infinity,
+                child: HubImage(
+                  url: brand.imageUrl,
+                  fit: BoxFit.contain,
+                  borderRadius: BorderRadius.circular(8),
+                  placeholder: (_) => const SizedBox.shrink(),
+                  error: (_) => const ColoredBox(color: AppColors.surfaceSubtle),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              brand.title,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.inkHeading,
+              const SizedBox(height: 6),
+              Text(
+                brand.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: t.captionStrong.copyWith(color: AppColors.inkHeading),
               ),
-            ),
-          ],
+              if (productCount != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  l10n.hmProductCount(productCount!),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.micro.copyWith(color: AppColors.inkMuted),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

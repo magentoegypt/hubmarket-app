@@ -23,6 +23,21 @@ final brandsProvider = FutureProvider.autoDispose<List<Brand>>((ref) async {
   return brands;
 });
 
+/// How many sellers carry a brand (by option id) — "from 2 stores" on its
+/// page; null without the Hub Market App API or when it can't be counted.
+final brandSellerCountProvider = FutureProvider.autoDispose.family<int?, int>((
+  ref,
+  optionId,
+) async {
+  if (ref.watch(hubAppStatusProvider) != HubAppStatus.available) return null;
+  ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
+  try {
+    return await ref.watch(brandsRepositoryProvider).fetchSellerCount(optionId);
+  } on Object {
+    return null;
+  }
+});
+
 /// Catalogue products per brand option id — "12 products" on the brands
 /// directory; empty without the Hub Market App API or the facet.
 final brandProductCountsProvider = FutureProvider.autoDispose<Map<int, int>>((

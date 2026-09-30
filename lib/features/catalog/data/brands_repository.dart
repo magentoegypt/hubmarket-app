@@ -39,6 +39,41 @@ query BrandProductCounts($root: String!) {
 }
 ''';
 
+  static const String _sellersDocument = r'''
+query BrandSellers($option: String!, $pageSize: Int!) {
+  products(filter: { mgs_brand: { eq: $option } }, pageSize: $pageSize) {
+    total_count
+    items { hm_seller { code } }
+  }
+}
+''';
+
+  /// The most products [fetchSellerCount] reads to count sellers.
+  static const int sellerScanLimit = 50;
+
+  /// How many sellers carry brand [optionId] ("from 2 stores"): Hub Market
+  /// itself counts as one. Null when the brand has more products than
+  /// [sellerScanLimit] — the count would be a guess.
+  Future<int?> fetchSellerCount(int optionId) async {
+    final data = await runHubAppQuery(
+      _client,
+      _sellersDocument,
+      variables: {'option': '$optionId', 'pageSize': sellerScanLimit},
+    );
+    final products = data['products'];
+    if (products is! Map<String, dynamic>) return null;
+    final items = products['items'] is List ? products['items'] as List : const [];
+    final total = hmInt(products['total_count']) ?? items.length;
+    if (total > items.length) return null;
+    final sellers = <String>{
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          hmString((item['hm_seller'] as Map<String, dynamic>?)?['code']) ??
+              '',
+    };
+    return sellers.length;
+  }
+
   /// Every enabled brand of this store view, in admin order. Throws
   /// [HubAppMissing] without the Hub Market App API.
   Future<List<Brand>> fetchBrands() async {
