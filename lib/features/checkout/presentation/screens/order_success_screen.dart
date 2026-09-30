@@ -6,8 +6,12 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
+import '../../../marketplace/domain/seller_groups.dart';
+import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../../domain/checkout.dart';
 import '../widgets/checkout_parts.dart';
@@ -20,6 +24,7 @@ class OrderPlacedArgs {
     this.firstName,
     this.total,
     this.payment,
+    this.packages = const <PlacedPackage>[],
   });
 
   final String orderNumber;
@@ -30,12 +35,40 @@ class OrderPlacedArgs {
   /// The grand total Magento charged.
   final Money? total;
   final PaymentMethodOption? payment;
+
+  /// One per store the order ships from ([placedPackagesOf]); empty without
+  /// HubApp, whose cart lines name no seller.
+  final List<PlacedPackage> packages;
 }
 
-/// 19 Order placed: the tick, the order number, how it is paid, then Track
-/// order / Continue shopping. The design's per-store "Arriving in N packages"
-/// list waits for store grouping and delivery estimates the backend doesn't
-/// provide yet.
+/// One store's share of a placed order — a package of its own when it ships.
+class PlacedPackage {
+  const PlacedPackage({required this.seller, required this.itemCount});
+
+  /// Null for lines the backend named no seller for.
+  final HmSellerSummary? seller;
+
+  /// Units of the store's lines.
+  final int itemCount;
+}
+
+/// The stores [cart] ships from, read from its lines' `hm_seller` before
+/// `placeOrder` consumes it — in the order the cart groups them (Figma 16).
+/// Empty when no line names a seller (Build 1).
+List<PlacedPackage> placedPackagesOf(Cart cart) => [
+  for (final group
+      in groupBySeller<CartItem>(cart.items, (item) => item.seller) ??
+          const <SellerGroup<CartItem>>[])
+    PlacedPackage(
+      seller: group.seller,
+      itemCount: group.items.fold(0, (sum, item) => sum + item.quantity),
+    ),
+];
+
+/// 19 Order placed: the tick, the order number, how it is paid, "Arriving in
+/// N packages" with the stores the order ships from (HubApp), then Track
+/// order (this order) / Continue shopping. The frame's per-package delivery
+/// estimates need data the backend doesn't provide yet.
 class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({super.key, required this.args});
 
@@ -114,6 +147,10 @@ class OrderSuccessScreen extends StatelessWidget {
                       ],
                       // Store credit the order used (HubAppAccount).
                       _StoreCreditRow(orderNumber: args.orderNumber),
+                      if (args.packages.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _PackagesCard(packages: args.packages),
+                      ],
                     ],
                   ),
                 ),
@@ -123,9 +160,12 @@ class OrderSuccessScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // This order, with My Orders beneath it.
                     FilledButton(
                       style: checkoutButtonStyle(context),
-                      onPressed: () => context.go(AppRoutes.orders),
+                      onPressed: () => context.go(
+                        AppRoutes.orderByNumber(args.orderNumber),
+                      ),
                       child: Text(l10n.orderPlacedTrack),
                     ),
                     const SizedBox(height: 8),
@@ -266,6 +306,115 @@ class _PaymentRow extends StatelessWidget {
               text,
               style: TextStyle(fontSize: 14, color: context.scaffoldHeading),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Arriving in 2 packages": one row per store the order ships from — its
+/// logo, name and ✓, and how many items it sends.
+class _PackagesCard extends StatelessWidget {
+  const _PackagesCard({required this.packages});
+
+  final List<PlacedPackage> packages;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      decoration: BoxDecoration(
+        color: context.isDarkMode ? Colors.white10 : AppColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 20,
+                color: context.scaffoldHeading,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.orderPlacedPackages(packages.length),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: context.scaffoldHeading,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (var i = 0; i < packages.length; i++)
+            _PackageRow(index: i + 1, package: packages[i]),
+        ],
+      ),
+    );
+  }
+}
+
+class _PackageRow extends StatelessWidget {
+  const _PackageRow({required this.index, required this.package});
+
+  /// 1-based, as the order detail numbers its packages.
+  final int index;
+  final PlacedPackage package;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final seller = package.seller;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          if (seller != null)
+            SellerLogo(seller: seller)
+          else
+            SizedBox(
+              width: 28,
+              child: Icon(
+                Icons.inventory_2_outlined,
+                size: 18,
+                color: context.scaffoldMuted,
+              ),
+            ),
+          const SizedBox(width: 10),
+          // The name gives way (ellipsis) to the item count.
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    seller?.name ?? l10n.orderPackageTitleNoStore(index),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: context.scaffoldHeading,
+                    ),
+                  ),
+                ),
+                if (seller != null && !seller.isMarketplace) ...[
+                  const SizedBox(width: 6),
+                  const SellerVerifiedIcon(),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            l10n.orderItemCount(package.itemCount),
+            style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
           ),
         ],
       ),

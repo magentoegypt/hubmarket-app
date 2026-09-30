@@ -1169,6 +1169,14 @@
     }
   },
   "orderPlacedTrack": "Track order",
+  "orderPlacedPackages": "{count, plural, =1{Arriving in 1 package} other{Arriving in {count} packages}}",
+  "@orderPlacedPackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",

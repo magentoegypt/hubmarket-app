@@ -738,6 +738,7 @@
   "orderPlacedPayWith": "ادفع {amount} عبر {method}",
   "orderPlacedPaidWithCredit": "تم دفع {amount} من رصيدك",
   "orderPlacedTrack": "تتبع الطلب",
+  "orderPlacedPackages": "{count, plural, =1{يصل طلبك في طرد واحد} =2{يصل طلبك في طردين} few{يصل طلبك في {count} طرود} many{يصل طلبك في {count} طردًا} other{يصل طلبك في {count} طرد}}",
   "priceFrom": "ابتداءً من",
   "productAddToCart": "أضف إلى السلة",
   "productOutOfStock": "غير متوفّر",
