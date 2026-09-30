@@ -17,6 +17,7 @@ import '../../store_credit/presentation/store_credit_providers.dart';
 import '../../returns/presentation/returns_providers.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
+import '../data/guest_order_store.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -465,58 +466,80 @@ class _AccountTile extends StatelessWidget {
   }
 }
 
-class _Guest extends StatelessWidget {
+/// Signed out: sign in / create account, and the guest's way back to their
+/// orders — the lookup by order number, e-mail and last name (Figma 26),
+/// and, once this device has placed or looked one up, My Orders (the orders
+/// the device remembers, see `GuestOrderStore`).
+class _Guest extends ConsumerWidget {
   const _Guest();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.surfaceTint,
-              child: Icon(
-                Icons.person_outline,
-                size: 48,
-                color: AppColors.brandPrimary,
+    final hasGuestOrders = ref.watch(guestOrderStoreProvider).isNotEmpty;
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          child: Column(
+            children: [
+              const CircleAvatar(
+                radius: 48,
+                backgroundColor: AppColors.surfaceTint,
+                child: Icon(
+                  Icons.person_outline,
+                  size: 48,
+                  color: AppColors.brandPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              l10n.accountGuestTitle,
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.accountGuestBody,
-              style: TextStyle(color: context.scaffoldMuted),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => context.push(AppRoutes.signIn),
-                child: Text(l10n.authSignInTitle),
+              const SizedBox(height: 20),
+              Text(
+                l10n.accountGuestTitle,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => context.push(AppRoutes.signUp),
-                child: Text(l10n.authSignUpTitle),
+              const SizedBox(height: 8),
+              Text(
+                l10n.accountGuestBody,
+                style: TextStyle(color: context.scaffoldMuted),
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => context.push(AppRoutes.signIn),
+                  child: Text(l10n.authSignInTitle),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => context.push(AppRoutes.signUp),
+                  child: Text(l10n.authSignUpTitle),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+        const _AccountBand(),
+        if (hasGuestOrders) ...[
+          _AccountTile(
+            icon: Icons.receipt_long_outlined,
+            label: l10n.accountOrders,
+            onTap: () => context.push(AppRoutes.orders),
+          ),
+          const _TileDivider(),
+        ],
+        _AccountTile(
+          icon: Icons.local_shipping_outlined,
+          label: l10n.accountTrackOrder,
+          onTap: () => context.push(AppRoutes.guestTrackOrder),
+        ),
+        const _AccountBand(),
+      ],
     );
   }
 }

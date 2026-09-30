@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -125,6 +127,39 @@ void main() {
     await tester.tap(find.text(en.storesTitle));
     await tester.pumpAndSettle();
     expect(find.text('route ${AppRoutes.stores}'), findsOneWidget);
+  });
+
+  testWidgets('a guest can track an order', (tester) async {
+    await _pump(tester);
+    // Nothing remembered on this device yet: no empty My Orders.
+    expect(find.text(en.accountOrders), findsNothing);
+
+    await tester.tap(find.text(en.accountTrackOrder));
+    await tester.pumpAndSettle();
+    expect(find.text('route ${AppRoutes.guestTrackOrder}'), findsOneWidget);
+  });
+
+  testWidgets("a guest's remembered orders are under My Orders", (
+    tester,
+  ) async {
+    final cache = FakeLocalCache()
+      ..writeString(
+        'guest_orders',
+        jsonEncode([
+          {'number': '2000000037', 'token': 'order-token'},
+        ]),
+      );
+    await _pump(tester, cache: cache);
+    expect(find.text(en.accountTrackOrder), findsOneWidget);
+
+    await tester.tap(find.text(en.accountOrders));
+    await tester.pumpAndSettle();
+    expect(find.text('route ${AppRoutes.orders}'), findsOneWidget);
+  });
+
+  testWidgets('a customer has no guest lookup row', (tester) async {
+    await _pump(tester, token: 'persisted');
+    expect(find.text(en.accountTrackOrder), findsNothing);
   });
 
   testWidgets('Build 1 has none of the Hub Market App lists', (tester) async {

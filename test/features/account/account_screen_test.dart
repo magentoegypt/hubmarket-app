@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
@@ -37,6 +40,7 @@ Widget _harness({
   String locale = 'en',
   bool push = false,
   bool newsletter = true,
+  FakeLocalCache? cache,
 }) {
   final router = GoRouter(
     initialLocation: '/account',
@@ -51,13 +55,18 @@ Widget _harness({
         '/signup',
       ])
         GoRoute(path: p, builder: (_, __) => const Scaffold()),
+      for (final p in [AppRoutes.orders, AppRoutes.guestTrackOrder])
+        GoRoute(
+          path: p,
+          builder: (_, __) => Scaffold(body: Text('route $p')),
+        ),
     ],
   );
   return ProviderScope(
     overrides: [
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore(token)),
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-      localCacheProvider.overrideWithValue(FakeLocalCache()),
+      localCacheProvider.overrideWithValue(cache ?? FakeLocalCache()),
       localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
       catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
       storeContactProvider.overrideWithValue(_testContact),
@@ -88,6 +97,15 @@ Widget _harness({
   );
 }
 
+/// A device that placed guest order 2000000037 (see `GuestOrderStore`).
+FakeLocalCache _cacheWithGuestOrder() => FakeLocalCache()
+  ..writeString(
+    'guest_orders',
+    jsonEncode([
+      {'number': '2000000037', 'token': 'order-token'},
+    ]),
+  );
+
 void main() {
   testWidgets('guest sees sign-in / create-account prompts', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
@@ -99,6 +117,52 @@ void main() {
     expect(find.text('Your Hub Market account'), findsOneWidget);
     expect(find.text('Sign In'), findsWidgets);
     expect(find.text('Create Account'), findsWidgets);
+  });
+
+  group('a guest gets back to their orders', () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    final ar = lookupAppLocalizations(const Locale('ar'));
+
+    testWidgets('Track an order opens the lookup', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_harness(token: null));
+      await tester.pumpAndSettle();
+      // Nothing remembered on this device yet: no empty My Orders.
+      expect(find.text(en.accountOrders), findsNothing);
+
+      await tester.tap(find.text(en.accountTrackOrder));
+      await tester.pumpAndSettle();
+      expect(find.text('route ${AppRoutes.guestTrackOrder}'), findsOneWidget);
+    });
+
+    testWidgets('My Orders lists the orders this device remembers', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _harness(token: null, cache: _cacheWithGuestOrder()),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(en.accountTrackOrder), findsOneWidget);
+
+      await tester.tap(find.text(en.accountOrders));
+      await tester.pumpAndSettle();
+      expect(find.text('route ${AppRoutes.orders}'), findsOneWidget);
+    });
+
+    test('the FAQ sends guests to these rows', () {
+      for (final l10n in [en, ar]) {
+        expect(l10n.helpA7, contains(l10n.accountTrackOrder));
+        expect(
+          l10n.helpA7.toLowerCase(),
+          contains(l10n.accountOrders.toLowerCase()),
+        );
+      }
+    });
   });
 
   testWidgets('authenticated session shows the customer and sign-out', (
