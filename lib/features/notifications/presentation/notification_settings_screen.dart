@@ -22,7 +22,7 @@ import 'notification_settings_controller.dart';
 /// * Push shows only when FCM is available ([pushNotificationsAvailableProvider]);
 ///   Hub Market has no Firebase config yet, so today it is hidden. Only the
 ///   promotions topic exists — per-type order / return / price-drop pushes
-///   need device tokens on the backend (`BackendCapabilities.pushDeviceTokens`).
+///   need the device registered with the backend (`DeviceTokenSync`).
 /// * The newsletter is the account's `is_subscribed`, shown for a signed-in
 ///   customer when storeConfig `newsletter_enabled` is on.
 /// * The frame's SMS section is left out: the backend has no SMS preferences.

@@ -14,6 +14,7 @@ import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/config/store_timezone.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -41,6 +42,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
+import '../../support/hubapp_fakes.dart';
 
 /// Renders the P1 stream-B screens — Figma 15, 20f, 21b, 20h, 27, 28 and 20b
 /// — in English and Arabic to `build/test_screens/` for comparison with the
@@ -225,6 +227,9 @@ Future<void> _render(
       storeTimezoneProvider.overrideWith((ref) async => 'Asia/Dubai'),
       appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
       pushNotificationsAvailableProvider.overrideWithValue(push),
+      // Build 1: no Hub Market App; the P1 frames predate store credit and
+      // returns.
+      hubAppOverride(const HubAppState.unavailable()),
     ],
   );
   addTearDown(container.dispose);

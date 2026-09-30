@@ -7,6 +7,7 @@ import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/core/app_info.dart';
 import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
@@ -18,6 +19,7 @@ import 'package:hubmarket_app/features/cms/domain/faq.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/hubapp_fakes.dart';
 
 /// What Hub Market publishes today: a WhatsApp link (from the footer CMS
 /// block) and nothing else.
@@ -79,6 +81,9 @@ Future<void> _pump(
           account ?? FakeAccountRepository(),
         ),
         appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
+        // Build 1 backend: no HubApp, so the FAQ keeps its Build 1 returns
+        // answer (the in-app one is covered by the returns tests).
+        hubAppOverride(const HubAppState.unavailable()),
       ],
       child: MaterialApp.router(
         routerConfig: router,

@@ -97,6 +97,17 @@ class AuthError {
 
   static final List<({AuthErrorKind kind, List<RegExp> patterns})> _rules = [
     (
+      // HubAppAccount's one answer to every refused sign-in code ("That code
+      // is incorrect or has expired. Check it, or ask for a new code."): it
+      // doesn't say which, so it reads as the more likely of the two, before
+      // the "expired" rule claims it.
+      kind: AuthErrorKind.invalidCode,
+      patterns: [
+        RegExp(r'incorrect or has expired'),
+        RegExp(r'غير صحيح أو انتهت صلاحيته'),
+      ],
+    ),
+    (
       kind: AuthErrorKind.tooManyAttempts,
       patterns: [
         RegExp(r'too (much|many)'), // "You are sending OTP too much times."
@@ -104,6 +115,8 @@ class AuthError {
         RegExp(r'أكثر من مرة'), // Vnecoms: لقد قمت بارسال كود التحقق أكثر من مرة
         RegExp(r'محاولات كثيرة|عدد كبير من المحاولات'),
         RegExp(r'يرجى الانتظار \d+|انتظر \d+'),
+        // HubAppAccount's send limits: "طلبات رموز كثيرة جدًا. …"
+        RegExp(r'طلبات رموز كثيرة'),
       ],
     ),
     (
@@ -150,6 +163,9 @@ class AuthError {
         RegExp(r'customer not found'),
         RegExp(r'لم يتم العثور على (رقم الهاتف|العميل)'),
         RegExp(r'ليس مرتبط'),
+        // HubAppAccount, when set to reveal unknown numbers.
+        RegExp(r'no account uses this mobile number'),
+        RegExp(r'لا يوجد حساب يستخدم'),
       ],
     ),
     (

@@ -8,6 +8,8 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
 import '../../../marketplace/domain/seller_groups.dart';
+import '../../../returns/presentation/widgets/return_items_button.dart';
+import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../../domain/order.dart';
 import '../order_actions.dart';
 import '../order_format.dart';
@@ -63,6 +65,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               label: Text(l10n.orderReorder),
             ),
           ),
+          // Return items (Figma 22), when the order has something returnable.
+          ReturnItemsButton(order: order),
           const SizedBox(height: 24),
 
           _SectionTitle(l10n.orderItemsSection),
@@ -92,6 +96,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             ),
           if (order.shippingAmount != null)
             _TotalRow(label: l10n.orderShippingLabel, amount: order.shippingAmount!),
+          // Store credit the order used (HubAppAccount); customers only.
+          if (!order.placedAsGuest)
+            _StoreCreditTotalRow(orderNumber: order.number),
           if (order.total != null)
             _TotalRow(label: l10n.cartTotal, amount: order.total!, emphasize: true),
 
@@ -383,6 +390,25 @@ class _TimelineRow extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// "Store credit −AED 23.00" (`OrderTotal.hm_store_credit`); nothing while
+/// store credit is off or the order used none.
+class _StoreCreditTotalRow extends ConsumerWidget {
+  const _StoreCreditTotalRow({required this.orderNumber});
+
+  final String orderNumber;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final credit = ref.watch(orderStoreCreditProvider(orderNumber)).valueOrNull;
+    if (credit == null) return const SizedBox.shrink();
+    return _TotalRow(
+      label: AppLocalizations.of(context).checkoutStoreCredit,
+      amount: credit,
+      negative: true,
+    );
+  }
 }
 
 class _TotalRow extends StatelessWidget {

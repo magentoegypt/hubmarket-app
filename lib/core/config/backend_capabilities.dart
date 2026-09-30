@@ -17,16 +17,16 @@ class BackendCapabilities {
   const BackendCapabilities({
     this.whatsappOtpLogin = false,
     this.guestCheckoutOtp = false,
-    this.pushDeviceTokens = false,
   });
 
   /// Passwordless sign-in with a WhatsApp code.
   ///
   /// Backed by `MagentoEgypt_SmsExtend`'s REST pair
-  /// `POST /V1/whatsapp/otp/{send,verify}` with `type: LOGIN` — the only
-  /// endpoint on this backend that answers a verified code with a customer
-  /// token (see `WhatsAppOtpApi`). Off hides the Phone tab on sign-in and
-  /// leaves e-mail + password.
+  /// `POST /V1/whatsapp/otp/{send,verify}` with `type: LOGIN`, which answers
+  /// a verified code with a customer token (see `WhatsAppOtpApi`), or — once
+  /// the Hub Market App's account module is deployed — by its GraphQL pair
+  /// `hmSendWhatsAppCode` / `hmSignInWithWhatsAppCode` (`HubAppAccountFeatures`).
+  /// Off hides the Phone tab on sign-in and leaves e-mail + password.
   final bool whatsappOtpLogin;
 
   /// Guests confirm the delivery phone with a WhatsApp code before Place Order
@@ -38,12 +38,9 @@ class BackendCapabilities {
   /// be friction with no server-side effect.
   final bool guestCheckoutOtp;
 
-  /// Binding this device's FCM token to the customer, for pushes addressed to
-  /// one person (order updates) rather than a topic. Needs a
-  /// register/remove-device endpoint; Hub Market has none yet, so the app
-  /// neither fetches the token for it nor calls one. Topic pushes (the
-  /// promotions opt-in) don't depend on this.
-  final bool pushDeviceTokens;
+  // Binding this device's FCM token to the customer is no longer a build-time
+  // switch: it follows the backend (HubAppAccount's hmRegisterDevice, see
+  // `HubAppAccountFeatures.pushDevices`) and FCM — `DeviceTokenSync`.
 
   /// What the Hub Market backend supports today.
   static const BackendCapabilities hubMarket = BackendCapabilities(

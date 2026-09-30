@@ -53,26 +53,14 @@ Future<void> bootstrap() async {
   unawaited(
     NotificationService.instance.init().then((_) {
       applyNotificationTopics(cache);
-      // Register this device's FCM token with the backend (launch heartbeat)
-      // and on every token rotation. No-op until FCM is configured and the
-      // backend has a device-token endpoint (BackendCapabilities).
-      container.read(deviceTokenSyncProvider).register();
-      NotificationService.instance.onTokenRefresh.listen(
-        (_) => container.read(deviceTokenSyncProvider).register(),
+      // Register this device's FCM token with the backend at launch, on every
+      // token rotation and store/language switch (hmRegisterDevice). Dormant
+      // until FCM is configured and the backend takes tokens (HubAppAccount).
+      startDeviceTokenSync(
+        container,
+        tokenRefresh: NotificationService.instance.onTokenRefresh,
       );
     }),
-  );
-
-  // Re-register the token when the store/language changes, so future pushes
-  // localise to the new view. (Wired here, not in the core store controller,
-  // to keep core free of feature dependencies.)
-  container.listen<String>(
-    storeControllerProvider.select((s) => s.activeLocale),
-    (previous, next) {
-      if (previous != null && previous != next) {
-        container.read(deviceTokenSyncProvider).register();
-      }
-    },
   );
 
   runApp(

@@ -3,11 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/config/store_timezone.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/order_detail_screen.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
+
+import '../../support/hubapp_fakes.dart';
 
 class _FakeAccountRepo implements AccountRepository {
   int calls = 0;
@@ -77,6 +80,8 @@ void main() {
           // test never reaches the network for storeConfig.
           overrides: [
             storeTimezoneProvider.overrideWith((ref) async => 'Asia/Dubai'),
+            // Build 1: no Hub Market App (no store-credit lookup).
+            hubAppOverride(const HubAppState.unavailable()),
           ],
           child: MaterialApp(
             localizationsDelegates: const [
