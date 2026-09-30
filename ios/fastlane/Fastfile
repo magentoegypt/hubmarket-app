@@ -1,6 +1,6 @@
 default_platform(:ios)
 
-APP_ID = "com.zoonze.shop"
+APP_ID = "com.hubmarket.app"
 
 # App Store Connect API key (no Apple ID / 2FA needed). Values come from the
 # APP_STORE_CONNECT_* GitHub Actions secrets; the key content is base64.

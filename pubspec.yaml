@@ -60,9 +60,9 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
   # GraphQL codegen (Phase 1): typed Dart from .graphql operation files against
-  # the live-introspected lib/core/graphql/schema.graphql (produced by
-  # tool/introspect.sh → tool/json_to_sdl.mjs). State stays plain Riverpod, so
-  # no riverpod_generator. Run: dart run build_runner build --delete-conflicting-outputs
+  # the live-introspected lib/core/graphql/schema.graphql (written by
+  # `python tool/introspect_to_sdl.py`). State stays plain Riverpod, so no
+  # riverpod_generator. Run: dart run build_runner build --delete-conflicting-outputs
   build_runner: ^2.4.0
   graphql_codegen: ^0.14.0
 

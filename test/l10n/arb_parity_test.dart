@@ -80,5 +80,4 @@ bool _usesPlaceholder(String message, String name) =>
     RegExp('\\{\\s*${RegExp.escape(name)}\\s*[,}]').hasMatch(message);
 
 bool _isPlural(Object? message) =>
-    message is String &&
-    RegExp(r'\{\s*\w+\s*,\s*plural\s*,').hasMatch(message);
+    message is String && RegExp(r'\{\s*\w+\s*,\s*plural\s*,').hasMatch(message);

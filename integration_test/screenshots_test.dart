@@ -77,8 +77,11 @@ void main() {
     // Ordered as they should appear on the product page — Apple shows the
     // first three on the install sheet.
     await shot('01-home', '/home', wait: 10);
-    await shot('02-category', '/category/Mw==', wait: 12); // Fragrance, 1796
-    await shot('03-product', '/product/3616306115934', wait: 12); // Gucci Bloom
+    // Live Hub Market data (checked 30 Sep 2026): the Fashion category (uid
+    // MTQw, "أزياء" in Arabic) and one of its in-stock simple products,
+    // "Square-Neck Dress with Lapel", which has three gallery images.
+    await shot('02-category', '/category/MTQw', wait: 12);
+    await shot('03-product', '/product/dress-code-2156', wait: 12);
     await shot('04-categories', '/categories', wait: 8);
     await shot('05-brands', '/brands', wait: 10);
     await shot('06-wishlist', '/wishlist', wait: 6);
