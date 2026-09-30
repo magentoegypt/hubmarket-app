@@ -28,21 +28,20 @@ String storeJoinedLabel(BuildContext context, DateTime joined) {
   return '$month ${joined.year}';
 }
 
-/// A count with Western digits and grouping ("1,240").
-String storeCount(int value) =>
-    NumberFormat.decimalPattern('en_US').format(value);
-
-/// Figma 13b "About": the seller's About text, the numbers (products,
-/// dispatch, rating, reviews, joining date), a summary of the policies and the
-/// categories the seller's products are in. Sections without data are left
-/// out; the frame's Sales figure and "Call" button have no source in the
-/// seller API, so they are too.
+/// Figma 13b "About": the seller's About text, the numbers (products, sales,
+/// dispatch, rating, reviews, joining date), a summary of the policies, the
+/// categories the seller's products are in and "Call" the seller. Sections
+/// without data are left out: the Sales figure and Call come only while the
+/// server lists HubAppVendors' P3.1 fields and the website's store page
+/// shows them (its sales count and telephone).
 class StoreAboutTab extends ConsumerWidget {
   const StoreAboutTab({
     super.key,
     required this.profile,
     required this.onPolicies,
     required this.onCategory,
+    this.salesCount,
+    this.onCall,
   });
 
   final StoreProfile profile;
@@ -52,6 +51,12 @@ class StoreAboutTab extends ConsumerWidget {
 
   /// Lists the seller's products in one of its categories.
   final ValueChanged<SearchCategory> onCategory;
+
+  /// The website's "N Sales"; null leaves the figure out.
+  final int? salesCount;
+
+  /// Dials the seller; null leaves the button out.
+  final VoidCallback? onCall;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,6 +70,8 @@ class StoreAboutTab extends ConsumerWidget {
 
     final stats = <StoreStat>[
       StoreStat(storeCount(store.productCount), l10n.storeStatProductsListed),
+      if (salesCount case final sales?)
+        StoreStat(storeCount(sales), l10n.storeStatSales),
       if (store.dispatchTime case final dispatch?)
         StoreStat(dispatch.label, l10n.storeStatDispatch),
       if (store.isRated)
@@ -126,6 +133,19 @@ class StoreAboutTab extends ConsumerWidget {
                     onTap: () => onCategory(category),
                   ),
               ],
+            ),
+          ),
+        if (onCall case final call?)
+          SizedBox(
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: call,
+              icon: const Icon(Icons.phone_outlined, size: 20),
+              label: Text(
+                l10n.storeCallVendor(store.name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
       ],

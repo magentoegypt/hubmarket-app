@@ -5,9 +5,11 @@ import '../../../core/store/store_controller.dart';
 import '../../catalog/domain/category.dart';
 import '../../catalog/domain/search_facets.dart';
 import '../../catalog/presentation/catalog_providers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../data/store_products_repository.dart';
 import '../data/stores_repository.dart';
 import '../domain/store.dart';
+import '../domain/store_review.dart';
 
 /// Whether the stores screens may run: the Hub Market App API answered
 /// ([HubAppStatus.available]). Unknown (still probing, or offline) and
@@ -21,6 +23,23 @@ import '../domain/store.dart';
 final storesAvailableProvider = Provider<bool>(
   (ref) => ref.watch(hubAppStatusProvider) == HubAppStatus.available,
 );
+
+/// Whether the store screens may use the P3.1 seller fields: the Reviews tab,
+/// Contact vendor and the location line, the Sales figure and Call, each
+/// card's category, the chips' counts. On only while the server lists the
+/// `vendors` capability ([MarketplaceFeatures.storeExtras]); off, the store
+/// screens are the P3 ones.
+final storeExtrasProvider = Provider<bool>(
+  (ref) => ref.watch(marketplaceFeaturesProvider.select((f) => f.storeExtras)),
+);
+
+/// Figma 12's chips with their seller counts (`hmStoreCategories`). Only
+/// watched while [storeExtrasProvider] is on.
+final storeCategoryChipsProvider =
+    FutureProvider.autoDispose<StoreCategoryChips>((ref) {
+      ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
+      return ref.watch(storesRepositoryProvider).fetchStoreCategories();
+    });
 
 /// One seller's store page (Figma 13 / 13b); null for a code that isn't an
 /// approved seller. Reloads on a store-view switch — the names, texts and

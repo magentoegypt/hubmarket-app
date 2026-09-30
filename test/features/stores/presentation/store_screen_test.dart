@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
+import 'package:hubmarket_app/core/util/launch.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/product_card.dart';
 
 import '../../../support/hubapp_fakes.dart';
@@ -317,5 +319,221 @@ void main() {
     expect(find.text('مدة التجهيز المعتادة'), findsOneWidget);
     expect(find.text('يونيو 2023'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  group('with the P3.1 seller fields (the server lists vendors)', () {
+    const vendors = HubAppState.available(kVendorsHmAppConfig);
+
+    /// Records what "Contact vendor" and "Call" would open.
+    List<Uri> recordLaunches(List<Override> overrides) {
+      final launched = <Uri>[];
+      overrides.add(
+        externalUriLauncherProvider.overrideWithValue((uri) async {
+          launched.add(uri);
+          return true;
+        }),
+      );
+      return launched;
+    }
+
+    testWidgets('13: the location line, Contact vendor and a Reviews tab', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1400);
+      final overrides = <Override>[];
+      final launched = recordLaunches(overrides);
+      final backend = FakeStoresBackend(storesAnswers());
+      await tester.pumpWidget(
+        storesHarness(
+          location: '/store/MIA',
+          backend: backend,
+          hubApp: vendors,
+          overrides: overrides,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(backend.of('HmStore').single.document, contains('HmStorePageExtras'));
+      // The website's location line, then the seller's category (Figma 13).
+      expect(
+        find.text('Dubai, United Arab Emirates · Furniture'),
+        findsOneWidget,
+      );
+      expect(find.text('Reviews'), findsOneWidget);
+      // Tabs in the frame's order.
+      final products = tester.getRect(find.text('Products').last);
+      final reviews = tester.getRect(find.text('Reviews'));
+      final about = tester.getRect(find.text('About'));
+      expect(products.left, lessThan(reviews.left));
+      expect(reviews.left, lessThan(about.left));
+      // The product cards name the seller, as every listing does now.
+      expect(backend.of('Products').last.document, contains('...HmCardSeller'));
+      expect(
+        find.descendant(
+          of: find.byType(ProductCard),
+          matching: find.text('MIA CO'),
+        ),
+        findsNWidgets(4),
+      );
+
+      // Contact vendor dials the number the website's button dials.
+      await tester.tap(find.text('Contact vendor'));
+      await tester.pumpAndSettle();
+      expect(launched, [Uri.parse('tel:+971501234567')]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Reviews: the rating, this store view\'s reviews and their products', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1600);
+      final backend = FakeStoresBackend(storesAnswers());
+      await tester.pumpWidget(
+        storesHarness(location: '/store/MIA', backend: backend, hubApp: vendors),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Reviews'));
+      await tester.pumpAndSettle();
+
+      expect(backend.of('HmStoreReviews').single.variables, {
+        'code': 'MIA',
+        'pageSize': 20,
+        'currentPage': 1,
+      });
+      // The header's figures: every approved review of the seller's products.
+      expect(find.text('4.8'), findsOneWidget);
+      expect(find.text('126 reviews'), findsWidgets);
+      expect(find.text('Sara K.'), findsOneWidget);
+      expect(find.text('Great sofa'), findsOneWidget);
+      expect(
+        find.text('Comfortable and well made, delivered on time.'),
+        findsOneWidget,
+      );
+      expect(find.text('20 Sep 2026'), findsOneWidget);
+      expect(find.text('Omar'), findsOneWidget);
+      expect(find.text('Old Lamp'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // A reviewed product the storefront lists opens its page …
+      await tester.tap(find.text('Corner Sofa Bed').last);
+      await tester.pumpAndSettle();
+      expect(find.text('PDP sofabed123'), findsOneWidget);
+    });
+
+    testWidgets('a product no longer listed is named, not opened', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1600);
+      await tester.pumpWidget(
+        storesHarness(
+          location: '/store/MIA',
+          backend: FakeStoresBackend(storesAnswers()),
+          hubApp: vendors,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reviews'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Old Lamp'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('PDP'), findsNothing);
+    });
+
+    testWidgets('reviews written only on the other store view: said so', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1400);
+      final backend = FakeStoresBackend(
+        (r) => r.operation == 'HmStoreReviews'
+            ? miaReviewsData(none: true)
+            : storesAnswers()(r),
+      );
+      await tester.pumpWidget(
+        storesHarness(location: '/store/MIA', backend: backend, hubApp: vendors),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reviews'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No reviews yet'), findsOneWidget);
+      expect(
+        find.text("This store's reviews were written in the other language."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('13b About: the Sales figure and Call', (tester) async {
+      await phoneSurface(tester, height: 2000);
+      final overrides = <Override>[];
+      final launched = recordLaunches(overrides);
+      await tester.pumpWidget(
+        storesHarness(
+          location: '/store/MIA',
+          backend: FakeStoresBackend(storesAnswers()),
+          hubApp: vendors,
+          overrides: overrides,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('About'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1,240'), findsOneWidget);
+      expect(find.text('Sales'), findsOneWidget);
+      await tester.tap(find.text('Call MIA CO'));
+      await tester.pumpAndSettle();
+      expect(launched, [Uri.parse('tel:+971501234567')]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('no phone published: no Contact vendor, no Call', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 2000);
+      final backend = FakeStoresBackend((r) {
+        final answer = storesAnswers()(r);
+        if (r.operation == 'HmStore') {
+          (answer as Map<String, dynamic>)['hmStore']['contact'] = null;
+        }
+        return answer;
+      });
+      await tester.pumpWidget(
+        storesHarness(location: '/store/MIA', backend: backend, hubApp: vendors),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Contact vendor'), findsNothing);
+      await tester.tap(find.text('About'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Call'), findsNothing);
+    });
+
+    testWidgets('Arabic: Contact vendor and the Reviews tab read right to left', (
+      tester,
+    ) async {
+      await phoneSurface(tester, height: 1400);
+      await tester.pumpWidget(
+        storesHarness(
+          location: '/store/MIA',
+          backend: FakeStoresBackend(storesAnswers(store: 'ar')),
+          hubApp: vendors,
+          locale: 'ar',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('تواصل مع البائع'), findsOneWidget);
+      expect(find.text('دبي، الإمارات العربية المتحدة · أثاث'), findsOneWidget);
+      final products = tester.getRect(find.text('المنتجات'));
+      final reviews = tester.getRect(find.text('التقييمات'));
+      expect(products.left, greaterThan(reviews.left));
+
+      await tester.tap(find.text('التقييمات'));
+      await tester.pumpAndSettle();
+      expect(find.text('سارة'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

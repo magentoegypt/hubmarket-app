@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -14,6 +15,17 @@ import '../../domain/store.dart';
 /// Opens [store]'s page, handing over the card so the header paints at once.
 void openStore(BuildContext context, HmStoreCard store) =>
     context.push(AppRoutes.store(store.code), extra: store);
+
+/// A count with Western digits and grouping ("1,240").
+String storeCount(int value) =>
+    NumberFormat.decimalPattern('en_US').format(value);
+
+/// A seller card's detail line: its category, when the list carries one,
+/// before [detail] ("Furniture · 38 products").
+String storeCardDetail(HmStoreCard store, String detail) {
+  final category = store.categoryName;
+  return category == null ? detail : '$category · $detail';
+}
 
 /// A seller's round logo on white (Figma "logo"). A seller without a logo
 /// gets its initial in a tinted disc — the website's avatar fallback.
@@ -210,18 +222,23 @@ InlineSpan ratingSpan(
 }
 
 /// A 36 pt pill (Figma "Chip"): navy when [selected], outlined otherwise.
-/// As wide as its label, in a row or a wrap.
+/// As wide as its label, in a row or a wrap. A [count] follows the label in a
+/// lighter weight ("Furniture 3") and [semanticLabel] then reads it out.
 class StorePill extends StatelessWidget {
   const StorePill({
     super.key,
     required this.label,
     required this.onTap,
     this.selected = false,
+    this.count,
+    this.semanticLabel,
   });
 
   final String label;
   final VoidCallback onTap;
   final bool selected;
+  final int? count;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -230,28 +247,56 @@ class StorePill extends StatelessWidget {
           ? BorderSide.none
           : BorderSide(color: SearchStyle.chipBorder(context)),
     );
-    return Material(
-      color: selected
-          ? AppColors.brandPrimary
-          : (context.isDarkMode ? Colors.transparent : Colors.white),
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Center(
-            widthFactor: 1,
-            child: Text(
-              label,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 14,
-                height: 20 / 14,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : context.scaffoldHeading,
-              ),
+    final color = selected ? Colors.white : context.scaffoldHeading;
+    final text = Text(
+      label,
+      maxLines: 1,
+      style: TextStyle(
+        fontSize: 14,
+        height: 20 / 14,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    );
+    final count = this.count;
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      selected: selected,
+      excludeSemantics: semanticLabel != null,
+      child: Material(
+        color: selected
+            ? AppColors.brandPrimary
+            : (context.isDarkMode ? Colors.transparent : Colors.white),
+        shape: shape,
+        child: InkWell(
+          customBorder: shape,
+          onTap: onTap,
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Center(
+              widthFactor: 1,
+              child: count == null
+                  ? text
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        text,
+                        const SizedBox(width: 6),
+                        Text(
+                          storeCount(count),
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 16 / 12,
+                            fontWeight: FontWeight.w500,
+                            color: selected
+                                ? Colors.white70
+                                : context.scaffoldMuted,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
