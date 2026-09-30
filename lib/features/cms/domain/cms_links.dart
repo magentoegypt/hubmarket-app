@@ -31,6 +31,73 @@ class CmsLink {
   final String url;
 }
 
+/// The store's legal pages, as the footer block `hm_footer_legal` links them.
+enum LegalPage { privacy, cookies, terms }
+
+/// Which legal page [link] opens, read from its URL and label (English and
+/// Arabic). Privacy is checked first: its page's key,
+/// `privacy-policy-cookie-restriction-mode`, also names cookies. Anything
+/// else counts as terms — on the live store "Terms" / «الشروط» opens
+/// `customer-service`, whose URL says nothing about terms.
+LegalPage legalPageOf(CmsLink link) {
+  final url = link.url.toLowerCase();
+  final label = link.label.toLowerCase();
+  bool names(List<String> words) =>
+      words.any((w) => url.contains(w) || label.contains(w));
+  if (names(const ['privacy', 'خصوصي'])) return LegalPage.privacy;
+  if (names(const ['cookie', 'ارتباط', 'كوكي'])) return LegalPage.cookies;
+  return LegalPage.terms;
+}
+
+/// The link in [links] that opens [page], or null when the block has none.
+/// For terms, a link that names terms or conditions wins over one that is
+/// terms only by elimination.
+CmsLink? legalLinkFor(List<CmsLink> links, LegalPage page) {
+  final matches = [
+    for (final link in links)
+      if (legalPageOf(link) == page) link,
+  ];
+  if (page != LegalPage.terms) return matches.firstOrNull;
+  bool namesTerms(CmsLink link) {
+    final text = '${link.url} ${link.label}'.toLowerCase();
+    return const ['term', 'condition', 'شروط', 'أحكام'].any(text.contains);
+  }
+
+  return matches.where(namesTerms).firstOrNull ?? matches.firstOrNull;
+}
+
+/// One run of a sentence with legal links (see `LegalLinksText`): plain
+/// words, or words that open [page].
+typedef LegalTextPart = ({String text, LegalPage? page});
+
+final RegExp _legalTag = RegExp(
+  r'<(terms|privacy|cookies)>(.*?)</\1>',
+  dotAll: true,
+);
+
+/// Splits interface wording at its `<terms>…</terms>`, `<privacy>…</privacy>`
+/// and `<cookies>…</cookies>` pairs, as in
+/// `I agree to the <terms>Terms of Service</terms> and …`. Anything else, an
+/// unclosed tag included, stays as written.
+List<LegalTextPart> legalTextParts(String text) {
+  final parts = <LegalTextPart>[];
+  var start = 0;
+  for (final match in _legalTag.allMatches(text)) {
+    if (match.start > start) {
+      parts.add((text: text.substring(start, match.start), page: null));
+    }
+    parts.add((
+      text: match.group(2)!,
+      page: LegalPage.values.byName(match.group(1)!),
+    ));
+    start = match.end;
+  }
+  if (start < text.length) {
+    parts.add((text: text.substring(start), page: null));
+  }
+  return parts;
+}
+
 /// Every `<a href>` in [html] that has visible text, in document order.
 List<CmsLink> linksFromHtml(String html) {
   if (html.trim().isEmpty) return const <CmsLink>[];

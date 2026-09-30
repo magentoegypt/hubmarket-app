@@ -15,6 +15,8 @@ import 'package:hubmarket_app/features/auth/presentation/screens/reset_password_
 import 'package:hubmarket_app/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/verify_code_screen.dart';
+import 'package:hubmarket_app/features/cms/domain/cms_links.dart';
+import 'package:hubmarket_app/features/cms/presentation/cms_providers.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -35,6 +37,7 @@ class AuthHarness {
     FakeAuthRepository? repo,
     FakeAccountRepository? account,
     this.signedIn = false,
+    this.legalLinksBlock,
   }) : repo = repo ?? FakeAuthRepository(),
        account = account ?? FakeAccountRepository();
 
@@ -42,6 +45,11 @@ class AuthHarness {
   final FakeAuthRepository repo;
   final FakeAccountRepository account;
   final bool signedIn;
+
+  /// The `hm_footer_legal` block that links Register's terms; none by
+  /// default, so the terms row is plain text and a tap anywhere on it ticks
+  /// the box.
+  final String? legalLinksBlock;
   late final GoRouter router;
 
   /// What Sign in's `push` completed with, on the caller / Welcome stubs.
@@ -103,6 +111,11 @@ class AuthHarness {
               VerifyCodeScreen(flow: state.extra! as VerifyCodeFlow),
         ),
         GoRoute(
+          path: AppRoutes.cmsPage,
+          builder: (_, state) =>
+              Scaffold(body: Text('PAGE ${state.uri.queryParameters['url']}')),
+        ),
+        GoRoute(
           path: editMobileRoute,
           builder: (_, _) => const Scaffold(
             body: Padding(
@@ -133,6 +146,9 @@ class AuthHarness {
         ),
         authRepositoryProvider.overrideWithValue(repo),
         accountRepositoryProvider.overrideWithValue(account),
+        legalLinksProvider.overrideWith(
+          (ref) async => linksFromHtml(legalLinksBlock ?? ''),
+        ),
       ],
       child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
     );
