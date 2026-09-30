@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:hubmarket_app/core/config/free_shipping.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/network/connectivity.dart';
@@ -71,6 +72,53 @@ void main() {
       expect(state.error, isA<HubAppMissing>());
       expect(container.read(hmAppConfigProvider), isNull);
       expect(container.read(hubAppFlagProvider('returns')), isNull);
+    });
+
+    test('an older HubApp (no P3.1 fields) is still available, read with '
+        'the P2 document', () async {
+      final log = <Request>[];
+      final container = _container({
+        'HmAppConfig': hubAppMissingResponse('shipping', type: 'HmAppConfig'),
+        'HmAppConfigP2': {'hmAppConfig': hmAppConfigJson()},
+      }, log: log);
+
+      final state = await container.read(hubAppProvider.future);
+
+      expect(state.status, HubAppStatus.available);
+      expect(log.map(operationNameOf), [
+        'HmAppConfig',
+        'HmAppConfigP2',
+      ]);
+      expect(state.config!.shipping.freeOver, isNull);
+      expect(await container.read(freeShippingThresholdProvider.future), isNull);
+      expect(
+        HubAppConfigRepository.documentFor(
+          HmPlatform.ios,
+          base: HubAppConfigRepository.p2Document,
+        ),
+        allOf(contains('hmAppConfig(platform: IOS)'), isNot(contains('shipping'))),
+      );
+    });
+
+    test('the free-shipping threshold is hmAppConfig.shipping.free_over, '
+        'only while HubApp is available', () async {
+      final container = _container({
+        'HmAppConfig': {
+          'hmAppConfig': hmAppConfigJson(
+            shipping: {
+              'free_over': {'value': 50, 'currency': 'AED'},
+            },
+          ),
+        },
+      });
+      await container.read(hubAppProvider.future);
+      expect(await container.read(freeShippingThresholdProvider.future), 50.0);
+
+      final build1 = _container({
+        'HmAppConfig': hubAppMissingResponse('hmAppConfig'),
+      });
+      await build1.read(hubAppProvider.future);
+      expect(await build1.read(freeShippingThresholdProvider.future), isNull);
     });
 
     test('a network failure is unknown, and is not latched', () async {

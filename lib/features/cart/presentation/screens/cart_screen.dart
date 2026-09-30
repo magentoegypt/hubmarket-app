@@ -157,11 +157,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       onChangeQty: (q) => _controller.setQuantity(item.uid, q),
       onRemove: () => _controller.removeItem(item.uid),
     );
-    // Free-shipping threshold comes from the backend (Magento's Free Shipping
-    // "Minimum Order Amount") — never hardcoded. Null while loading or when the
-    // store doesn't publish one (Hub Market doesn't yet), in which case the
-    // banner/summary hide the free-shipping story and the delivery line falls
-    // back to "at checkout".
+    // Free-shipping threshold comes from the backend (`hmAppConfig.shipping
+    // .free_over`, the storefront's cart-rule figure) — never hardcoded. Null
+    // while loading, in Build 1, or when the store publishes none, in which
+    // case the banner/summary hide the free-shipping story and the delivery
+    // line falls back to "at checkout".
     final freeShipThreshold = ref
         .watch(freeShippingThresholdProvider)
         .valueOrNull;

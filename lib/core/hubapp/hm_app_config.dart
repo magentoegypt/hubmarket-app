@@ -15,6 +15,7 @@ class HmAppConfig {
     this.versions = const <HmVersionPolicy>[],
     this.maintenance = const HmMaintenance(),
     this.features = const <String, bool>{},
+    this.shipping = const HmShippingConfig(),
   });
 
   final String storeCode;
@@ -32,6 +33,10 @@ class HmAppConfig {
   /// Remote switches by code. A code the backend doesn't list is unset — see
   /// [flag].
   final Map<String, bool> features;
+
+  /// Shipping promises (the free-shipping threshold); empty from a backend
+  /// older than them.
+  final HmShippingConfig shipping;
 
   /// The switch [code] (`store_credit`, `returns`, `whatsapp_login`, `push`,
   /// …); null when the backend doesn't list it, so each feature picks its own
@@ -70,6 +75,32 @@ class HmAppConfig {
             if (hmString(item['code']) case final code?)
               code: item['enabled'] == true,
       },
+      shipping: HmShippingConfig.fromJson(json['shipping']),
+    );
+  }
+}
+
+/// `HmShippingConfig` — the store view's shipping promises.
+@immutable
+class HmShippingConfig {
+  const HmShippingConfig({this.freeOver, this.currency});
+
+  /// The cart subtotal that earns free shipping, the figure the storefront's
+  /// mini-cart counts down to (the lowest threshold of the store's coupon-free
+  /// free-shipping cart price rules); null when the store has none.
+  final double? freeOver;
+
+  /// [freeOver]'s currency, e.g. `AED`.
+  final String? currency;
+
+  static HmShippingConfig fromJson(Object? json) {
+    if (json is! Map<String, dynamic>) return const HmShippingConfig();
+    final freeOver = json['free_over'];
+    if (freeOver is! Map<String, dynamic>) return const HmShippingConfig();
+    final value = hmDouble(freeOver['value']);
+    return HmShippingConfig(
+      freeOver: value != null && value >= 0 ? value : null,
+      currency: hmString(freeOver['currency']),
     );
   }
 }
@@ -107,6 +138,7 @@ class HmAlgoliaConfig {
     required this.categoryIndex,
     required this.pageIndex,
     this.validUntil,
+    this.layout,
   });
 
   final String applicationId;
@@ -120,6 +152,10 @@ class HmAlgoliaConfig {
   final String productIndex;
   final String categoryIndex;
   final String pageIndex;
+
+  /// The storefront's search layout (facets, sorts, suggestions, …); null from
+  /// a backend older than it, which leaves the app to read it elsewhere.
+  final HmAlgoliaLayout? layout;
 
   /// Null without the application, the key or the products index.
   static HmAlgoliaConfig? fromJson(Object? json) {
@@ -139,6 +175,147 @@ class HmAlgoliaConfig {
       productIndex: products,
       categoryIndex: hmString(json['category_index']) ?? '',
       pageIndex: hmString(json['page_index']) ?? '',
+      layout: HmAlgoliaLayout.fromJson(json),
+    );
+  }
+}
+
+/// The search layout the storefront renders into `window.algoliaConfig` for
+/// a guest, as `hmAppConfig.algolia` carries it (`facets`, `sorts`,
+/// `suggestion_index`, …).
+@immutable
+class HmAlgoliaLayout {
+  const HmAlgoliaLayout({
+    this.facets = const <HmAlgoliaFacet>[],
+    this.sorts = const <HmAlgoliaSort>[],
+    this.suggestionIndex,
+    this.suggestionCount = 0,
+    this.currencyCode = '',
+    this.priceGroup = '',
+    this.maxValuesPerFacet = 0,
+    this.productSuggestions = 0,
+    this.categorySuggestions = 0,
+    this.pageSuggestions = 0,
+    this.categorySeparator = '',
+    this.categoriesOutsideMenu = false,
+  });
+
+  /// In the admin's order, with the store view's labels.
+  final List<HmAlgoliaFacet> facets;
+
+  /// The products index's sort replicas for guests, in the admin's order;
+  /// relevance is the products index itself.
+  final List<HmAlgoliaSort> sorts;
+
+  /// The query-suggestions index the storefront's autocomplete reads; null
+  /// when its suggestions are off.
+  final String? suggestionIndex;
+  final int suggestionCount;
+  final String currencyCode;
+  final String priceGroup;
+  final int maxValuesPerFacet;
+  final int productSuggestions;
+  final int categorySuggestions;
+  final int pageSuggestions;
+
+  /// As indexed, spaces included (` /// `).
+  final String categorySeparator;
+  final bool categoriesOutsideMenu;
+
+  /// Null when [json] (an `HmAlgoliaConfig`) carries no layout — a backend
+  /// older than it doesn't send `facets`.
+  static HmAlgoliaLayout? fromJson(Map<String, dynamic> json) {
+    final facets = json['facets'];
+    if (facets is! List) return null;
+    final sorts = json['sorts'];
+    final separator = json['category_separator'];
+    return HmAlgoliaLayout(
+      facets: [
+        for (final item in facets)
+          if (HmAlgoliaFacet.fromJson(item) case final facet?) facet,
+      ],
+      sorts: [
+        for (final item in sorts is List ? sorts : const [])
+          if (HmAlgoliaSort.fromJson(item) case final sort?) sort,
+      ],
+      suggestionIndex: hmString(json['suggestion_index']),
+      suggestionCount: _count(json['suggestion_count']),
+      currencyCode: hmString(json['currency_code']) ?? '',
+      priceGroup: hmString(json['price_group']) ?? '',
+      maxValuesPerFacet: _count(json['max_values_per_facet']),
+      productSuggestions: _count(json['product_suggestions']),
+      categorySuggestions: _count(json['category_suggestions']),
+      pageSuggestions: _count(json['page_suggestions']),
+      categorySeparator: separator is String ? separator : '',
+      categoriesOutsideMenu: json['categories_outside_menu'] == true,
+    );
+  }
+
+  static int _count(Object? value) {
+    final count = hmInt(value);
+    return count != null && count > 0 ? count : 0;
+  }
+}
+
+/// `HmAlgoliaFacet`.
+@immutable
+class HmAlgoliaFacet {
+  const HmAlgoliaFacet({
+    required this.attribute,
+    required this.type,
+    this.label = '',
+  });
+
+  /// `price`, `categories`, `mgs_brand`, …
+  final String attribute;
+
+  /// `slider`, `conjunctive`, `disjunctive` or `priceRanges`.
+  final String type;
+
+  /// In the store view's language; may be empty.
+  final String label;
+
+  static HmAlgoliaFacet? fromJson(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    final attribute = hmString(json['attribute']);
+    if (attribute == null) return null;
+    return HmAlgoliaFacet(
+      attribute: attribute,
+      type: hmString(json['type']) ?? '',
+      label: hmString(json['label']) ?? '',
+    );
+  }
+}
+
+/// `HmAlgoliaSort` — a sort replica of the products index.
+@immutable
+class HmAlgoliaSort {
+  const HmAlgoliaSort({
+    required this.index,
+    required this.attribute,
+    required this.descending,
+    this.label = '',
+  });
+
+  final String index;
+
+  /// `price`, `created_at`, …
+  final String attribute;
+  final bool descending;
+  final String label;
+
+  static HmAlgoliaSort? fromJson(Object? json) {
+    if (json is! Map<String, dynamic>) return null;
+    final index = hmString(json['index']);
+    final attribute = hmString(json['attribute']);
+    final direction = hmString(json['direction'])?.toUpperCase();
+    if (index == null || attribute == null) return null;
+    if (direction != 'ASC' && direction != 'DESC') return null;
+    return HmAlgoliaSort(
+      index: index,
+      attribute: attribute,
+      descending: direction == 'DESC',
+      label: hmString(json['label']) ?? '',
     );
   }
 }

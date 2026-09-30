@@ -5,6 +5,7 @@ Map<String, dynamic> hmAppConfigJson({
   String? minVersion = '1.0.0',
   String? latestVersion = '1.2.0',
   Map<String, dynamic>? algolia,
+  Map<String, dynamic>? shipping,
 }) => {
   'store_code': storeCode,
   'locale': storeCode == 'ar' ? 'ar_SA' : 'en_US',
@@ -40,4 +41,5 @@ Map<String, dynamic> hmAppConfigJson({
     {'code': 'store_credit', 'enabled': false},
     {'code': '', 'enabled': true},
   ],
+  if (shipping != null) 'shipping': shipping,
 };

@@ -24,8 +24,38 @@ class HubAppConfigRepository {
   /// `$platform: HmPlatform` variable: while the module is missing, a
   /// variable of an unknown type makes Magento answer HTTP 500 instead of
   /// "Cannot query field" (see [runHubAppQuery]).
+  ///
+  /// Carries the P3.1 fields too — the free-shipping threshold and the
+  /// storefront's search layout — so they cost no request of their own; a
+  /// backend without them is read with [p2Document] (see [fetch]).
   static const String document = r'''
 query HmAppConfig {
+  hmAppConfig(platform: ANDROID) {
+    store_code
+    locale
+    search { hint trending_terms }
+    algolia {
+      application_id search_api_key valid_until index_prefix
+      product_index category_index page_index
+      facets { attribute type label }
+      sorts { index attribute direction label }
+      suggestion_index suggestion_count currency_code price_group
+      max_values_per_facet product_suggestions category_suggestions
+      page_suggestions category_separator categories_outside_menu
+    }
+    contact { whatsapp_number whatsapp_url phone email hours }
+    version { platform min_version latest_version store_url message }
+    maintenance { enabled message retry_after_minutes }
+    features { code enabled }
+    shipping { free_over { value currency } }
+  }
+}
+''';
+
+  /// [document] as the first HubApp release (PR #22) answers it, without the
+  /// P3.1 fields: read when the module is there but older than this build.
+  static const String p2Document = r'''
+query HmAppConfigP2 {
   hmAppConfig(platform: ANDROID) {
     store_code
     locale
@@ -42,25 +72,41 @@ query HmAppConfig {
 }
 ''';
 
-  /// [document] for [platform]; without one the server returns every
-  /// platform's version policy and only the all-platform flags.
-  static String documentFor(HmPlatform? platform) => switch (platform) {
-    HmPlatform.android => document,
-    null => document.replaceFirst('(platform: ANDROID)', ''),
-    final other => document.replaceFirst(
-      '(platform: ANDROID)',
-      '(platform: ${other.wire})',
-    ),
-  };
+  /// [base] for [platform]; without one the server returns every platform's
+  /// version policy and only the all-platform flags.
+  static String documentFor(HmPlatform? platform, {String base = document}) =>
+      switch (platform) {
+        HmPlatform.android => base,
+        null => base.replaceFirst('(platform: ANDROID)', ''),
+        final other => base.replaceFirst(
+          '(platform: ANDROID)',
+          '(platform: ${other.wire})',
+        ),
+      };
 
   /// This store view's settings (the `Store` header). Throws [HubAppMissing]
   /// when the server has no `hmAppConfig`, a `Failure` for anything else.
+  ///
+  /// A server whose `hmAppConfig` lacks a field this build asks for — HubApp
+  /// deployed before the P3.1 additions — is asked again with [p2Document]:
+  /// the module is there, so the answer is Build 2 without those extras, not
+  /// "not deployed".
   Future<HmAppConfig> fetch({HmPlatform? platform}) async {
-    final data = await runHubAppQuery(
-      _client,
-      documentFor(platform),
-      timeout: timeout,
-    );
+    Map<String, dynamic> data;
+    try {
+      data = await runHubAppQuery(
+        _client,
+        documentFor(platform),
+        timeout: timeout,
+      );
+    } on HubAppMissing catch (missing) {
+      if (!isOlderModule(missing)) rethrow;
+      data = await runHubAppQuery(
+        _client,
+        documentFor(platform, base: p2Document),
+        timeout: timeout,
+      );
+    }
     final json = data['hmAppConfig'];
     try {
       if (json is Map<String, dynamic>) return HmAppConfig.fromJson(json);
@@ -71,6 +117,11 @@ query HmAppConfig {
     // a missing module.
     throw const Failure(FailureKind.server, detail: 'hmAppConfig is empty');
   }
+
+  /// Whether [missing] is about one of hmAppConfig's own fields (an older
+  /// HubApp) rather than `hmAppConfig` itself (no HubApp at all).
+  static bool isOlderModule(HubAppMissing missing) =>
+      !missing.message.contains('"hmAppConfig"');
 }
 
 final hubAppConfigRepositoryProvider = Provider<HubAppConfigRepository>(

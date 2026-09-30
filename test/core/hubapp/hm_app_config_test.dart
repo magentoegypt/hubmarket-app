@@ -79,6 +79,110 @@ void main() {
     test('no store_code is not an hmAppConfig', () {
       expect(() => HmAppConfig.fromJson({}), throwsFormatException);
     });
+
+    test('shipping: the free-shipping threshold, or none', () {
+      final config = HmAppConfig.fromJson(
+        hmAppConfigJson(
+          shipping: {
+            'free_over': {'value': 50, 'currency': 'AED'},
+          },
+        ),
+      );
+      expect(config.shipping.freeOver, 50.0);
+      expect(config.shipping.currency, 'AED');
+
+      // No rule: null; an older backend: no shipping at all.
+      expect(
+        HmAppConfig.fromJson(
+          hmAppConfigJson(shipping: {'free_over': null}),
+        ).shipping.freeOver,
+        isNull,
+      );
+      expect(HmAppConfig.fromJson(hmAppConfigJson()).shipping.freeOver, isNull);
+      expect(
+        HmShippingConfig.fromJson({
+          'free_over': {'value': -1, 'currency': 'AED'},
+        }).freeOver,
+        isNull,
+      );
+    });
+
+    test('algolia: the storefront layout when the backend sends it', () {
+      final config = HmAppConfig.fromJson(
+        hmAppConfigJson(
+          algolia: {
+            'application_id': 'HL67ED06DQ',
+            'search_api_key': 'secured',
+            'index_prefix': 'hubmarket_',
+            'product_index': 'hubmarket_ar_products',
+            'category_index': 'hubmarket_ar_categories',
+            'page_index': 'hubmarket_ar_pages',
+            'facets': [
+              {'attribute': 'price', 'type': 'slider', 'label': 'السعر'},
+              {'attribute': 'mgs_brand', 'type': 'disjunctive', 'label': null},
+              {'attribute': '', 'type': 'disjunctive'},
+            ],
+            'sorts': [
+              {
+                'index': 'hubmarket_ar_products_price_default_asc',
+                'attribute': 'price',
+                'direction': 'ASC',
+                'label': 'الأقل سعراً',
+              },
+              {
+                'index': 'hubmarket_ar_products_created_at_desc',
+                'attribute': 'created_at',
+                'direction': 'DESC',
+                'label': 'الأحدث أولاً',
+              },
+              {'index': 'x', 'attribute': 'y', 'direction': 'SIDEWAYS'},
+            ],
+            'suggestion_index': 'hubmarket_ar_suggestions',
+            'suggestion_count': 5,
+            'currency_code': 'AED',
+            'price_group': 'default',
+            'max_values_per_facet': 10,
+            'product_suggestions': 8,
+            'category_suggestions': 2,
+            'page_suggestions': 2,
+            'category_separator': ' /// ',
+            'categories_outside_menu': false,
+          },
+        ),
+      );
+
+      final layout = config.algolia!.layout!;
+      expect(layout.facets.map((f) => f.attribute), ['price', 'mgs_brand']);
+      expect(layout.facets.first.label, 'السعر');
+      expect(layout.facets.last.label, '');
+      expect(layout.sorts, hasLength(2));
+      expect(layout.sorts.first.descending, isFalse);
+      expect(layout.sorts.last.descending, isTrue);
+      expect(layout.sorts.last.label, 'الأحدث أولاً');
+      expect(layout.suggestionIndex, 'hubmarket_ar_suggestions');
+      expect(layout.suggestionCount, 5);
+      expect(layout.currencyCode, 'AED');
+      expect(layout.priceGroup, 'default');
+      expect(layout.maxValuesPerFacet, 10);
+      expect(layout.productSuggestions, 8);
+      expect(layout.pageSuggestions, 2);
+      // As indexed, spaces kept.
+      expect(layout.categorySeparator, ' /// ');
+    });
+
+    test('algolia: no layout from a backend older than it', () {
+      final config = HmAppConfig.fromJson(
+        hmAppConfigJson(
+          algolia: {
+            'application_id': 'HL67ED06DQ',
+            'search_api_key': 'secured',
+            'product_index': 'hubmarket_en_products',
+          },
+        ),
+      );
+      expect(config.algolia, isNotNull);
+      expect(config.algolia!.layout, isNull);
+    });
   });
 
   group('versions', () {
