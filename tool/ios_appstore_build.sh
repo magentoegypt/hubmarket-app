@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Build a SIGNED App Store IPA from the committed Apple Distribution cert (.p12)
-# + the App Store provisioning profile, both under ios/signing/ — no fastlane
-# `match`, no separate signing repo. macOS only.
+# Build a SIGNED App Store IPA from the Apple Distribution cert (.p12) + the
+# App Store provisioning profile in ios/signing/ — no fastlane `match`, no
+# separate signing repo. macOS only. ios/signing/ is git-ignored (the repo is
+# public): release-ios.yml decodes the files there from secrets; locally, copy
+# them in by hand.
 #
 # This mirrors tool/ios_sign_build.sh (the ad-hoc path). The only differences:
 #   - export `method` is `app-store` (not `ad-hoc`);
@@ -25,7 +27,7 @@ P12="$(ls "${SIGN_DIR}"/*.p12 2>/dev/null | head -1 || true)"
 # Select the App Store profile: pick the first .mobileprovision whose decoded
 # plist has NO `ProvisionedDevices` key (ad-hoc/dev profiles list device UDIDs;
 # App Store profiles never do). This is what tells the App Store profile apart
-# from the committed ad-hoc one.
+# from an ad-hoc one lying next to it.
 PROFILE=""
 for p in "${SIGN_DIR}"/*.mobileprovision; do
   [ -e "$p" ] || continue
@@ -164,7 +166,7 @@ if /usr/libexec/PlistBuddy -c "Print :com.apple.developer.associated-domains" "$
   if grep -q "associated-domains" <<<"${EMBEDDED}"; then
     echo "✅ Associated Domains entitlement embedded"
   else
-    echo "::error::Runner.entitlements declares com.apple.developer.associated-domains but the signed app does not carry it — regenerate ios/signing/*.mobileprovision with Associated Domains enabled on the App ID"
+    echo "::error::Runner.entitlements declares com.apple.developer.associated-domains but the signed app does not carry it — regenerate the App Store profile (secret IOS_APPSTORE_PROFILE_BASE64) with Associated Domains enabled on the App ID"
     exit 1
   fi
 fi

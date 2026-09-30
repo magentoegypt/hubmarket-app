@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Build a SIGNED ad-hoc IPA from a distribution certificate (.p12) + ad-hoc
-# provisioning profile (.mobileprovision) committed under ios/signing/ — no
-# fastlane `match`, no separate signing repo. macOS only.
+# provisioning profile (.mobileprovision) in ios/signing/ — no fastlane
+# `match`, no separate signing repo. macOS only. ios/signing/ is git-ignored
+# (the repo is public): release-ios.yml / build-ios.yml decode the files there
+# from secrets; locally, copy them in by hand.
 #
 # Required:
 #   - ios/signing/*.p12              Apple Distribution cert exported WITH its
@@ -19,8 +21,8 @@ P12="$(ls "${SIGN_DIR}"/*.p12 2>/dev/null | head -1 || true)"
 [ -n "${P12}" ] || { echo "::error::No .p12 found in ${SIGN_DIR}"; exit 1; }
 
 # Select the AD-HOC profile: pick the first .mobileprovision whose decoded plist
-# HAS a `ProvisionedDevices` key (ad-hoc/dev profiles list device UDIDs; the
-# App Store profile committed alongside it never does). Without this, a plain
+# HAS a `ProvisionedDevices` key (ad-hoc/dev profiles list device UDIDs; an
+# App Store profile lying next to it never does). Without this, a plain
 # `ls | head -1` would alphabetically pick the App Store profile and this ad-hoc
 # build would sign with the wrong (device-less) profile.
 PROFILE=""
