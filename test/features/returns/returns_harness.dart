@@ -14,6 +14,7 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/util/launch.dart';
 import 'package:hubmarket_app/core/store/store_repository.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
@@ -66,7 +67,8 @@ const CustomerOrder kReturnableCustomerOrder = CustomerOrder(
 );
 
 /// Mounts the app's returns routes (and the screens that lead to them) at
-/// [location], with [returns] as the returns backend.
+/// [location], with [returns] as the returns backend. Links opened outside
+/// the app land in [launched].
 Future<ProviderContainer> pumpReturns(
   WidgetTester tester, {
   required String location,
@@ -76,6 +78,7 @@ Future<ProviderContainer> pumpReturns(
   bool signedIn = true,
   FakeReturnsRepository? returns,
   FakeReturnPhotoPicker? photoPicker,
+  List<Uri>? launched,
   Size size = const Size(390, 1600),
   GlobalKey? boundary,
   bool dark = false,
@@ -177,6 +180,10 @@ Future<ProviderContainer> pumpReturns(
       returnPhotoPickerProvider.overrideWithValue(
         photoPicker ?? FakeReturnPhotoPicker(),
       ),
+      externalUriLauncherProvider.overrideWithValue((uri) async {
+        launched?.add(uri);
+        return true;
+      }),
     ],
   );
   addTearDown(container.dispose);

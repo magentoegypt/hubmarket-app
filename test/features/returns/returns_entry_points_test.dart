@@ -56,6 +56,9 @@ void main() {
         returns: repo,
       );
       expect(find.text(en.returnsReturnItems), findsOneWidget);
+      // One request for this order, not a walk through the order pages.
+      expect(repo.returnableOrderLookups, ['000000150']);
+      expect(repo.returnableOrderPages, isEmpty);
 
       await tester.tap(find.text(en.returnsReturnItems));
       await tester.pumpAndSettle();
@@ -63,11 +66,14 @@ void main() {
       // The order is already chosen, its lines listed.
       expect(find.textContaining('#000000150'), findsOneWidget);
       expect(find.text('Short Square-Neck T-Shirt'), findsOneWidget);
+      // The form reuses that answer.
+      expect(repo.returnableOrderLookups, ['000000150']);
     });
 
     testWidgets('not offered when the order has nothing returnable', (
       tester,
     ) async {
+      final repo = FakeReturnsRepository();
       await pumpReturns(
         tester,
         location: AppRoutes.orderDetail,
@@ -77,9 +83,11 @@ void main() {
           date: '2026-09-28 10:42:00',
           id: 'MTUx',
         ),
+        returns: repo,
       );
       expect(find.text(en.orderReorder), findsOneWidget);
       expect(find.text(en.returnsReturnItems), findsNothing);
+      expect(repo.returnableOrderLookups, ['000000151']);
     });
 
     testWidgets('not offered on a guest order', (tester) async {
@@ -97,6 +105,7 @@ void main() {
         returns: repo,
       );
       expect(find.text(en.returnsReturnItems), findsNothing);
+      expect(repo.returnableOrderLookups, isEmpty);
       expect(repo.returnableOrderPages, isEmpty);
     });
 
@@ -113,6 +122,7 @@ void main() {
         expect(find.text(en.orderReorder), findsOneWidget);
         expect(find.text(en.returnsReturnItems), findsNothing);
         // Nothing is asked of a server that may not have returns.
+        expect(repo.returnableOrderLookups, isEmpty);
         expect(repo.returnableOrderPages, isEmpty);
       });
     }
