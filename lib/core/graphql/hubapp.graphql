@@ -720,3 +720,45 @@ input HmSignInWithWhatsAppCodeInput @doc(description: "Sign-in.") {
     mobile: String! @doc(description: "Same number as sent.")
     code: String! @doc(description: "6-digit code.")
 }
+
+
+# ===================== HubAppOrders/etc/schema.graphqls (P3.1) =====================
+
+type CustomerOrder {
+    hm_packages: [HmOrderPackage!]! @resolver(class: "MagentoEgypt\\HubAppOrders\\Model\\Resolver\\OrderPackages") @doc(description: "The order split by store the way Vnecoms splits it into vendor orders: one package per store, in the order the stores first appear among the lines. Hub Market's own lines have no vendor order and form a package of their own. Also on guestOrder and guestOrderByToken; one batch for every order of a response.")
+}
+
+type HmOrderPackage @doc(description: "One store's part of an order: a Vnecoms vendor order, or Hub Market's own lines.") {
+    seller: HmSellerSummary @doc(description: "Who sells the package; Hub Market for its own lines; null when the seller is no longer approved.")
+    status_code: String! @doc(description: "Order status code of the vendor order, e.g. processing. Hub Market's own lines take the order's status.")
+    status_label: String! @doc(description: "The status as the website names it, in the store view's language.")
+    state: String! @doc(description: "Magento order state behind the status: new, pending_payment, processing, complete, closed, canceled, holded or payment_review.")
+    item_uids: [ID!]! @doc(description: "OrderItemInterface.id of the package's lines, top-level lines only.")
+    subtotal: Money! @doc(description: "Items subtotal as the vendor order holds it. Hub Market's own lines are summed the way Vnecoms sums a vendor order.")
+    discount: Money @doc(description: "Discount on the package, as a positive amount; null when none.")
+    tax: Money @doc(description: "Tax on the package; null when none.")
+    shipping_amount: Money @doc(description: "Delivery charged for this store when the order paid delivery per store (Vnecoms per-seller shipping); null when one delivery charge covered the whole order, see CustomerOrder.total.total_shipping.")
+    shipping_method: String @doc(description: "This store's delivery method when delivery was chosen per store; null otherwise.")
+    grand_total: Money! @doc(description: "Package total as the vendor order holds it: subtotal - discount + tax + shipping_amount.")
+    shipments: [HmOrderPackageShipment!]! @doc(description: "Shipments of the package's lines, oldest first.")
+    comments: [HmOrderPackageComment!]! @doc(description: "Comments the store made visible on the storefront for this package (the website lists them under About Your Order), oldest first.")
+}
+
+type HmOrderPackageShipment @doc(description: "A shipment of a package.") {
+    id: ID! @doc(description: "Same value as OrderShipment.id.")
+    number: String! @doc(description: "Shipment number.")
+    created_at: String! @doc(description: "Created, ISO-8601 UTC.")
+    tracks: [HmOrderPackageTrack!]! @doc(description: "Tracking numbers in the order they were added; empty when the store shipped without one.")
+}
+
+type HmOrderPackageTrack @doc(description: "A shipment tracking number.") {
+    carrier_code: String! @doc(description: "custom for a carrier typed by hand, else the Magento carrier code, e.g. dhl.")
+    carrier_title: String! @doc(description: "Carrier name saved with the number.")
+    number: String! @doc(description: "Tracking number.")
+    tracking_url: String @doc(description: "The carrier's public tracking page for this number when one can be built from its code (dhl, fedex, ups, usps); null otherwise, e.g. for a custom carrier.")
+}
+
+type HmOrderPackageComment @doc(description: "A comment shown to the customer.") {
+    message: String! @doc(description: "Plain text.")
+    created_at: String! @doc(description: "When, ISO-8601 UTC.")
+}
