@@ -116,7 +116,10 @@ class FakeHubAppClient extends GraphQLClient {
           return Stream.error(Exception('offline (test): $name'));
         }),
         // Canned data may leave out the `__typename`s the client adds.
-        cache: GraphQLCache(partialDataPolicy: PartialDataCachePolicy.accept),
+        cache: GraphQLCache(
+      partialDataPolicy: PartialDataCachePolicy.accept,
+      possibleTypes: kGraphQLPossibleTypes,
+    ),
       );
 
   /// Every request sent, in order.

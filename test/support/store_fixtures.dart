@@ -1,6 +1,7 @@
 import 'package:gql/ast.dart';
 import 'package:gql/language.dart' show printNode;
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 
 import 'search_fixtures.dart';
 
@@ -76,7 +77,10 @@ class FakeStoresBackend {
     }),
     // Canned data may leave out `__typename`s; the ones a fragment needs are
     // in the fixtures below.
-    cache: GraphQLCache(partialDataPolicy: PartialDataCachePolicy.accept),
+    cache: GraphQLCache(
+      partialDataPolicy: PartialDataCachePolicy.accept,
+      possibleTypes: kGraphQLPossibleTypes,
+    ),
   );
 }
 

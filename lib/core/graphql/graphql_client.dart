@@ -12,6 +12,27 @@ import '../store/store_controller.dart';
 import 'resilience_link.dart';
 import 'store_link.dart';
 
+/// The concrete types of every interface an app fragment is written on
+/// (`fragment … on ProductInterface`), from the live schema
+/// (`lib/core/graphql/schema.graphql`; a test keeps the two in step).
+///
+/// The client writes every answer to its normalized cache and reads it back,
+/// and that read fills a fragment only for an object whose `__typename` it
+/// knows to match the fragment's type. Without this map every fragment on an
+/// interface came back empty — the product page's "You may also like"
+/// (`LinkedProductFields`), and the cards of `hmDeals`, the Home rails
+/// (`HmCardProduct`) and the listings' sellers (`HmCardSeller`).
+const Map<String, Set<String>> kGraphQLPossibleTypes = {
+  'ProductInterface': {
+    'SimpleProduct',
+    'VirtualProduct',
+    'ConfigurableProduct',
+    'BundleProduct',
+    'GroupedProduct',
+    'DownloadableProduct',
+  },
+};
+
 /// On iOS/macOS, route HTTP through `NSURLSession` (the same stack Safari uses)
 /// instead of `dart:io`'s `HttpClient`. `dart:io` ignores the system proxy/VPN
 /// and can hit TLS/connection edge cases that NSURLSession handles — which
@@ -146,7 +167,10 @@ GraphQLClient buildGraphQLClient({
 
   return GraphQLClient(
     link: link,
-    cache: GraphQLCache(store: InMemoryStore()),
+    cache: GraphQLCache(
+      store: InMemoryStore(),
+      possibleTypes: kGraphQLPossibleTypes,
+    ),
     // Disable graphql's built-in request timeout: its 5s default times out
     // mutations against the CloudFront/WAF-fronted endpoint, and its timeout
     // path double-completes the response completer when ResilienceLink retries
