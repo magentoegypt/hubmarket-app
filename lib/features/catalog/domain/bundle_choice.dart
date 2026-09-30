@@ -258,6 +258,21 @@ class BundleChoice {
       a.entries.every((e) => mapEquals(e.value, b[e.key]));
 }
 
+/// The server's price of a package (`hmBundleQuote`): the cart's own figure
+/// ([quote], [BundleQuote.exact]) when the cart would take the package, or
+/// why it wouldn't ([message], in the store view's language).
+@immutable
+class BundleServerQuote {
+  const BundleServerQuote.available(BundleQuote this.quote) : message = null;
+
+  const BundleServerQuote.unavailable(this.message) : quote = null;
+
+  final BundleQuote? quote;
+  final String? message;
+
+  bool get available => quote != null;
+}
+
 /// A package's price as the bundle page shows it (Figma 14b "Package
 /// summary").
 @immutable
@@ -272,9 +287,10 @@ class BundleQuote {
   /// then shows the bundle's "from" price.
   final Money? total;
 
-  /// [total] is the server's own price for this package — the cheapest one,
-  /// which `price_range` prices. Otherwise it is worked out from the
-  /// children's prices, and the cart shows the final figure.
+  /// [total] is the server's own price for this package: `hmBundleQuote`'s
+  /// (the cart's figure for any package), or `price_range`'s for the
+  /// cheapest one. Otherwise it is worked out from the children's prices, and
+  /// the cart shows the final figure.
   final bool exact;
 
   /// "Bundle saving" / "You save": [regular] − [total] when there is one.

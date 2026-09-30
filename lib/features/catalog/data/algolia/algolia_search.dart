@@ -144,6 +144,50 @@ TypeAheadResult typeAheadFromResults(
   );
 }
 
+/// The "Try" suggestions of a search that found nothing (Figma S2): queries
+/// from the store's query-suggestions index ([AlgoliaSettings.suggestionIndex],
+/// the one the website's autocomplete reads) that share words with [query],
+/// every word optional when none shares them all. Null when the store has no
+/// suggestions index — the page then shows no "Try" row.
+AlgoliaQuery? trySuggestionsQuery(
+  AlgoliaSettings settings, {
+  required String query,
+  int limit = 3,
+}) {
+  final index = settings.suggestionIndex;
+  if (index == null || query.trim().isEmpty || limit < 1) return null;
+  return AlgoliaQuery(index, {
+    'query': query,
+    // One more than shown: the query itself may come back.
+    'hitsPerPage':
+        math.min(limit, math.max(settings.suggestionCount, 1)) + 1,
+    'removeWordsIfNoResults': 'allOptional',
+    'attributesToRetrieve': ['query'],
+    'attributesToHighlight': <String>[],
+    'analyticsTags': ['app', 'no-results'],
+  });
+}
+
+/// The suggested queries of a [trySuggestionsQuery] answer: distinct, in
+/// Algolia's order, never [query] itself, at most [limit].
+List<String> trySuggestionsFromResult(
+  Map<String, dynamic> result, {
+  required String query,
+  int limit = 3,
+}) {
+  final seen = <String>{query.trim().toLowerCase()};
+  final out = <String>[];
+  for (final hit
+      in (result['hits'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()) {
+    final text = hit['query'] is String ? (hit['query'] as String).trim() : '';
+    if (text.isEmpty || !seen.add(text.toLowerCase())) continue;
+    out.add(text);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /// What one results page asks Algolia: the page itself, then — for every
 /// facet the shopper filtered on — the same search without that facet's own
 /// filter, whose counts keep the facet's other values selectable
@@ -451,6 +495,29 @@ class AlgoliaSearch {
       sellers: _marketplace.features.listingSellers,
     );
   });
+
+  /// The "Try" suggestions for [query] (see [trySuggestionsQuery]); empty
+  /// when the store has no suggestions index or it can't be read. Never
+  /// rests Algolia: a missing suggestions index says nothing about search.
+  Future<List<String>> trySuggestions({
+    required String storeCode,
+    required String query,
+    int limit = 3,
+  }) async {
+    try {
+      final settings = await _settings.settingsFor(storeCode);
+      final request = trySuggestionsQuery(settings, query: query, limit: limit);
+      if (request == null) return const <String>[];
+      final results = await _client.multiQuery(
+        appId: settings.appId,
+        apiKey: settings.searchKey,
+        queries: [request],
+      );
+      return trySuggestionsFromResult(results.first, query: query, limit: limit);
+    } on Object {
+      return const <String>[];
+    }
+  }
 
   Future<T> _run<T>(
     String storeCode,

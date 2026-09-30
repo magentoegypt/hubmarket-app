@@ -45,12 +45,14 @@ class FilledCart extends FakeCartRepository {
 }
 
 /// The cart tab for a guest with a cart on this device (so it loads it from
-/// [cart]), Build 1, free delivery from [freeShipping] when set.
+/// [cart]), Build 1, free delivery from [freeShipping] when set — or, with
+/// [hubApp], Build 2 on that `hmAppConfig`, the threshold read from it.
 Widget cartScreenApp({
   required String locale,
   required CartRepository cart,
   bool dark = false,
   double? freeShipping,
+  HmAppConfig? hubApp,
   GlobalKey? boundary,
 }) {
   final router = GoRouter(
@@ -94,9 +96,14 @@ Widget cartScreenApp({
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       publicGraphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
-      hubAppOverride(const HubAppState.unavailable()),
+      hubAppOverride(
+        hubApp == null
+            ? const HubAppState.unavailable()
+            : HubAppState.available(hubApp),
+      ),
       cartRepositoryProvider.overrideWithValue(cart),
-      freeShippingThresholdProvider.overrideWith((ref) async => freeShipping),
+      if (hubApp == null)
+        freeShippingThresholdProvider.overrideWith((ref) async => freeShipping),
     ],
     child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
   );

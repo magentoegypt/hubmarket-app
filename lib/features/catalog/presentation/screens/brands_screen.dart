@@ -15,7 +15,8 @@ import '../../data/brands_provider.dart';
 import '../../domain/brand.dart';
 
 /// All brands (Figma 10d, `hmBrands`): search, A–Z initials, and every brand
-/// that has products, with how many — the catalogue's own `mgs_brand` facet.
+/// that has products, with how many — `hmBrands`' own `product_count`, the
+/// products each brand's page lists.
 class BrandsScreen extends ConsumerStatefulWidget {
   const BrandsScreen({super.key});
 
@@ -44,7 +45,6 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final brands = ref.watch(brandsProvider);
-    final counts = ref.watch(brandProductCountsProvider).valueOrNull;
     return HubScaffold(
       currentTab: AppTab.home,
       appBar: HmTitleAppBar(
@@ -59,7 +59,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
           emptyTitle: l10n.brandsEmpty,
           emptyIcon: Icons.storefront_outlined,
         ),
-        data: (all) => _content(context, l10n, all, counts),
+        data: (all) => _content(context, l10n, all),
       ),
     );
   }
@@ -68,13 +68,13 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
     BuildContext context,
     AppLocalizations l10n,
     List<Brand> all,
-    Map<int, int>? counts,
   ) {
     final t = AppTextStyles.of(context);
-    // Brands with products when the counts are known; all of them otherwise.
-    final known = counts != null && counts.isNotEmpty;
+    // Brands with products when the backend counted them; all of them from a
+    // backend older than the counts.
+    final known = all.any((b) => b.productCount != null);
     final listed = known
-        ? [for (final b in all) if ((counts[b.optionId] ?? 0) > 0) b]
+        ? [for (final b in all) if ((b.productCount ?? 0) > 0) b]
         : all;
     if (listed.isEmpty) {
       return EmptyState(icon: Icons.storefront_outlined, title: l10n.brandsEmpty);
@@ -165,7 +165,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
             itemCount: shown.length,
             itemBuilder: (context, i) => BrandCard(
               brand: shown[i],
-              productCount: known ? counts[shown[i].optionId] : null,
+              productCount: shown[i].productCount,
             ),
           ),
       ],

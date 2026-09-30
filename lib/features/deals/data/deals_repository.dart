@@ -26,16 +26,36 @@ class DealsRepository {
   /// The most a page may ask for (the contract caps `pageSize` at 50).
   static const int maxPageSize = 50;
 
+  /// Filtered and sorted on the server, over the day's whole ranking. The
+  /// sort is written inline ([dealsDocument]); the filters are scalar
+  /// variables — never a variable of an `Hm*` type (see [runHubAppQuery]).
   static const String _dealsDocument = r'''
-query HmDeals($pageSize: Int!, $currentPage: Int!) {
+query HmDeals($pageSize: Int!, $currentPage: Int!, $categoryId: Int, $minDiscount: Int) {
+  hmDeals(pageSize: $pageSize, currentPage: $currentPage, category_id: $categoryId, min_discount_percent: $minDiscount, sort: DISCOUNT) {
+    total_count
+    countdown_ends_at
+    page_info { current_page page_size total_pages }
+    categories { id uid name count }
+    items { ...HmCardProduct }
+  }
+}
+''';
+
+  /// The plain ranking, for a HubApp deployed before the filters.
+  static const String _dealsDocumentP2 = r'''
+query HmDealsP2($pageSize: Int!, $currentPage: Int!) {
   hmDeals(pageSize: $pageSize, currentPage: $currentPage) {
     total_count
     countdown_ends_at
     page_info { current_page page_size total_pages }
-    items { ...HmCardProduct categories { uid name level include_in_menu } }
+    items { ...HmCardProduct }
   }
 }
 ''';
+
+  /// [_dealsDocument] in [sort].
+  static String dealsDocument(DealsSort sort) =>
+      _dealsDocument.replaceFirst('sort: DISCOUNT', 'sort: ${sort.wire}');
 
   static const String _bundlesDocument = r'''
 query HmBundleDeals($categoryId: Int, $pageSize: Int!, $currentPage: Int!) {
@@ -50,20 +70,41 @@ query HmBundleDeals($categoryId: Int, $pageSize: Int!, $currentPage: Int!) {
 }
 ''';
 
-  Future<DealsPage> fetchDeals({int pageSize = 20, int currentPage = 1}) async {
-    final data = await sendListing(
+  /// A page of today's deals narrowed by [filters]. A HubApp older than the
+  /// filters answers with the plain ranking ([DealsPage.filtered] false).
+  Future<DealsPage> fetchDeals({
+    int pageSize = 20,
+    int currentPage = 1,
+    DealsFilters filters = const DealsFilters(),
+  }) async {
+    final paging = {
+      'pageSize': pageSize.clamp(1, maxPageSize),
+      'currentPage': currentPage,
+    };
+    // The cards ask who sells each product while the server lists
+    // HubAppVendors (`sendListing`); a plain document goes out otherwise.
+    Future<Map<String, dynamic>> send(
+      String document,
+      Map<String, dynamic> variables,
+    ) => sendListing(
       _marketplace,
-      _dealsDocument + DealsFragments.cardProduct,
-      (document, _) => runHubAppQuery(
-        _client,
-        document,
-        variables: {
-          'pageSize': pageSize.clamp(1, maxPageSize),
-          'currentPage': currentPage,
-        },
-      ),
+      document + DealsFragments.cardProduct,
+      (doc, _) => runHubAppQuery(_client, doc, variables: variables),
     );
-    return dealsPageFromJson(data['hmDeals']);
+    try {
+      final data = await send(dealsDocument(filters.sort), {
+        ...paging,
+        'categoryId': filters.categoryId,
+        'minDiscount': filters.minDiscount,
+      });
+      return dealsPageFromJson(data['hmDeals']);
+    } on HubAppMissing catch (missing) {
+      // No hmDeals at all: HubApp isn't there. Anything else ("Unknown
+      // argument", "Cannot query field categories"): it is, only older.
+      if (isMissingRootField(missing, 'hmDeals')) rethrow;
+      final data = await send(_dealsDocumentP2, paging);
+      return dealsPageFromJson(data['hmDeals'], filtered: false);
+    }
   }
 
   Future<BundleDealPage> fetchBundleDeals({
@@ -107,7 +148,7 @@ abstract final class DealsFragments {
 }
 
 /// `hmDeals` → [DealsPage]; empty for anything that isn't one.
-DealsPage dealsPageFromJson(Object? json) {
+DealsPage dealsPageFromJson(Object? json, {bool filtered = true}) {
   if (json is! Map<String, dynamic>) return DealsPage.empty;
   final items = [
     for (final item in json['items'] is List ? json['items'] as List : const [])
@@ -118,8 +159,26 @@ DealsPage dealsPageFromJson(Object? json) {
     totalCount: hmInt(json['total_count']) ?? items.length,
     pageInfo: HmPageInfo.fromJson(json['page_info']),
     countdownEndsAt: hmDateTime(json['countdown_ends_at']),
+    categories: dealCategoriesFromJson(json['categories']),
+    filtered: filtered,
   );
 }
+
+/// `[HmCategoryCount]` → chips; blank or nameless entries dropped.
+List<DealCategory> dealCategoriesFromJson(Object? json) => [
+  for (final c in json is List ? json : const [])
+    if (c is Map<String, dynamic>)
+      if ((hmString(c['uid']), hmString(c['name'])) case (
+        final uid?,
+        final name?,
+      ))
+        DealCategory(
+          id: hmInt(c['id']) ?? 0,
+          uid: uid,
+          name: name,
+          count: hmInt(c['count']) ?? 0,
+        ),
+];
 
 /// `hmBundleDeals` → [BundleDealPage]; empty for anything that isn't one.
 BundleDealPage bundleDealPageFromJson(Object? json) {
@@ -130,21 +189,7 @@ BundleDealPage bundleDealPageFromJson(Object? json) {
           in json['items'] is List ? json['items'] as List : const [])
         if (bundleDealFromJson(item) case final deal?) deal,
     ],
-    categories: [
-      for (final c
-          in json['categories'] is List ? json['categories'] as List : const [])
-        if (c is Map<String, dynamic>)
-          if ((hmString(c['uid']), hmString(c['name'])) case (
-            final uid?,
-            final name?,
-          ))
-            DealCategory(
-              id: hmInt(c['id']) ?? 0,
-              uid: uid,
-              name: name,
-              count: hmInt(c['count']) ?? 0,
-            ),
-    ],
+    categories: dealCategoriesFromJson(json['categories']),
     maxDiscountPercent: hmInt(json['max_discount_percent']) ?? 0,
     sellerCount: hmInt(json['seller_count']) ?? 0,
     totalCount: hmInt(json['total_count']) ?? 0,

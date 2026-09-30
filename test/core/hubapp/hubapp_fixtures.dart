@@ -6,6 +6,7 @@ Map<String, dynamic> hmAppConfigJson({
   String? latestVersion = '1.2.0',
   Map<String, dynamic>? algolia,
   List<String>? capabilities,
+  Map<String, dynamic>? shipping,
 }) => {
   'store_code': storeCode,
   'locale': storeCode == 'ar' ? 'ar_SA' : 'en_US',
@@ -43,4 +44,5 @@ Map<String, dynamic> hmAppConfigJson({
   ],
   // A server from before hmAppConfig.capabilities leaves the field out.
   if (capabilities != null) 'capabilities': capabilities,
+  if (shipping != null) 'shipping': shipping,
 };

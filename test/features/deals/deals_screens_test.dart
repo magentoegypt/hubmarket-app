@@ -23,24 +23,31 @@ import '../../support/fakes.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 
-const _grocery = ProductCategoryRef(uid: 'Mw==', name: 'Grocery', level: 2);
-const _furniture = ProductCategoryRef(uid: 'NQ==', name: 'Furniture', level: 2);
+const _grocery = DealCategory(id: 3, uid: 'Mw==', name: 'Grocery', count: 0);
+const _furniture = DealCategory(id: 5, uid: 'NQ==', name: 'Furniture', count: 0);
 
-Product _deal(
+/// A deal as the server ranks it: its product, department and discount.
+typedef _Deal = ({Product product, DealCategory category, int percent});
+
+_Deal _deal(
   String name,
   double price,
   double was,
-  ProductCategoryRef category,
-) => Product(
-  sku: name,
-  name: name,
-  urlKey: name.toLowerCase().replaceAll(' ', '-'),
-  regularPrice: Money(amount: was, currency: 'AED'),
-  finalPrice: Money(amount: price, currency: 'AED'),
-  categories: [category],
+  DealCategory category,
+) => (
+  product: Product(
+    sku: name,
+    name: name,
+    urlKey: name.toLowerCase().replaceAll(' ', '-'),
+    regularPrice: Money(amount: was, currency: 'AED'),
+    finalPrice: Money(amount: price, currency: 'AED'),
+  ),
+  category: category,
+  percent: ((was - price) * 100 / was).round(),
 );
 
-final _deals = <Product>[
+/// The day's ranking, deepest discount first (29 %, 25 %, 15 %, 10 %, 10 %).
+final _deals = <_Deal>[
   _deal('Egyptian Rice 1 kg', 25, 35, _grocery),
   _deal('Modern Executive Desk', 263, 350, _furniture),
   _deal('Corner Sofa Bed', 425, 500, _furniture),
@@ -67,30 +74,80 @@ BundleDeal _bundle(
   seller: seller == null ? null : HmSellerSummary(name: seller),
 );
 
+/// The server of hmDeals: filters and sorts the whole ranking, counts the
+/// departments of every filter but the category, pages of [perPage].
 class _FakeDeals implements DealsRepository {
-  _FakeDeals({this.missing = false});
+  _FakeDeals({this.missing = false, this.older = false, this.perPage = 20});
 
   final bool missing;
+
+  /// A HubApp older than the filters: the plain ranking.
+  final bool older;
+  final int perPage;
   final List<int?> bundleCategories = [];
   final List<int> dealPages = [];
+  final List<DealsFilters> asked = [];
 
   @override
-  Future<DealsPage> fetchDeals({int pageSize = 20, int currentPage = 1}) async {
+  Future<DealsPage> fetchDeals({
+    int pageSize = 20,
+    int currentPage = 1,
+    DealsFilters filters = const DealsFilters(),
+  }) async {
     if (missing) throw const HubAppMissing('Cannot query field "hmDeals"');
     dealPages.add(currentPage);
+    asked.add(filters);
+    final offered = [
+      for (final d in _deals)
+        if (older || d.percent >= (filters.minDiscount ?? 0)) d,
+    ];
+    final matching = [
+      for (final d in offered)
+        if (older ||
+            filters.categoryId == null ||
+            d.category.id == filters.categoryId)
+          d,
+    ];
+    double price(_Deal d) => d.product.finalPrice!.amount;
+    if (!older) {
+      switch (filters.sort) {
+        case DealsSort.priceLowHigh:
+          matching.sort((a, b) => price(a).compareTo(price(b)));
+        case DealsSort.priceHighLow:
+          matching.sort((a, b) => price(b).compareTo(price(a)));
+        default:
+      }
+    }
+    final start = (currentPage - 1) * perPage;
+    final page = matching.skip(start).take(perPage).toList();
+    final counts = <int, int>{};
+    for (final d in offered) {
+      counts[d.category.id] = (counts[d.category.id] ?? 0) + 1;
+    }
     return DealsPage(
-      items: currentPage == 1
-          ? _deals.take(3).toList()
-          : _deals.skip(3).toList(),
-      totalCount: _deals.length,
+      items: [for (final d in page) d.product],
+      totalCount: matching.length,
       pageInfo: HmPageInfo(
         currentPage: currentPage,
-        pageSize: 3,
-        totalPages: 2,
+        pageSize: perPage,
+        totalPages: (matching.length / perPage).ceil(),
       ),
       countdownEndsAt: DateTime.now().add(
         const Duration(days: 2, hours: 14, minutes: 32, seconds: 19),
       ),
+      categories: older || counts.length < 2
+          ? const <DealCategory>[]
+          : [
+              for (final c in [_grocery, _furniture])
+                if (counts[c.id] case final count?)
+                  DealCategory(
+                    id: c.id,
+                    uid: c.uid,
+                    name: c.name,
+                    count: count,
+                  ),
+            ],
+      filtered: !older,
     );
   }
 
@@ -195,7 +252,7 @@ void main() {
 
   group("Today's Deals (10b)", () {
     for (final locale in ['en', 'ar']) {
-      testWidgets('banner, chips, count, sort and grid ($locale)', (
+      testWidgets('banner, chips, count, sort, filters and grid ($locale)', (
         tester,
       ) async {
         await _phone(tester, height: 1100);
@@ -224,37 +281,156 @@ void main() {
         );
         expect(find.text(l10n.dealsCount(5)), findsOneWidget);
         expect(find.text(l10n.dealsAllChip), findsOneWidget);
-        // Chips from the deals' own top-level categories, busiest first.
-        expect(find.text('Furniture'), findsOneWidget);
+        // The server's department chips, catalogue order.
         expect(find.text('Grocery'), findsOneWidget);
-        // Both pages were read.
-        expect(deals.dealPages, [1, 2]);
+        expect(find.text('Furniture'), findsOneWidget);
+        expect(find.text(l10n.dealsSortBiggestDiscount), findsOneWidget);
+        expect(find.text(l10n.filtersLabel), findsOneWidget);
+        // The ranking as the server sent it: one request, nothing re-sorted.
+        expect(deals.asked, [const DealsFilters()]);
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('a chip filters and a sort reorders, on the whole list', (
+    testWidgets('a chip asks the server for that department; the chips stay', (
       tester,
     ) async {
       await _phone(tester, height: 1600);
-      await tester.pumpWidget(
-        _harness(const DealsScreen(), deals: _FakeDeals()),
-      );
+      final deals = _FakeDeals();
+      await tester.pumpWidget(_harness(const DealsScreen(), deals: deals));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Grocery'));
       await tester.pumpAndSettle();
+
+      expect(deals.asked.last, const DealsFilters(categoryId: 3));
       expect(find.text('2 deals'), findsOneWidget);
       expect(find.text('Corner Sofa Bed'), findsNothing);
       expect(find.text('Dolphin Tuna'), findsOneWidget);
+      expect(find.text('Furniture'), findsOneWidget);
+
+      await tester.tap(find.text('All deals'));
+      await tester.pumpAndSettle();
+      expect(deals.asked.last, const DealsFilters());
+      expect(find.text('5 deals'), findsOneWidget);
+    });
+
+    testWidgets('the sort pill reorders on the server', (tester) async {
+      await _phone(tester, height: 1600);
+      final deals = _FakeDeals();
+      await tester.pumpWidget(_harness(const DealsScreen(), deals: deals));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Biggest discount'));
       await tester.pumpAndSettle();
+      // Every order the server offers.
+      expect(find.text('Ending soon'), findsOneWidget);
+      expect(find.text('Newest First'), findsOneWidget);
       await tester.tap(find.text('Price: Low to High'));
       await tester.pumpAndSettle();
+
+      expect(deals.asked.last.sort, DealsSort.priceLowHigh);
       final rice = tester.getTopLeft(find.text('Egyptian Rice 1 kg'));
       final tuna = tester.getTopLeft(find.text('Dolphin Tuna'));
-      expect(rice.dx, lessThan(tuna.dx)); // AED 25 before AED 43
+      expect(rice.dy, tuna.dy); // AED 25 and 43: the first row
+      expect(rice.dx, lessThan(tuna.dx));
+      expect(find.text('Price: Low to High'), findsOneWidget);
+    });
+
+    for (final locale in ['en', 'ar']) {
+      testWidgets('the Filters sheet: sort, minimum discount, department '
+          '($locale)', (tester) async {
+        await _phone(tester, height: 1000);
+        final key = GlobalKey();
+        final deals = _FakeDeals();
+        await tester.pumpWidget(
+          _harness(
+            const DealsScreen(),
+            deals: deals,
+            locale: locale,
+            boundary: key,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(DealsScreen)),
+        );
+
+        await tester.tap(find.text(l10n.filtersLabel));
+        await tester.pumpAndSettle();
+        expect(find.byType(DealsFilterSheet), findsOneWidget);
+        await tester.tap(find.text(l10n.dealsSortEndingSoon).last);
+        await tester.tap(find.text(l10n.filterDiscountOption(20)));
+        // The chips count the department's deals as the list stands.
+        await tester.tap(find.text('Furniture (3)'));
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'deals_filters_$locale');
+
+        await tester.tap(find.text(l10n.filterApplyLabel));
+        await tester.pumpAndSettle();
+
+        expect(
+          deals.asked.last,
+          const DealsFilters(
+            categoryId: 5,
+            minDiscount: 20,
+            sort: DealsSort.endingSoon,
+          ),
+        );
+        expect(find.text('${l10n.filtersLabel} · 2'), findsOneWidget);
+        // Furniture with 20% or more off: the desk alone.
+        expect(find.text(l10n.dealsCount(1)), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('filters that leave nothing: say so, and clear them', (
+      tester,
+    ) async {
+      await _phone(tester, height: 1000);
+      final deals = _FakeDeals();
+      await tester.pumpWidget(_harness(const DealsScreen(), deals: deals));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Filters'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('50% or more'));
+      await tester.tap(find.text('Apply Filters'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No deals match these filters.'), findsOneWidget);
+      await tester.tap(find.text('Clear All'));
+      await tester.pumpAndSettle();
+      expect(deals.asked.last, const DealsFilters());
+      expect(find.text('5 deals'), findsOneWidget);
+    });
+
+    testWidgets('more deals load as the list scrolls', (tester) async {
+      await _phone(tester);
+      final deals = _FakeDeals(perPage: 3);
+      await tester.pumpWidget(_harness(const DealsScreen(), deals: deals));
+      await tester.pumpAndSettle();
+      expect(deals.dealPages, [1]);
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(deals.dealPages, [1, 2]);
+    });
+
+    testWidgets('an older HubApp: the ranking without chips, sort or filters', (
+      tester,
+    ) async {
+      await _phone(tester, height: 1600);
+      await tester.pumpWidget(
+        _harness(const DealsScreen(), deals: _FakeDeals(older: true)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('5 deals'), findsOneWidget);
+      expect(find.text('Grocery'), findsNothing);
+      expect(find.text('Biggest discount'), findsNothing);
+      expect(find.text('Filters'), findsNothing);
+      expect(find.text('Egyptian Rice 1 kg'), findsOneWidget);
     });
 
     testWidgets('without the Hub Market App API: the empty state', (

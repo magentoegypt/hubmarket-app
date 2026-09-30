@@ -10,6 +10,8 @@ class Brand {
     required this.optionId,
     required this.position,
     this.isFeatured = false,
+    this.productCount,
+    this.sellerCount,
   });
 
   final int brandId;
@@ -28,4 +30,13 @@ class Brand {
 
   /// Flagged Featured in MGS › Shop by Brand.
   final bool isFeatured;
+
+  /// The products its page lists (`HmBrand.product_count`: the brand's
+  /// products the storefront shows); null when the backend didn't count them
+  /// (the Home's brand strip, an older backend).
+  final int? productCount;
+
+  /// The sellers of those products, Hub Market itself one of them
+  /// (`HmBrand.seller_count`) — "from 2 stores"; null when not counted.
+  final int? sellerCount;
 }

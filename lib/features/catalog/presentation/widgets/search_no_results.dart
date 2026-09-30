@@ -18,20 +18,26 @@ import 'search_style.dart';
 /// A search that found nothing (Figma S2): the search glyph in a grey disc,
 /// "No results for “…”" and a hint.
 ///
+/// The "Try" chips come from the store's Algolia query-suggestions index —
+/// the one the website's autocomplete reads ([searchTrySuggestionsProvider]);
+/// a chip searches for it ([onTry]). No index, no row: Hub Market's
+/// suggestions are off today (checked 30 Sep 2026), so the row appears the
+/// day they are switched on in Magento, and nothing is made up meanwhile.
+///
 /// With the Hub Market App's API ([storesAvailableProvider]) it also offers
 /// "Browse stores" and the "Popular right now" rail — its best sellers
 /// (`hmBestSellers`), "View All" opening the whole ranking; without it the
 /// page stays as it was.
 ///
-/// Left out of the frame: the "Try" suggestions, as the store's Algolia has
-/// no query-suggestions index (autocomplete suggestions are off and
-/// `popularQueries` is empty, checked 29 Sep 2026); and the category in
-/// "Browse Furniture stores", as a search that found nothing names no
-/// category.
+/// Left out of the frame: the category in "Browse Furniture stores", as a
+/// search that found nothing names no category.
 class SearchNoResults extends ConsumerWidget {
-  const SearchNoResults({super.key, required this.query});
+  const SearchNoResults({super.key, required this.query, this.onTry});
 
   final String query;
+
+  /// Searches for a "Try" suggestion; without it the row isn't offered.
+  final ValueChanged<String>? onTry;
 
   /// The rail's card, as on Home.
   static const double _cardWidth = 152;
@@ -44,6 +50,10 @@ class SearchNoResults extends ConsumerWidget {
     final popular = stores
         ? ref.watch(searchPopularNowProvider).valueOrNull ?? const <Product>[]
         : const <Product>[];
+    final tries = onTry == null
+        ? const <String>[]
+        : ref.watch(searchTrySuggestionsProvider(query)).valueOrNull ??
+              const <String>[];
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     final display = TextStyle(
       fontFamily: isEn ? AppTheme.displayFont : null,
@@ -89,6 +99,10 @@ class SearchNoResults extends ConsumerWidget {
             ),
           ),
         ),
+        if (tries.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _TryRow(terms: tries, onTry: onTry!),
+        ],
         if (stores) ...[
           const SizedBox(height: 24),
           Padding(
@@ -152,6 +166,59 @@ class SearchNoResults extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "Try" and the suggested searches as outlined chips, on a light panel
+/// (Figma S2).
+class _TryRow extends StatelessWidget {
+  const _TryRow({required this.terms, required this.onTry});
+
+  final List<String> terms;
+  final ValueChanged<String> onTry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Container(
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 14),
+        decoration: BoxDecoration(
+          color: SearchStyle.pillFill(context),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.searchTryLabel,
+              style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final term in terms)
+                  ActionChip(
+                    label: Text(term),
+                    onPressed: () => onTry(term),
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                    side: BorderSide(color: context.hairline),
+                    shape: const StadiumBorder(),
+                    labelStyle: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: context.scaffoldHeading,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

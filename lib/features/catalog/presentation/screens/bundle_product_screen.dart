@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,10 +12,12 @@ import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../cart/domain/bundle_cart_request.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
 import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
+import '../../data/bundle_quote_repository.dart';
 import '../../domain/bundle_choice.dart';
 import '../../domain/bundle_product.dart';
 import '../../domain/money.dart';
@@ -25,6 +29,11 @@ import 'product_detail_screen.dart';
 /// option's other selections and addable on its own; a configurable item's
 /// size and colour; the package's price; and "Add bundle to cart", which
 /// sends the whole package through `hmAddBundleToCart`.
+///
+/// The price of any complete package is the server's (`hmBundleQuote`, what
+/// the cart will charge), asked [quoteDelay] after the last change; until it
+/// answers — or where it can't — the page shows its own estimate and says the
+/// cart has the final figure.
 ///
 /// Shown only with HubApp (HubAppBundle); without it a bundle opens on the
 /// plain product page, as today.
@@ -40,6 +49,9 @@ class BundleProductScreen extends ConsumerStatefulWidget {
   final BundleProduct bundle;
   final HmSellerSummary? seller;
 
+  /// How long the package must stay unchanged before the server prices it.
+  static const Duration quoteDelay = Duration(milliseconds: 400);
+
   @override
   ConsumerState<BundleProductScreen> createState() =>
       _BundleProductScreenState();
@@ -53,16 +65,54 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
   int _quantity = 1;
   bool _expanded = false;
 
+  /// The package the server was last asked to price; the opening package is
+  /// asked at once, later ones after [BundleProductScreen.quoteDelay].
+  late BundleCartRequest? _quoted = _package();
+  Timer? _quoteTimer;
+
   @override
   void didUpdateWidget(BundleProductScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Read again (a store switch): start from the new data's own package.
     if (!identical(oldWidget.bundle, widget.bundle)) {
       _choice = BundleChoice.initial(widget.bundle);
+      _quoteTimer?.cancel();
+      _quoted = _package();
     }
   }
 
-  void _update(BundleChoice choice) => setState(() => _choice = choice);
+  @override
+  void dispose() {
+    _quoteTimer?.cancel();
+    super.dispose();
+  }
+
+  /// The package as the cart would get it, or null while it is incomplete.
+  BundleCartRequest? _package() => _choice.issues(widget.bundle).isNotEmpty
+      ? null
+      : _choice.toRequest(
+          widget.product.sku,
+          widget.bundle,
+          quantity: _quantity.toDouble(),
+        );
+
+  /// Asks the server for the new package's price once it settles.
+  void _requote() {
+    _quoteTimer?.cancel();
+    _quoteTimer = Timer(BundleProductScreen.quoteDelay, () {
+      if (mounted) setState(() => _quoted = _package());
+    });
+  }
+
+  void _update(BundleChoice choice) {
+    setState(() => _choice = choice);
+    _requote();
+  }
+
+  void _setQuantity(int quantity) {
+    setState(() => _quantity = quantity);
+    _requote();
+  }
 
   void _snack(String message) {
     if (!mounted) return;
@@ -184,7 +234,14 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
     final l10n = AppLocalizations.of(context);
     final product = widget.product;
     final bundle = widget.bundle;
-    final quote = BundleQuote.of(bundle, _choice);
+    // The server's figure for the package on show; the page's own estimate
+    // until it answers, or when it can't.
+    final package = _package();
+    final served = package != null && package == _quoted
+        ? ref.watch(bundleQuoteProvider(package)).valueOrNull
+        : null;
+    final quote = served?.quote ?? BundleQuote.of(bundle, _choice);
+    final refusal = served != null && !served.available ? served.message : null;
     final saving = quote.saving;
     final percent = quote.savingPercent;
     final busy = ref.watch(cartControllerProvider.select((s) => s.isMutating));
@@ -197,7 +254,7 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
       bottomBar: _BuyBar(
         quantity: _quantity,
         busy: busy,
-        onQuantity: (q) => setState(() => _quantity = q),
+        onQuantity: _setQuantity,
         onAdd: () => _addBundle(quote),
       ),
       body: ListView(
@@ -269,7 +326,7 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
                   onAddItemOnly: _addItemOnly,
                 ),
                 const SizedBox(height: 16),
-                _PackageSummary(bundle: bundle, quote: quote),
+                _PackageSummary(bundle: bundle, quote: quote, refusal: refusal),
               ],
             ),
           ),
@@ -899,10 +956,17 @@ class _SmallStepper extends StatelessWidget {
 
 /// "Package summary" (Figma 14b 61:2776).
 class _PackageSummary extends StatelessWidget {
-  const _PackageSummary({required this.bundle, required this.quote});
+  const _PackageSummary({
+    required this.bundle,
+    required this.quote,
+    this.refusal,
+  });
 
   final BundleProduct bundle;
   final BundleQuote quote;
+
+  /// Why the cart would refuse the package, as the server put it.
+  final String? refusal;
 
   @override
   Widget build(BuildContext context) {
@@ -1022,7 +1086,16 @@ class _PackageSummary extends StatelessWidget {
             l10n.bundleTaxesNote,
             style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
           ),
-          if (!quote.exact && total != null) ...[
+          if (refusal != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              refusal!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.accentStrong,
+              ),
+            ),
+          ] else if (!quote.exact && total != null) ...[
             const SizedBox(height: 2),
             Text(
               l10n.bundleEstimateNote,

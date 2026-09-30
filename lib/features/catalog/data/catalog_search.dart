@@ -161,6 +161,14 @@ class CatalogSearch {
     );
   }
 
+  /// The "Try" suggestions of a search that found nothing (Figma S2): the
+  /// store's query-suggestions index on Algolia; none otherwise (GraphQL has
+  /// no suggestions to offer).
+  Future<List<String>> trySuggestions({
+    required String storeCode,
+    required String query,
+  }) => _algolia.trySuggestions(storeCode: storeCode, query: query);
+
   static ProductSortField _productSort(SearchSort sort) =>
       switch ((sort.attribute, sort.descending)) {
         ('price', false) => ProductSortField.priceAsc,

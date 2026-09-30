@@ -254,10 +254,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           scope: _scope,
           onScopeTap: _pickScope,
           onViewAll: () => _submit(_controller.text),
+          onSearch: _submit,
         ),
         _SearchMode.results => SearchResultsView(
           request: SearchRequest(_query, categoryUid: _scope?.uid),
           scopeName: _scope?.name,
+          onSearch: _submit,
         ),
       },
     );

@@ -151,6 +151,122 @@ void main() {
       expect(again.categorySeparator, ' /// ');
     });
 
+    test('the suggestions index, as the storefront autocomplete picks it', () {
+      Map<String, dynamic> withSuggestions(Map<String, dynamic> flags) {
+        final config = storefrontAlgoliaConfig();
+        config['autocomplete'] = <String, dynamic>{
+          ...config['autocomplete'] as Map,
+          ...flags,
+        };
+        return config;
+      }
+
+      // Off, as on the live store today.
+      final off = AlgoliaSettings.fromStorefrontConfig(storefrontAlgoliaConfig());
+      expect(off.suggestionIndex, isNull);
+      expect(off.suggestionCount, 0);
+
+      // Magento search terms: the extension's own <index>_suggestions.
+      final magento = AlgoliaSettings.fromStorefrontConfig(
+        withSuggestions({
+          'areSuggestionsEnabled': true,
+          'showMagentoSuggestions': true,
+          'nbOfQueriesSuggestions': 5,
+          'showAlgoliaSuggestions': false,
+          'suggestionsIndexName': '',
+        }),
+      );
+      expect(magento.suggestionIndex, 'hubmarket_en_suggestions');
+      expect(magento.suggestionCount, 5);
+
+      // Algolia Query Suggestions: the configured index.
+      final algolia = AlgoliaSettings.fromStorefrontConfig(
+        withSuggestions({
+          'areSuggestionsEnabled': true,
+          'showAlgoliaSuggestions': true,
+          'suggestionsIndexName': 'hubmarket_en_products_query_suggestions',
+          'nbOfAlgoliaSuggestions': 3,
+        }),
+      );
+      expect(algolia.suggestionIndex, 'hubmarket_en_products_query_suggestions');
+      expect(algolia.suggestionCount, 3);
+
+      // The offline cache keeps it.
+      final again = AlgoliaSettings.fromStorefrontConfig(
+        jsonDecode(jsonEncode(magento.toStorefrontConfig()))
+            as Map<String, dynamic>,
+      );
+      expect(again.suggestionIndex, 'hubmarket_en_suggestions');
+      expect(again.suggestionCount, 5);
+    });
+
+    test('from hmAppConfig with the storefront layout: everything the page '
+        'had', () {
+      final until = now.add(const Duration(hours: 20));
+      final settings = AlgoliaSettings.fromHubApp(
+        HmAlgoliaConfig(
+          applicationId: 'HL67ED06DQ',
+          searchApiKey: 'hub-key',
+          validUntil: until,
+          indexPrefix: 'hubmarket_',
+          productIndex: 'hubmarket_ar_products',
+          categoryIndex: 'hubmarket_ar_categories',
+          pageIndex: 'hubmarket_ar_pages',
+          layout: const HmAlgoliaLayout(
+            facets: [
+              HmAlgoliaFacet(attribute: 'price', type: 'slider', label: 'السعر'),
+              HmAlgoliaFacet(
+                attribute: 'mgs_brand',
+                type: 'disjunctive',
+                label: 'العلامة التجارية',
+              ),
+            ],
+            sorts: [
+              HmAlgoliaSort(
+                index: 'hubmarket_ar_products_created_at_desc',
+                attribute: 'created_at',
+                descending: true,
+                label: 'الأحدث أولاً',
+              ),
+            ],
+            suggestionIndex: 'hubmarket_ar_suggestions',
+            suggestionCount: 4,
+            currencyCode: 'AED',
+            priceGroup: 'group_0',
+            maxValuesPerFacet: 12,
+            productSuggestions: 6,
+            categorySuggestions: 3,
+            pageSuggestions: 0,
+            categorySeparator: ' /// ',
+            categoriesOutsideMenu: true,
+          ),
+        ),
+        config: _config(),
+        storeCode: 'ar',
+      );
+
+      expect(settings.searchKey, 'hub-key');
+      expect(settings.validUntil, until);
+      expect(settings.indexName, 'hubmarket_ar');
+      expect(settings.facets.map((f) => f.attribute), ['price', 'mgs_brand']);
+      expect(settings.facet('mgs_brand')!.label, 'العلامة التجارية');
+      expect(
+        settings.sorts.map((s) => (s.indexName, s.attribute, s.descending)),
+        [('hubmarket_ar_products_created_at_desc', 'created_at', true)],
+      );
+      expect(settings.sorts.single.label, 'الأحدث أولاً');
+      expect(settings.priceAttribute, 'price.AED.group_0');
+      expect(settings.maxValuesPerFacet, 12);
+      expect(settings.productSuggestions, 6);
+      expect(settings.categorySuggestions, 3);
+      expect(settings.pageSuggestions, 0);
+      expect(settings.categorySeparator, ' /// ');
+      expect(settings.categoriesOutsideMenu, isTrue);
+      expect(settings.suggestionIndex, 'hubmarket_ar_suggestions');
+      expect(settings.suggestionCount, 4);
+      expect(settings.fromBackend, isTrue);
+    });
+
     test('from a static key: the configured replicas, basic facets', () {
       final settings = AlgoliaSettings.fromAppConfig(
         _config(key: '0123456789abcdef0123456789abcdef'),
@@ -360,6 +476,37 @@ void main() {
         ).settingsFor('ar');
         expect(again.facet('mgs_brand'), isNotNull);
         expect(backend.pageRequests, hasLength(1));
+      },
+    );
+
+    test(
+      'the layout from hmAppConfig: no storefront page is read at all',
+      () async {
+        final backend = FakeAlgoliaBackend();
+        final settings = await repository(
+          backend,
+          (store, {bool fresh = false}) async => HmAlgoliaConfig(
+            applicationId: 'HL67ED06DQ',
+            searchApiKey: 'hub-key',
+            validUntil: DateTime.now().add(const Duration(hours: 23)),
+            indexPrefix: 'hubmarket_',
+            productIndex: 'hubmarket_${store}_products',
+            categoryIndex: 'hubmarket_${store}_categories',
+            pageIndex: 'hubmarket_${store}_pages',
+            layout: const HmAlgoliaLayout(
+              facets: [
+                HmAlgoliaFacet(attribute: 'color', type: 'disjunctive', label: 'اللون'),
+              ],
+              currencyCode: 'AED',
+              priceGroup: 'default',
+              productSuggestions: 8,
+            ),
+          ),
+        ).settingsFor('ar');
+
+        expect(settings.searchKey, 'hub-key');
+        expect(settings.facet('color')!.label, 'اللون');
+        expect(backend.pageRequests, isEmpty);
       },
     );
 

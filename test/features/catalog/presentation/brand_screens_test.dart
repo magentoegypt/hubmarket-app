@@ -24,7 +24,13 @@ import '../../../support/fakes.dart';
 import '../../../support/fonts.dart';
 import '../../../support/hubapp_fakes.dart';
 
-Brand _brand(int id, String name, {int? option}) => Brand(
+Brand _brand(
+  int id,
+  String name, {
+  int? option,
+  int? products,
+  int? sellers,
+}) => Brand(
   brandId: id,
   title: name,
   urlKey: name.toLowerCase(),
@@ -32,18 +38,19 @@ Brand _brand(int id, String name, {int? option}) => Brand(
   imageUrl: '',
   optionId: option ?? 200 + id,
   position: id,
+  productCount: products,
+  sellerCount: sellers,
 );
 
+/// As `hmBrands` counts them (Figma 10d).
 final _brands = <Brand>[
-  _brand(1, 'Samsung'),
-  _brand(2, 'HP'),
-  _brand(3, 'Fresh'),
-  _brand(4, 'Acer'),
-  _brand(5, 'Lenovo'),
-  _brand(6, 'Kodak'), // no products → not listed
+  _brand(1, 'Samsung', products: 12, sellers: 2),
+  _brand(2, 'HP', products: 2, sellers: 1),
+  _brand(3, 'Fresh', products: 2, sellers: 1),
+  _brand(4, 'Acer', products: 1, sellers: 1),
+  _brand(5, 'Lenovo', products: 1, sellers: 1),
+  _brand(6, 'Kodak', products: 0, sellers: 0), // no products → not listed
 ];
-
-const _counts = <int, int>{201: 12, 202: 2, 203: 2, 204: 1, 205: 1, 206: 0};
 
 /// Samsung's products, answering the mgs_brand filter like OpenSearch does.
 class _BrandCatalog extends FakeCatalogRepository {
@@ -109,7 +116,7 @@ Widget _harness(
   String locale = 'en',
   GlobalKey? boundary,
   _BrandCatalog? catalog,
-  int? sellers = 2,
+  List<Brand>? brands,
 }) {
   _visited.clear();
   final router = GoRouter(
@@ -142,9 +149,7 @@ Widget _harness(
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       publicGraphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(const HubAppState.available(kSampleHmAppConfig)),
-      brandsProvider.overrideWith((ref) async => _brands),
-      brandProductCountsProvider.overrideWith((ref) async => _counts),
-      brandSellerCountProvider.overrideWith((ref, id) async => sellers),
+      brandsProvider.overrideWith((ref) async => brands ?? _brands),
       catalogRepositoryProvider.overrideWithValue(catalog ?? _BrandCatalog()),
     ],
     child: RepaintBoundary(
@@ -200,6 +205,22 @@ void main() {
       });
     }
 
+    testWidgets('an older backend without counts lists every brand', (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(
+        _harness(
+          const BrandsScreen(),
+          brands: [_brand(1, 'Samsung'), _brand(6, 'Kodak')],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Samsung'), findsOneWidget);
+      expect(find.text('Kodak'), findsOneWidget);
+      expect(find.textContaining('products'), findsOneWidget); // the header line only
+    });
+
     testWidgets('search, initials, and a card opens the brand page', (
       tester,
     ) async {
@@ -245,8 +266,9 @@ void main() {
           tester.element(find.byType(BrandPageScreen)),
         );
         expect(find.text('Samsung'), findsWidgets);
+        // The brand's own counts, "from N stores" always (Figma 10e).
         expect(
-          find.text('${l10n.hmProductCount(2)} · ${l10n.brandFromStores(2)}'),
+          find.text('${l10n.hmProductCount(12)} · ${l10n.brandFromStores(2)}'),
           findsOneWidget,
         );
         // "All" is a category every product is in: no chip for it.
@@ -277,13 +299,37 @@ void main() {
 
     testWidgets('found by url_key when opened from a link', (tester) async {
       await _phone(tester);
-      await tester.pumpWidget(
-        _harness(const BrandPageScreen(urlKey: 'SAMSUNG'), sellers: null),
-      );
+      await tester.pumpWidget(_harness(const BrandPageScreen(urlKey: 'SAMSUNG')));
       await tester.pumpAndSettle();
       expect(find.text('Samsung 65-Inch Television'), findsOneWidget);
-      // No seller count: the products alone.
+      expect(find.text('12 products · from 2 stores'), findsOneWidget);
+    });
+
+    testWidgets('from the Home strip (no counts): the counts of hmBrands', (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(
+        _harness(BrandPageScreen(urlKey: 'samsung', brand: _brand(1, 'Samsung'))),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('12 products · from 2 stores'), findsOneWidget);
+    });
+
+    testWidgets("an older backend without counts: the listing's total alone", (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(
+        _harness(
+          const BrandPageScreen(urlKey: 'samsung'),
+          brands: [_brand(1, 'Samsung')],
+        ),
+      );
+      await tester.pumpAndSettle();
+      // The grid's 2 products, and no store count to show.
       expect(find.text('2 products'), findsWidgets);
+      expect(find.textContaining('from'), findsNothing);
     });
 
     testWidgets('an unknown brand shows the empty state', (tester) async {

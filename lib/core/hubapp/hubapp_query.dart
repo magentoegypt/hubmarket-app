@@ -22,6 +22,13 @@ class HubAppMissing implements Exception {
   String toString() => 'HubAppMissing($message)';
 }
 
+/// Whether [missing] says the root field [field] itself is unknown — the
+/// module that owns it isn't deployed — rather than one of its arguments,
+/// sub-fields or types (an older build of the module).
+bool isMissingRootField(HubAppMissing missing, String field) =>
+    missing.message.contains('Cannot query field "$field" on type "Query"') ||
+    missing.message.contains('Cannot query field "$field" on type "Mutation"');
+
 /// Validation messages that mean "this schema has no such field / type /
 /// argument". Magento answers them with HTTP 200 and no `extensions.category`
 /// in production mode, so the message is all there is to go on.
