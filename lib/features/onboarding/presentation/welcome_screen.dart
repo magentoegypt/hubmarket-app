@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,36 +10,76 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/assets/app_images.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../core/widgets/brand_lockup.dart';
+import '../../../core/widgets/network_image.dart';
+import '../../home/domain/hm_home.dart';
+import '../../home/presentation/hm_home_providers.dart';
+import '../../home/presentation/widgets/hm_hero.dart';
 import '../../../l10n/l10n.dart';
 
-/// Welcome (Figma "02 Welcome"): a visual panel with the "same-day delivery"
-/// badge, the headline + subtitle, the English | عربي switch, then Create
-/// account / Sign in / Continue as guest. Chrome-free. Guests can browse;
-/// sign-in is only forced at checkout.
+/// Welcome (Figma "02 Welcome"): a visual panel, the headline + subtitle, the
+/// English | عربي switch, then Create account / Sign in / Continue as guest.
+/// Chrome-free. Guests can browse; sign-in is only forced at checkout.
 ///
-/// Build 1: the panel shows the reversed logo on navy. The Figma's photo
-/// carousel is the storefront's Hero Banner slides and arrives with their API
-/// (Build 2) — no marketing photo is bundled with the app.
-class WelcomeScreen extends ConsumerWidget {
+/// The panel is the storefront's Hero Banner slides (the guest Home's
+/// HERO_BANNERS, Hub Market App API) — each photo with its kicker, the pager
+/// below. Without them (Build 1, or no slide with a photo) it is the reversed
+/// logo on navy with the "same-day delivery" badge: no marketing photo is
+/// bundled with the app.
+class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
+  int _page = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final activeLocale = ref.watch(
       storeControllerProvider.select((s) => s.activeLocale),
     );
     final isEn = activeLocale != 'ar';
+    final slides =
+        ref.watch(welcomeSlidesProvider).valueOrNull ?? const <HmHeroBanner>[];
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          Expanded(child: _BrandPanel(kicker: l10n.welcomeKicker)),
+          Expanded(
+            child: slides.isEmpty
+                ? _BrandPanel(kicker: l10n.welcomeKicker)
+                : _SlidesPanel(
+                    slides: slides,
+                    onPageChanged: (page) => setState(() => _page = page),
+                  ),
+          ),
+          if (slides.length > 1)
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 22, 20, 0),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: HmPagerDots(
+                  count: slides.length,
+                  index: _page.clamp(0, slides.length - 1),
+                  activeColor: AppColors.accent,
+                  dotSize: 8,
+                  activeWidth: 22,
+                ),
+              ),
+            ),
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                slides.length > 1 ? 14 : 20,
+                24,
+                8,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -104,6 +146,89 @@ class WelcomeScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The Hero Banner slides as the Welcome photo carousel: each image with its
+/// kicker pill; advances every few seconds.
+class _SlidesPanel extends StatefulWidget {
+  const _SlidesPanel({required this.slides, required this.onPageChanged});
+
+  final List<HmHeroBanner> slides;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  State<_SlidesPanel> createState() => _SlidesPanelState();
+}
+
+class _SlidesPanelState extends State<_SlidesPanel> {
+  final _controller = PageController();
+  Timer? _timer;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    if (widget.slides.length < 2) return;
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      _controller.animateToPage(
+        (_page + 1) % widget.slides.length,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: PageView.builder(
+        controller: _controller,
+        itemCount: widget.slides.length,
+        onPageChanged: (page) {
+          _page = page;
+          widget.onPageChanged(page);
+          _schedule();
+        },
+        itemBuilder: (context, i) {
+          final slide = widget.slides[i];
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              HubImage(
+                url: slide.imageUrl,
+                fit: BoxFit.cover,
+                shimmer: true,
+                semanticLabel: slide.title,
+              ),
+              if (slide.kicker != null)
+                PositionedDirectional(
+                  start: 20,
+                  bottom: 20,
+                  child: HmPill(
+                    label: slide.kicker!,
+                    color: slide.accent ?? AppColors.successStrong,
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

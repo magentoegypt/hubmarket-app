@@ -364,11 +364,15 @@ class HmPagerDots extends StatelessWidget {
     required this.count,
     required this.index,
     this.activeColor = AppColors.brandPrimary,
+    this.dotSize = 6,
+    this.activeWidth = 20,
   });
 
   final int count;
   final int index;
   final Color activeColor;
+  final double dotSize;
+  final double activeWidth;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -378,8 +382,8 @@ class HmPagerDots extends StatelessWidget {
         if (i > 0) const SizedBox(width: 6),
         AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          width: i == index ? 20 : 6,
-          height: 6,
+          width: i == index ? activeWidth : dotSize,
+          height: dotSize,
           decoration: BoxDecoration(
             color: i == index ? activeColor : AppColors.borderStrong,
             borderRadius: BorderRadius.circular(999),
