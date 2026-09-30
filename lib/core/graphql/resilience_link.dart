@@ -5,6 +5,19 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 
 import '../error/graphql_failure_mapper.dart';
 
+/// Marks a request that checks a credential the customer typed — the current
+/// password of `changeCustomerPassword`. Magento refuses a wrong one with a
+/// `graphql-authentication` error on the mutation's field
+/// ([isCredentialRefusal]), the category it also uses for a dead session; on
+/// a request with this entry that refusal is the answer to the form, not a
+/// reason for [ResilienceLink] to sign the customer out.
+class CredentialCheck extends ContextEntry {
+  const CredentialCheck();
+
+  @override
+  List<Object?> get fieldsForEquality => const [];
+}
+
 /// A terminating-adjacent link that adds two cross-cutting concerns to every
 /// operation (CLAUDE.md §3.2 + §7):
 ///
@@ -54,7 +67,7 @@ class ResilienceLink extends Link {
       attempt++;
       try {
         await for (final response in forward!(request).timeout(requestTimeout)) {
-          if (_responseHasAuthError(response)) onAuthError();
+          if (_responseHasAuthError(request, response)) onAuthError();
           yield response;
         }
         return;
@@ -63,7 +76,7 @@ class ResilienceLink extends Link {
         // graphql throws as a ServerException (it never reaches the yielded-
         // response check above). Detect the auth error here too so the stale
         // token is dropped to guest — otherwise every request keeps failing.
-        if (_thrownHasAuthError(error)) onAuthError();
+        if (_thrownHasAuthError(request, error)) onAuthError();
         if (!retryable || attempt >= maxAttempts || !_isTransient(error)) {
           rethrow;
         }
@@ -81,21 +94,29 @@ class ResilienceLink extends Link {
     return false;
   }
 
-  static bool _responseHasAuthError(Response response) {
-    final errors = response.errors;
-    if (errors == null || errors.isEmpty) return false;
-    return errors.any(isAuthGraphqlError);
-  }
+  static bool _responseHasAuthError(Request request, Response response) =>
+      _reportsDeadSession(request, response.errors);
 
   /// True when a *thrown* exception carries a parsed auth error — i.e. a
   /// ServerException from a non-200 (Magento 401) whose payload reports the
   /// token is invalid/expired (`graphql-authorization`/`graphql-authentication`).
-  static bool _thrownHasAuthError(Object error) {
+  static bool _thrownHasAuthError(Request request, Object error) {
     if (error is ServerException) {
-      final errors = error.parsedResponse?.errors;
-      return errors != null && errors.any(isAuthGraphqlError);
+      return _reportsDeadSession(request, error.parsedResponse?.errors);
     }
     return false;
+  }
+
+  /// Whether [errors] say the session is gone. On a [CredentialCheck]
+  /// request, a field's refusal of the typed credential doesn't.
+  static bool _reportsDeadSession(Request request, List<GraphQLError>? errors) {
+    if (errors == null || errors.isEmpty) return false;
+    final checksCredential = request.context.entry<CredentialCheck>() != null;
+    return errors.any(
+      (error) =>
+          isAuthGraphqlError(error) &&
+          !(checksCredential && isCredentialRefusal(error)),
+    );
   }
 
   /// String-based, version-robust transient detection (mirrors the failure

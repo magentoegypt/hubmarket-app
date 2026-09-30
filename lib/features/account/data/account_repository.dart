@@ -4,6 +4,7 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/graphql/resilience_link.dart';
 import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../core/util/media.dart';
@@ -247,10 +248,16 @@ class AccountRepository {
     'input': {'firstname': firstName, 'lastname': lastName},
   }, mutation: true);
 
+  /// Throws a `server` [Failure] with the store's message when it refuses:
+  /// a wrong current password ("Invalid login or password."), a new one it
+  /// won't take. A wrong current password is an authentication error on the
+  /// mutation's field, so the request is a [CredentialCheck]: it answers the
+  /// form and leaves the session alone.
   Future<void> changePassword(String current, String next) => _run(
     AccountQueries.changePassword,
     {'currentPassword': current, 'newPassword': next},
     mutation: true,
+    credentialCheck: true,
   );
 
   /// Replaces the customer's mobile with [mobileNumber] (E.164), proving it
@@ -543,13 +550,19 @@ class AccountRepository {
   }
 
   /// [throwMissing]: a "Cannot query field" answer throws [HubAppMissing]
-  /// rather than a [Failure].
+  /// rather than a [Failure]. [credentialCheck]: the request checks a
+  /// credential the customer typed ([CredentialCheck]); a field's refusal of
+  /// it becomes a `server` [Failure] with the store's message.
   Future<Map<String, dynamic>> _run(
     String document,
     Map<String, dynamic> variables, {
     required bool mutation,
     bool throwMissing = false,
+    bool credentialCheck = false,
   }) async {
+    final requestContext = credentialCheck
+        ? const Context().withEntry(const CredentialCheck())
+        : const Context();
     try {
       final result = mutation
           ? await _client.mutate(
@@ -557,6 +570,7 @@ class AccountRepository {
                 document: gql(document),
                 variables: variables,
                 fetchPolicy: FetchPolicy.networkOnly,
+                context: requestContext,
               ),
             )
           : await _client.query(
@@ -564,6 +578,7 @@ class AccountRepository {
                 document: gql(document),
                 variables: variables,
                 fetchPolicy: FetchPolicy.networkOnly,
+                context: requestContext,
               ),
             );
       if (result.hasException) {
@@ -572,6 +587,12 @@ class AccountRepository {
           throw HubAppMissing(
             exception.graphqlErrors.firstOrNull?.message ?? 'hm_seller',
           );
+        }
+        if (credentialCheck) {
+          final refusal = credentialRefusalMessage(exception);
+          if (refusal != null) {
+            throw Failure(FailureKind.server, detail: refusal);
+          }
         }
         throw mapOperationException(exception);
       }

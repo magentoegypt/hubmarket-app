@@ -114,7 +114,10 @@ void main() {
   testWidgets('Build 2 lists deals, bundles, brands and stores', (
     tester,
   ) async {
-    await _pump(tester, hubApp: const HubAppState.available(kSampleHmAppConfig));
+    await _pump(
+      tester,
+      hubApp: const HubAppState.available(kSampleHmAppConfig),
+    );
     for (final label in [
       en.homeTodaysDeals,
       en.bundlesTitle,
