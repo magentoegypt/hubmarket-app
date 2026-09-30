@@ -46,12 +46,15 @@ Android flavors install side by side (`com.hubmarket.app`, `.dev`, `.staging`).
 ```bash
 flutter analyze
 flutter test
-PYTHONIOENCODING=utf-8 python tool/validate_ops.py   # every GraphQL document vs the live schema — must report 0 problems
+PYTHONIOENCODING=utf-8 python tool/validate_ops.py   # every GraphQL document vs the live schema + the HubApp contract — must report 0 problems
+python -m unittest discover -s tool -p "test_*.py"   # the tooling's own tests
 ```
 
 `python tool/introspect_to_sdl.py` refreshes `lib/core/graphql/schema.graphql`
-from the live endpoint. Tooling and tests only ever **query** the live server
-(and introspect it); they never send a mutation.
+from the live endpoint; CI checks the operations against that committed copy
+(`validate_ops.py --schema-file lib/core/graphql/schema.graphql`). Tooling and
+tests only ever **query** the live server (and introspect it); they never send
+a mutation.
 
 Some widget tests also render screens in English and Arabic, with the bundled
 fonts, to `build/test_screens/*.png` for comparison with the Figma frames.
@@ -61,16 +64,18 @@ fonts, to `build/test_screens/*.png` for comparison with the Figma frames.
 ```
 lib/
   app/        MaterialApp.router, routes, theme (Figma tokens, fonts, text styles), shell
-  core/       config · graphql (link chain, resilience) · store views · storage · error
-              · network (connectivity) · validation · widgets
+  core/       config · graphql (link chain, resilience) · hubapp (Hub Market App API
+              probe, settings) · store views · storage · error · network (connectivity)
+              · validation · widgets
   features/   auth · catalog (search, PLP, PDP, reviews) · home · cart · checkout
               · account · wishlist · cms · notifications · onboarding · diagnostics
+              · app_status · deals · marketplace · returns · store_credit · stores
               (each data / domain / presentation)
   l10n/       app_en.arb · app_ar.arb
 assets/       branding (logo, app icon) · fonts (DM Sans, Tajawal, Playfair Display + OFL)
 config/       dev · staging · prod
 tool/         introspect_to_sdl.py · validate_ops.py · CI / iOS helper scripts
-.github/      ci · build-on-push · release-android · release-ios · iOS screenshot / deep-link checks
+.github/      ci · build-on-push · release-android · release-ios · build-ios · iOS screenshot / deep-link checks
 ```
 
 ## Fonts
