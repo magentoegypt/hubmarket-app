@@ -92,11 +92,17 @@ fragment HmOrderSellers on CustomerOrder {
 
   // scope: WEBSITE unifies orders across both store views (`en` / `ar` share
   // one website) — without it `orders` defaults to STORE and each language only
-  // sees the orders placed under its own Store header.
+  // sees the orders placed under its own Store header. Newest first: without a
+  // sort Magento returns orders in database order, oldest first.
   static final String orders = _withOrderFields(r'''
 query CustomerOrders($pageSize: Int!, $currentPage: Int!) {
   customer {
-    orders(pageSize: $pageSize, currentPage: $currentPage, scope: WEBSITE) {
+    orders(
+      pageSize: $pageSize
+      currentPage: $currentPage
+      scope: WEBSITE
+      sort: { sort_field: CREATED_AT, sort_direction: DESC }
+    ) {
       total_count
       page_info { current_page total_pages }
       items { ...OrderFields }
