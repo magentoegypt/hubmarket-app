@@ -20,6 +20,7 @@ import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/cart.dart';
 import '../cart_controller.dart';
+import '../cart_store_credit.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -258,7 +259,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         // Thick grey band (Figma 39:26) — closes the promo section.
         const _SectionBand(),
         // Order Summary (Figma 39:27).
-        _OrderSummary(cart: cart, freeDeliveryThreshold: freeShipThreshold),
+        _OrderSummary(
+          cart: cart,
+          freeDeliveryThreshold: freeShipThreshold,
+          storeCredit: ref.watch(cartStoreCreditProvider).valueOrNull,
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Column(
@@ -675,13 +680,21 @@ class _CouponSection extends StatelessWidget {
 /// delivery line (FREE past the threshold, otherwise "calculated at
 /// checkout"), a divider, then the total in navy.
 class _OrderSummary extends StatelessWidget {
-  const _OrderSummary({required this.cart, this.freeDeliveryThreshold});
+  const _OrderSummary({
+    required this.cart,
+    this.freeDeliveryThreshold,
+    this.storeCredit,
+  });
 
   final Cart cart;
 
   /// Free-shipping threshold (AED) from store config; null when unconfigured/
   /// still loading, in which case delivery falls back to "calculated at checkout".
   final double? freeDeliveryThreshold;
+
+  /// Store credit used on the cart (HubApp), already off [cart]'s total;
+  /// null — no line — in Build 1 and when none is applied.
+  final Money? storeCredit;
 
   @override
   Widget build(BuildContext context) {
@@ -733,6 +746,15 @@ class _OrderSummary extends StatelessWidget {
             valueColor: freeDelivery ? AppColors.brandPrimary : null,
             valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
           ),
+          // Credit used at checkout is already off the total below.
+          if (storeCredit != null) ...[
+            const SizedBox(height: 11),
+            SummaryRow(
+              label: l10n.checkoutStoreCredit,
+              value: '−${storeCredit!.formatted()}',
+              valueColor: AppColors.brandPrimary,
+            ),
+          ],
           const SizedBox(height: 11),
           const Divider(
             height: 1,

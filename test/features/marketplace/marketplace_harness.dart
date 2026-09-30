@@ -25,6 +25,7 @@ import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
+import 'package:hubmarket_app/features/store_credit/data/store_credit_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -145,6 +146,8 @@ Widget marketplaceHarness({
   CatalogRepository? catalogRepository,
   CustomerOrder? order,
   bool storeRoute = true,
+  bool signedIn = false,
+  StoreCreditRepository? storeCredit,
   GlobalKey? boundary,
 }) {
   final router = GoRouter(
@@ -206,8 +209,12 @@ Widget marketplaceHarness({
         FakeLocalCache()..writeString('guest_cart_id', 'guest-1'),
       ),
       localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
-      secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
+      secureTokenStoreProvider.overrideWithValue(
+        FakeSecureTokenStore(signedIn ? 'customer-token' : null),
+      ),
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      if (storeCredit != null)
+        storeCreditRepositoryProvider.overrideWithValue(storeCredit),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(hubApp),
       publicGraphqlClientProvider.overrideWithValue(

@@ -12,6 +12,7 @@ import '../../support/fakes.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 import '../../support/marketplace_fakes.dart';
+import '../../support/store_credit_fakes.dart';
 import 'marketplace_harness.dart';
 
 final _en = lookupAppLocalizations(const Locale('en'));
@@ -348,6 +349,80 @@ void main() {
       expect(find.text('MIA CO'), findsNothing);
       expect(find.text(_en.cartItemCount(4)), findsOneWidget);
       expect(find.text('Corner Sofa Bed'), findsOneWidget);
+    });
+  });
+
+  group('the cart\'s store credit line', () {
+    Future<void> pumpCart(
+      WidgetTester tester, {
+      required HubAppState hubApp,
+      required FakeStoreCreditRepository credit,
+      bool signedIn = true,
+    }) async {
+      phoneView(tester, height: 1500);
+      await tester.pumpWidget(
+        marketplaceHarness(
+          locale: 'en',
+          location: AppRoutes.cart,
+          hubApp: hubApp,
+          signedIn: signedIn,
+          storeCredit: credit,
+          cartRepository: CannedCartRepository(twoStoreCart('customer-1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('credit used at checkout shows under the delivery line', (
+      tester,
+    ) async {
+      final credit = FakeStoreCreditRepository(
+        cartCredit: sampleCartCredit(applied: 50),
+      );
+      await pumpCart(
+        tester,
+        hubApp: HubAppState.available(hubAppAccountConfig(storeCredit: true)),
+        credit: credit,
+      );
+
+      expect(credit.calls, contains(startsWith('fetchCartCredit:')));
+      expect(find.text(_en.checkoutStoreCredit), findsOneWidget);
+      expect(find.text('−AED 50.00'), findsOneWidget);
+    });
+
+    testWidgets('no line while no credit is used', (tester) async {
+      await pumpCart(
+        tester,
+        hubApp: HubAppState.available(hubAppAccountConfig(storeCredit: true)),
+        credit: FakeStoreCreditRepository(cartCredit: sampleCartCredit()),
+      );
+
+      expect(find.text(_en.checkoutStoreCredit), findsNothing);
+    });
+
+    testWidgets('Build 1 and guests never ask', (tester) async {
+      final build1 = FakeStoreCreditRepository(
+        cartCredit: sampleCartCredit(applied: 50),
+      );
+      await pumpCart(
+        tester,
+        hubApp: const HubAppState.unavailable(),
+        credit: build1,
+      );
+      expect(find.text(_en.checkoutStoreCredit), findsNothing);
+      expect(build1.calls, isEmpty);
+
+      final guest = FakeStoreCreditRepository(
+        cartCredit: sampleCartCredit(applied: 50),
+      );
+      await pumpCart(
+        tester,
+        hubApp: HubAppState.available(hubAppAccountConfig(storeCredit: true)),
+        credit: guest,
+        signedIn: false,
+      );
+      expect(find.text(_en.checkoutStoreCredit), findsNothing);
+      expect(guest.calls, isEmpty);
     });
   });
 

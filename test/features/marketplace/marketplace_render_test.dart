@@ -10,6 +10,7 @@ import '../../support/bundle_fixtures.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 import '../../support/marketplace_fakes.dart';
+import '../../support/store_credit_fakes.dart';
 import '../checkout/checkout_harness.dart' as checkout;
 import 'marketplace_harness.dart';
 
@@ -270,6 +271,26 @@ void main() {
         locale: locale,
       );
       expect(find.text(n.mia), findsOneWidget);
+    });
+
+    testWidgets('16 cart with store credit used ($locale)', (tester) async {
+      await render(
+        tester,
+        (key) => marketplaceHarness(
+          locale: locale,
+          location: AppRoutes.cart,
+          boundary: key,
+          hubApp: HubAppState.available(hubAppAccountConfig(storeCredit: true)),
+          signedIn: true,
+          storeCredit: FakeStoreCreditRepository(
+            cartCredit: sampleCartCredit(applied: 50),
+          ),
+          cartRepository: CannedCartRepository(_cart(locale, 'customer-1')),
+        ),
+        'p3_16_cart_credit_$locale',
+        height: 1400,
+        locale: locale,
+      );
     });
 
     testWidgets('18b review by store ($locale)', (tester) async {
