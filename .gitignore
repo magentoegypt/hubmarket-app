@@ -59,6 +59,10 @@ android/key.properties
 # (*.certSigningRequest) is a transient upload artifact; keep it out of git too.
 *.key
 *.certSigningRequest
+# Certificates and PEM files: a .pem can hold a private key, and a .cer is the
+# public half that only ever belongs in the Apple portal and the .p12.
+*.pem
+*.cer
 # Where tool/ios_sign_build.sh / ios_appstore_build.sh read the .p12 and the
 # provisioning profile: put there by hand on a Mac, or decoded from secrets by
 # the iOS workflows. Never committed.
