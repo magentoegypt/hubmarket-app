@@ -278,10 +278,25 @@ void main() {
         },
       });
       expect(detail.brand, 'Samsung');
+      // The option id brand listings filter on.
+      expect(detail.brandOptionId, 1);
       expect(
         [for (final a in detail.attributes) (a.code, a.value, a.isBrand)],
         [('color', 'Black', false), ('mgs_brand', 'Samsung', true)],
       );
+    });
+
+    test('a manufacturer brand carries no mgs_brand option id', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'custom_attributesV2': {
+          'items': [
+            selected('manufacturer', ['Acme']),
+          ],
+        },
+      });
+      expect(detail.brand, 'Acme');
+      expect(detail.brandOptionId, isNull);
     });
 
     test('a multiselect lists every label, entity-decoded', () {

@@ -216,6 +216,7 @@ ProductDetail productDetailFromJson(
   // are dropped, matching the site.
   final attributes = <ProductAttribute>[];
   String? brand;
+  int? brandOptionId;
   final customAttrs =
       (json['custom_attributesV2'] as Map<String, dynamic>?)?['items']
           as List<dynamic>?;
@@ -232,7 +233,18 @@ ProductDetail productDetailFromJson(
         : (item['value'] as String? ?? '').trim();
     if (code.isEmpty || value.isEmpty) continue;
     final isBrand = _brandAttributeCodes.contains(code);
-    if (isBrand) brand ??= value;
+    if (isBrand && brand == null) {
+      brand = value;
+      // The option id brand pages filter on — only `mgs_brand`'s own, and
+      // only for a single brand.
+      final options = item['selected_options'];
+      if (code == kBrandAttributeCode && options is List && options.length == 1) {
+        final option = options.first;
+        if (option is Map<String, dynamic>) {
+          brandOptionId = int.tryParse('${option['value'] ?? ''}'.trim());
+        }
+      }
+    }
     attributes.add(ProductAttribute(code: code, value: value, isBrand: isBrand));
   }
 
@@ -242,6 +254,7 @@ ProductDetail productDetailFromJson(
     urlKey: (json['url_key'] as String?) ?? '',
     typeId: productTypeFromTypename(json['__typename']),
     brand: brand,
+    brandOptionId: brandOptionId,
     attributes: attributes,
     description: _stripHtml(
       (json['description'] as Map<String, dynamic>?)?['html'] as String?,

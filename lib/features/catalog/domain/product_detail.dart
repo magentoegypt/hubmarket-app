@@ -186,6 +186,7 @@ class ProductDetail {
     required this.urlKey,
     this.typeId,
     this.brand,
+    this.brandOptionId,
     this.description,
     this.shortDescription,
     this.attributes = const <ProductAttribute>[],
@@ -211,6 +212,11 @@ class ProductDetail {
   /// unknown.
   final String? typeId;
   final String? brand;
+
+  /// The `mgs_brand` option id of [brand] — what brand listings filter on and
+  /// `hmBrands` keys brands by; null when the brand came from another
+  /// attribute or the catalogue didn't say.
+  final int? brandOptionId;
 
   /// Plain-text description (HTML already stripped).
   final String? description;
