@@ -9,6 +9,7 @@ import '../../features/auth/presentation/auth_controller.dart';
 import '../config/app_config.dart';
 import '../storage/secure_token_store.dart';
 import '../store/store_controller.dart';
+import 'possible_types.dart';
 import 'resilience_link.dart';
 import 'store_link.dart';
 
@@ -25,19 +26,18 @@ import 'store_link.dart';
 http.Client _platformHttpClient(String userAgent) {
   if (defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.macOS) {
-    final configuration =
-        URLSessionConfiguration.defaultSessionConfiguration()
-          ..httpAdditionalHeaders = {
-            'User-Agent': userAgent,
-            // Force uncompressed responses on iOS. Once the app sets
-            // Accept-Encoding, NSURLSession stops auto-decompressing — so we
-            // ask the edge for `identity` (CloudFront honours it) and get plain
-            // JSON. This sidesteps a compressed body that gql_http_link's
-            // utf8→json decoder can't parse (it surfaced as a `service`
-            // failure on the larger storeConfig response while a tiny probe
-            // response — uncompressed — succeeded).
-            'Accept-Encoding': 'identity',
-          };
+    final configuration = URLSessionConfiguration.defaultSessionConfiguration()
+      ..httpAdditionalHeaders = {
+        'User-Agent': userAgent,
+        // Force uncompressed responses on iOS. Once the app sets
+        // Accept-Encoding, NSURLSession stops auto-decompressing — so we
+        // ask the edge for `identity` (CloudFront honours it) and get plain
+        // JSON. This sidesteps a compressed body that gql_http_link's
+        // utf8→json decoder can't parse (it surfaced as a `service`
+        // failure on the larger storeConfig response while a tiny probe
+        // response — uncompressed — succeeded).
+        'Accept-Encoding': 'identity',
+      };
     return CupertinoClient.fromSessionConfiguration(configuration);
   }
   return http.Client();
@@ -146,7 +146,10 @@ GraphQLClient buildGraphQLClient({
 
   return GraphQLClient(
     link: link,
-    cache: GraphQLCache(store: InMemoryStore()),
+    // Every result is normalised into the cache and read back from it; a
+    // fragment on an interface (`fragment F on ProductInterface`) only keeps
+    // its fields on a `SimpleProduct` when the cache knows the implementers.
+    cache: GraphQLCache(store: InMemoryStore(), possibleTypes: kPossibleTypes),
     // Disable graphql's built-in request timeout: its 5s default times out
     // mutations against the CloudFront/WAF-fronted endpoint, and its timeout
     // path double-completes the response completer when ResilienceLink retries
@@ -292,7 +295,11 @@ String compactGraphQLDocument(String document) {
       pendingSpace = true;
       continue;
     }
-    if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ',' ||
+    if (c == ' ' ||
+        c == '\t' ||
+        c == '\n' ||
+        c == '\r' ||
+        c == ',' ||
         c == '﻿') {
       pendingSpace = true;
       i++;
