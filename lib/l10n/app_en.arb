@@ -16,7 +16,6 @@
   "actionRetry": "Retry",
   "actionCopy": "Copy",
   "actionLinkCopied": "Link copied to clipboard",
-  "stateLoading": "Loading…",
   "stateEmpty": "Nothing here yet",
   "errorGeneric": "Something went wrong. Please try again.",
   "sessionExpiredMessage": "Your session has ended. Please sign in again.",
@@ -193,7 +192,6 @@
   },
   "filtersLabel": "Filters",
   "filterPriceLabel": "Price",
-  "filterSortByLabel": "Sort By",
   "filterPriceRangeLabel": "Price Range",
   "filterResetLabel": "Reset",
   "filterClearAllLabel": "Clear All",
@@ -229,7 +227,6 @@
     }
   },
   "filterRatingAndAbove": "& above",
-  "applyLabel": "Apply",
   "clearLabel": "Clear",
   "resultsCount": "{count} results",
   "@resultsCount": {
@@ -244,8 +241,6 @@
   "searchRecentTitle": "Recent searches",
   "searchTrendingTitle": "Trending searches",
   "searchClearHistory": "Clear",
-  "searchTrendingCsv": "bag,Samsung,shirt,dress,sofa,rice,perfume,milk",
-  "searchHintExpanded": "Search for products, brands…",
   "searchClearField": "Clear search",
   "searchRemoveRecent": "Remove from recent searches",
   "searchPopularCategories": "Popular categories",
@@ -517,7 +512,6 @@
   },
   "accountGuestTitle": "Your Hub Market account",
   "accountGuestBody": "Sign in to track orders, save addresses and check out faster.",
-  "accountSignOut": "Sign Out",
   "accountHeading": "My Account",
   "accountAbout": "About Hub Market",
   "accountOrders": "My Orders",
@@ -535,7 +529,6 @@
   "helpNoResults": "No answers match your search. Try other words, or send us a message.",
   "helpPopularTopics": "Popular topics",
   "helpWhatsApp": "WhatsApp",
-  "helpWhatsAppCaption": "24/7 customer care",
   "helpCallUs": "Call us",
   "helpEmailUs": "Email us",
   "helpAboutLegal": "About & legal",
@@ -634,7 +627,6 @@
       }
     }
   },
-  "cartTitle": "Cart",
   "cartHeading": "My Cart",
   "cartItemCount": "{count, plural, =0{No items} =1{1 item} other{{count} items}}",
   "@cartItemCount": {
@@ -742,7 +734,6 @@
   "ordersFilterToReceive": "To Receive",
   "ordersFilterDelivered": "Delivered",
   "ordersFilterCancelled": "Cancelled",
-  "orderStatus": "Status",
   "orderNumber": "Order #{number}",
   "@orderNumber": {
     "placeholders": {
@@ -786,14 +777,6 @@
   "orderNoTracking": "Tracking details appear here once your order ships.",
   "orderTrackingCopied": "Tracking number copied",
   "orderViewDetails": "View Details",
-  "orderMoreItems": "+{count} more",
-  "@orderMoreItems": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "orderPaymentSection": "Payment Method",
   "orderTimelineSection": "Order Timeline",
   "orderBillingAddress": "Billing Address",
@@ -1017,18 +1000,13 @@
   "addressAdd": "Add Address",
   "addressEdit": "Edit Address",
   "actionSave": "Save",
-  "actionDelete": "Delete",
   "defaultBadge": "Default",
   "fieldPhone": "Phone Number",
   "fieldStreet": "Street",
-  "fieldCity": "City",
   "fieldPostcode": "Postcode",
-  "fieldRegion": "Area / Emirate",
-  "fieldCountry": "Country code",
   "fieldFullName": "Full Name",
   "fieldEmirate": "State",
   "fieldCountryLabel": "Country",
-  "fieldArea": "Area",
   "fieldApartment": "Apartment / Floor (optional)",
   "checkoutUseNewAddress": "Use a new address",
   "addressDefaultShipping": "Set as default address",
@@ -1037,8 +1015,6 @@
   "addressAddNew": "Add New Address",
   "addressSave": "Save Address",
   "addressHintName": "e.g. Hassan Ahmed",
-  "addressHintPhone": "+971 50 000 0000",
-  "addressHintArea": "Jumeirah 1",
   "addressHintStreet": "Street 9",
   "actionChange": "Change",
   "actionEdit": "Edit",
@@ -1144,7 +1120,6 @@
   "checkoutFreeOrder": "No payment needed — your order total is free",
   "countryUae": "United Arab Emirates",
   "savedCardsTitle": "Payment Methods",
-  "savedCardsSubtitle": "Cards saved at checkout",
   "savedCardsEmptyTitle": "No saved cards",
   "savedCardsEmptyBody": "Cards saved to your account appear here.",
   "savedCardExpired": "Expired",
@@ -1239,7 +1214,6 @@
       }
     }
   },
-  "tabDescription": "Description",
   "tabDetails": "Details",
   "tabKeyFeatures": "Key Features",
   "tabMoreInformation": "More Information",
@@ -1248,17 +1222,6 @@
   "attrBrand": "Brand",
   "reviewsEmptyTitle": "No reviews yet",
   "reviewsEmptyBody": "Be the first to review this product.",
-  "reviewsSummary": "{rating}% rating · {count} reviews",
-  "@reviewsSummary": {
-    "placeholders": {
-      "rating": {
-        "type": "int"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "pdpQuantityLabel": "Quantity",
   "pdpYouMayAlsoLike": "You may also like",
   "pdpSoldBy": "Sold by",
@@ -1429,27 +1392,11 @@
       }
     }
   },
-  "pdpTrustAuthenticValue": "Verified",
-  "pdpTrustAuthenticLabel": "sellers",
-  "pdpTrustFreeValue": "Free",
-  "pdpTrustFreeLabel": "Delivery",
-  "pdpTrustFreeOver": "Delivery over AED {amount}",
-  "@pdpTrustFreeOver": {
-    "placeholders": {
-      "amount": {
-        "type": "int"
-      }
-    }
-  },
-  "pdpTrustDeliveryValue": "14-day",
-  "pdpTrustDeliveryLabel": "easy returns",
   "menuShop": "Shop",
   "menuViewAll": "View All",
   "menuAccountSection": "Account",
   "menuLogOut": "Log Out",
   "footerSubscribeConfirm": "Almost there — check your inbox to confirm your subscription.",
-  "footerTagline": "Hundreds of local stores. One cart.",
-  "footerTrackOrder": "Track Order",
   "webviewOpenInBrowser": "Open in browser",
   "homeSearchMarketplaceHint": "Search products, stores and brands",
   "homeDeliverTo": "Deliver to",
@@ -1470,7 +1417,6 @@
       }
     }
   },
-  "homeAiEngine": "AI ENGINE",
   "homeRefresh": "Refresh",
   "homeYourSearches": "YOUR SEARCHES:",
   "homeVisitStore": "Visit Store",
@@ -1497,7 +1443,6 @@
     }
   },
   "dealsEndIn": "Deals end in",
-  "dealsNewEveryDay": "New deals every day at midnight",
   "dealsAllChip": "All deals",
   "dealsCount": "{count, plural, =1{1 deal} other{{count} deals}}",
   "@dealsCount": {
@@ -1558,7 +1503,5 @@
       }
     }
   },
-  "launchFooter": "Across all seven emirates",
-  "welcomeKicker": "SAME-DAY DELIVERY",
   "welcomeCreateAccount": "Create account"
 }
