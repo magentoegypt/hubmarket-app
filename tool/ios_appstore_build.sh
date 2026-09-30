@@ -129,6 +129,21 @@ xcodebuild -exportArchive \
 ENTITLEMENTS="${RUNNER_TEMP:-/tmp}/app.entitlements.plist"
 /usr/libexec/PlistBuddy -x -c "Print :Entitlements" /dev/stdin <<<"${PROFILE_PLIST}" \
   > "${ENTITLEMENTS}"
+# A profile lists some capabilities with a wildcard: Associated Domains is the
+# string "*". A signed app has to carry the real list, and the "*" is not a
+# value App Store validation accepts. So take the domains from the app's own
+# entitlements file, and leave the key out when the app declares none.
+AD_KEY="com.apple.developer.associated-domains"
+APP_ENT="ios/Runner/Runner.entitlements"
+/usr/libexec/PlistBuddy -c "Delete :${AD_KEY}" "${ENTITLEMENTS}" >/dev/null 2>&1 || true
+if /usr/libexec/PlistBuddy -c "Print :${AD_KEY}" "${APP_ENT}" >/dev/null 2>&1; then
+  /usr/libexec/PlistBuddy -c "Add :${AD_KEY} array" "${ENTITLEMENTS}"
+  i=0
+  while domain="$(/usr/libexec/PlistBuddy -c "Print :${AD_KEY}:${i}" "${APP_ENT}" 2>/dev/null)"; do
+    /usr/libexec/PlistBuddy -c "Add :${AD_KEY}:${i} string ${domain}" "${ENTITLEMENTS}"
+    i=$((i + 1))
+  done
+fi
 IPA="$(ls build/ios/ipa/*.ipa | head -1)"
 IPA="$(cd "$(dirname "${IPA}")" && pwd)/$(basename "${IPA}")"
 IDENTITY="$(security find-identity -v -p codesigning "${KEYCHAIN}" \
