@@ -31,6 +31,7 @@ import '../widgets/search_landing.dart';
 import '../widgets/search_results_view.dart';
 import '../widgets/search_type_ahead.dart';
 import '../widgets/sort_sheet.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Which of the search designs is on screen.
 enum _SearchMode {
@@ -195,7 +196,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _pickScope() async {
-    final picked = await showModalBottomSheet<SearchScopePick>(
+    final picked = await showHubBottomSheet<SearchScopePick>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -359,7 +360,7 @@ class _ResultsState extends ConsumerState<_Results> {
 
   Future<void> _openFilters(PlpState state) async {
     final currency = ref.read(storeControllerProvider).currency;
-    final result = await showModalBottomSheet<FilterResult>(
+    final result = await showHubBottomSheet<FilterResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -381,7 +382,7 @@ class _ResultsState extends ConsumerState<_Results> {
   /// shared [SortSheet], labelled "Relevance" for search results.
   Future<void> _openSort(PlpState state) async {
     final l10n = AppLocalizations.of(context);
-    final selected = await showModalBottomSheet<ProductSortField>(
+    final selected = await showHubBottomSheet<ProductSortField>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,

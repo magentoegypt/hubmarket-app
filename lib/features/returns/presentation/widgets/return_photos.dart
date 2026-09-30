@@ -14,6 +14,7 @@ import '../../domain/return_photo.dart';
 import '../../domain/returns.dart';
 import 'return_form_widgets.dart';
 import 'return_widgets.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Photos on a return (Figma 23 "Photos (optional)", 65:2855), its replies
 /// (23c's camera button) and its escalation, and the files the thread shows.
@@ -31,7 +32,7 @@ Future<List<ReturnPhoto>> pickReturnPhotos(
   if (room < 1 || !config.acceptsPhotos) return const <ReturnPhoto>[];
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  final source = await showModalBottomSheet<ReturnPhotoSource>(
+  final source = await showHubBottomSheet<ReturnPhotoSource>(
     context: context,
     showDragHandle: true,
     backgroundColor: Colors.white,

@@ -23,6 +23,7 @@ import '../../domain/bundle_product.dart';
 import '../../domain/money.dart';
 import '../../domain/product_detail.dart';
 import 'product_detail_screen.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Figma 14b — a bundle's own page (core `bundle`, or `new_bundle` with
 /// HubApp): the package's items, one per option, each swappable for the
@@ -214,7 +215,7 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
     }
   }
 
-  Future<void> _swap(BundleOption option) => showModalBottomSheet<void>(
+  Future<void> _swap(BundleOption option) => showHubBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

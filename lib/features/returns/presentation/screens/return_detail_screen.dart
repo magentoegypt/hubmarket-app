@@ -18,6 +18,7 @@ import '../returns_providers.dart';
 import '../widgets/return_form_widgets.dart';
 import '../widgets/return_photos.dart';
 import '../widgets/return_widgets.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// One return (Figma 23c, `hmReturn`): its lines, outcome and status, the
 /// status history, the messages and the customer's escalation as one thread,
@@ -122,7 +123,7 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
 
   Future<void> _escalate(ReturnConfig? config) async {
     final l10n = AppLocalizations.of(context);
-    final escalated = await showModalBottomSheet<bool>(
+    final escalated = await showHubBottomSheet<bool>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,

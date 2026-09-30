@@ -12,6 +12,7 @@ import '../../../catalog/domain/product.dart';
 import '../../../catalog/domain/product_detail.dart';
 import '../../../catalog/domain/product_preview.dart';
 import '../cart_controller.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// What was just added, as the sheet shows it.
 class AddedItem {
@@ -92,7 +93,7 @@ class AddedToCartSheet extends ConsumerWidget {
     BuildContext context, {
     required AddedItem item,
     List<Product> recommendations = const <Product>[],
-  }) => showModalBottomSheet<void>(
+  }) => showHubBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

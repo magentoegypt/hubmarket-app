@@ -4,6 +4,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../l10n/l10n.dart';
 import '../domain/product_offer.dart';
 import 'seller_widgets.dart';
+import '../../../core/widgets/hub_bottom_sheet.dart';
 
 /// What the customer chose in the other-sellers sheet.
 @immutable
@@ -105,7 +106,7 @@ class OtherSellersSheet extends StatelessWidget {
     BuildContext context, {
     required int count,
     required List<ProductOffer> offers,
-  }) => showModalBottomSheet<OfferChoice>(
+  }) => showHubBottomSheet<OfferChoice>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

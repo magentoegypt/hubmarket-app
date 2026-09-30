@@ -24,6 +24,7 @@ import 'search_no_results.dart';
 import 'search_style.dart';
 import 'search_type_ahead.dart' show openSearchCategory;
 import 'sort_sheet.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Full results of a submitted search (Figma 09c): "Products (N)",
 /// "Vendors (V)" and "Categories (M)" tabs. Products carries the result
@@ -257,7 +258,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
     final l10n = AppLocalizations.of(context);
     final currency = ref.read(storeControllerProvider).currency;
     final filters = state.filters;
-    final result = await showModalBottomSheet<FilterResult>(
+    final result = await showHubBottomSheet<FilterResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -289,7 +290,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
     final options = state.sorts.isNotEmpty
         ? state.sorts
         : const [SearchSortOption(SearchSort.relevance)];
-    final selected = await showModalBottomSheet<SearchSort>(
+    final selected = await showHubBottomSheet<SearchSort>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,

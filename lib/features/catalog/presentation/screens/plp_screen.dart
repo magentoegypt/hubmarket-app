@@ -27,6 +27,7 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
 import '../widgets/sort_sheet.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Product listing for a category: aggregation-driven filters, sort, and
 /// append-on-scroll pagination.
@@ -85,7 +86,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
 
   Future<void> _openFilters(PlpState state) async {
     final currency = ref.read(storeControllerProvider).currency;
-    final result = await showModalBottomSheet<FilterResult>(
+    final result = await showHubBottomSheet<FilterResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -112,7 +113,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
   }
 
   Future<void> _openSort(PlpState state) async {
-    final selected = await showModalBottomSheet<ProductSortField>(
+    final selected = await showHubBottomSheet<ProductSortField>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,

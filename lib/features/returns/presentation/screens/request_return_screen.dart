@@ -24,6 +24,7 @@ import '../returns_providers.dart';
 import '../widgets/return_form_widgets.dart';
 import '../widgets/return_photos.dart';
 import '../widgets/return_widgets.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Request a return (Figma 23): pick an order the server lists as returnable
 /// (`hmReturnableOrders`), tick lines of one seller with their quantities,
@@ -617,7 +618,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
 
   Future<void> _pickOrder(ReturnDraft? draft) async {
     final extra = draft == null ? widget.order : draft.order;
-    final picked = await showModalBottomSheet<ReturnableOrder>(
+    final picked = await showHubBottomSheet<ReturnableOrder>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -636,7 +637,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     ReturnDraft draft,
   ) async {
     const other = -1;
-    final picked = await showModalBottomSheet<int>(
+    final picked = await showHubBottomSheet<int>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -697,7 +698,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
   }
 
   Future<void> _showPolicy(AppLocalizations l10n, String html) =>
-      showModalBottomSheet<void>(
+      showHubBottomSheet<void>(
         context: context,
         showDragHandle: true,
         isScrollControlled: true,

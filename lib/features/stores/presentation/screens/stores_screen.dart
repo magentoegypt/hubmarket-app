@@ -26,6 +26,7 @@ import '../store_list_controller.dart';
 import '../stores_providers.dart';
 import '../widgets/store_widgets.dart';
 import '../widgets/stores_unavailable.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// The sellers of Hub Market (Figma 12): a store search, top-level category
 /// chips, the featured seller's banner, then every approved seller with the
@@ -114,7 +115,7 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
 
   Future<void> _pickSort() async {
     final l10n = AppLocalizations.of(context);
-    final picked = await showModalBottomSheet<StoreSort>(
+    final picked = await showHubBottomSheet<StoreSort>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,

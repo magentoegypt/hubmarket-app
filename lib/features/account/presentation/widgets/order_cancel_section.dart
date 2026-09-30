@@ -10,6 +10,7 @@ import '../../../../core/widgets/failure_message.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/order.dart';
 import '../order_cancellation.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// The foot of an order screen (Figma 22): a note and "Cancel order", shown
 /// only when [offersOrderCancel] allows it. Opens the 21b sheet; a customer's
@@ -132,7 +133,7 @@ Future<CancelOutcome?> showCancelOrderSheet(
   BuildContext context, {
   required CustomerOrder order,
   required List<String> reasons,
-}) => showModalBottomSheet<CancelOutcome>(
+}) => showHubBottomSheet<CancelOutcome>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,

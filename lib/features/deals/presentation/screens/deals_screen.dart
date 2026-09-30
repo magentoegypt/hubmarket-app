@@ -14,6 +14,7 @@ import '../deals_controller.dart';
 import '../widgets/deal_countdown.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// Today's Deals (Figma 10b, `hmDeals`): the countdown banner, department
 /// chips, the count with the sort and the Filters sheet, and the deals in a
@@ -201,7 +202,7 @@ class _DealsList extends StatelessWidget {
 
   Future<void> _pickSort(BuildContext context, DealsSort current) async {
     final l10n = AppLocalizations.of(context);
-    final picked = await showModalBottomSheet<DealsSort>(
+    final picked = await showHubBottomSheet<DealsSort>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -224,7 +225,7 @@ class _DealsList extends StatelessWidget {
   }
 
   Future<void> _openFilters(BuildContext context) async {
-    final picked = await showModalBottomSheet<DealsFilters>(
+    final picked = await showHubBottomSheet<DealsFilters>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,

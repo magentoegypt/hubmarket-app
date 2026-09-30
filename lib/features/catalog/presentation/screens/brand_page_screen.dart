@@ -22,6 +22,7 @@ import '../product_navigation.dart';
 import '../widgets/filter_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/sort_sheet.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
 
 /// The brand a page is for: [brand] when the caller had it, else looked up by
 /// its url_key among `hmBrands`; null when there is no such brand.
@@ -333,7 +334,7 @@ class _BrandPage extends ConsumerWidget {
     BrandResultsController controller,
     PlpState state,
   ) async {
-    final selected = await showModalBottomSheet<ProductSortField>(
+    final selected = await showHubBottomSheet<ProductSortField>(
       context: context,
       showDragHandle: true,
       backgroundColor: Colors.white,
@@ -348,7 +349,7 @@ class _BrandPage extends ConsumerWidget {
     BrandResultsController controller,
     PlpState state,
   ) async {
-    final result = await showModalBottomSheet<FilterResult>(
+    final result = await showHubBottomSheet<FilterResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
