@@ -11,6 +11,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../cms/presentation/cms_navigation.dart';
 import '../../../cms/presentation/cms_providers.dart';
+import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../delete_account_action.dart';
 
 /// Privacy & data (Figma 20b): the store's policies and account deletion.
@@ -19,9 +20,10 @@ import '../delete_account_action.dart';
 /// nothing behind them exists: "Download my data" (no data-export endpoint),
 /// "Cookie & personalisation consent" (the app sets no tracking cookies and
 /// has no consent store), the password confirmation (core `deleteCustomer`
-/// takes none, and customers who joined by WhatsApp code may not have one),
-/// the credit balance line (no store credit) and "open orders must be
-/// delivered or cancelled first" (Magento does not enforce it).
+/// takes none, and customers who joined by WhatsApp code may not have one)
+/// and "open orders must be delivered or cancelled first" (Magento does not
+/// enforce it). The credit balance line shows once the store has store
+/// credit (HubAppAccount) and the customer's balance is above zero.
 class PrivacyDataScreen extends ConsumerWidget {
   const PrivacyDataScreen({super.key});
 
@@ -92,6 +94,19 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
       height: 1.45,
       color: context.scaffoldHeading,
     );
+    // Deleting the account forfeits its store credit: say so while there is
+    // some (Build 2 with store credit on).
+    final credit = ref.watch(storeCreditEnabledProvider)
+        ? ref.watch(storeCreditBalanceProvider).valueOrNull?.balance
+        : null;
+    final losses = [
+      l10n.deleteAccountLoseOrders,
+      l10n.deleteAccountLoseSaved,
+      if (credit != null && credit.amount > 0)
+        // "AED 120.00" in a left-to-right isolate, so it keeps its order in
+        // RTL.
+        l10n.deleteAccountLoseCredit('\u2066${credit.formatted()}\u2069'),
+    ];
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -123,10 +138,7 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
           const SizedBox(height: 10),
           Text(l10n.deleteAccountIntro, style: body),
           const SizedBox(height: 10),
-          for (final item in [
-            l10n.deleteAccountLoseOrders,
-            l10n.deleteAccountLoseSaved,
-          ])
+          for (final item in losses)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(

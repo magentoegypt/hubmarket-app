@@ -52,6 +52,7 @@
   "deleteAccountIntro": "يؤدي هذا إلى حذف حسابك على Hub Market نهائيًا. ستفقد:",
   "deleteAccountLoseOrders": "سجل طلباتك وتقييماتك في التطبيق",
   "deleteAccountLoseSaved": "عناوينك المحفوظة وقائمة المفضلة",
+  "deleteAccountLoseCredit": "رصيدك في المتجر البالغ {amount}",
   "deleteAccountRecordsNote": "نحتفظ بسجلات الطلبات والفواتير للمدة التي يفرضها القانون في دولة الإمارات.",
   "deleteAccountUnderstand": "أفهم أنه لا يمكن التراجع عن ذلك",
   "deleteAccountAction": "حذف حسابي",

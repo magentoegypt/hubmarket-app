@@ -58,6 +58,14 @@
   "deleteAccountIntro": "This permanently erases your Hub Market account. You will lose:",
   "deleteAccountLoseOrders": "Your order history and reviews in the app",
   "deleteAccountLoseSaved": "Your saved addresses and wishlist",
+  "deleteAccountLoseCredit": "Your store credit balance of {amount}",
+  "@deleteAccountLoseCredit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "deleteAccountRecordsNote": "Order and invoice records are kept for the period required by UAE law.",
   "deleteAccountUnderstand": "I understand this can't be undone",
   "deleteAccountAction": "Delete my account",
