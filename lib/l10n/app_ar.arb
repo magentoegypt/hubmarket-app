@@ -127,7 +127,7 @@
   "storesEmpty": "لا توجد متاجر",
   "storesNoMatch": "لا يوجد متجر يطابق «{query}».",
   "storeVerified": "بائع موثّق",
-  "storeReviewCount": "{count} تقييم",
+  "storeReviewCount": "{count, plural, =1{تقييم واحد} =2{تقييمان} few{{count} تقييمات} many{{count} تقييمًا} other{{count} تقييم}}",
   "storeNoReviews": "لا توجد تقييمات بعد",
   "storeStatProducts": "منتج",
   "storeStatSellingSince": "يبيع منذ",
@@ -211,13 +211,13 @@
   "searchListSeparator": "، ",
   "searchCategoriesLabel": "الأقسام",
   "searchPagesLabel": "الصفحات",
-  "searchViewAllResults": "عرض كل النتائج ({count})",
+  "searchViewAllResults": "{count, plural, =1{عرض نتيجة واحدة} =2{عرض النتيجتين} other{عرض كل النتائج ({count})}}",
   "searchTabProducts": "المنتجات ({count})",
   "searchTabVendors": "البائعون ({count})",
   "searchVendorsLabel": "البائعون",
   "searchTabCategories": "الأقسام ({count})",
-  "searchResultsSummary": "{count} نتيجة لـ «{query}»",
-  "searchResultsSummaryIn": "{count} نتيجة لـ «{query}» في {category}",
+  "searchResultsSummary": "{count, plural, =0{لا نتائج لـ «{query}»} =1{نتيجة واحدة لـ «{query}»} =2{نتيجتان لـ «{query}»} few{{count} نتائج لـ «{query}»} other{{count} نتيجة لـ «{query}»}}",
+  "searchResultsSummaryIn": "{count, plural, =0{لا نتائج لـ «{query}» في {category}} =1{نتيجة واحدة لـ «{query}» في {category}} =2{نتيجتان لـ «{query}» في {category}} few{{count} نتائج لـ «{query}» في {category}} other{{count} نتيجة لـ «{query}» في {category}}}",
   "searchFilterAction": "تصفية",
   "searchCategoryMatches": "{count, plural, =1{منتج واحد مطابق} other{{count} منتجات مطابقة}}",
   "searchNoCategoryMatches": "لا توجد أقسام مطابقة لـ «{query}».",
@@ -382,7 +382,7 @@
   "notificationsEmptyTitle": "لا توجد إشعارات بعد",
   "notificationsEmptyBody": "ستظهر هنا تحديثات الطلبات والعروض وانخفاضات الأسعار.",
   "notifJustNow": "الآن",
-  "notifMinutesAgo": "قبل {count} دقيقة",
+  "notifMinutesAgo": "{count, plural, =1{قبل دقيقة} =2{قبل دقيقتين} few{قبل {count} دقائق} other{قبل {count} دقيقة}}",
   "@notifMinutesAgo": {
     "placeholders": {
       "count": {
@@ -390,7 +390,7 @@
       }
     }
   },
-  "notifHoursAgo": "قبل {count} ساعة",
+  "notifHoursAgo": "{count, plural, =1{قبل ساعة} =2{قبل ساعتين} few{قبل {count} ساعات} other{قبل {count} ساعة}}",
   "@notifHoursAgo": {
     "placeholders": {
       "count": {
@@ -399,7 +399,7 @@
     }
   },
   "notifYesterday": "أمس",
-  "notifDaysAgo": "قبل {count} يوم",
+  "notifDaysAgo": "{count, plural, =1{قبل يوم} =2{قبل يومين} few{قبل {count} أيام} many{قبل {count} يومًا} other{قبل {count} يوم}}",
   "@notifDaysAgo": {
     "placeholders": {
       "count": {
@@ -420,7 +420,7 @@
   "cartStartShopping": "ابدأ التسوّق",
   "cartOrderSummary": "ملخص الطلب",
   "cartSubtotal": "المجموع الفرعي",
-  "cartSubtotalCount": "المجموع الفرعي ({count} عنصر)",
+  "cartSubtotalCount": "المجموع الفرعي ({count, plural, =1{عنصر واحد} =2{عنصران} few{{count} عناصر} many{{count} عنصرًا} other{{count} عنصر}})",
   "cartPromoCode": "خصم ({code})",
   "cartDiscount": "الخصم",
   "cartDelivery": "التوصيل",
