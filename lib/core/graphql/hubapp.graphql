@@ -1,7 +1,7 @@
 # =============================================================================
 # COPY - do not edit here. Source of truth is the backend repo:
 #   magentoegypt/multivendor PR #22 (https://github.com/magentoegypt/multivendor/pull/22)
-#   branch feature/hubapp-graphql, commit f21123056
+#   branch feature/hubapp-graphql, commit 501bbe217
 #   app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
 # Refresh with:
 #   git -C <multivendor> show feature/hubapp-graphql:app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
@@ -43,8 +43,9 @@
 #   - descriptions that contained curly braces are reworded (reader rule);
 #   - HmLinkType adds BRANDS (all brands page) and STORES (seller list page);
 #   - HmAppConfig adds algolia: HmAlgoliaConfig (application id, the secured
-#     search key the storefront gives guest browsers, its valid_until, and
-#     the store view's index names; null when search is not on Algolia).
+#     search key the storefront gives guest browsers limited to the store
+#     view's indices, its valid_until, and the store view's index names; null
+#     when search is not on Algolia or the storefront publishes no key).
 #   - vendor_id is a MATCH filter in the live ProductAttributeFilterInput
 #     (FilterMatchTypeInput), so a seller's products are
 #     products(filter: vendor_id match <id>, match_type FULL), not eq.
@@ -153,7 +154,7 @@ type HmAppConfig @doc(description: "App settings for one store view.") {
     store_code: String! @doc(description: "Store view code (en or ar).")
     locale: String! @doc(description: "Store view locale, e.g. ar_SA.")
     search: HmSearchConfig! @doc(description: "Search screen settings.")
-    algolia: HmAlgoliaConfig @doc(description: "Algolia search credentials and index names for this store view; null when search is not on Algolia.")
+    algolia: HmAlgoliaConfig @doc(description: "Algolia search credentials and index names for this store view; null when search is not on Algolia or the storefront publishes no search key for it.")
     contact: HmContactConfig! @doc(description: "Customer-service channels.")
     version: [HmVersionPolicy!]! @doc(description: "Version policy per platform.")
     maintenance: HmMaintenance! @doc(description: "Maintenance mode.")
@@ -167,7 +168,7 @@ type HmSearchConfig @doc(description: "Search settings.") {
 
 type HmAlgoliaConfig @doc(description: "Algolia as the storefront uses it for this store view. Search-only credentials: never the admin key.") {
     application_id: String! @doc(description: "Algolia application id.")
-    search_api_key: String! @doc(description: "Secured search key exactly as the storefront gives a guest browser: derived from the search-only key, restricted, valid until valid_until. Never the admin key.")
+    search_api_key: String! @doc(description: "Secured search key with the restrictions the storefront gives a guest browser, derived from the search-only key and further limited to this store view's indices; valid until valid_until. Never the admin key.")
     valid_until: Int @doc(description: "Unix time in seconds when search_api_key expires; fetch hmAppConfig again before then. Responses carrying a key are cached for at most an hour.")
     index_prefix: String! @doc(description: "Index name prefix, e.g. hubmarket_.")
     product_index: String! @doc(description: "Products index of this store view, e.g. hubmarket_en_products.")
@@ -505,15 +506,15 @@ type HmReturnableOrder @doc(description: "Eligible order.") {
     order_number: String! @doc(description: "Increment id.")
     created_at: String! @doc(description: "Placed, ISO-8601 UTC.")
     status_label: String! @doc(description: "Localised status.")
-    items: [HmReturnableItem!]! @doc(description: "Top-level items.")
+    items: [HmReturnableItem!]! @doc(description: "Lines to pick: each top-level line, but a bundle through its child lines.")
 }
 
 type HmReturnableItem @doc(description: "Order line.") {
-    order_item_id: Int! @doc(description: "sales_order_item id.")
+    order_item_id: Int! @doc(description: "sales_order_item id: a top-level line, or a bundle's child line.")
     sku: String! @doc(description: "SKU.")
     name: String! @doc(description: "Name.")
     image_url: String @doc(description: "Thumbnail, absolute HTTPS.")
-    options: [HmLabelValue!]! @doc(description: "Chosen options.")
+    options: [HmLabelValue!]! @doc(description: "Chosen options; a bundle's child line starts with the bundle it belongs to.")
     qty_ordered: Float! @doc(description: "Ordered.")
     qty_returnable: Float! @doc(description: "Returnable now (website formula).")
     open_return_numbers: [String!]! @doc(description: "Non-cancelled returns already holding this line.")
@@ -525,16 +526,16 @@ input HmCreateReturnInput @doc(description: "Return request.") {
     items: [HmReturnItemInput!]! @doc(description: "Lines and quantities, one seller.")
     type: HmReturnType! @doc(description: "Refund or replace.")
     reason_id: Int @doc(description: "Reason; required when reasons are enabled and other_reason is empty.")
-    other_reason: String @doc(description: "Free-text reason when allowed.")
+    other_reason: String @doc(description: "Free-text reason when allowed, max 255 characters; angle brackets and double quotes are refused.")
     package_opened: Boolean! @doc(description: "Package opened.")
     comment: String! @doc(description: "First message.")
     refund_amount_type: HmRefundAmountType @doc(description: "REFUND only; FULL when omitted.")
     refund_custom_amount: Float @doc(description: "CUSTOM amount.")
-    tracking_code: String @doc(description: "Return shipment tracking.")
+    tracking_code: String @doc(description: "Return shipment tracking, max 255 characters: letters, digits, spaces, dot, underscore, slash, hash and hyphen only.")
 }
 
 input HmReturnItemInput @doc(description: "Line to return.") {
-    order_item_id: Int! @doc(description: "Top-level sales_order_item id.")
+    order_item_id: Int! @doc(description: "HmReturnableItem.order_item_id: a top-level line, or a bundle's child line; never the bundle's own line.")
     quantity: Float! @doc(description: "Qty, 1..qty_returnable.")
 }
 
@@ -642,7 +643,7 @@ type Mutation {
     ): HmSendWhatsAppCodeOutput! @resolver(class: "MagentoEgypt\\HubAppAccount\\Model\\Resolver\\SendWhatsAppCode") @doc(description: "Send a LOGIN code to the matching account's stored number. Anonymous.")
     hmSignInWithWhatsAppCode(
         input: HmSignInWithWhatsAppCodeInput! @doc(description: "Number and code.")
-    ): CustomerToken! @resolver(class: "MagentoEgypt\\HubAppAccount\\Model\\Resolver\\SignInWithWhatsAppCode") @doc(description: "Exchange a code for a customer token; failures count toward lockout. Anonymous.")
+    ): CustomerToken! @resolver(class: "MagentoEgypt\\HubAppAccount\\Model\\Resolver\\SignInWithWhatsAppCode") @doc(description: "Exchange a code for a customer token. Five wrong codes for a number lock code sign-in for that number for 15 minutes, never the account. Anonymous.")
 }
 
 type Cart {
