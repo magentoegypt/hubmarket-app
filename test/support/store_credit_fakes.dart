@@ -61,6 +61,7 @@ List<StoreCreditTransaction> sampleCreditTransactions({bool arabic = false}) =>
             ? 'إرجاع #R-000031 · تيشيرت قصير ياقة مربع'
             : 'Return #R-000031 · Short Square-Neck T-Shirt',
         createdAt: '2026-09-26T08:14:00Z',
+        orderNumber: '000000031',
       ),
       StoreCreditTransaction(
         id: 30,
@@ -72,6 +73,7 @@ List<StoreCreditTransaction> sampleCreditTransactions({bool arabic = false}) =>
             ? 'طلب \u200E#000000231'
             : 'Spent credit on order #000000231',
         createdAt: '2026-09-20T11:02:00Z',
+        orderNumber: '000000231',
       ),
       StoreCreditTransaction(
         id: 29,
@@ -117,9 +119,37 @@ CartStoreCredit sampleCartCredit({
   canUse: canUse,
 );
 
+/// Figma 20d "Buy credit": AED 50, 100 and 250, and — with [custom] — any
+/// whole amount from AED 10 to AED 1,000.
+StoreCreditTopUp sampleTopUp({bool custom = false, double? price100}) =>
+    StoreCreditTopUp(
+      sku: custom ? 'hm-credit-any' : 'hm-credit-50',
+      min: custom ? aedCredit(10) : null,
+      max: custom ? aedCredit(1000) : null,
+      creditRate: custom ? 1 : null,
+      presets: [
+        StoreCreditPreset(
+          sku: 'hm-credit-50',
+          credit: aedCredit(50),
+          price: aedCredit(50),
+        ),
+        StoreCreditPreset(
+          sku: 'hm-credit-100',
+          credit: aedCredit(100),
+          price: aedCredit(price100 ?? 100),
+        ),
+        StoreCreditPreset(
+          sku: 'hm-credit-250',
+          credit: aedCredit(250),
+          price: aedCredit(250),
+        ),
+      ],
+    );
+
 class FakeStoreCreditRepository implements StoreCreditRepository {
   FakeStoreCreditRepository({
     List<StoreCreditAccount>? pages,
+    this.topUp,
     this.cartCredit,
     this.grandTotalBefore = 553,
     this.paymentMethods = const [
@@ -136,6 +166,12 @@ class FakeStoreCreditRepository implements StoreCreditRepository {
 
   /// Served by [fetchAccount] per `currentPage` (1-based).
   final List<StoreCreditAccount> pages;
+
+  /// Served by [fetchTopUp]: null while the store sells no credit.
+  final StoreCreditTopUp? topUp;
+
+  /// Thrown by [fetchTopUp] when set: a lookup that fails on its own.
+  Object? topUpError;
 
   /// The cart's credit; [apply] / [remove] move it.
   CartStoreCredit? cartCredit;
@@ -190,6 +226,23 @@ class FakeStoreCreditRepository implements StoreCreditRepository {
       balance: first.balance,
       canUseAtCheckout: first.canUseAtCheckout,
     );
+  }
+
+  /// How many times [fetchTopUp] ran — kept out of [calls], which follows
+  /// the account and the cart.
+  int topUpCalls = 0;
+
+  @override
+  Future<StoreCreditTopUp?> fetchTopUp() async {
+    topUpCalls++;
+    if (missing) {
+      throw const HubAppMissing(
+        'Cannot query field "hmStoreCredit" on type "Query".',
+      );
+    }
+    final error = topUpError;
+    if (error != null) throw error;
+    return topUp;
   }
 
   @override

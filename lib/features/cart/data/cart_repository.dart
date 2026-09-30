@@ -134,6 +134,44 @@ class CartRepository {
     );
   }
 
+  /// Buys [amount] of store credit through HubAppAccount's
+  /// `hmAddCreditToCart`: the website's credit product for that amount, on
+  /// the signed-in customer's cart. Throws [HubAppMissing] when the server
+  /// has no such mutation, a [Failure] otherwise — the store's refusal (an
+  /// amount not on offer, credit no longer on sale) as a `server` failure
+  /// with its message.
+  Future<Cart> addCredit(String cartId, double amount) async {
+    Future<Map<String, dynamic>> send({required bool withSellers}) => _run(
+      withSellers
+          ? CartQueries.withSellers(CartQueries.addCredit)
+          : CartQueries.addCredit,
+      {'cartId': cartId, 'amount': amount},
+      mutation: true,
+      throwMissing: true,
+    );
+
+    Map<String, dynamic> data;
+    try {
+      data = await send(withSellers: _marketplace.features.sellers);
+    } on HubAppMissing catch (missing) {
+      if (!missing.message.contains('hm_seller')) rethrow;
+      // Credit is there but sellers aren't: nothing ran (the document
+      // failed validation), so sending it again without them is safe.
+      _marketplace.sellersMissing();
+      data = await send(withSellers: false);
+    }
+    final result = data['hmAddCreditToCart'] as Map<String, dynamic>?;
+    final errors = result?['user_errors'] as List<dynamic>?;
+    if (errors != null && errors.isNotEmpty) {
+      final message = (errors.first as Map)['message'] as String?;
+      throw Failure(FailureKind.server, detail: message);
+    }
+    return _parseCart(
+      result?['cart'] as Map<String, dynamic>?,
+      fallbackId: cartId,
+    );
+  }
+
   Future<Cart> updateItem(String cartId, String uid, int quantity) async {
     final data = await _cartRun(CartQueries.updateItems, {
       'cartId': cartId,

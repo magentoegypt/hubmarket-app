@@ -151,6 +151,36 @@ class FakeCartRepository implements CartRepository {
     return _cart;
   }
 
+  /// Every store credit amount [addCredit] was asked to add, in order.
+  final List<double> creditAmounts = [];
+
+  /// Thrown by the next [addCredit] when set (and then cleared).
+  Failure? addCreditFailure;
+
+  @override
+  Future<Cart> addCredit(String cartId, double amount) async {
+    creditAmounts.add(amount);
+    final failure = addCreditFailure;
+    if (failure != null) {
+      addCreditFailure = null;
+      throw failure;
+    }
+    _cart = Cart(
+      id: cartId,
+      items: [
+        ..._cart.items,
+        CartItem(
+          uid: 'credit-$amount',
+          sku: 'store-credit',
+          name: 'Store credit',
+          quantity: 1,
+          rowTotal: Money(amount: amount, currency: 'AED'),
+        ),
+      ],
+    );
+    return _cart;
+  }
+
   @override
   Future<Cart> updateItem(String cartId, String uid, int quantity) async {
     _cart = Cart(

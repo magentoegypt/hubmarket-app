@@ -101,6 +101,17 @@ mutation HmAddBundleToCart($cartId: String!, $sku: String!, $quantity: Float) {
   }
 }''');
 
+  /// `hmAddCreditToCart` (HubAppAccount): store credit for `$amount`, the
+  /// product the website's Buy Credit page sells for it. The input is written
+  /// inline around scalar variables — never a variable of an `Hm*` type.
+  static final String addCredit = _doc(r'''
+mutation HmAddCreditToCart($cartId: String!, $amount: Float!) {
+  hmAddCreditToCart(input: { cart_id: $cartId, amount: $amount }) {
+    cart { ...CartFields }
+    user_errors { code message }
+  }
+}''');
+
   static final String updateItems = _doc(r'''
 mutation UpdateItems($cartId: String!, $items: [CartItemUpdateInput!]!) {
   updateCartItems(input: { cart_id: $cartId, cart_items: $items }) {

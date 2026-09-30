@@ -32,10 +32,11 @@ Override creditHubApp({bool deployed = true, bool creditOn = true}) =>
 
 /// A screen on a router with stand-ins for the routes it can leave to, over
 /// fakes: a signed-in customer (unless [signedIn] is false), [credit] as the
-/// store-credit backend and [hubApp] as the probe.
+/// store-credit backend, [cart] as the cart backend and [hubApp] as the probe.
 Widget storeCreditHarness({
   required Widget screen,
   required FakeStoreCreditRepository credit,
+  FakeCartRepository? cart,
   String locale = 'en',
   bool signedIn = true,
   Override? hubApp,
@@ -61,6 +62,12 @@ Widget storeCreditHarness({
           path: path,
           builder: (_, __) => Scaffold(body: Text('route $path')),
         ),
+      // One order by its number (`AppRoutes.orderByNumber`).
+      GoRoute(
+        path: '${AppRoutes.orders}/:number',
+        builder: (_, state) =>
+            Scaffold(body: Text('order ${state.pathParameters['number']}')),
+      ),
     ],
   );
   final app = MaterialApp.router(
@@ -90,7 +97,7 @@ Widget storeCreditHarness({
       ),
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
-      cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+      cartRepositoryProvider.overrideWithValue(cart ?? FakeCartRepository()),
       wishlistRepositoryProvider.overrideWithValue(FakeWishlistRepository()),
       catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
       accountRepositoryProvider.overrideWithValue(FakeAccountRepository()),

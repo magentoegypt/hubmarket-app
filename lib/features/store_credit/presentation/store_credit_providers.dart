@@ -37,6 +37,24 @@ final storeCreditBalanceProvider =
       }
     });
 
+/// 20d "Buy credit": how credit is bought (`HmStoreCreditAccount.top_up`).
+/// Null while store credit is off, while the store sells no credit product,
+/// or when the lookup fails — the card is one extra on a page that shows
+/// either way. A server that has store credit but not the top-up yet (the
+/// field is missing) hides only the card; it doesn't switch store credit off.
+final storeCreditTopUpProvider = FutureProvider.autoDispose<StoreCreditTopUp?>((
+  ref,
+) async {
+  if (!ref.watch(storeCreditEnabledProvider)) return null;
+  try {
+    return await ref.watch(storeCreditRepositoryProvider).fetchTopUp();
+  } on HubAppMissing {
+    return null;
+  } on Failure {
+    return null;
+  }
+});
+
 /// The credit order [orderNumber] was paid with (`OrderTotal.hm_store_credit`)
 /// for order detail and order placed; null when it used none, when store
 /// credit is off, or when the lookup fails — the line is one detail of an

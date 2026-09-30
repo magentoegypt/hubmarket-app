@@ -23,6 +23,28 @@ query HmStoreCredit($pageSize: Int!, $currentPage: Int!) {
       balance_after { value currency }
       description
       created_at
+      order_number
+    }
+  }
+}
+''';
+
+  /// 20d "Buy credit": how credit is bought here. Its own query, read once
+  /// (not with every page of transactions); null while the store sells no
+  /// store credit product.
+  static const String topUp = r'''
+query HmStoreCreditTopUp {
+  hmStoreCredit(pageSize: 1, currentPage: 1) {
+    top_up {
+      sku
+      min { value currency }
+      max { value currency }
+      credit_rate
+      presets {
+        sku
+        credit { value currency }
+        price { value currency }
+      }
     }
   }
 }

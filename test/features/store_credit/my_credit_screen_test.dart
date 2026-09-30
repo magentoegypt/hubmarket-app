@@ -75,7 +75,7 @@ void main() {
       expect(find.text('Spent credit on order #000000231'), findsOneWidget);
       expect(find.text('26 Sep 2026'), findsOneWidget);
       expect(credit.calls, ['fetchAccount:1']);
-      // Nothing the backend can't do: no top-up.
+      // The store sells no credit product: no "Buy credit" card.
       expect(find.text('Buy credit'), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -134,6 +134,42 @@ void main() {
       expect(find.text('Spent credit on order #000078'), findsOneWidget);
       // The last page is in: no further request.
       expect(credit.calls, ['fetchAccount:1', 'fetchAccount:2']);
+    });
+
+    testWidgets('a transaction that records an order opens it', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pump(tester, FakeStoreCreditRepository());
+
+      final row = find
+          .ancestor(
+            of: find.text('Used at checkout'),
+            matching: find.byType(InkWell),
+          )
+          .first;
+      final node = tester.getSemantics(row);
+      expect(node.hint, 'Opens order 000000231');
+      expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
+
+      await tester.tap(find.text('Used at checkout'));
+      await tester.pumpAndSettle();
+      expect(find.text('order 000000231'), findsOneWidget);
+      semantics.dispose();
+    });
+
+    testWidgets('a transaction without an order opens nothing', (tester) async {
+      await _pump(tester, FakeStoreCreditRepository());
+
+      expect(
+        find.ancestor(
+          of: find.text('Credit added'),
+          matching: find.byType(InkWell),
+        ),
+        findsNothing,
+      );
+      await tester.tap(find.text('Credit added'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MyCreditScreen), findsOneWidget);
+      expect(find.textContaining('order 0'), findsNothing);
     });
 
     testWidgets('a failed load offers a retry', (tester) async {
@@ -211,8 +247,10 @@ void main() {
         await withRealShadows(() async {
           await _pump(
             tester,
+            // As in the frame: the store sells AED 50, 100 and 250.
             FakeStoreCreditRepository(
               pages: [sampleCreditAccount(arabic: locale == 'ar')],
+              topUp: sampleTopUp(),
             ),
             locale: locale,
             height: 761,

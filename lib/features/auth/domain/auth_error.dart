@@ -1,4 +1,5 @@
 import '../../../core/error/failure.dart';
+import 'otp_send_status.dart';
 
 /// What went wrong in a sign-in / sign-up / code flow, as the screens need to
 /// know it (Figma S6): which field to mark and what to say there.
@@ -43,6 +44,10 @@ enum AuthErrorKind {
 /// GraphQL error ("A customer with the same email address already exists…").
 /// So the message is matched against what those modules send, in English and
 /// Arabic; anything unrecognised keeps its message and is shown as-is.
+///
+/// The one exception is the Hub Market App's code request
+/// (`hmSendWhatsAppCode`), which says why it refused in a code
+/// ([OtpSendRefused.status]): that code picks the error, never the wording.
 class AuthError {
   const AuthError(this.kind, {this.serverMessage});
 
@@ -53,6 +58,7 @@ class AuthError {
 
   /// Classifies [error] (normally a [Failure]; anything else is `other`).
   factory AuthError.from(Object error) {
+    if (error is OtpSendRefused) return AuthError._fromSendStatus(error);
     if (error is! Failure) return const AuthError(AuthErrorKind.other);
     switch (error.kind) {
       case FailureKind.network:
@@ -81,6 +87,31 @@ class AuthError {
               : null,
         );
     }
+  }
+
+  /// A refused code request by its `HmOtpSendStatus`: the limits (and a
+  /// cooldown, should one ever be refused) read as too many attempts, no
+  /// account as no account, a delivery failure as the screen's own "couldn't
+  /// send"; a number shared by several accounts or one that can't get codes
+  /// has no inline error of its own, so the store's message (which says to
+  /// sign in by e-mail) is shown.
+  factory AuthError._fromSendStatus(OtpSendRefused error) {
+    final detail = error.detail?.trim();
+    final message = detail == null || detail.isEmpty ? null : detail;
+    return switch (error.status) {
+      OtpSendStatus.throttled ||
+      OtpSendStatus.cooldown => const AuthError(AuthErrorKind.tooManyAttempts),
+      OtpSendStatus.noAccount => const AuthError(AuthErrorKind.noAccount),
+      OtpSendStatus.failed => const AuthError(AuthErrorKind.other),
+      OtpSendStatus.multiple ||
+      OtpSendStatus.undeliverable ||
+      OtpSendStatus.sent ||
+      OtpSendStatus.masked ||
+      OtpSendStatus.unknown => AuthError(
+        AuthErrorKind.other,
+        serverMessage: message,
+      ),
+    };
   }
 
   /// The [AuthErrorKind] a backend message describes, or null when it is not
