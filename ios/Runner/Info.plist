@@ -69,26 +69,10 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
-	<!-- App Transport Security: the storefront talks to hub-market.magento2.click over HTTPS;
-	     permit it explicitly (TLS 1.2+) and allow cleartext for any http media
-	     URL the catalogue returns before it's upgraded client-side. iOS blocks
-	     non-conforming loads by default, so without this block any TLS edge case
-	     or http image would silently fail (blank widgets / missing images). -->
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>hub-market.magento2.click</key>
-			<dict>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.2</string>
-			</dict>
-		</dict>
-	</dict>
+	<!-- App Transport Security stays at its defaults: HTTPS only, TLS 1.2+. The storefront serves
+	     every API and media URL over HTTPS (checked 30 Sep 2026, English and Arabic), and the app
+	     upgrades a stray http:// media URL to https:// (lib/core/util/media.dart), so no cleartext
+	     exception is needed. Keep it that way: App Review asks for a justification for each one. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
