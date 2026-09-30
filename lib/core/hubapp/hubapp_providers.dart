@@ -60,8 +60,11 @@ class HubAppState {
 ///
 /// * [HubAppMissing] (the server has no such field) → [HubAppStatus.unavailable];
 /// * any other failure → [HubAppStatus.unknown], never latched: the probe runs
-///   again when the device comes back online, when the app returns to the
-///   foreground ([onResume]) and when a screen retries ([refresh]).
+///   again on its own ([autoRetries] times, [autoRetryDelay] apart: the first
+///   call after a deploy or an idle spell can take 15-25 s while the server's
+///   caches rebuild, past the probe's timeout, and by the retry it is warm),
+///   when the device comes back online, when the app returns to the foreground
+///   ([onResume]) and when a screen retries ([refresh]).
 ///
 /// Features read [hubAppStatusProvider] / [hmAppConfigProvider] /
 /// [hubAppFlagProvider]; the Home reads this provider itself to tell "still
@@ -74,8 +77,16 @@ class HubAppController extends AsyncNotifier<HubAppState> {
   /// server-side; the GET is served from the HTTP cache anyway).
   static const Duration staleAfter = Duration(hours: 1);
 
+  /// How many times an unknown probe is retried without anyone asking, and how
+  /// long it waits before each retry.
+  static const int autoRetries = 2;
+  static const Duration autoRetryDelay = Duration(seconds: 5);
+
+  int _autoRetried = 0;
+
   @override
   Future<HubAppState> build() {
+    _autoRetried = 0;
     ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
     ref.listen<bool>(isOfflineProvider, (wasOffline, offline) {
       if (wasOffline == true && !offline) unawaited(retryIfUnknown());
@@ -88,13 +99,24 @@ class HubAppController extends AsyncNotifier<HubAppState> {
     try {
       final config = await repository.fetch(platform: HmPlatform.current);
       _checkedAt = DateTime.now();
+      _autoRetried = 0;
       return HubAppState.available(config);
     } on HubAppMissing catch (error) {
       _checkedAt = DateTime.now();
+      _autoRetried = 0;
       return HubAppState.unavailable(error);
     } on Object catch (error) {
+      _scheduleAutoRetry();
       return HubAppState.unknown(error);
     }
+  }
+
+  /// One more probe in [autoRetryDelay], while [autoRetries] allow it.
+  void _scheduleAutoRetry() {
+    if (_autoRetried >= autoRetries) return;
+    _autoRetried++;
+    final timer = Timer(autoRetryDelay, () => unawaited(retryIfUnknown()));
+    ref.onDispose(timer.cancel);
   }
 
   /// Probes again, keeping the current state visible meanwhile.

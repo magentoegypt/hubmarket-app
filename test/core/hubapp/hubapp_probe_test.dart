@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/language.dart' show printNode;
@@ -156,6 +157,51 @@ void main() {
         (await container.read(hubAppProvider.future)).status,
         HubAppStatus.unknown,
       );
+    });
+
+    test('an unknown probe is retried on its own when the server wakes up', () {
+      // The first call after a deploy can outlast the probe's timeout; by the
+      // retry the server's caches are warm.
+      fakeAsync((async) {
+        final answers = <String, Object>{'HmAppConfig': Exception('timed out')};
+        final log = <Request>[];
+        final container = _container(answers, log: log);
+        container.read(hubAppProvider);
+        async.flushMicrotasks();
+        expect(container.read(hubAppStatusProvider), HubAppStatus.unknown);
+        expect(log, hasLength(1));
+
+        answers['HmAppConfig'] = {'hmAppConfig': hmAppConfigJson()};
+        async.elapse(HubAppController.autoRetryDelay);
+        async.flushMicrotasks();
+
+        expect(container.read(hubAppStatusProvider), HubAppStatus.available);
+        expect(log, hasLength(2));
+        // Settled: nothing more is asked.
+        async.elapse(HubAppController.autoRetryDelay * 3);
+        async.flushMicrotasks();
+        expect(log, hasLength(2));
+      });
+    });
+
+    test('an unknown probe gives up on its own after two retries', () {
+      fakeAsync((async) {
+        final log = <Request>[];
+        final container = _container({
+          'HmAppConfig': Exception('timed out'),
+        }, log: log);
+        container.read(hubAppProvider);
+        async.flushMicrotasks();
+        for (var i = 0; i < 6; i++) {
+          async.elapse(HubAppController.autoRetryDelay);
+          async.flushMicrotasks();
+        }
+
+        // The probe and two retries; then it waits for a resume, a reconnect
+        // or a screen's retry.
+        expect(log, hasLength(1 + HubAppController.autoRetries));
+        expect(container.read(hubAppStatusProvider), HubAppStatus.unknown);
+      });
     });
 
     test('coming back online retries an unknown probe', () async {
