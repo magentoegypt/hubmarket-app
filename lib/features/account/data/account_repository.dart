@@ -50,6 +50,22 @@ class AccountRepository {
     );
   }
 
+  /// The signed-in customer's order [number] (the increment id customers see,
+  /// e.g. `000000248`), or null when they have no order by that number.
+  Future<CustomerOrder?> fetchOrderByNumber(String number) async {
+    final data = await _orderRun(AccountQueries.orderByNumber, {
+      'number': number,
+    }, mutation: false);
+    final orders =
+        (data['customer'] as Map<String, dynamic>?)?['orders']
+            as Map<String, dynamic>?;
+    return (orders?['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .where((order) => order.number == number)
+        .firstOrNull;
+  }
+
   /// Guest order lookup by the Magento order token captured at checkout
   /// (`placeOrder.orderV2.token`). Native Magento query — returns the same
   /// `CustomerOrder` type as the customer list, so it parses identically.

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/hm_link_navigation.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/hubapp/hubapp_providers.dart';
 import '../../../l10n/l10n.dart';
 import '../../deals/presentation/widgets/bundle_card.dart';
 import '../../deals/presentation/widgets/deal_countdown.dart';
@@ -187,11 +188,17 @@ class HmSectionView extends ConsumerWidget {
             ? const SizedBox.shrink()
             : HmPromoBanners(promos: promos);
       case HmSectionType.bestSellers:
+        // The admin's link, else the whole ranking (`hmBestSellers`), which
+        // only a server with the Hub Market App serves.
+        final ranking =
+            ref.watch(hubAppStatusProvider) == HubAppStatus.available
+            ? AppRoutes.bestSellers
+            : null;
         return titled(
           HmProductRail(products: s.products, ranked: true),
           leading: const HmHeaderEmoji('🏆'),
           action: l10n.homeViewAll,
-          onAction: more(),
+          onAction: more(fallback: ranking),
         );
       case HmSectionType.popularProducts:
       case HmSectionType.productList:

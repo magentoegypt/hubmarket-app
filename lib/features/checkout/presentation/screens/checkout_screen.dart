@@ -297,6 +297,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final firstName =
           ref.read(authControllerProvider).customer?.firstName ??
           before.shipTo?.firstName;
+      final packages = placedPackagesOf(ref.read(cartControllerProvider).cart);
       final result = await _controller.placeOrder();
       if (!mounted || result == null) return;
       // Every method checkout offers completes on placeOrder (payableInApp):
@@ -308,6 +309,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           firstName: firstName,
           total: before.grandTotal,
           payment: before.selectedPayment,
+          packages: packages,
         ),
       );
     } finally {

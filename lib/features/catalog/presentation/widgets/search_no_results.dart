@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../l10n/l10n.dart';
@@ -19,13 +20,14 @@ import 'search_style.dart';
 ///
 /// With the Hub Market App's API ([storesAvailableProvider]) it also offers
 /// "Browse stores" and the "Popular right now" rail — its best sellers
-/// (`hmBestSellers`); without it the page stays as it was.
+/// (`hmBestSellers`), "View All" opening the whole ranking; without it the
+/// page stays as it was.
 ///
 /// Left out of the frame: the "Try" suggestions, as the store's Algolia has
 /// no query-suggestions index (autocomplete suggestions are off and
-/// `popularQueries` is empty, checked 29 Sep 2026); the category in "Browse
-/// Furniture stores", as a search that found nothing names no category; and
-/// the rail's "View All", as the app has no best-sellers page.
+/// `popularQueries` is empty, checked 29 Sep 2026); and the category in
+/// "Browse Furniture stores", as a search that found nothing names no
+/// category.
 class SearchNoResults extends ConsumerWidget {
   const SearchNoResults({super.key, required this.query});
 
@@ -123,7 +125,13 @@ class SearchNoResults extends ConsumerWidget {
           const SizedBox(height: 28),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(l10n.searchPopularNow, style: display),
+            child: Row(
+              children: [
+                Expanded(child: Text(l10n.searchPopularNow, style: display)),
+                const SizedBox(width: 8),
+                _ViewAll(onTap: () => context.push(AppRoutes.bestSellers)),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -144,6 +152,40 @@ class SearchNoResults extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// The rail's orange "View All →", as on the Home's section headers.
+class _ViewAll extends StatelessWidget {
+  const _ViewAll({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              AppLocalizations.of(context).homeViewAll,
+              style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.arrow_forward,
+              size: 16,
+              color: AppColors.accentStrong,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

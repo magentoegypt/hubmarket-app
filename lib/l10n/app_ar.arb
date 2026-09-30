@@ -471,6 +471,8 @@
   "orderStatus": "الحالة",
   "orderNumber": "الطلب رقم {number}",
   "orderDetailsTitle": "تفاصيل الطلب",
+  "orderNotFoundTitle": "لم يتم العثور على الطلب",
+  "orderNotFoundBody": "لم نعثر على الطلب رقم {number} في حسابك.",
   "orderItemsSection": "العناصر",
   "orderPackageTitle": "الطرد {index} · {store}",
   "orderPackageTitleNoStore": "الطرد {index}",
@@ -738,6 +740,7 @@
   "orderPlacedPayWith": "ادفع {amount} عبر {method}",
   "orderPlacedPaidWithCredit": "تم دفع {amount} من رصيدك",
   "orderPlacedTrack": "تتبع الطلب",
+  "orderPlacedPackages": "{count, plural, =1{يصل طلبك في طرد واحد} =2{يصل طلبك في طردين} few{يصل طلبك في {count} طرود} many{يصل طلبك في {count} طردًا} other{يصل طلبك في {count} طرد}}",
   "priceFrom": "ابتداءً من",
   "productAddToCart": "أضف إلى السلة",
   "productOutOfStock": "غير متوفّر",
@@ -833,6 +836,8 @@
   "homeTrackOrder": "تتبّع الطلب",
   "homeBestSellerFirst": "الأكثر مبيعًا #1",
   "homeBestSellerRank": "#{rank}",
+  "bestSellersTitle": "الأكثر مبيعًا",
+  "bestSellersEmpty": "لا توجد منتجات أكثر مبيعًا بعد — عُد قريبًا.",
   "@homeBestSellerRank": {
     "placeholders": {
       "rank": {

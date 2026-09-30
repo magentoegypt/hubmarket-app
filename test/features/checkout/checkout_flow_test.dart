@@ -269,8 +269,9 @@ void main() {
       findsOneWidget,
     );
 
+    // Track order opens this order.
     await tapText(tester, 'Track order');
-    expect(find.text('route /orders'), findsOneWidget);
+    expect(find.text('route /orders/000000248'), findsOneWidget);
   });
 
   testWidgets('a signed-in customer starts on Ship to with the default '

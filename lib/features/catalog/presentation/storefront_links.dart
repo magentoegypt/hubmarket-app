@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/hubapp/hubapp_providers.dart';
 import '../../../core/store/store_controller.dart';
 import '../../../core/store/store_urls.dart';
 import '../../../core/util/launch.dart';
@@ -70,6 +71,19 @@ Future<void> openStorefrontUrl(
   }
 
   // Ours, or store-relative, from here on.
+
+  // A seller's page (`shop/<code>/`) has no `url_rewrite` either. With the
+  // Hub Market App's seller API it opens the native store page (Figma 13), and
+  // the sellers index the stores list; without it, the page itself below.
+  final sellerCode = sellerCodeOf(url);
+  if (sellerCode != null && await hubAppStoresReady(ref)) {
+    if (!context.mounted) return;
+    context.push(
+      sellerCode.isEmpty ? AppRoutes.stores : AppRoutes.store(sellerCode),
+    );
+    return;
+  }
+  if (!context.mounted) return;
 
   // A `shopbrand` page is a brand landing, not a catalogue entity — it has no
   // `url_rewrite`, so `urlResolver` returns null for it and the old code fell
@@ -169,6 +183,43 @@ String? shopbrandKey(String url) {
 
 /// True when [url] is the brand directory (`/shopbrand/`, no brand key).
 bool isBrandIndexUrl(String url) => shopbrandKey(url) == '';
+
+/// The storefront's seller route (Vnecoms `vendors/vendorspage/url_key`, `shop`
+/// on Hub Market): a seller's page is `<store view>/shop/<seller code>/`, e.g.
+/// `https://hub-market.magento2.click/en/shop/loly/` — the URL the website's
+/// cart, Home and search build, and the one a STORE `HmLink.url` carries.
+const String kSellerRoute = 'shop';
+
+/// The seller code in a storefront seller-page URL — `…/en/shop/loly/` →
+/// `loly`, a deeper path (`shop/loly/items`) belonging to that seller too — or
+/// null when [url] isn't one. An empty string is the sellers index (`/shop/`,
+/// `/sellerlist`): the stores list rather than one store. The same rules as
+/// the backend's link classifier.
+String? sellerCodeOf(String url) {
+  final segments = storePathOf(url).split('/').where((s) => s.isNotEmpty);
+  if (segments.isEmpty) return null;
+  final first = segments.first.toLowerCase();
+  if (first == 'sellerlist') return '';
+  if (first != kSellerRoute) return null;
+  return segments.length > 1 ? segments.elementAt(1).trim() : '';
+}
+
+/// Whether a seller link may open the native store screens: the Hub Market
+/// App's seller API is there (`storesAvailableProvider`'s rule). Waits, up to
+/// [wait], for a probe still out — a cold-start App Link arrives before it
+/// lands; a probe that can't tell keeps the website.
+Future<bool> hubAppStoresReady(
+  WidgetRef ref, {
+  Duration wait = const Duration(seconds: 8),
+}) async {
+  final probe = ref.read(hubAppProvider);
+  if (!probe.isLoading && probe.hasValue) return probe.requireValue.isAvailable;
+  try {
+    return (await ref.read(hubAppProvider.future).timeout(wait)).isAvailable;
+  } on Object {
+    return false;
+  }
+}
 
 /// The brand a `/shopbrand/<url_key>.html` URL points at, or null when [url]
 /// isn't a single-brand page or nothing in [brands] matches.

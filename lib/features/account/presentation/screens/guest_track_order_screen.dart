@@ -18,7 +18,11 @@ import '../guest_orders_controller.dart';
 /// native `guestOrder` query; a match is remembered on this device and opens
 /// the same Track Order screen customers get.
 class GuestTrackOrderScreen extends ConsumerStatefulWidget {
-  const GuestTrackOrderScreen({super.key});
+  const GuestTrackOrderScreen({super.key, this.initialNumber});
+
+  /// The order number to start with: an order a guest opened from a push or
+  /// a link (`/track-order?number=`).
+  final String? initialNumber;
 
   @override
   ConsumerState<GuestTrackOrderScreen> createState() =>
@@ -27,7 +31,9 @@ class GuestTrackOrderScreen extends ConsumerStatefulWidget {
 
 class _GuestTrackOrderScreenState extends ConsumerState<GuestTrackOrderScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _number = TextEditingController();
+  late final _number = TextEditingController(
+    text: widget.initialNumber?.trim() ?? '',
+  );
   final _email = TextEditingController();
   final _lastname = TextEditingController();
   bool _busy = false;

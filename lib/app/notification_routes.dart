@@ -2,7 +2,8 @@ import 'routes.dart';
 
 /// Maps a push-notification data payload to an in-app route, or null if it
 /// carries no navigable target. The backend can send either an explicit
-/// `route` (a path starting with `/`) or a typed `{ type, id }` pair.
+/// `route` (a path starting with `/`) or a typed `{ type, id }` pair; an
+/// order's `id` is its number (the increment id customers see).
 String? notificationRoute(Map<String, dynamic> data) {
   final route = data['route'];
   if (route is String && route.startsWith('/')) return route;
@@ -13,7 +14,7 @@ String? notificationRoute(Map<String, dynamic> data) {
 
   switch (type) {
     case 'order':
-      return AppRoutes.orders;
+      return hasId ? AppRoutes.orderByNumber(id) : AppRoutes.orders;
     case 'product':
       return hasId ? AppRoutes.product(id) : null;
     case 'category':

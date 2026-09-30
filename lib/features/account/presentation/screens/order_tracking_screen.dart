@@ -10,9 +10,11 @@ import '../../../../core/config/store_timezone.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../core/widgets/hub_back_button.dart';
+import '../../../marketplace/domain/seller_groups.dart';
 import '../../domain/order.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
+import '../widgets/order_packages.dart';
 
 /// One timeline step: a label, an optional timestamp, and whether it's done.
 typedef _Step = ({String label, String time, bool done});
@@ -290,8 +292,25 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
               ),
             ),
           ),
-          for (final line in order.lines)
-            _ItemRow(line: line, l10n: l10n),
+          // With HubApp, one package per store, as on the order detail (22).
+          if (groupBySeller<OrderLine>(order.lines, (l) => l.seller)
+              case final packages?)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  for (var i = 0; i < packages.length; i++)
+                    OrderPackageCard(
+                      index: i + 1,
+                      package: packages[i],
+                      line: (line) =>
+                          _ItemRow(line: line, l10n: l10n, inset: false),
+                    ),
+                ],
+              ),
+            )
+          else
+            for (final line in order.lines) _ItemRow(line: line, l10n: l10n),
           const SizedBox(height: 8),
           const _Band(),
 
@@ -482,14 +501,17 @@ class _Dot extends StatelessWidget {
 }
 
 class _ItemRow extends StatelessWidget {
-  const _ItemRow({required this.line, required this.l10n});
+  const _ItemRow({required this.line, required this.l10n, this.inset = true});
   final OrderLine line;
   final AppLocalizations l10n;
+
+  /// The page's side margin; a package card brings its own.
+  final bool inset;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: inset ? 16 : 0, vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

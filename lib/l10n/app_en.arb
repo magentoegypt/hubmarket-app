@@ -732,6 +732,15 @@
     }
   },
   "orderDetailsTitle": "Order Details",
+  "orderNotFoundTitle": "Order not found",
+  "orderNotFoundBody": "We couldn't find order #{number} in your account.",
+  "@orderNotFoundBody": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "orderItemsSection": "Items",
   "orderPackageTitle": "Package {index} · {store}",
   "@orderPackageTitle": {
@@ -1184,6 +1193,14 @@
     }
   },
   "orderPlacedTrack": "Track order",
+  "orderPlacedPackages": "{count, plural, =1{Arriving in 1 package} other{Arriving in {count} packages}}",
+  "@orderPlacedPackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",
@@ -1435,6 +1452,8 @@
       }
     }
   },
+  "bestSellersTitle": "Best Sellers",
+  "bestSellersEmpty": "No best sellers yet — check back soon.",
   "hmProductCount": "{count, plural, =1{1 product} other{{count} products}}",
   "@hmProductCount": {
     "placeholders": {

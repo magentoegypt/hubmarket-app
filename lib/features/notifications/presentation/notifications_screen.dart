@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/notification_routes.dart';
+import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/widgets/hub_back_button.dart';
 import '../../../l10n/l10n.dart';
@@ -9,9 +12,30 @@ import '../domain/notification_item.dart';
 
 /// Notification feed (Figma 65:53): a list of received pushes — unread rows are
 /// pale navy with a navy dot — plus "Mark all as read", backed by the local
-/// inbox. Notification *preferences* live in Settings.
+/// inbox. Tapping a row opens what the push points at, as tapping the push
+/// itself does ([notificationRoute]), and marks it read. Notification
+/// *preferences* live in Settings.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
+
+  /// Opens [item]'s target — a tab is switched to, anything else opens over
+  /// the feed so Back comes back here — then marks it read. A push without a
+  /// target is only marked read.
+  static void _open(
+    BuildContext context,
+    NotificationInbox inbox,
+    NotificationItem item,
+  ) {
+    final route = notificationRoute(item.data);
+    if (route != null) {
+      if (AppTab.values.any((tab) => tab.route == route)) {
+        context.go(route);
+      } else {
+        context.push(route);
+      }
+    }
+    inbox.markRead(item.id);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,7 +92,7 @@ class NotificationsScreen extends ConsumerWidget {
                   ),
                   itemBuilder: (context, i) => _NotificationTile(
                     item: items[i],
-                    onTap: () => inbox.markRead(items[i].id),
+                    onTap: () => _open(context, inbox, items[i]),
                   ),
                 ),
               ),

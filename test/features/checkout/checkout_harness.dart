@@ -160,12 +160,13 @@ Widget checkoutHarness({
         AppRoutes.home,
         AppRoutes.cart,
         AppRoutes.orders,
+        '${AppRoutes.orders}/:number',
         AppRoutes.signIn,
         AppRoutes.forgotPassword,
       ])
         GoRoute(
           path: path,
-          builder: (_, __) => Scaffold(body: Text('route $path')),
+          builder: (_, state) => Scaffold(body: Text('route ${state.uri}')),
         ),
     ],
   );
