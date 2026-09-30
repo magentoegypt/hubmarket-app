@@ -19,9 +19,11 @@ recount if you edit.
 | Keywords | – | 100 (commas, no spaces) |
 | What's new / release notes | 500 | 4000 |
 
-**Name.** `Hub Market` in both languages (the logo is Latin). DEV03 renamed the existing listing;
-if the client decides on "ME Hub Market", change it here, in `CFBundleDisplayName` and in the
-Android label, and keep the store name identical to the icon and the developer account.
+**Name.** `Hub Market` in both languages (the logo is Latin). Decided on 30 Sep 2026; "ME Hub
+Market", raised in DEV03, is dropped. The app already carries the name (`CFBundleDisplayName`,
+the Android label, the launch screen). A search of the public App Store (UAE, Egypt, Saudi
+Arabia, US, UK) found no app with that exact name; App Store Connect gives the final answer when
+the app record is created. If it were taken, the fallback is a longer name that starts with it.
 
 **Category.** Shopping on both stores. Skip a secondary category: Health & Fitness and
 Lifestyle invite questions the app does not answer (see the privacy document).

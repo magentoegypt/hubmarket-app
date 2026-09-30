@@ -38,7 +38,7 @@ the code, not from memory. Nothing here publishes anything or creates an account
 3. A **Firebase project** for push (Android and iOS apps registered with the two ids above).
 
 **Decisions**
-4. The store **name**: "Hub Market", or "ME Hub Market" (DEV03 renamed the existing listing).
+4. ~~The store **name**~~ Decided: **Hub Market** (30 Sep 2026; "ME Hub Market" from DEV03 is dropped).
 5. The **production domain**. `hub-market.magento2.click` is a `magento2.click` development domain
    with a wildcard certificate; the app and the links are tied to whatever host is chosen
    (section 5).

@@ -82,7 +82,10 @@ valid TLS:
 `<TeamID>.com.hubmarket.app` exactly. The paths mirror the Android filter.
 
 **Enable it in the app, in this order** (an existing provisioning profile never picks up a new
-capability, which is why the entitlement stays commented out until the last step):
+capability, which is why the entitlement stays commented out until the last step). **Shortcut:** if
+the App ID is created with **Associated Domains** already on, and the profiles are made after that,
+steps 2 and 3 are already done. A profile that has a capability the app does not use is harmless, so
+turn it on together with Push Notifications when the App ID is registered.
 
 1. Publish the file on both hosts and check it with `IOS_TEAM_ID=<TEAMID> bash tool/verify_applinks.sh`.
 2. developer.apple.com › Identifiers › `com.hubmarket.app`: turn on **Associated Domains**.
