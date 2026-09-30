@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
+import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/returns/domain/return_draft.dart';
+import 'package:hubmarket_app/features/returns/domain/return_photo.dart';
 import 'package:hubmarket_app/features/returns/domain/returns.dart';
 
 import '../../support/returns_fakes.dart';
@@ -93,25 +97,49 @@ void main() {
   });
 
   group('refund cap', () {
-    const units = {501: 43.0, 502: 29.0, 503: 425.0};
+    test('sums the server’s unit prices × units ticked', () {
+      final draft = const ReturnDraft(order: kTwoSellerOrder).toggle(tShirt);
+      expect(draft.needsFallbackPrices, isFalse);
+      expect(draft.refundCap(), 86);
+      expect(
+        draft.setQuantity(tShirt, 1, kSampleReturnConfig).refundCap(),
+        43,
+      );
+      // The server's figure wins over any other.
+      expect(draft.refundCap(const {501: 99}), 86);
+    });
 
-    test(
-      'sums the ticked lines’ per-unit amounts × units, down to the cent',
-      () {
-        final draft = const ReturnDraft(order: kTwoSellerOrder).toggle(tShirt);
-        expect(draft.refundCap(units), 86);
-        expect(
-          draft.setQuantity(tShirt, 1, kSampleReturnConfig).refundCap(units),
-          43,
-        );
-        expect(draft.refundCap({501: 33.335}), 66.67);
-      },
-    );
+    test('rounds down to the cent, as the server reports the cap', () {
+      const order = ReturnableOrder(
+        number: '1',
+        createdAt: '',
+        statusLabel: '',
+        items: [
+          ReturnableItem(
+            orderItemId: 9,
+            name: 'Kettle',
+            qtyOrdered: 3,
+            qtyReturnable: 2,
+            unitPrice: Money(amount: 33.335, currency: 'AED'),
+          ),
+        ],
+      );
+      final draft = const ReturnDraft(order: order).toggle(order.items.single);
+      expect(draft.refundCap(), 66.67);
+    });
 
-    test('unknown when nothing is ticked or a line has no amount', () {
+    test('a server without unit prices falls back to the core order’s', () {
+      final line = kLegacyOrder.items.single;
+      final draft = const ReturnDraft(order: kLegacyOrder).toggle(line);
+      expect(draft.needsFallbackPrices, isTrue);
+      expect(draft.refundCap(), isNull);
+      expect(draft.refundCap(const {470: 55}), 165);
+      expect(ReturnDraft.unitRefund(line, const {470: 55}), 55);
+    });
+
+    test('unknown when nothing is ticked', () {
       const draft = ReturnDraft(order: kTwoSellerOrder);
-      expect(draft.refundCap(units), isNull);
-      expect(draft.toggle(tShirt).refundCap(const {503: 425}), isNull);
+      expect(draft.refundCap(), isNull);
     });
 
     test('a custom refund must be above zero and within the cap', () {
@@ -290,6 +318,25 @@ void main() {
         (draft.toInput()['items'] as List).map((i) => i['order_item_id']),
         [9, 3],
       );
+    });
+
+    test('photos go as attachments, only when there are some', () {
+      final photo = ReturnPhoto(
+        name: 'photo-1-1.png',
+        mimeType: 'image/png',
+        bytes: kGreenPhoto,
+      );
+      final draft = const ReturnDraft(order: kTwoSellerOrder)
+          .toggle(tShirt)
+          .copyWith(reasonId: 1, packageOpened: true, comment: 'Torn');
+      expect(draft.toInput().containsKey('attachments'), isFalse);
+      expect(draft.copyWith(photos: [photo]).toInput()['attachments'], [
+        {
+          'name': 'photo-1-1.png',
+          'mime_type': 'image/png',
+          'content_base64': base64Encode(kGreenPhoto),
+        },
+      ]);
     });
   });
 }

@@ -16,11 +16,9 @@ import '../returns_providers.dart';
 import '../widgets/return_widgets.dart';
 
 /// My returns (Figma 23b): the customer's returns, newest first, paged
-/// (`hmReturns`), each with its status, and New return request.
-///
-/// The contract's `HmReturnSummary` carries no line names or thumbnails, so
-/// a card names the order and its line count where the frame shows the
-/// first product.
+/// (`hmReturns`), each with its status — coloured by the store's status code,
+/// so a resolved return and a rejected one read apart — its first product and
+/// its refund, and New return request.
 class MyReturnsScreen extends ConsumerStatefulWidget {
   const MyReturnsScreen({super.key});
 
@@ -139,8 +137,10 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
   }
 }
 
-/// One return (Figma 65:2908): number, date and outcome, status pill, then
-/// the order, its seller and whether there's an unread reply.
+/// One return (Figma 65:2908): number, date, outcome and refund, status pill,
+/// then its first product with its thumbnail (the order and its line count
+/// when the server has no first line), its seller and whether there's an
+/// unread reply.
 class _ReturnCard extends StatelessWidget {
   const _ReturnCard({required this.summary, required this.onTap});
 
@@ -152,11 +152,20 @@ class _ReturnCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     final day = returnDay(summary.createdAt, locale);
+    final refund = summary.type == ReturnType.refund
+        ? summary.refundAmount
+        : null;
     final caption = [
       if (day.isNotEmpty) l10n.returnsRequestedOn(day),
-      returnTypeLabel(l10n, summary.type),
+      [
+        returnTypeLabel(l10n, summary.type),
+        // "Refund AED 29" (Figma 65:2910), the amount left to right.
+        if (refund != null) '\u2066${refund.formatted()}\u2069',
+      ].join(' '),
     ].join(' · ');
     final seller = summary.seller?.name.trim() ?? '';
+    final first = summary.firstItem;
+    final more = summary.itemCount - 1;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -198,7 +207,7 @@ class _ReturnCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   ReturnStatusPill(
-                    state: summary.state,
+                    tone: summary.tone,
                     label: summary.statusLabel,
                   ),
                 ],
@@ -206,23 +215,41 @@ class _ReturnCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  const ReturnThumb(url: null),
+                  ReturnThumb(url: first?.thumbnail),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${l10n.orderNumber(summary.orderNumber)} · '
-                          '${l10n.orderItemCount(summary.itemCount)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 20 / 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.inkHeading,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                first?.name ??
+                                    '${l10n.orderNumber(summary.orderNumber)} · '
+                                        '${l10n.orderItemCount(summary.itemCount)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 20 / 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.inkHeading,
+                                ),
+                              ),
+                            ),
+                            if (first != null && more > 0) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                l10n.returnsMoreItems(more),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  height: 16 / 12,
+                                  color: AppColors.inkMuted,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         if (seller.isNotEmpty)
                           Padding(

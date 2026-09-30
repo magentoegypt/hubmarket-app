@@ -1,5 +1,6 @@
 import '../../../core/hubapp/hubapp.dart';
 import '../../catalog/domain/money.dart';
+import 'return_photo.dart';
 
 /// Returns (RMA) as the HubAppReturns contract describes them: Figma 23, 23b
 /// and 23c. Dates stay the contract's ISO-8601 UTC strings; the screens format
@@ -34,7 +35,8 @@ enum RefundAmountType {
   };
 }
 
-/// Lifecycle (`HmReturnState`). Only an open return takes replies.
+/// Lifecycle (`HmReturnState`). What the customer may do with a return comes
+/// with it (`ReturnDetail.canReply`, `canCancel`, `canEscalate`).
 enum ReturnState {
   open,
   closed,
@@ -45,6 +47,38 @@ enum ReturnState {
     'CANCELED' => ReturnState.canceled,
     _ => ReturnState.open,
   };
+}
+
+/// How a status reads at a glance (the Figma 23b / 23c pills): still being
+/// handled, resolved, or refused / cancelled.
+enum ReturnTone {
+  /// With the store or with Hub Market (amber).
+  pending,
+
+  /// Resolved (green).
+  resolved,
+
+  /// Cancelled, or refused (red).
+  rejected;
+
+  /// From the store's status code first (`status_code`), so that a resolved
+  /// return and a rejected one read apart whatever state the store maps its
+  /// statuses to; from the state when the code says nothing.
+  static ReturnTone of(ReturnState state, String statusCode) {
+    final code = statusCode.trim().toLowerCase();
+    if (code == 'resolved') return ReturnTone.resolved;
+    if (code == 'canceled' ||
+        code.contains('reject') ||
+        code.contains('declin') ||
+        code.contains('refus')) {
+      return ReturnTone.rejected;
+    }
+    return switch (state) {
+      ReturnState.open => ReturnTone.pending,
+      ReturnState.closed => ReturnTone.resolved,
+      ReturnState.canceled => ReturnTone.rejected,
+    };
+  }
 }
 
 /// Who wrote a message or changed the status (`HmReturnActor`). Staff are
@@ -90,6 +124,9 @@ class ReturnConfig {
     this.reasons = const <ReturnReason>[],
     this.policyHtml,
     this.windowDays,
+    this.attachmentExtensions = const <String>[],
+    this.attachmentMaxBytes,
+    this.attachmentMaxFiles = 0,
   });
 
   final bool enabled;
@@ -114,9 +151,27 @@ class ReturnConfig {
   /// for them.
   final int? windowDays;
 
+  /// File extensions a message may carry, lower case: the website's upload
+  /// rules (`attachment_extensions`).
+  final List<String> attachmentExtensions;
+
+  /// Largest file in bytes; null when the server didn't say.
+  final int? attachmentMaxBytes;
+
+  /// Most files one message may carry; 0 when the server didn't say.
+  final int attachmentMaxFiles;
+
   /// Whether the form offers a reason at all.
   bool get asksForReason =>
       (reasonsEnabled && reasons.isNotEmpty) || otherReasonAllowed;
+
+  /// Whether photos can go with a return, a reply or an escalation: the store
+  /// takes one of the image formats the app sends.
+  bool get acceptsPhotos =>
+      attachmentMaxFiles > 0 &&
+      ReturnPhotoFormat.values.any(
+        (f) => f.extensions.any(attachmentExtensions.contains),
+      );
 }
 
 class ReturnOption {
@@ -126,7 +181,8 @@ class ReturnOption {
   final String value;
 }
 
-/// One top-level line of an eligible order (`HmReturnableItem`).
+/// One line of an eligible order the customer can pick (`HmReturnableItem`):
+/// a top-level line, or a bundle's child line.
 class ReturnableItem {
   const ReturnableItem({
     required this.orderItemId,
@@ -138,6 +194,9 @@ class ReturnableItem {
     this.qtyReturnable = 0,
     this.openReturnNumbers = const <String>[],
     this.seller,
+    this.unitPrice,
+    this.rowTotal,
+    this.maxRefund,
   });
 
   final int orderItemId;
@@ -153,6 +212,18 @@ class ReturnableItem {
   /// Non-cancelled returns already holding units of this line.
   final List<String> openReturnNumbers;
   final HmSellerSummary? seller;
+
+  /// Paid per unit, the refund cap's base (row total incl. tax − discount) ÷
+  /// qty ordered, as the server computes the cap; null from a server that
+  /// doesn't send it.
+  final Money? unitPrice;
+
+  /// Paid for the whole line (row total incl. tax − discount).
+  final Money? rowTotal;
+
+  /// The most a custom refund may ask for this line: [unitPrice] ×
+  /// [qtyReturnable].
+  final Money? maxRefund;
 
   bool get isReturnable => qtyReturnable >= 1;
 
@@ -174,7 +245,7 @@ class ReturnableOrder {
   final String createdAt;
   final String statusLabel;
 
-  /// Every top-level line, returnable or not.
+  /// Every line the website's form offers, returnable now or not.
   final List<ReturnableItem> items;
 
   bool get hasReturnableItem => items.any((i) => i.isReturnable);
@@ -197,6 +268,14 @@ class ReturnsPage<T> {
   bool get hasMore => currentPage < totalPages;
 }
 
+/// The line a return's card pictures (`HmReturnSummaryItem`).
+class ReturnSummaryItem {
+  const ReturnSummaryItem({required this.name, this.thumbnail});
+
+  final String name;
+  final String? thumbnail;
+}
+
 /// A row of "My returns" (`HmReturnSummary`).
 class ReturnSummary {
   const ReturnSummary({
@@ -206,11 +285,14 @@ class ReturnSummary {
     required this.createdAt,
     this.updatedAt = '',
     this.state = ReturnState.open,
+    this.statusCode = '',
     this.statusLabel = '',
     this.type = ReturnType.refund,
     this.itemCount = 0,
     this.seller,
     this.hasUnreadReply = false,
+    this.refundAmount,
+    this.firstItem,
   });
 
   final int id;
@@ -219,6 +301,9 @@ class ReturnSummary {
   final String createdAt;
   final String updatedAt;
   final ReturnState state;
+
+  /// The store's status code (`ves_rma_status`), which sets the pill's tone.
+  final String statusCode;
   final String statusLabel;
   final ReturnType type;
   final int itemCount;
@@ -226,6 +311,31 @@ class ReturnSummary {
 
   /// The seller or Hub Market wrote since the customer last opened it.
   final bool hasUnreadReply;
+
+  /// A refund's amount once the store has one.
+  final Money? refundAmount;
+
+  /// The return's first line; null when its order line is gone.
+  final ReturnSummaryItem? firstItem;
+
+  ReturnTone get tone => ReturnTone.of(state, statusCode);
+
+  /// The same row, read by the customer.
+  ReturnSummary markedRead() => ReturnSummary(
+    id: id,
+    number: number,
+    orderNumber: orderNumber,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    state: state,
+    statusCode: statusCode,
+    statusLabel: statusLabel,
+    type: type,
+    itemCount: itemCount,
+    seller: seller,
+    refundAmount: refundAmount,
+    firstItem: firstItem,
+  );
 }
 
 /// A returned line (`HmReturnItem`).
@@ -260,6 +370,33 @@ class ReturnHistoryEntry {
   final String createdAt;
 }
 
+/// A file on a message or an escalation (`HmReturnAttachment`).
+class ReturnAttachment {
+  const ReturnAttachment({required this.name, required this.url});
+
+  /// Image extensions the thread shows as pictures; any other file opens in
+  /// the browser, as the website links it.
+  static const Set<String> imageExtensions = {
+    'jpg',
+    'jpeg',
+    'jpe',
+    'png',
+    'gif',
+    'bmp',
+    'webp',
+  };
+
+  final String name;
+  final String url;
+
+  String get extension {
+    final dot = name.lastIndexOf('.');
+    return dot < 0 ? '' : name.substring(dot + 1).toLowerCase();
+  }
+
+  bool get isImage => imageExtensions.contains(extension);
+}
+
 /// A message of the return's thread (`HmReturnMessage`).
 class ReturnMessage {
   const ReturnMessage({
@@ -268,7 +405,7 @@ class ReturnMessage {
     required this.authorName,
     required this.bodyText,
     required this.createdAt,
-    this.attachmentUrls = const <String>[],
+    this.attachments = const <ReturnAttachment>[],
   });
 
   final int id;
@@ -279,7 +416,23 @@ class ReturnMessage {
 
   /// Plain text (the contract's `body_text`).
   final String bodyText;
-  final List<String> attachmentUrls;
+
+  /// Its files, in the order sent.
+  final List<ReturnAttachment> attachments;
+  final String createdAt;
+}
+
+/// The customer's escalation to Hub Market (`HmReturnEscalation`), as the
+/// website's "RMA Escalate" tab shows it.
+class ReturnEscalation {
+  const ReturnEscalation({
+    required this.bodyText,
+    required this.createdAt,
+    this.attachments = const <ReturnAttachment>[],
+  });
+
+  final String bodyText;
+  final List<ReturnAttachment> attachments;
   final String createdAt;
 }
 
@@ -305,6 +458,10 @@ class ReturnDetail {
     this.items = const <ReturnItem>[],
     this.history = const <ReturnHistoryEntry>[],
     this.messages = const <ReturnMessage>[],
+    this.canReply = false,
+    this.canCancel = false,
+    this.canEscalate = false,
+    this.escalation,
   });
 
   final int id;
@@ -327,9 +484,21 @@ class ReturnDetail {
   final List<ReturnHistoryEntry> history;
   final List<ReturnMessage> messages;
 
-  /// The website takes replies only while a return is open (open, awaiting
-  /// or being reviewed — all `OPEN` here); the server enforces it too.
-  bool get acceptsReplies => state == ReturnState.open;
+  /// The return takes replies: the server's word (`can_reply`), by the
+  /// website's rule — open, awaiting or being reviewed by Hub Market.
+  final bool canReply;
+
+  /// The customer may cancel it (`can_cancel`): pending or accepted.
+  final bool canCancel;
+
+  /// The customer may ask Hub Market to step in (`can_escalate`): not
+  /// cancelled and never escalated.
+  final bool canEscalate;
+
+  /// The customer's escalation, once there is one.
+  final ReturnEscalation? escalation;
+
+  ReturnTone get tone => ReturnTone.of(state, statusCode);
 
   /// The reason as the customer gave it: a listed reason, else free text.
   String? get reasonText {

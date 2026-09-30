@@ -25,6 +25,9 @@ ReturnReason? _reason(Object? json) {
   return ReturnReason(id: id, label: _string(json['label']));
 }
 
+Money? _money(Object? json) =>
+    moneyFromJson(json is Map<String, dynamic> ? json : null);
+
 ReturnConfig returnConfigFromJson(Map<String, dynamic> json) => ReturnConfig(
   enabled: json['enabled'] == true,
   reasonsEnabled: json['reasons_enabled'] == true,
@@ -36,6 +39,12 @@ ReturnConfig returnConfigFromJson(Map<String, dynamic> json) => ReturnConfig(
   ],
   policyHtml: hmString(json['policy_html']),
   windowDays: hmInt(json['window_days']),
+  attachmentExtensions: [
+    for (final extension in hmStrings(json['attachment_extensions']))
+      extension.toLowerCase(),
+  ],
+  attachmentMaxBytes: hmInt(json['attachment_max_bytes']),
+  attachmentMaxFiles: hmInt(json['attachment_max_files']) ?? 0,
 );
 
 ReturnableItem returnableItemFromJson(Map<String, dynamic> json) {
@@ -54,6 +63,9 @@ ReturnableItem returnableItemFromJson(Map<String, dynamic> json) {
     qtyReturnable: returnable < 0 ? 0 : returnable,
     openReturnNumbers: hmStrings(json['open_return_numbers']),
     seller: HmSellerSummary.fromJson(json['seller']),
+    unitPrice: _money(json['unit_price']),
+    rowTotal: _money(json['row_total']),
+    maxRefund: _money(json['max_refund']),
   );
 }
 
@@ -84,19 +96,52 @@ ReturnsPage<T> returnsPageFromJson<T>(
   );
 }
 
-ReturnSummary returnSummaryFromJson(Map<String, dynamic> json) => ReturnSummary(
-  id: _int(json['id']),
-  number: _string(json['number']),
-  orderNumber: _string(json['order_number']),
-  createdAt: _string(json['created_at']),
-  updatedAt: _string(json['updated_at']),
-  state: ReturnState.parse(json['state']),
-  statusLabel: _string(json['status_label']),
-  type: ReturnType.parse(json['type']),
-  itemCount: _int(json['item_count']),
-  seller: HmSellerSummary.fromJson(json['seller']),
-  hasUnreadReply: json['has_unread_reply'] == true,
-);
+ReturnSummary returnSummaryFromJson(Map<String, dynamic> json) {
+  final first = json['first_item'];
+  final firstName = first is Map<String, dynamic> ? _string(first['name']) : '';
+  return ReturnSummary(
+    id: _int(json['id']),
+    number: _string(json['number']),
+    orderNumber: _string(json['order_number']),
+    createdAt: _string(json['created_at']),
+    updatedAt: _string(json['updated_at']),
+    state: ReturnState.parse(json['state']),
+    statusCode: _string(json['status_code']),
+    statusLabel: _string(json['status_label']),
+    type: ReturnType.parse(json['type']),
+    itemCount: _int(json['item_count']),
+    seller: HmSellerSummary.fromJson(json['seller']),
+    hasUnreadReply: json['has_unread_reply'] == true,
+    refundAmount: _money(json['refund_amount']),
+    firstItem: first is Map<String, dynamic> && firstName.isNotEmpty
+        ? ReturnSummaryItem(
+            name: firstName,
+            thumbnail: hmImageUrl(first['thumbnail']),
+          )
+        : null,
+  );
+}
+
+/// A message's (or an escalation's) files: `attachments`, else the URLs of
+/// `attachment_urls`, named after their last path segment.
+List<ReturnAttachment> _attachments(Map<String, dynamic> json) {
+  final files = json['attachments'];
+  if (files is List) {
+    return [
+      for (final file in _maps(files))
+        if (hmImageUrl(file['url']) case final url?)
+          ReturnAttachment(name: _string(file['name']), url: url),
+    ];
+  }
+  return [
+    for (final raw in hmStrings(json['attachment_urls']))
+      if (hmImageUrl(raw) case final url?)
+        ReturnAttachment(
+          name: Uri.tryParse(url)?.pathSegments.lastOrNull ?? '',
+          url: url,
+        ),
+  ];
+}
 
 ReturnDetail returnDetailFromJson(Map<String, dynamic> json) => ReturnDetail(
   id: _int(json['id']),
@@ -145,18 +190,27 @@ ReturnDetail returnDetailFromJson(Map<String, dynamic> json) => ReturnDetail(
         author: ReturnActor.parse(message['author']),
         authorName: _string(message['author_name']),
         bodyText: _string(message['body_text']),
-        attachmentUrls: [
-          for (final url in hmStrings(message['attachment_urls']))
-            hmImageUrl(url) ?? url,
-        ],
+        attachments: _attachments(message),
         createdAt: _string(message['created_at']),
       ),
   ],
+  canReply: json['can_reply'] == true,
+  canCancel: json['can_cancel'] == true,
+  canEscalate: json['can_escalate'] == true,
+  escalation: switch (json['escalation']) {
+    final Map<String, dynamic> escalation => ReturnEscalation(
+      bodyText: _string(escalation['body_text']),
+      attachments: _attachments(escalation),
+      createdAt: _string(escalation['created_at']),
+    ),
+    _ => null,
+  },
 );
 
 /// `sales_order_item.item_id` behind a core order line uid — Magento encodes
 /// it as base64 (`Magento\Framework\GraphQl\Query\Uid`). Null when the uid
-/// isn't one.
+/// isn't one. Only for the fallback prices (a server without
+/// `HmReturnableItem.unit_price`).
 int? orderItemIdFromUid(String uid) {
   try {
     return int.tryParse(utf8.decode(base64.decode(base64.normalize(uid))));

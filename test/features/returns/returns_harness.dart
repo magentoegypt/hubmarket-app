@@ -26,6 +26,7 @@ import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
 import 'package:hubmarket_app/features/cms/domain/faq.dart';
 import 'package:hubmarket_app/features/notifications/presentation/notification_settings_controller.dart';
+import 'package:hubmarket_app/features/returns/data/return_photo_picker.dart';
 import 'package:hubmarket_app/features/returns/data/returns_repository.dart';
 import 'package:hubmarket_app/features/returns/domain/returns.dart';
 import 'package:hubmarket_app/features/returns/presentation/screens/my_returns_screen.dart';
@@ -74,6 +75,7 @@ Future<ProviderContainer> pumpReturns(
   HubAppState hubApp = kReturnsOn,
   bool signedIn = true,
   FakeReturnsRepository? returns,
+  FakeReturnPhotoPicker? photoPicker,
   Size size = const Size(390, 1600),
   GlobalKey? boundary,
   bool dark = false,
@@ -171,6 +173,9 @@ Future<ProviderContainer> pumpReturns(
       hubAppOverride(hubApp),
       returnsRepositoryProvider.overrideWithValue(
         returns ?? FakeReturnsRepository(),
+      ),
+      returnPhotoPickerProvider.overrideWithValue(
+        photoPicker ?? FakeReturnPhotoPicker(),
       ),
     ],
   );

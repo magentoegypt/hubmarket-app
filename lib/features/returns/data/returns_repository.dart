@@ -8,6 +8,7 @@ import '../../../core/graphql/graphql_client.dart';
 import '../../../core/hubapp/hubapp.dart';
 import '../../../core/store/store_controller.dart';
 import '../../catalog/domain/money.dart';
+import '../domain/return_photo.dart';
 import '../domain/returns.dart';
 import 'returns_mapper.dart';
 import 'returns_queries.dart';
@@ -20,8 +21,9 @@ import 'returns_queries.dart';
 ///   deployed) — callers hide returns rather than report an error, and
 ///   [onModuleMissing] is told;
 /// * a [Failure] otherwise. A store refusal (not eligible, too many units,
-///   two sellers, over the refund cap, a closed return) is a `server` failure
-///   carrying the store's localized message.
+///   two sellers, over the refund cap, a closed return, a photo the store
+///   doesn't take, a return that can't be cancelled or escalated any more) is
+///   a `server` failure carrying the store's localized message.
 class ReturnsRepository {
   ReturnsRepository(this._client, {this.onModuleMissing});
 
@@ -59,9 +61,24 @@ class ReturnsRepository {
     );
   }
 
+  /// Order [orderNumber]'s returnable lines, in one request; null when the
+  /// order has nothing left to return (not the customer's, not processing or
+  /// complete, or everything returned already).
+  Future<ReturnableOrder?> fetchReturnableOrder(String orderNumber) async {
+    final data = await _query(
+      ReturnsQueries.returnableOrder,
+      variables: {'number': orderNumber},
+    );
+    final order = data['hmReturnableOrder'];
+    if (order is! Map<String, dynamic>) return null;
+    final returnable = returnableOrderFromJson(order);
+    return returnable.hasReturnableItem ? returnable : null;
+  }
+
   /// The per-unit refund base of each line of order [orderNumber]
   /// (`order_item_id` → amount), from the core order — see
-  /// [unitRefundsFromOrderJson]. Empty when the order can't be found.
+  /// [unitRefundsFromOrderJson]. Empty when the order can't be found. Only
+  /// for a server whose returnable lines carry no `unit_price`.
   Future<Map<int, Money>> fetchUnitRefunds(String orderNumber) async {
     final data = await _query(
       ReturnsQueries.orderLinePrices,
@@ -117,14 +134,51 @@ class ReturnsRepository {
     return _rma(data['hmCreateReturn']);
   }
 
-  /// Posts the customer's reply on return [returnId] and returns the return
-  /// with it.
-  Future<ReturnDetail> addMessage(int returnId, String message) async {
-    final data = await _mutate(ReturnsQueries.addMessage, {
-      'returnId': returnId,
-      'message': message,
-    });
+  /// Posts the customer's reply on return [returnId], with [photos], and
+  /// returns the return with it. A reply without photos declares no `Hm*`
+  /// variable.
+  Future<ReturnDetail> addMessage(
+    int returnId,
+    String message, {
+    List<ReturnPhoto> photos = const <ReturnPhoto>[],
+  }) async {
+    final data = await _mutate(
+      photos.isEmpty
+          ? ReturnsQueries.addMessage
+          : ReturnsQueries.addMessageWithPhotos,
+      {
+        'returnId': returnId,
+        'message': message,
+        if (photos.isNotEmpty)
+          'attachments': [for (final photo in photos) photo.toInput()],
+      },
+    );
     return _rma(data['hmAddReturnMessage']);
+  }
+
+  /// Asks Hub Market to step in on return [returnId] with [message] and
+  /// [photos]; returns the escalated return.
+  Future<ReturnDetail> escalate(
+    int returnId,
+    String message, {
+    List<ReturnPhoto> photos = const <ReturnPhoto>[],
+  }) async {
+    final data = await _mutate(
+      photos.isEmpty ? ReturnsQueries.escalate : ReturnsQueries.escalateWithPhotos,
+      {
+        'returnId': returnId,
+        'message': message,
+        if (photos.isNotEmpty)
+          'attachments': [for (final photo in photos) photo.toInput()],
+      },
+    );
+    return _rma(data['hmEscalateReturn']);
+  }
+
+  /// Cancels return [returnId]; returns it cancelled.
+  Future<ReturnDetail> cancel(int returnId) async {
+    final data = await _mutate(ReturnsQueries.cancel, {'returnId': returnId});
+    return _rma(data['hmCancelReturn']);
   }
 
   ReturnDetail _rma(Object? output) {

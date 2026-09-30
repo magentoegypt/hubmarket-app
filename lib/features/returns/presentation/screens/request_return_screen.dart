@@ -18,26 +18,29 @@ import '../../../cms/presentation/cms_navigation.dart';
 import '../../../cms/presentation/widgets/cms_html_view.dart';
 import '../../data/returns_repository.dart';
 import '../../domain/return_draft.dart';
+import '../../domain/return_photo.dart';
 import '../../domain/returns.dart';
 import '../returns_providers.dart';
 import '../widgets/return_form_widgets.dart';
+import '../widgets/return_photos.dart';
 import '../widgets/return_widgets.dart';
 
 /// Request a return (Figma 23): pick an order the server lists as returnable
 /// (`hmReturnableOrders`), tick lines of one seller with their quantities,
 /// say refund or exchange, why, whether the package was opened, how much of
-/// a refund, what happened, and the tracking number if it's on its way —
-/// then `hmCreateReturn`, and on to the new return (23c).
+/// a refund, add photos, what happened, and the tracking number if it's on
+/// its way — then `hmCreateReturn`, and on to the new return (23c).
 ///
 /// The website's rules the form applies (the server checks them all again):
-/// only processing or complete orders and their top-level lines, at most the
-/// line's returnable quantity (whole, or everything left when partial
+/// only processing or complete orders and the lines its form offers, at most
+/// the line's returnable quantity (whole, or everything left when partial
 /// quantities are off), one seller per return, a custom refund up to the
-/// lines' paid amount, and no return window for signed-in customers.
+/// lines' paid amount (the server's `unit_price`; the core order's prices
+/// only from a server without it), photos of the formats and size the
+/// store's upload takes, and no return window for signed-in customers.
 ///
-/// Photos (the frame's "Photos (optional)") aren't offered: the contract has
-/// no upload. The contract's required first message is the "Tell us what
-/// happened" field, which the frame doesn't show.
+/// The contract's required first message is the "Tell us what happened"
+/// field, which the frame doesn't show.
 class RequestReturnScreen extends ConsumerStatefulWidget {
   const RequestReturnScreen({super.key, this.order, this.orderNumber});
 
@@ -100,6 +103,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
       packageOpened: keep?.packageOpened,
       comment: _comment.text,
       trackingCode: _tracking.text,
+      photos: keep?.photos ?? const <ReturnPhoto>[],
     );
     final returnable = order.items.where((i) => i.isReturnable).toList();
     if (returnable.length == 1) draft = draft.toggle(returnable.single);
@@ -111,18 +115,29 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     if (widget.order != null) return widget.order;
     final number = widget.orderNumber;
     if (number == null || number.isEmpty) return null;
-    return ref
-        .watch(returnableOrderProvider((number: number, placedAt: null)))
-        .valueOrNull;
+    return ref.watch(returnableOrderProvider(number)).valueOrNull;
   }
 
   /// Still looking up the order the screen was opened on by number.
   bool _initialPending() {
     final number = widget.orderNumber;
     if (widget.order != null || number == null || number.isEmpty) return false;
-    return ref
-        .watch(returnableOrderProvider((number: number, placedAt: null)))
-        .isLoading;
+    return ref.watch(returnableOrderProvider(number)).isLoading;
+  }
+
+  /// What a unit of each line of [draft]'s order was paid: the server's
+  /// `unit_price`, else — only from a server without it — the core order's
+  /// prices.
+  Map<int, Money> _unitPrices(ReturnDraft draft) {
+    final fallback = draft.needsFallbackPrices
+        ? ref.watch(returnUnitRefundsProvider(draft.order.number)).valueOrNull ??
+              const <int, Money>{}
+        : const <int, Money>{};
+    return {
+      for (final item in draft.order.items)
+        if (item.unitPrice ?? fallback[item.orderItemId] case final unit?)
+          item.orderItemId: unit,
+    };
   }
 
   void _update(ReturnDraft draft) => setState(() => _draft = draft);
@@ -240,12 +255,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     ReturnDraft? draft,
   ) {
     final locale = Localizations.localeOf(context).languageCode;
-    final units = draft == null
-        ? const <int, Money>{}
-        : ref
-                  .watch(returnUnitRefundsProvider(draft.order.number))
-                  .valueOrNull ??
-              const <int, Money>{};
+    final units = draft == null ? const <int, Money>{} : _unitPrices(draft);
     final currency = units.values.firstOrNull?.currency ?? 'AED';
     final cap = draft?.refundCap({
       for (final e in units.entries) e.key: e.value.amount,
@@ -361,6 +371,19 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
               ],
             ),
           ),
+          if (config.acceptsPhotos) ...[
+            const SizedBox(height: 16),
+            ReturnPhotoField(
+              label: l10n.returnsPhotos,
+              photos: draft.photos,
+              maxPhotos: config.attachmentMaxFiles,
+              onAdd: () => _addPhotos(config, draft),
+              onRemove: (index) => _edit(
+                draft,
+                (d) => d.copyWith(photos: [...d.photos]..removeAt(index)),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           KeyedSubtree(
             key: _trackingKey,
@@ -655,6 +678,24 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     );
   }
 
+  /// Adds photos, up to the store's limit.
+  Future<void> _addPhotos(ReturnConfig config, ReturnDraft shown) async {
+    final current = _draft ?? shown;
+    final added = await pickReturnPhotos(
+      context,
+      ref,
+      config: config,
+      room: config.attachmentMaxFiles - current.photos.length,
+    );
+    if (added.isEmpty || !mounted) return;
+    _edit(shown, (d) {
+      final photos = [...d.photos, ...added];
+      return d.copyWith(
+        photos: photos.take(config.attachmentMaxFiles).toList(),
+      );
+    });
+  }
+
   Future<void> _showPolicy(AppLocalizations l10n, String html) =>
       showModalBottomSheet<void>(
         context: context,
@@ -688,11 +729,12 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     // The latest edit, even one made since the button was last built.
     final draft = _draft ?? shown;
     final l10n = AppLocalizations.of(context);
-    final units =
-        ref.read(returnUnitRefundsProvider(draft.order.number)).valueOrNull ??
-        const <int, Money>{};
+    final fallback = draft.needsFallbackPrices
+        ? ref.read(returnUnitRefundsProvider(draft.order.number)).valueOrNull ??
+              const <int, Money>{}
+        : const <int, Money>{};
     final cap = draft.refundCap({
-      for (final e in units.entries) e.key: e.value.amount,
+      for (final e in fallback.entries) e.key: e.value.amount,
     });
     final errors = draft.validate(config, refundCap: cap);
     if (errors.isNotEmpty) {
