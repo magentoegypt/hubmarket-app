@@ -101,6 +101,43 @@ void main() {
       expect(product.isOnSale, isFalse);
     });
 
+    test('the average rating comes along; the records carry no count', () {
+      final rated = productFromAlgoliaHit(
+        _sofaBed()..['rating_summary'] = 94,
+        _settings,
+        now: _now,
+      )!;
+      expect(rated.starRating, closeTo(4.7, 1e-9));
+      expect(rated.reviewCount, isNull);
+      final unrated = productFromAlgoliaHit(
+        _sofaBed()..['rating_summary'] = 0,
+        _settings,
+        now: _now,
+      )!;
+      expect(unrated.starRating, isNull);
+      expect(
+        productFromAlgoliaHit(_sofaBed(), _settings, now: _now)!.starRating,
+        isNull,
+      );
+    });
+
+    test('a new_bundle record opens its page from the card', () {
+      final product = productFromAlgoliaHit(
+        productRecord(
+          id: '2101',
+          name: 'house tools',
+          urlKey: 'house-tools',
+          sku: 'house tools',
+          type: 'new_bundle',
+          price: 170,
+        ),
+        _settings,
+        now: _now,
+      )!;
+      expect(product.typeId, 'new_bundle');
+      expect(product.requiresOptions, isTrue);
+    });
+
     test('a record with no product URL is skipped', () {
       final record = _sofaBed()
         ..['url'] = 'https://hub-market.magento2.click/en/';

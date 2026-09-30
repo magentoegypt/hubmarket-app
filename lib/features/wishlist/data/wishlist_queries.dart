@@ -13,6 +13,8 @@ fragment WishlistFields on Wishlist {
         stock_status
         new_from_date
         new_to_date
+        rating_summary
+        review_count
         image { url }
         price_range {
           minimum_price {

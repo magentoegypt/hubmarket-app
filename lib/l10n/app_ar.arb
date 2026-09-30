@@ -739,6 +739,7 @@
   "priceFrom": "ابتداءً من",
   "productAddToCart": "أضف إلى السلة",
   "productOutOfStock": "غير متوفّر",
+  "productCardRating": "{count, plural, =0{التقييم {rating} من 5} =1{التقييم {rating} من 5، من تقييم واحد} =2{التقييم {rating} من 5، من تقييمين} few{التقييم {rating} من 5، من {count} تقييمات} other{التقييم {rating} من 5، من {count} تقييم}}",
   "tabDescription": "الوصف",
   "tabDetails": "التفاصيل",
   "tabKeyFeatures": "المميزات الرئيسية",

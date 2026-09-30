@@ -1163,6 +1163,18 @@
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",
+  "productCardRating": "{count, plural, =0{Rated {rating} out of 5} =1{Rated {rating} out of 5, from 1 review} other{Rated {rating} out of 5, from {count} reviews}}",
+  "@productCardRating": {
+    "description": "Screen-reader label of a product card's stars. count is 0 when the source doesn't say how many reviews there are.",
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tabDescription": "Description",
   "tabDetails": "Details",
   "tabKeyFeatures": "Key Features",
