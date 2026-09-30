@@ -58,7 +58,8 @@ class _BuyCreditCardState extends ConsumerState<BuyCreditCard> {
       _preset = initial;
     } else {
       _other = true;
-      _custom.text = initial == null ? '' : _amountFormat.format(initial);
+      // Digits only, as the field takes them (the range is whole units).
+      _custom.text = initial == null ? '' : '${initial.round()}';
     }
   }
 
@@ -71,7 +72,7 @@ class _BuyCreditCardState extends ConsumerState<BuyCreditCard> {
   /// The credit the button buys; null while the typed amount can't be bought.
   double? get _amount {
     if (!_other) return _preset;
-    final typed = double.tryParse(_custom.text.replaceAll(',', '').trim());
+    final typed = double.tryParse(_custom.text.trim());
     return typed != null && _topUp.acceptsCustom(typed) ? typed : null;
   }
 
