@@ -12,6 +12,7 @@ import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/algolia/algolia_settings_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/search_screen.dart';
+import 'package:hubmarket_app/features/catalog/presentation/widgets/product_card.dart';
 import 'package:hubmarket_app/features/stores/presentation/widgets/search_vendor_widgets.dart';
 import 'package:hubmarket_app/features/stores/presentation/widgets/store_widgets.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
@@ -111,6 +112,48 @@ Future<void> _type(WidgetTester tester, String text) async {
 }
 
 void main() {
+  group('results (Figma 09c) with the P3.1 seller fields', () {
+    testWidgets(
+      'the vendor card names the category; product cards their seller',
+      (tester) async {
+        await _phone(tester);
+        final stores = _stores();
+        await tester.pumpWidget(
+          _harness(
+            algolia: FakeAlgoliaBackend(answer: sofaAnswers()),
+            stores: stores,
+            hubApp: const HubAppState.available(kVendorsHmAppConfig),
+            initialQuery: 'sofa',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // The facet's count reached MIA CO by its facet value.
+        expect(
+          stores.of('HmStores').map((r) => r.document),
+          everyElement(contains('...HmStoreCardExtras')),
+        );
+        final card = find.byType(SearchVendorCard);
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.text('8 matching products · Furniture'),
+          ),
+          findsOneWidget,
+        );
+        // The Algolia records' seller, above each product's name.
+        expect(
+          find.descendant(
+            of: find.byType(ProductCard),
+            matching: find.text('MIA CO'),
+          ),
+          findsWidgets,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
+
   group('results (Figma 09c) with the seller API', () {
     testWidgets('a Vendors tab, and the seller of the matches as a card', (
       tester,

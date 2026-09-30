@@ -49,14 +49,35 @@ void main() {
       expect(vendors.map((v) => v.nameMatch), [true, false, false]);
     });
 
-    test('facet names match the directory whatever their case or spacing', () {
+    test('without facet values (a P3 server), names match whatever their case or spacing', () {
+      final older = [
+        for (final json in sampleStoreCards()) _card({...json, 'facet_value': null}),
+      ];
       final vendors = searchVendorsFrom(
         nameMatches: const [],
-        directory: cards,
+        directory: older,
         sellerCounts: {' mia co ': 3},
       );
-      expect(vendors.single.store, same(mia));
+      expect(vendors.single.store, same(older.first));
       expect(vendors.single.matchCount, 3);
+    });
+
+    test('a card with its facet value matches that value exactly, not its name', () {
+      // The index spells the seller as the backend reports it, whatever the
+      // card's display name says.
+      final renamed = _card({
+        ...sampleStoreCards()[2],
+        'name': 'Enara Lights',
+        'facet_value': 'ENARA',
+      });
+      final vendors = searchVendorsFrom(
+        nameMatches: const [],
+        directory: [mia, renamed],
+        sellerCounts: {'ENARA': 4, 'mia co': 2, 'Enara Lights': 9},
+      );
+      expect(vendors.map((v) => v.store.code), ['ENARA']);
+      expect(vendors.single.matchCount, 4);
+      expect(mia.facetValue, 'MIA CO');
     });
 
     test('a seller the directory does not know is dropped', () {

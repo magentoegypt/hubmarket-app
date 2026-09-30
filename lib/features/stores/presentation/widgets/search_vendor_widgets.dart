@@ -4,24 +4,25 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
+import '../../domain/store.dart';
 import '../search_vendors.dart';
 import 'store_widgets.dart';
 
 /// The line under a found seller's name: how many of the search's products
 /// they sell, or — for a name match the seller facet doesn't count — their
-/// product count.
+/// product count; then the seller's category when the card carries one
+/// ("8 matching products · Furniture").
 String searchVendorDetail(AppLocalizations l10n, SearchVendor vendor) {
   final matches = vendor.matchCount;
-  return matches != null
+  final count = matches != null
       ? l10n.searchCategoryMatches(matches)
       : l10n.categoryProductCount(vendor.store.productCount);
+  final category = vendor.store.categoryName;
+  return category == null ? count : '$count · $category';
 }
 
 /// The seller at the head of a search's products (Figma 09c "vendor-match"):
-/// logo, name, what matched, and View.
-///
-/// The frame's "· Furniture" after the count has no source: the seller card
-/// carries no category.
+/// logo, name, what matched, its category, and View.
 class SearchVendorCard extends StatelessWidget {
   const SearchVendorCard({super.key, required this.vendor});
 
