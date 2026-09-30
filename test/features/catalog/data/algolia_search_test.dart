@@ -121,6 +121,38 @@ void main() {
       );
     });
 
+    test('the seller comes along only while the cards show sellers', () {
+      final record = _sofaBed()
+        ..['seller'] = 'MIA CO'
+        ..['seller_id'] = 12
+        ..['seller_url_key'] = 'MIA';
+
+      final shown = productFromAlgoliaHit(
+        record,
+        _settings,
+        now: _now,
+        sellers: true,
+      )!;
+      expect(shown.sellerKnown, isTrue);
+      expect(shown.sellerName, 'MIA CO');
+      expect(shown.sellerCode, 'MIA');
+
+      // Hub Market's own product: no seller on the record, an empty line.
+      final own = productFromAlgoliaHit(
+        _sofaBed(),
+        _settings,
+        now: _now,
+        sellers: true,
+      )!;
+      expect(own.sellerKnown, isTrue);
+      expect(own.sellerName, isNull);
+
+      // Build 1: no seller line at all.
+      final build1 = productFromAlgoliaHit(record, _settings, now: _now)!;
+      expect(build1.sellerKnown, isFalse);
+      expect(build1.sellerName, isNull);
+    });
+
     test('a new_bundle record opens its page from the card', () {
       final product = productFromAlgoliaHit(
         productRecord(

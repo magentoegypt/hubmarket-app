@@ -4,6 +4,8 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/graphql/graphql_client.dart';
 import '../../../core/hubapp/hubapp.dart';
 import '../../catalog/data/product_mapper.dart';
+import '../../marketplace/data/listing_sellers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../../catalog/domain/money.dart';
 import '../domain/deals.dart';
 
@@ -11,9 +13,15 @@ import '../domain/deals.dart';
 /// deals (`hmBundleDeals`). Public reads over the GET client; throws
 /// [HubAppMissing] when the server has no such fields, a `Failure` otherwise.
 class DealsRepository {
-  DealsRepository(this._client);
+  DealsRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
+
+  /// Whether the deal cards ask who sells each product (`sendListing`).
+  final MarketplaceGate _marketplace;
 
   /// The most a page may ask for (the contract caps `pageSize` at 50).
   static const int maxPageSize = 50;
@@ -43,13 +51,17 @@ query HmBundleDeals($categoryId: Int, $pageSize: Int!, $currentPage: Int!) {
 ''';
 
   Future<DealsPage> fetchDeals({int pageSize = 20, int currentPage = 1}) async {
-    final data = await runHubAppQuery(
-      _client,
+    final data = await sendListing(
+      _marketplace,
       _dealsDocument + DealsFragments.cardProduct,
-      variables: {
-        'pageSize': pageSize.clamp(1, maxPageSize),
-        'currentPage': currentPage,
-      },
+      (document, _) => runHubAppQuery(
+        _client,
+        document,
+        variables: {
+          'pageSize': pageSize.clamp(1, maxPageSize),
+          'currentPage': currentPage,
+        },
+      ),
     );
     return dealsPageFromJson(data['hmDeals']);
   }
@@ -73,15 +85,19 @@ query HmBundleDeals($categoryId: Int, $pageSize: Int!, $currentPage: Int!) {
 }
 
 final dealsRepositoryProvider = Provider<DealsRepository>(
-  (ref) => DealsRepository(ref.watch(publicGraphqlClientProvider)),
+  (ref) => DealsRepository(
+    ref.watch(publicGraphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );
 
 /// GraphQL fragments of the deal cards, shared with the Home document.
 abstract final class DealsFragments {
   /// `...HmCardProduct` — a listing card: the catalogue `products` card
-  /// fields, the core rating included. No `hm_seller`: listing cards don't
-  /// show the seller yet, and asking for it would make these lists depend on
-  /// HubAppVendors too.
+  /// fields, the core rating included. No `hm_seller` here: the twin a list
+  /// sends while the server lists HubAppVendors adds it
+  /// (`SellerSelections.withCardSellers`), so these lists never depend on
+  /// HubAppVendors being deployed.
   static const String cardProduct =
       r'''fragment HmCardProduct on ProductInterface{sku name url_key stock_status new_from_date new_to_date rating_summary review_count image{url} price_range{minimum_price{regular_price{value currency} final_price{value currency}}}}''';
 

@@ -1,8 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/ast.dart';
 import 'package:gql/language.dart';
+import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/cart/data/cart_queries.dart';
+import 'package:hubmarket_app/features/catalog/data/best_sellers_repository.dart';
+import 'package:hubmarket_app/features/catalog/data/catalog_queries.dart';
+import 'package:hubmarket_app/features/home/data/hm_home_repository.dart';
 import 'package:hubmarket_app/features/marketplace/data/seller_selections.dart';
+import 'package:hubmarket_app/features/wishlist/data/wishlist_queries.dart';
 
 /// Names of the fragments [document] spreads and defines.
 ({Set<String> spreads, List<String> defined}) _fragments(String document) {
@@ -86,6 +91,60 @@ void main() {
         identical(
           CartQueries.withSellers(CartQueries.getCart),
           CartQueries.withSellers(CartQueries.getCart),
+        ),
+        isTrue,
+      );
+    });
+  });
+
+  group('listing documents (the card seller line)', () {
+    final listings = <String, String>{
+      'products (PLP, brand and store pages)': CatalogQueries.products,
+      'search fallback': CatalogQueries.searchProducts,
+      'hmBestSellers': BestSellersRepository.query,
+      'hmAppHome rails': HmHomeRepository.documentFor(HmAudience.guest),
+      'wishlist': WishlistQueries.getWishlist,
+      'wishlist add': WishlistQueries.addToWishlist,
+    };
+
+    for (final MapEntry(key: name, value: live) in listings.entries) {
+      test('$name: the live document asks for no seller', () {
+        expect(live, isNot(contains('hm_seller')));
+        expect(live, isNot(contains('HmCardSeller')));
+      });
+
+      test('$name: the twin adds the seller to each card, and nothing else', () {
+        final twin = SellerSelections.withCardSellers(live);
+        final fragments = _fragments(twin);
+
+        expect(twin, contains('hm_seller'));
+        expect(
+          fragments.spreads,
+          containsAll(['HmCardSeller', 'HmSellerFields', 'HmLinkFields']),
+        );
+        expect(fragments.defined.toSet(), containsAll(fragments.spreads));
+        expect(fragments.defined.toSet(), hasLength(fragments.defined.length));
+        // One card selection gains one spread.
+        expect(RegExp(r'\.\.\.HmCardSeller\b').allMatches(twin), hasLength(1));
+        String normalized(String document) => printNode(parseString(document))
+            .replaceAll('...HmCardSeller', '')
+            .replaceAll(RegExp(r'\s+'), ' ');
+        final liveOp = normalized(live);
+        final twinOp = normalized(twin);
+        expect(twinOp.startsWith(liveOp.trim()), isTrue);
+      });
+    }
+
+    test('a document without a card selection is left as it is', () {
+      final twin = SellerSelections.withCardSellers(CatalogQueries.categoryTree);
+      expect(twin, isNot(contains('...HmCardSeller')));
+    });
+
+    test('the twin is built once per document', () {
+      expect(
+        identical(
+          SellerSelections.withCardSellers(CatalogQueries.products),
+          SellerSelections.withCardSellers(CatalogQueries.products),
         ),
         isTrue,
       );

@@ -4,7 +4,10 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/hubapp/hubapp_query.dart';
 import '../../catalog/data/product_mapper.dart';
+import '../../marketplace/data/listing_sellers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../domain/wishlist_entry.dart';
 import 'wishlist_queries.dart';
 
@@ -18,9 +21,15 @@ class WishlistData {
 }
 
 class WishlistRepository {
-  WishlistRepository(this._client);
+  WishlistRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
+
+  /// Whether the saved products' cards ask who sells them (`sendListing`).
+  final MarketplaceGate _marketplace;
 
   /// The customer's default wishlist, or null when none is returned.
   Future<WishlistData?> fetchWishlist() async {
@@ -89,10 +98,24 @@ class WishlistRepository {
     return WishlistData(id: json['id']?.toString() ?? '', entries: entries);
   }
 
+  /// Runs a wishlist [document] — its seller twin while the gate allows it
+  /// (`sendListing`: a refused twin ran nothing, a mutation's included).
   Future<Map<String, dynamic>> _run(
     String document,
     Map<String, dynamic> variables, {
     required bool mutation,
+  }) => sendListing(
+    _marketplace,
+    document,
+    (document, twin) =>
+        _send(document, variables, mutation: mutation, throwMissing: twin),
+  );
+
+  Future<Map<String, dynamic>> _send(
+    String document,
+    Map<String, dynamic> variables, {
+    required bool mutation,
+    required bool throwMissing,
   }) async {
     try {
       final result = mutation
@@ -111,10 +134,16 @@ class WishlistRepository {
               ),
             );
       if (result.hasException) {
-        throw mapOperationException(result.exception!);
+        final exception = result.exception!;
+        if (throwMissing) {
+          if (missingOrNull(exception) case final missing?) throw missing;
+        }
+        throw mapOperationException(exception);
       }
       return result.data ?? const <String, dynamic>{};
     } on Failure {
+      rethrow;
+    } on HubAppMissing {
       rethrow;
     } catch (error) {
       throw Failure(FailureKind.unknown, detail: error.toString());
@@ -123,5 +152,8 @@ class WishlistRepository {
 }
 
 final wishlistRepositoryProvider = Provider<WishlistRepository>(
-  (ref) => WishlistRepository(ref.watch(graphqlClientProvider)),
+  (ref) => WishlistRepository(
+    ref.watch(graphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );

@@ -527,4 +527,38 @@ void main() {
       expect(detail.alsoLike.single.reviewCount, 2);
     });
   });
+
+  group('the card seller line from hm_seller', () {
+    Map<String, dynamic> seller({bool marketplace = false}) => {
+      'code': marketplace ? null : 'MIA',
+      'vendor_entity_id': marketplace ? null : 12,
+      'name': marketplace ? 'Hub Market' : ' MIA CO ',
+      'is_marketplace': marketplace,
+    };
+
+    test("a seller's product names its seller", () {
+      final product = productFromJson(_json(extra: {'hm_seller': seller()}));
+      expect(product.sellerKnown, isTrue);
+      expect(product.sellerName, 'MIA CO');
+      expect(product.sellerCode, 'MIA');
+    });
+
+    test("Hub Market's own product: known, with no name to show", () {
+      final own = productFromJson(
+        _json(extra: {'hm_seller': seller(marketplace: true)}),
+      );
+      expect(own.sellerKnown, isTrue);
+      expect(own.sellerName, isNull);
+      // A seller that is not approved comes back null: the line stays empty.
+      final hidden = productFromJson(_json(extra: {'hm_seller': null}));
+      expect(hidden.sellerKnown, isTrue);
+      expect(hidden.sellerName, isNull);
+    });
+
+    test('a listing that did not ask has no seller line', () {
+      final plain = productFromJson(_json());
+      expect(plain.sellerKnown, isFalse);
+      expect(plain.sellerName, isNull);
+    });
+  });
 }

@@ -4,6 +4,9 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/graphql_client.dart';
+import '../../../core/hubapp/hubapp_query.dart';
+import '../../marketplace/data/listing_sellers.dart';
+import '../../marketplace/marketplace_features.dart';
 import '../../catalog/data/catalog_queries.dart';
 import '../../catalog/data/catalog_repository.dart' show ProductSortField;
 import '../../catalog/data/product_mapper.dart';
@@ -23,9 +26,16 @@ import '../../catalog/domain/product_page.dart';
 /// through `publicGraphqlClientProvider` and the HTTP cache can answer it —
 /// guest prices, as the Home's product sections show.
 class StoreProductsRepository {
-  StoreProductsRepository(this._client);
+  StoreProductsRepository(
+    this._client, {
+    this._marketplace = const FixedMarketplaceGate(),
+  });
 
   final GraphQLClient _client;
+
+  /// Whether the cards ask who sells each product (`sendListing`). On a
+  /// store's own page that is the one seller, as the Figma 13 cards show it.
+  final MarketplaceGate _marketplace;
 
   /// Facets of the seller filter itself: pointless on one seller's page.
   static const Set<String> _sellerFacets = <String>{'vendor_id', 'VENDORID'};
@@ -41,7 +51,7 @@ class StoreProductsRepository {
     int currentPage = 1,
   }) async {
     final query = search?.trim() ?? '';
-    final data = await _query(<String, dynamic>{
+    final variables = <String, dynamic>{
       'pageSize': pageSize,
       'currentPage': currentPage,
       if (query.isNotEmpty) 'search': query,
@@ -52,7 +62,17 @@ class StoreProductsRepository {
         priceTo: priceTo,
       ),
       if (_sortInput(sort) case final sortInput?) 'sort': sortInput,
-    });
+    };
+    // A one-product read for the category facet (Categories in this store)
+    // draws no card: no seller asked.
+    final data = pageSize <= 1
+        ? await _query(CatalogQueries.products, variables)
+        : await sendListing(
+            _marketplace,
+            CatalogQueries.products,
+            (document, twin) =>
+                _query(document, variables, throwMissing: twin),
+          );
     final products = data['products'];
     return products is Map<String, dynamic>
         ? _page(products)
@@ -66,20 +86,32 @@ class StoreProductsRepository {
     ProductSortField.nameAsc => const <String, dynamic>{'name': 'ASC'},
   };
 
-  Future<Map<String, dynamic>> _query(Map<String, dynamic> variables) async {
+  /// [throwMissing] (the seller twin, see `sendListing`): a "Cannot query
+  /// field" answer throws [HubAppMissing] rather than a [Failure].
+  Future<Map<String, dynamic>> _query(
+    String document,
+    Map<String, dynamic> variables, {
+    bool throwMissing = false,
+  }) async {
     try {
       final result = await _client.query(
         QueryOptions(
-          document: gql(CatalogQueries.products),
+          document: gql(document),
           variables: variables,
           fetchPolicy: FetchPolicy.networkOnly,
         ),
       );
       if (result.hasException) {
-        throw mapOperationException(result.exception!);
+        final exception = result.exception!;
+        if (throwMissing) {
+          if (missingOrNull(exception) case final missing?) throw missing;
+        }
+        throw mapOperationException(exception);
       }
       return result.data ?? const <String, dynamic>{};
     } on Failure {
+      rethrow;
+    } on HubAppMissing {
       rethrow;
     } catch (error) {
       throw Failure(FailureKind.unknown, detail: error.toString());
@@ -144,5 +176,8 @@ Map<String, dynamic> storeProductsFilter({
 };
 
 final storeProductsRepositoryProvider = Provider<StoreProductsRepository>(
-  (ref) => StoreProductsRepository(ref.watch(publicGraphqlClientProvider)),
+  (ref) => StoreProductsRepository(
+    ref.watch(publicGraphqlClientProvider),
+    marketplace: ref.watch(marketplaceGateProvider),
+  ),
 );

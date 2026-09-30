@@ -1,6 +1,8 @@
 import 'package:gql/ast.dart';
 import 'package:gql/language.dart';
 
+import '../../../core/hubapp/hubapp_models.dart';
+
 /// Builds the HubApp twin of a cart or order document: the same document with
 /// the `hm_seller` selections added.
 ///
@@ -31,14 +33,33 @@ abstract final class SellerSelections {
     () => _compose(document, anchor, spread, fragments),
   );
 
+  /// The twin of a product listing [document] (PLP, search, deals, best
+  /// sellers, a brand's or store's products, Home rails, wishlist): every
+  /// product card selection — a selection set asking for both `url_key` and
+  /// `price_range` — gains `...HmCardSeller` (`hm_seller`, the card's seller
+  /// line), and the fragments it needs are appended. Sent only while the
+  /// server lists the `vendors` capability (`MarketplaceFeatures
+  /// .listingSellers`); everything else goes out as written.
+  static String withCardSellers(String document) => _built.putIfAbsent(
+    'cards|$document',
+    () => _compose(
+      document,
+      null,
+      'HmCardSeller',
+      '${HmFragments.cardSeller}\n${HmFragments.seller}\n${HmFragments.link}',
+      visitor: const _CardSellers(),
+    ),
+  );
+
   static String _compose(
     String document,
-    String anchor,
+    String? anchor,
     String spread,
-    String fragments,
-  ) {
+    String fragments, {
+    TransformingVisitor? visitor,
+  }) {
     final transformed = transform(parseString(document), [
-      _SpreadBeside(anchor, spread),
+      visitor ?? _SpreadBeside(anchor!, spread),
     ]);
     final defined = {
       for (final definition
@@ -54,6 +75,37 @@ abstract final class SellerSelections {
     return printNode(
       DocumentNode(definitions: [...transformed.definitions, ...added]),
     );
+  }
+}
+
+/// Adds `...HmCardSeller` to every selection set that selects a listing
+/// card: `url_key` and `price_range` side by side, directly (a fragment's own
+/// selection set included, so `HmCardProduct` gains it once for every list
+/// that spreads it).
+class _CardSellers extends TransformingVisitor {
+  const _CardSellers();
+
+  static const String _spread = 'HmCardSeller';
+
+  bool _selects(SelectionSetNode node, String field) => node.selections.any(
+    (selection) => selection is FieldNode && selection.name.value == field,
+  );
+
+  @override
+  SelectionSetNode visitSelectionSetNode(SelectionSetNode node) {
+    final isCard = _selects(node, 'url_key') && _selects(node, 'price_range');
+    final has = node.selections.any(
+      (selection) =>
+          selection is FragmentSpreadNode && selection.name.value == _spread,
+    );
+    return isCard && !has
+        ? SelectionSetNode(
+            selections: [
+              ...node.selections,
+              FragmentSpreadNode(name: NameNode(value: _spread)),
+            ],
+          )
+        : node;
   }
 }
 

@@ -15,10 +15,17 @@ import 'price_view.dart';
 
 /// Product card per Figma: a bordered white card with a full-bleed image
 /// carrying NEW/BESTSELLER + discount badges (top-start) and stacked wishlist +
-/// share actions (top-end), then the name, the star rating (v3) when the
-/// product has reviews, and the stacked price. Image degrades to a neutral
-/// placeholder and the merchandising badge only shows when the catalogue
-/// actually flags it (no fabricated imagery, badges or ratings).
+/// share actions (top-end), then the seller (v3) above the name, the star
+/// rating (v3) when the product has reviews, and the stacked price. Image
+/// degrades to a neutral placeholder and the merchandising badge only shows
+/// when the catalogue actually flags it (no fabricated imagery, badges or
+/// ratings).
+///
+/// The seller line shows when the listing said who sells the product
+/// ([Product.sellerKnown]: `hm_seller`, asked only while the server lists
+/// HubAppVendors, or an Algolia record's `seller`). Like the website's card,
+/// it stays in place but empty for Hub Market's own products, so the cards of
+/// a row stay level.
 class ProductCard extends ConsumerStatefulWidget {
   const ProductCard({
     super.key,
@@ -159,6 +166,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (product.sellerKnown) ...[
+                    _SellerLine(name: product.sellerName),
+                    const SizedBox(height: 2),
+                  ],
                   Text(
                     product.name,
                     maxLines: 2,
@@ -248,6 +259,39 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final url = productUrl(ref.read(storeControllerProvider), product.urlKey);
     await SharePlus.instance.share(
       ShareParams(text: url == null ? message : '$message\n$url'),
+    );
+  }
+}
+
+/// The seller above the name (Figma v3 card "vendor": semibold, link blue).
+/// Plain text, as on the website's card — the card itself opens the product.
+/// [name] null keeps the line's height with nothing in it (Hub Market's own
+/// products).
+class _SellerLine extends StatelessWidget {
+  const _SellerLine({required this.name});
+
+  final String? name;
+
+  static const TextStyle _style = TextStyle(
+    fontSize: 11,
+    height: 14 / 11,
+    fontWeight: FontWeight.w600,
+    color: AppColors.info,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final seller = name;
+    if (seller == null) return const SizedBox(height: 14);
+    return Semantics(
+      label: AppLocalizations.of(context).productCardSoldBy(seller),
+      excludeSemantics: true,
+      child: Text(
+        seller,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: _style,
+      ),
     );
   }
 }
