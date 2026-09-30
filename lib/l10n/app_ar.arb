@@ -577,7 +577,7 @@
   "returnsWriteReply": "اكتب ردًا…",
   "returnsSendReply": "إرسال",
   "returnsClosedNote": "هذا الإرجاع مغلق، لذا لا يستقبل رسائل جديدة.",
-  "returnsEscalatePrompt": "لم تُحل المشكلة؟ يمكن لـ Hub Market التدخل.",
+  "returnsEscalatePrompt": "لم تُحل المشكلة؟ يستطيع Hub Market التدخل.",
   "returnsEscalate": "تصعيد",
   "returnsEscalateTitle": "التصعيد إلى Hub Market",
   "returnsEscalateBody": "أخبر Hub Market بما حدث. سيطّلع المتجر أيضًا على التصعيد ويمكنه إضافة ردّه.",
