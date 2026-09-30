@@ -219,9 +219,12 @@ class HmTrustGrid extends StatelessWidget {
   ];
 
   static IconData iconFor(TrustItem item, int index) {
-    final text = '${item.title} ${item.text}'.toLowerCase();
-    for (final (words, icon) in _byWord) {
-      if (words.any(text.contains)) return icon;
+    // The title decides first: "Secure Payments — Cash on delivery" is about
+    // paying, whatever its caption mentions.
+    for (final text in [item.title.toLowerCase(), item.text.toLowerCase()]) {
+      for (final (words, icon) in _byWord) {
+        if (words.any(text.contains)) return icon;
+      }
     }
     return _icons[index % _icons.length];
   }
