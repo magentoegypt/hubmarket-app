@@ -30,8 +30,7 @@ dart run build_runner build --delete-conflicting-outputs   # typed GraphQL (grap
 ## Run
 
 Each flavor reads its settings (GraphQL endpoint, store codes, Algolia…)
-from `config/<flavor>.json`. The User-Agent carries the installed build's
-version (pubspec `version:`), read at startup:
+from `config/<flavor>.json`:
 
 ```bash
 flutter run -t lib/main_dev.dart     --dart-define-from-file=config/dev.json     --flavor dev
@@ -40,6 +39,8 @@ flutter run -t lib/main_prod.dart    --dart-define-from-file=config/prod.json   
 ```
 
 Android flavors install side by side (`com.hubmarket.app`, `.dev`, `.staging`).
+Requests carry `User-Agent: HubMarketApp[-<flavor>]/<version> (Flutter)`, with
+the installed build's version (pubspec `version:`) read at startup.
 
 ## Check before pushing
 
