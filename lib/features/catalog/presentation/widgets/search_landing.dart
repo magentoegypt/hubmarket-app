@@ -33,16 +33,9 @@ class SearchLanding extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final history = ref.watch(searchHistoryProvider);
     final recent = history.take(recentLimit).toList(growable: false);
-    // The admin's list (Hub Market App settings) when there is one; the
-    // app's own wording otherwise.
-    final configured = ref.watch(trendingSearchesProvider);
-    final trending = configured.isNotEmpty
-        ? configured
-        : l10n.searchTrendingCsv
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList(growable: false);
+    // Only the admin's list (Hub Market App settings): without one — Build 1
+    // or none configured — the section hides. The app never invents trends.
+    final trending = ref.watch(trendingSearchesProvider);
     final categories =
         ref.watch(searchCategoryChoicesProvider).valueOrNull ??
         const <Category>[];
