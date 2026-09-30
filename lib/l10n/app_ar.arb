@@ -832,6 +832,8 @@
   "homeTrackOrder": "تتبّع الطلب",
   "homeBestSellerFirst": "الأكثر مبيعًا #1",
   "homeBestSellerRank": "#{rank}",
+  "bestSellersTitle": "الأكثر مبيعًا",
+  "bestSellersEmpty": "لا توجد منتجات أكثر مبيعًا بعد — عُد قريبًا.",
   "@homeBestSellerRank": {
     "placeholders": {
       "rank": {

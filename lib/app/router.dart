@@ -40,6 +40,7 @@ import '../features/catalog/presentation/screens/product_reviews_screen.dart';
 import '../features/catalog/presentation/screens/search_screen.dart';
 import '../features/catalog/presentation/screens/write_review_screen.dart';
 import '../features/cms/domain/cms_links.dart';
+import '../features/deals/presentation/screens/best_sellers_screen.dart';
 import '../features/deals/presentation/screens/bundle_deals_screen.dart';
 import '../features/deals/presentation/screens/deals_screen.dart';
 import '../features/cms/domain/faq.dart';
@@ -154,6 +155,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.bundles,
         builder: (context, state) => const BundleDealsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bestSellers,
+        builder: (context, state) => const BestSellersScreen(),
       ),
       GoRoute(
         path: AppRoutes.stores,

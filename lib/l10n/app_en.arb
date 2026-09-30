@@ -1423,6 +1423,8 @@
       }
     }
   },
+  "bestSellersTitle": "Best Sellers",
+  "bestSellersEmpty": "No best sellers yet — check back soon.",
   "hmProductCount": "{count, plural, =1{1 product} other{{count} products}}",
   "@hmProductCount": {
     "placeholders": {

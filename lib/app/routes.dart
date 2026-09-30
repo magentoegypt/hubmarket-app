@@ -60,6 +60,10 @@ abstract final class AppRoutes {
   /// Figma 10c — bundle deals (`hmBundleDeals`).
   static const String bundles = '/bundles';
 
+  /// Best sellers by units ordered (`hmBestSellers`): Home's BEST_SELLERS and
+  /// the no-results page's "Popular right now" lead here.
+  static const String bestSellers = '/best-sellers';
+
   static String category(String uid) => '/category/$uid';
   static String subcategories(String uid) => '/subcategories/$uid';
   static String product(String urlKey) => '/product/$urlKey';
