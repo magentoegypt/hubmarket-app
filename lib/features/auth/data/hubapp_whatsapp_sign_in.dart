@@ -4,6 +4,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/error/graphql_failure_mapper.dart';
 import '../../../core/graphql/hubapp_operation.dart';
 import '../../../core/hubapp/hubapp.dart';
+import '../domain/otp_send_status.dart';
 
 /// Sign-in by WhatsApp code over the Hub Market App backend
 /// (`MagentoEgypt_HubAppAccount`): `hmSendWhatsAppCode`, then
@@ -19,6 +20,7 @@ abstract final class HubAppSignInQueries {
 mutation HmSendWhatsAppCode($mobile: String!) {
   hmSendWhatsAppCode(input: { mobile: $mobile }) {
     sent
+    status
     message
     resend_after_seconds
   }
@@ -44,9 +46,11 @@ class HubAppWhatsAppSignIn {
   /// The server answers alike for every number — whether or not an account
   /// has it — unless it is set to reveal unknown numbers. A request it turns
   /// down (`sent: false`: the per-number / per-address limits, or, revealing,
-  /// no account / a number shared by several / a delivery failure) throws a
-  /// `server` [Failure] with its (localized) message; [HubAppMissing] when the
-  /// server doesn't have the module.
+  /// no account / a number shared by several / one that can't get codes / a
+  /// delivery failure) throws [OtpSendRefused] with the answer's `status`
+  /// (`HmOtpSendStatus`) and its localized message; [HubAppMissing] when the
+  /// server doesn't have the module. A code still valid from moments ago
+  /// (`COOLDOWN`) counts as sent: the customer types that one.
   Future<int?> sendCode(String mobile) async {
     final data = await runHubAppOperation(
       _client,
@@ -64,9 +68,9 @@ class HubAppWhatsAppSignIn {
     }
     if (answer['sent'] != true) {
       final message = (answer['message'] as String?)?.trim();
-      throw Failure(
-        FailureKind.server,
-        detail: message == null || message.isEmpty ? null : message,
+      throw OtpSendRefused(
+        OtpSendStatus.fromCode(answer['status']),
+        message: message == null || message.isEmpty ? null : message,
       );
     }
     return (answer['resend_after_seconds'] as num?)?.toInt();

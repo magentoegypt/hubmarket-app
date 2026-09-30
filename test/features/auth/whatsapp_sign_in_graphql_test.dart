@@ -20,6 +20,7 @@ import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/auth/data/hubapp_whatsapp_sign_in.dart';
 import 'package:hubmarket_app/features/auth/data/whatsapp_otp_api.dart';
 import 'package:hubmarket_app/features/auth/domain/auth_error.dart';
+import 'package:hubmarket_app/features/auth/domain/otp_send_status.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/verify_code_screen.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
@@ -51,6 +52,7 @@ const _sharedEn =
 
 Map<String, dynamic> _sent({
   bool sent = true,
+  String status = 'MASKED',
   String message =
       'If this number belongs to an account, we have sent a sign-in code to '
       'it on WhatsApp.',
@@ -59,6 +61,7 @@ Map<String, dynamic> _sent({
   'hmSendWhatsAppCode': {
     '__typename': 'HmSendWhatsAppCodeOutput',
     'sent': sent,
+    'status': status,
     'message': message,
     'resend_after_seconds': resendAfter,
   },
@@ -148,6 +151,7 @@ void main() {
           final client = fakeHubAppClient({
             'HmSendWhatsAppCode': _sent(
               sent: false,
+              status: 'THROTTLED',
               message: message,
               resendAfter: 300,
             ),
@@ -155,7 +159,14 @@ void main() {
           final error = await HubAppWhatsAppSignIn(client)
               .sendCode(_mobile)
               .then<Object>((_) => fail('should refuse'), onError: (e) => e);
-          expect(error, isA<Failure>());
+          expect(
+            error,
+            isA<OtpSendRefused>().having(
+              (e) => e.status,
+              'status',
+              OtpSendStatus.throttled,
+            ),
+          );
           expect((error as Failure).detail, message);
           expect(_classify(error).kind, AuthErrorKind.tooManyAttempts);
         },
@@ -170,7 +181,11 @@ void main() {
         'a store revealing unknown numbers reads as no account ($lang)',
         () async {
           final client = fakeHubAppClient({
-            'HmSendWhatsAppCode': _sent(sent: false, message: message),
+            'HmSendWhatsAppCode': _sent(
+              sent: false,
+              status: 'NO_ACCOUNT',
+              message: message,
+            ),
           });
           final error = await HubAppWhatsAppSignIn(client)
               .sendCode(_mobile)
@@ -180,16 +195,98 @@ void main() {
       );
     }
 
-    test('any other refusal keeps the store message', () async {
-      final client = fakeHubAppClient({
-        'HmSendWhatsAppCode': _sent(sent: false, message: _sharedEn),
+    test(
+      'a number shared by several accounts keeps the store message',
+      () async {
+        final client = fakeHubAppClient({
+          'HmSendWhatsAppCode': _sent(
+            sent: false,
+            status: 'MULTIPLE',
+            message: _sharedEn,
+          ),
+        });
+        final error = await HubAppWhatsAppSignIn(client)
+            .sendCode(_mobile)
+            .then<Object>((_) => fail('should refuse'), onError: (e) => e);
+        final authError = _classify(error);
+        expect(authError.kind, AuthErrorKind.other);
+        expect(authError.serverMessage, _sharedEn);
+      },
+    );
+
+    group('the status picks the error, never the wording', () {
+      // Wording the message rules would read otherwise — or not at all.
+      const misleading = 'No account uses this mobile number.';
+      const opaque = 'Bitte versuchen Sie es später erneut.';
+
+      Future<AuthError> refusedWith(String status, String message) async {
+        final client = fakeHubAppClient({
+          'HmSendWhatsAppCode': _sent(
+            sent: false,
+            status: status,
+            message: message,
+          ),
+        });
+        final error = await HubAppWhatsAppSignIn(client)
+            .sendCode(_mobile)
+            .then<Object>((_) => fail('should refuse'), onError: (e) => e);
+        return _classify(error);
+      }
+
+      test('THROTTLED is too many attempts', () async {
+        expect(
+          (await refusedWith('THROTTLED', misleading)).kind,
+          AuthErrorKind.tooManyAttempts,
+        );
+        expect(
+          (await refusedWith('THROTTLED', opaque)).kind,
+          AuthErrorKind.tooManyAttempts,
+        );
       });
-      final error = await HubAppWhatsAppSignIn(client)
-          .sendCode(_mobile)
-          .then<Object>((_) => fail('should refuse'), onError: (e) => e);
-      final authError = _classify(error);
-      expect(authError.kind, AuthErrorKind.other);
-      expect(authError.serverMessage, _sharedEn);
+
+      test('NO_ACCOUNT is no account', () async {
+        expect(
+          (await refusedWith('NO_ACCOUNT', opaque)).kind,
+          AuthErrorKind.noAccount,
+        );
+      });
+
+      test('FAILED is the screen\'s own "couldn\'t send"', () async {
+        final error = await refusedWith('FAILED', misleading);
+        expect(error.kind, AuthErrorKind.other);
+        expect(error.serverMessage, isNull);
+      });
+
+      test('UNDELIVERABLE and MULTIPLE show the store\'s message', () async {
+        for (final status in ['UNDELIVERABLE', 'MULTIPLE']) {
+          final error = await refusedWith(status, misleading);
+          expect(error.kind, AuthErrorKind.other, reason: status);
+          expect(error.serverMessage, misleading, reason: status);
+        }
+      });
+
+      test('a status this app does not know keeps the message', () async {
+        final error = await refusedWith('SOMETHING_NEW', opaque);
+        expect(error.kind, AuthErrorKind.other);
+        expect(error.serverMessage, opaque);
+      });
+    });
+
+    test('a code still valid from moments ago counts as sent', () async {
+      final client = fakeHubAppClient({
+        'HmSendWhatsAppCode': _sent(
+          status: 'COOLDOWN',
+          message:
+              'We have already sent a sign-in code to your WhatsApp. Use that '
+              'code, or ask for another in a moment.',
+          resendAfter: 45,
+        ),
+      });
+      expect(await HubAppWhatsAppSignIn(client).sendCode(_mobile), 45);
+    });
+
+    test('the request asks for the status', () {
+      expect(HubAppSignInQueries.sendCode, contains('status'));
     });
 
     for (final (lang, message) in [('en', _uniformEn), ('ar', _uniformAr)]) {
@@ -319,7 +416,11 @@ void main() {
         rest.api,
         graphqlSignIn: HubAppWhatsAppSignIn(
           fakeHubAppClient({
-            'HmSendWhatsAppCode': _sent(sent: false, message: _throttleEn),
+            'HmSendWhatsAppCode': _sent(
+              sent: false,
+              status: 'THROTTLED',
+              message: _throttleEn,
+            ),
             'HmSignInWithWhatsAppCode': _refused(_uniformEn),
           }),
         ),
@@ -538,6 +639,7 @@ void main() {
           answers: {
             'HmSendWhatsAppCode': _sent(
               sent: false,
+              status: 'THROTTLED',
               message: locale == 'ar' ? _throttleAr : _throttleEn,
               resendAfter: 300,
             ),
@@ -547,6 +649,53 @@ void main() {
 
         expect(find.byType(VerifyCodeScreen), findsNothing);
         expect(find.text(l10n.authErrorTooManyAttempts), findsOneWidget);
+      });
+
+      testWidgets('each refusal code shows its inline error ($locale)', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(Locale(locale));
+        // A store message in neither language: only the code can be read.
+        const opaque = 'Bitte versuchen Sie es später erneut.';
+        for (final (status, expected) in [
+          ('NO_ACCOUNT', l10n.authErrorNoAccount),
+          ('THROTTLED', l10n.authErrorTooManyAttempts),
+          ('FAILED', l10n.authOtpRequestError),
+          ('MULTIPLE', opaque),
+        ]) {
+          await pump(
+            tester,
+            locale: locale,
+            answers: {
+              'HmSendWhatsAppCode': _sent(
+                sent: false,
+                status: status,
+                message: opaque,
+              ),
+            },
+          );
+          await sendCode(tester, l10n);
+
+          expect(find.byType(VerifyCodeScreen), findsNothing, reason: status);
+          expect(find.text(expected), findsOneWidget, reason: status);
+        }
+      });
+
+      testWidgets('a code still valid from moments ago opens the code '
+          'screen ($locale)', (tester) async {
+        final l10n = lookupAppLocalizations(Locale(locale));
+        await pump(
+          tester,
+          locale: locale,
+          answers: {
+            'HmSendWhatsAppCode': _sent(status: 'COOLDOWN', resendAfter: 45),
+            'HmSignInWithWhatsAppCode': _token(),
+          },
+        );
+        await sendCode(tester, l10n);
+
+        expect(find.byType(VerifyCodeScreen), findsOneWidget);
+        expect(find.text('00:45'), findsOneWidget);
       });
 
       testWidgets('a refused code says so under the boxes ($locale)', (
