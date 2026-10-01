@@ -57,7 +57,9 @@ class HmSectionHeader extends StatelessWidget {
                         Expanded(
                           child: Text(
                             title,
-                            maxLines: 2,
+                            // "Top Brands on Hub Market" takes two lines in
+                            // English and three in Arabic.
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             style: t.heading1.copyWith(
                               color: AppColors.inkHeading,

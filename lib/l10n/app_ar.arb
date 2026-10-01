@@ -845,7 +845,7 @@
   "homeAllBrands": "كل العلامات التجارية",
   "homeAllVendors": "كل البائعين",
   "homeViewAll": "عرض الكل",
-  "homeCountdownRemaining": "متبقية",
+  "homeCountdownRemaining": "متبقٍ",
   "dealsCountdownDays": "{days} يوم",
   "@dealsCountdownDays": {
     "placeholders": {
@@ -857,7 +857,7 @@
   "homeRefresh": "تحديث",
   "homeYourSearches": "عمليات بحثك:",
   "homeVisitStore": "زيارة المتجر",
-  "homeTopVendorBadge": "البائع الأول",
+  "homeTopVendorBadge": "البائع رقم 1",
   "homeVerified": "موثّق",
   "homeTrackOrder": "تتبّع الطلب",
   "homeBestSellerFirst": "الأكثر مبيعًا #1",

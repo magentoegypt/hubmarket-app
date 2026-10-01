@@ -9,36 +9,33 @@ import '../../../app/routes.dart';
 import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
-import '../../../app/theme/app_theme.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/hubapp/hubapp_providers.dart';
 import '../../../core/network/connectivity.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/failure_message.dart';
-import '../../../core/widgets/network_image.dart';
 import '../../../core/widgets/offline_state.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../../../l10n/l10n.dart';
 import '../../catalog/domain/category.dart';
-import '../../catalog/domain/product.dart';
 import '../../catalog/presentation/catalog_providers.dart';
-import '../../catalog/presentation/product_navigation.dart';
+import '../../catalog/presentation/category_icons.dart';
 import '../../catalog/presentation/search_providers.dart';
-import '../../catalog/presentation/storefront_links.dart';
 import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
 import '../../notifications/presentation/notification_bell.dart';
+import '../data/home_content_repository.dart';
 import '../domain/hm_home.dart';
-import '../domain/home_content.dart';
 import 'active_order_providers.dart';
 import 'hm_home_providers.dart';
 import 'hm_home_view.dart';
 import 'home_providers.dart';
+import 'widgets/hm_category_chips.dart';
+import 'widgets/hm_cms_sections.dart';
+import 'widgets/hm_product_rail.dart';
+import 'widgets/hm_section_header.dart';
 import 'widgets/home_active_order.dart';
 import '../../../app/theme/hub_icons.dart';
-
-/// Carousel card width (Figma v2/v3): 152 pt so the next card peeks ~30%.
-const double _kCardWidth = 152;
 
 /// Hub Market Home (Figma "07 Home", v3).
 ///
@@ -128,6 +125,10 @@ class _Build1Home extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(homeCategoriesProvider);
     final categories = categoriesAsync.valueOrNull ?? const <Category>[];
+    final promise = ref.watch(homePromiseProvider);
+    final hasOrder = ref.watch(
+      activeOrderProvider.select((order) => order.valueOrNull != null),
+    );
     // Without the category tree Home has nothing to show but the CMS strip, so
     // a failed load (the backend sheds load with 503s) gets a retry instead of
     // a blank page. While a retry runs, the skeletons show again.
@@ -144,33 +145,40 @@ class _Build1Home extends ConsumerWidget {
             onRefresh: () => _reload(ref),
             // Each rail is its own list child, so its product query only
             // starts when it scrolls near the viewport instead of all six
-            // at launch.
+            // at launch. Sections are 28 pt apart (Figma 07 "Body"), 16 under
+            // the strip; each carries its own gap so a collapsed one leaves
+            // none.
             child: ListView(
-              padding: const EdgeInsets.only(bottom: 28),
+              padding: const EdgeInsets.only(bottom: HmHomeView.gap),
               children: [
-                const _PromiseStrip(),
-                // Signed in with an open recent order only.
+                if (promise.isNotEmpty) HmDeliveryStrip(text: promise),
+                // Signed in with an open recent order only: 16 under the strip.
                 const HomeActiveOrder(),
-                const _ShopByCategory(),
+                _ShopByCategory(top: hasOrder ? HmHomeView.gap : 16),
                 for (final c in categories.take(kHomeRailCount))
                   _CategoryRail(key: ValueKey(c.uid), category: c),
                 const _PromoBanners(),
                 const _TrustRow(),
+                const _SellCard(),
               ],
             ),
           );
   }
 }
 
-/// While the Home's source is being decided: the category and rail
-/// skeletons.
+/// While the Home's source is being decided: the category tiles and two
+/// product rails as skeletons, laid out where the loaded Home puts them.
 class _HomeLoading extends StatelessWidget {
   const _HomeLoading();
 
   @override
   Widget build(BuildContext context) => ListView(
     physics: const NeverScrollableScrollPhysics(),
-    children: const [_CategorySkeleton(), _RailSkeleton(), _RailSkeleton()],
+    children: const [
+      _CategorySkeleton(top: 16),
+      _RailSkeleton(),
+      _RailSkeleton(),
+    ],
   );
 }
 
@@ -380,189 +388,60 @@ class _SearchBox extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────── strip
-
-class _PromiseStrip extends ConsumerWidget {
-  const _PromiseStrip();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final text = ref.watch(homePromiseProvider);
-    if (text.isEmpty) return const SizedBox(height: 8);
-    return Container(
-      color: const Color(0xFFFFF4EC),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          const Icon(HubIcons.truck, size: 16, color: AppColors.accentStrong),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.accentStrong,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────── sections
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.actionLabel, this.onAction});
-
-  final String title;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 24, 8, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                // Playfair Display has no Arabic glyphs; Arabic titles keep
-                // the theme's Arabic face.
-                fontFamily: Localizations.localeOf(context).languageCode == 'ar'
-                    ? null
-                    : AppTheme.displayFont,
-                fontSize: 21,
-                fontWeight: FontWeight.w700,
-                color: AppColors.inkHeading,
-              ),
-            ),
-          ),
-          if (actionLabel != null && onAction != null)
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(foregroundColor: AppColors.accentStrong),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(actionLabel!, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(width: 2),
-                  const Icon(HubIcons.arrowRight, size: 16),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
+/// Shop by category (Figma 07): the catalogue's top-level categories as the
+/// pastel tiles of the admin's Home, each with its Lucide glyph.
 class _ShopByCategory extends ConsumerWidget {
-  const _ShopByCategory();
+  const _ShopByCategory({required this.top});
+
+  /// The space above the section.
+  final double top;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final categories = ref.watch(homeCategoriesProvider);
     return categories.when(
-      loading: () => const _CategorySkeleton(),
+      loading: () => _CategorySkeleton(top: top),
       error: (_, __) => const SizedBox.shrink(),
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
-        final thumbs = ref
-                .watch(categoryThumbnailsProvider(categoryThumbnailKey(items)))
-                .valueOrNull ??
-            const <String, String>{};
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SectionHeader(
-              title: l10n.homeShopByCategory,
-              actionLabel: l10n.homeSeeAll,
-              onAction: () => context.go(AppRoutes.categories),
-            ),
-            SizedBox(
-              height: 140,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, i) => _CategoryTile(
-                  category: items[i],
-                  imageUrl: items[i].image ?? thumbs[items[i].uid],
+        return Padding(
+          padding: EdgeInsets.only(top: top),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              HmSectionHeader(
+                title: l10n.homeShopByCategory,
+                actionLabel: l10n.filterAll,
+                onAction: () => context.go(AppRoutes.categories),
+              ),
+              SizedBox(
+                height: HmCategoryTile.height,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, i) => HmCategoryTile(
+                    name: items[i].name,
+                    tint: kCategoryTints[i % kCategoryTints.length],
+                    icon: categoryIcon(items[i].urlKey, items[i].name),
+                    count: items[i].productCount,
+                    onTap: () => context.push(AppRoutes.category(items[i].uid)),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
   }
 }
 
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.category, this.imageUrl});
-
-  final Category category;
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return SizedBox(
-      width: 74,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push(AppRoutes.category(category.uid)),
-        child: Column(
-          children: [
-            Container(
-              width: 74,
-              height: 74,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceTint,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: (imageUrl ?? '').isEmpty
-                  ? const Icon(HubIcons.layoutGrid, color: AppColors.brandPrimary)
-                  : HubImage(url: imageUrl, fit: BoxFit.cover, width: 74, height: 74),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              category.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkHeading,
-              ),
-            ),
-            if (category.productCount > 0)
-              Text(
-                l10n.categoryProductCount(category.productCount),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
+/// One category's product rail: its name over "See All" and the cards.
 class _CategoryRail extends ConsumerWidget {
   const _CategoryRail({super.key, required this.category});
 
@@ -576,236 +455,115 @@ class _CategoryRail extends ConsumerWidget {
           error: (_, __) => const SizedBox.shrink(),
           data: (items) => items.isEmpty
               ? const SizedBox.shrink()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _SectionHeader(
-                      title: category.name,
-                      actionLabel: l10n.homeSeeAll,
-                      onAction: () => context.push(AppRoutes.category(category.uid)),
-                    ),
-                    _ProductCarousel(products: items),
-                  ],
+              : Padding(
+                  padding: const EdgeInsets.only(top: HmHomeView.gap),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      HmSectionHeader(
+                        title: category.name,
+                        actionLabel: l10n.homeSeeAll,
+                        onAction: () =>
+                            context.push(AppRoutes.category(category.uid)),
+                      ),
+                      HmProductRail(products: items),
+                    ],
+                  ),
                 ),
         );
   }
 }
 
-class _ProductCarousel extends StatelessWidget {
-  const _ProductCarousel({required this.products});
-
-  final List<Product> products;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: ProductCardMetrics.heightFor(context, _kCardWidth),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: products.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, i) => SizedBox(
-          width: _kCardWidth,
-          child: ProductCard(
-            product: products[i],
-            onTap: () => openProduct(context, products[i]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+/// The promo cards of the `hm_home_promos` block.
 class _PromoBanners extends ConsumerWidget {
   const _PromoBanners();
-
-  static const List<List<Color>> _palettes = <List<Color>>[
-    <Color>[Color(0xFF0F2144), Color(0xFF1E3A6E)],
-    <Color>[Color(0xFF14532D), Color(0xFF15803D)],
-    <Color>[Color(0xFF4C1D95), Color(0xFF6D28D9)],
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final promos = ref.watch(homePromosProvider);
     if (promos.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: Column(
-        children: [
-          for (var i = 0; i < promos.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            _PromoCard(promo: promos[i], colors: _palettes[i % _palettes.length]),
-          ],
-        ],
-      ),
+      padding: const EdgeInsets.only(top: HmHomeView.gap),
+      child: HmPromoBanners(promos: promos),
     );
   }
 }
 
-class _PromoCard extends ConsumerWidget {
-  const _PromoCard({required this.promo, required this.colors});
-
-  final PromoTile promo;
-  final List<Color> colors;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Material(
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: Ink(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: AlignmentDirectional.centerStart,
-            end: AlignmentDirectional.centerEnd,
-            colors: colors,
-          ),
-        ),
-        child: InkWell(
-          onTap: promo.url.isEmpty
-              ? null
-              : () => openStorefrontUrl(context, ref, promo.url, title: promo.title),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        [promo.icon, promo.kicker.toUpperCase()]
-                            .where((s) => s.isNotEmpty)
-                            .join('  '),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        promo.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (promo.text.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          promo.text,
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white24,
-                  child: Icon(HubIcons.arrowRight, color: Colors.white, size: 18),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+/// The trust tiles of the `hm_home_trust` block.
 class _TrustRow extends ConsumerWidget {
   const _TrustRow();
-
-  static const List<IconData> _icons = <IconData>[
-    HubIcons.shieldCheck,
-    HubIcons.lock,
-    HubIcons.truck,
-    HubIcons.rotateCcw,
-    HubIcons.headset,
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(homeTrustProvider);
     if (items.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final half = (constraints.maxWidth - 12) / 2;
-          return Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              for (var i = 0; i < items.length; i++)
-                SizedBox(
-                  // An odd last item spans the full row, as in the Figma.
-                  width: (i == items.length - 1 && items.length.isOdd)
-                      ? constraints.maxWidth
-                      : half,
-                  child: _TrustTile(item: items[i], icon: _icons[i % _icons.length]),
-                ),
-            ],
-          );
-        },
-      ),
+      padding: const EdgeInsets.only(top: HmHomeView.gap),
+      child: HmTrustGrid(items: items),
     );
   }
 }
 
-class _TrustTile extends StatelessWidget {
-  const _TrustTile({required this.item, required this.icon});
+/// "Sell on Hub Market": the `hm_home_sell` block as the navy card — nothing
+/// while the store has no such block.
+class _SellCard extends ConsumerWidget {
+  const _SellCard();
 
-  final TrustItem item;
-  final IconData icon;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final html = ref.watch(
+      homeCmsBlocksProvider.select(
+        (blocks) => blocks.valueOrNull?[HomeCmsBlocks.sell],
+      ),
+    );
+    if ((html ?? '').trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: HmHomeView.gap),
+      child: HmCmsBlockView(html: html!, identifier: HomeCmsBlocks.sell),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────── skeletons
+
+/// A section's title as a skeleton bar (Heading 1's 28 pt line).
+class _TitleSkeleton extends StatelessWidget {
+  const _TitleSkeleton();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
+    child: Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: SkeletonBox(width: 180, height: 28),
+    ),
+  );
+}
+
+/// A product rail while it loads: title and three cards, as tall as the rail.
+class _RailSkeleton extends StatelessWidget {
+  const _RailSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderDefault),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(top: HmHomeView.gap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceTint,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 18, color: AppColors.brandPrimary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.inkHeading,
-                  ),
-                ),
-                if (item.text.isNotEmpty)
-                  Text(
-                    item.text,
-                    style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
-                  ),
-              ],
+          const Shimmer(child: _TitleSkeleton()),
+          SizedBox(
+            height: ProductCardMetrics.heightFor(context, kHmCardWidth),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 3,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, __) => const SizedBox(
+                width: kHmCardWidth,
+                child: ProductCardSkeleton(),
+              ),
             ),
           ),
         ],
@@ -814,45 +572,36 @@ class _TrustTile extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────── skeletons
-
-class _RailSkeleton extends StatelessWidget {
-  const _RailSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24),
-      child: SizedBox(
-        height: ProductCardMetrics.heightFor(context, _kCardWidth),
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: 3,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
-          itemBuilder: (_, __) => const SizedBox(width: _kCardWidth, child: ProductCardSkeleton()),
-        ),
-      ),
-    );
-  }
-}
-
+/// The category tiles while they load.
 class _CategorySkeleton extends StatelessWidget {
-  const _CategorySkeleton();
+  const _CategorySkeleton({required this.top});
+
+  final double top;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: SizedBox(
-        height: 100,
-        child: Row(
+      padding: EdgeInsets.only(top: top),
+      child: Shimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (var i = 0; i < 4; i++) ...[
-              if (i > 0) const SizedBox(width: 12),
-              const Shimmer(child: SkeletonBox(width: 74, height: 74)),
-            ],
+            const _TitleSkeleton(),
+            SizedBox(
+              height: HmCategoryTile.height,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: 5,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, __) => const SkeletonBox(
+                  width: HmCategoryTile.width,
+                  height: HmCategoryTile.height,
+                  borderRadius: 16,
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -23,7 +23,36 @@ class BundleRailCard extends StatelessWidget {
   final BundleDeal deal;
 
   static const double width = 300;
+
+  /// The card's height in English at 1× text: 1 pt border, the 150 pt photo,
+  /// and the 238 pt body (14 | seller 16 · name 22 · line 16 · thumbs 44 ·
+  /// price 20 · button 52, 8 apart | 14).
   static const double height = 390;
+
+  /// The card's height for the language and text size of [context]: [height]
+  /// in English, 398 in Arabic (taller lines), so the body keeps its 8 pt
+  /// between the rows.
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    double line(TextStyle style) =>
+        scaler.scale(style.fontSize! * style.height!);
+    return 2 + // the border
+        150 +
+        14 +
+        line(t.captionStrong) +
+        8 +
+        line(t.title) +
+        8 +
+        line(t.caption) +
+        8 +
+        44 +
+        8 +
+        line(t.button) +
+        8 +
+        52 +
+        14;
+  }
 
   @override
   Widget build(BuildContext context) {

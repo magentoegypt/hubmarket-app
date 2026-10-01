@@ -17,6 +17,8 @@ import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
+import 'package:hubmarket_app/features/deals/presentation/widgets/bundle_card.dart';
+import 'package:hubmarket_app/features/deals/presentation/widgets/deal_countdown.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
@@ -26,11 +28,15 @@ import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/presentation/catalog_providers.dart';
 import 'package:hubmarket_app/features/home/data/hm_home_repository.dart';
 import 'package:hubmarket_app/features/home/data/home_content_repository.dart';
-import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_view.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_category_chips.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_cms_sections.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_hero.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_section_header.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_store_cards.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/home_active_order.dart';
 import 'package:hubmarket_app/features/notifications/data/notification_inbox.dart';
 import 'package:hubmarket_app/features/notifications/domain/notification_item.dart';
@@ -250,6 +256,78 @@ Future<void> _writeCapture(
   });
 }
 
+/// The sizes Figma 07 (English) and AR-07 (Arabic) give the pieces of the Home,
+/// as `get_metadata` reports them, asserted on the render: if a shared style or
+/// a piece's layout drifts, the Home no longer lays over its frame.
+void _expectFrameGeometry(WidgetTester tester, String locale) {
+  final ar = locale == 'ar';
+  // The iPhone status bar the UI_AUDIT flag adds (0 without it).
+  final inset = tester.view.padding.top / tester.view.devicePixelRatio;
+
+  void size(String what, Finder finder, Size en, [Size? arabic]) {
+    expect(
+      tester.getSize(finder.first),
+      ar ? (arabic ?? en) : en,
+      reason: what,
+    );
+  }
+
+  // Header: 142 under the status bar (2 + 40 + 12 + 46 + 12 + 16 + 14), 144 in
+  // Arabic, then the utility strip.
+  expect(
+    tester.getTopLeft(find.byType(HmDeliveryStrip)).dy,
+    inset + (ar ? 144 : 142),
+    reason: 'the header',
+  );
+  size('utility strip', find.byType(HmDeliveryStrip), const Size(390, 32), const Size(390, 34));
+  size('active order', find.byType(ActiveOrderCard), const Size(358, 66), const Size(358, 68));
+  size('hero carousel', find.byType(HmHeroCarousel), const Size(390, 236));
+  size('hero pager', find.byType(HmPagerDots), const Size(44, 6));
+  size('promo tile', find.byType(HmPromoTile), const Size(168, 100));
+  size('category tile', find.byType(HmCategoryTile), const Size(74, 112));
+
+  // Section headers: 28 for a title (30 in Arabic), 30 with Today's Deals' glyph.
+  size(
+    'Shop by category header',
+    find.descendant(
+      of: find.byType(HmSectionHeader).at(0),
+      matching: find.byType(IntrinsicHeight),
+    ),
+    const Size(358, 28),
+    const Size(358, 30),
+  );
+  size(
+    "Today's Deals header",
+    find.descendant(
+      of: find.byType(HmSectionHeader).at(1),
+      matching: find.byType(IntrinsicHeight),
+    ),
+    const Size(358, 30),
+  );
+  expect(
+    tester.getSize(find.byType(DealCountdownPill)).height,
+    ar ? 36 : 34,
+    reason: 'countdown pill',
+  );
+
+  // Stores. Arabic card text is a line taller than the frame's English-sized
+  // Latin names and counts (212 / 214 there), so Arabic only has to be close.
+  final featured = tester.getSize(find.byType(HmFeaturedStoreCard).first);
+  expect(featured.width, 148);
+  expect(featured.height, ar ? closeTo(214, 6) : 212, reason: 'featured store card');
+  size('top vendor card', find.byType(HmTopVendorCard), const Size(150, 147), const Size(150, 151));
+  size('new stores list', find.byType(HmNewStoresList), const Size(390, 192), const Size(390, 204));
+
+  size('bundle card', find.byType(BundleRailCard), const Size(300, 390), const Size(300, 398));
+  size(
+    'promo banner',
+    find.descendant(of: find.byType(HmPromoBanners), matching: find.byType(InkWell)),
+    const Size(358, 104),
+  );
+  size('trust grid', find.byType(HmTrustGrid), const Size(390, 275), const Size(390, 255));
+  size('Sell on Hub Market', find.byType(HmSellCard), const Size(390, 196), const Size(390, 184));
+}
+
 Future<void> _capture(
   WidgetTester tester, {
   required String locale,
@@ -310,6 +388,7 @@ Future<void> _capture(
     ..createSync(recursive: true)
     ..writeAsStringSync(const JsonEncoder.withIndent(' ').convert(rects));
 
+  if (hubApp) _expectFrameGeometry(tester, locale);
   expect(tester.takeException(), isNull);
 
   // Let the timers the decoded logo left behind run out.

@@ -31,15 +31,18 @@ class HmCategoryChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
-      height: 112,
+      height: HmCategoryTile.height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: chips.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, i) => _ChipTile(
-          chip: chips[i],
+        itemBuilder: (context, i) => HmCategoryTile(
+          name: chips[i].name,
           tint: kCategoryTints[(chips[i].tint ?? i) % kCategoryTints.length],
+          emoji: chips[i].icon,
+          icon: categoryIcon(chips[i].urlKey, chips[i].name),
+          count: chips[i].productCount,
           onTap: () =>
               openHmLink(context, ref, chips[i].link, title: chips[i].name),
         ),
@@ -48,20 +51,41 @@ class HmCategoryChips extends ConsumerWidget {
   }
 }
 
-class _ChipTile extends StatelessWidget {
-  const _ChipTile({required this.chip, required this.tint, this.onTap});
+/// A category tile (Figma "Category tile"): 74×112, radius 16, on its [tint];
+/// the 28 pt glyph — the admin's [emoji], else the category's Lucide [icon] —
+/// the name (Caption Strong, up to two lines) and "N+ items" (Micro, muted).
+class HmCategoryTile extends StatelessWidget {
+  const HmCategoryTile({
+    super.key,
+    required this.name,
+    required this.tint,
+    required this.icon,
+    this.emoji,
+    this.count = 0,
+    this.onTap,
+  });
 
-  final HmCategoryChip chip;
+  static const double width = 74;
+  static const double height = 112;
+
+  final String name;
   final Color tint;
+  final IconData icon;
+
+  /// Drawn instead of [icon] when set.
+  final String? emoji;
+
+  /// The number of products; the line is left out for none.
+  final int count;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = AppTextStyles.of(context);
     final l10n = AppLocalizations.of(context);
-    final icon = chip.icon;
+    final glyph = emoji;
     return SizedBox(
-      width: 74,
+      width: width,
       child: Material(
         color: tint,
         borderRadius: BorderRadius.circular(16),
@@ -75,33 +99,30 @@ class _ChipTile extends StatelessWidget {
                 SizedBox(
                   height: 28,
                   child: Center(
-                    child: icon != null
-                        ? Text(
-                            icon,
-                            style: const TextStyle(fontSize: 24, height: 1),
-                          )
-                        : Icon(
-                            categoryIcon(chip.urlKey, chip.name),
-                            size: 24,
-                            color: AppColors.brandPrimary,
-                          ),
+                    child: glyph != null
+                        ? Text(glyph, style: const TextStyle(fontSize: 24, height: 1))
+                        : Icon(icon, size: 24, color: AppColors.brandPrimary),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  chip.name,
+                  name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: t.captionStrong.copyWith(color: AppColors.inkHeading),
                 ),
                 const SizedBox(height: 4),
-                if (chip.productCount > 0)
-                  Text(
-                    l10n.searchCategoryItems(chip.productCount),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: t.micro.copyWith(color: AppColors.inkMuted),
+                // One line: a longer count ("أكثر من 19 منتج") shrinks to fit
+                // the tile instead of being cut.
+                if (count > 0)
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      l10n.searchCategoryItems(count),
+                      maxLines: 1,
+                      style: t.micro.copyWith(color: AppColors.inkMuted),
+                    ),
                   ),
               ],
             ),

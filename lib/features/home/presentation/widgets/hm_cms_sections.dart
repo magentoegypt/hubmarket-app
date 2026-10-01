@@ -50,10 +50,12 @@ class HmDeliveryStrip extends ConsumerWidget {
                       color: AppColors.accentStrong,
                     ),
                     const SizedBox(width: 6),
+                    // One line, as the frame draws it; the admin's longer copy
+                    // ("… · Fast nationwide shipping") wraps instead of being cut.
                     Expanded(
                       child: Text(
                         text,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: style,
                       ),

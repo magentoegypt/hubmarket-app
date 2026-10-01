@@ -170,7 +170,10 @@ class HmHeroSlide extends StatelessWidget {
                     if (banner.subtitle != null) ...[
                       const SizedBox(height: 8),
                       ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 240),
+                        // 240 in the English frame, 250 in the Arabic one.
+                        constraints: BoxConstraints(
+                          maxWidth: t.arabic ? 250 : 240,
+                        ),
                         child: Text(
                           banner.subtitle!,
                           maxLines: 2,

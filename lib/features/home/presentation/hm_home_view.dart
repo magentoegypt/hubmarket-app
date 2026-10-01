@@ -259,7 +259,7 @@ class HmSectionView extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: titled(
               SizedBox(
-                height: BundleRailCard.height,
+                height: BundleRailCard.heightFor(context),
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
