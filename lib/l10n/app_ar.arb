@@ -695,10 +695,28 @@
   "reviewsWrite": "اكتب تقييمًا",
   "reviewRating": "تقييمك",
   "reviewNickname": "الاسم المستعار",
-  "reviewSummary": "العنوان",
-  "reviewText": "مراجعتك",
-  "reviewSubmit": "إرسال المراجعة",
+  "reviewSummary": "الملخص",
+  "reviewText": "تقييمك",
+  "reviewSubmit": "إرسال التقييم",
   "reviewSubmitted": "شكرًا لك! مراجعتك قيد المراجعة.",
+  "reviewHowRate": "ما تقييمك للمنتج؟",
+  "reviewRatingCaption": "{stars} من 5 · {label}",
+  "@reviewRatingCaption": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewRatingPoor": "سيئ",
+  "reviewRatingFair": "مقبول",
+  "reviewRatingAverage": "متوسط",
+  "reviewRatingGood": "جيد",
+  "reviewRatingExcellent": "ممتاز",
+  "reviewFooterNote": "تُراجع التقييمات قبل نشرها. يُرجى عدم ذكر بيانات شخصية.",
   "myReviewsTitle": "تقييماتي للمنتجات",
   "myReviewsCount": "{count, plural, =1{تقييم واحد} =2{تقييمان} few{{count} تقييمات} many{{count} تقييمًا} other{{count} تقييم}}",
   "myReviewsApprovalNote": "تظهر التقييمات الجديدة في صفحة المنتج بعد اعتمادها",

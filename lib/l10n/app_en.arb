@@ -1120,8 +1120,48 @@
   "reviewNickname": "Nickname",
   "reviewSummary": "Summary",
   "reviewText": "Your review",
-  "reviewSubmit": "Submit Review",
+  "reviewSubmit": "Submit review",
   "reviewSubmitted": "Thank you! Your review is awaiting approval.",
+  "reviewHowRate": "How would you rate it?",
+  "@reviewHowRate": {
+    "description": "Figma 15b: the question over the five stars of the review form."
+  },
+  "reviewRatingCaption": "{stars} of 5 · {label}",
+  "@reviewRatingCaption": {
+    "description": "Figma 15b: under the stars — the chosen rating and its word (reviewRatingGood …).",
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewRatingPoor": "Poor",
+  "@reviewRatingPoor": {
+    "description": "The word for a 1-star rating."
+  },
+  "reviewRatingFair": "Fair",
+  "@reviewRatingFair": {
+    "description": "The word for a 2-star rating."
+  },
+  "reviewRatingAverage": "Average",
+  "@reviewRatingAverage": {
+    "description": "The word for a 3-star rating."
+  },
+  "reviewRatingGood": "Good",
+  "@reviewRatingGood": {
+    "description": "The word for a 4-star rating."
+  },
+  "reviewRatingExcellent": "Excellent",
+  "@reviewRatingExcellent": {
+    "description": "The word for a 5-star rating."
+  },
+  "reviewFooterNote": "Reviews are checked before they’re published. Please don’t include personal details.",
+  "@reviewFooterNote": {
+    "description": "Figma 15b: over the Submit review button."
+  },
   "myReviewsTitle": "My product reviews",
   "myReviewsCount": "{count, plural, =1{1 review} other{{count} reviews}}",
   "@myReviewsCount": {

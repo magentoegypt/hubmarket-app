@@ -9,6 +9,7 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
+import 'package:hubmarket_app/features/catalog/domain/review_subject.dart';
 import 'package:hubmarket_app/features/catalog/presentation/reviews_controllers.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_reviews_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/review_widgets.dart';
@@ -120,7 +121,10 @@ void main() {
           ),
           GoRoute(
             path: '/review/:sku',
-            builder: (_, s) => Text('WRITE ${s.pathParameters['sku']}'),
+            builder: (_, s) => Text(
+              'WRITE ${s.pathParameters['sku']} '
+              '${(s.extra as ReviewSubject?)?.name}',
+            ),
           ),
           for (final p in ['/home', '/categories', '/cart', '/wishlist', '/account'])
             GoRoute(path: p, builder: (_, __) => const Scaffold()),
@@ -179,11 +183,22 @@ void main() {
       expect(find.byKey(const ValueKey('review-filter-5')), findsNothing);
     });
 
-    testWidgets('Write a review opens the review form', (tester) async {
+    testWidgets('Write a review opens the review form, with the product', (
+      tester,
+    ) async {
       await pump(tester, FakeReviewsRepository(productReviews: [sampleReview(4)]));
       await tester.tap(find.text(en.reviewsWrite));
       await tester.pumpAndSettle();
-      expect(find.text('WRITE SKU-dress'), findsOneWidget);
+      expect(find.text('WRITE SKU-dress Product dress'), findsOneWidget);
+    });
+
+    testWidgets('has no tab bar: its footer is the Write a review button', (
+      tester,
+    ) async {
+      await pump(tester, FakeReviewsRepository(productReviews: [sampleReview(4)]));
+      expect(find.byType(BottomNavigationBar), findsNothing);
+      expect(find.text(en.navCart), findsNothing);
+      expect(find.text(en.reviewsWrite), findsOneWidget);
     });
 
     testWidgets('renders right-to-left in Arabic', (tester) async {

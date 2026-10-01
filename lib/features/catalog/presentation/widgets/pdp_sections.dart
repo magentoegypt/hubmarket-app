@@ -733,15 +733,13 @@ class PdpRatingBars extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: ClipRRect(
+                  child: LinearProgressIndicator(
+                    value: (byStar[star]?.percent ?? 0) / 100,
+                    minHeight: 6,
                     borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: (byStar[star]?.percent ?? 0) / 100,
-                      minHeight: 6,
-                      backgroundColor: AppColors.surfaceSubtle,
-                      valueColor: const AlwaysStoppedAnimation(
-                        AppColors.ratingStar,
-                      ),
+                    backgroundColor: AppColors.surfaceSubtle,
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.ratingStar,
                     ),
                   ),
                 ),
