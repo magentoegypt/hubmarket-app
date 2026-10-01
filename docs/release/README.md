@@ -175,7 +175,9 @@ client launches on another domain, change all of these together and rebuild:
 Also on the new host: a certificate that covers it (ATS is at its defaults, so TLS 1.2+ is needed),
 the WAF rule for the app's user agent, the `Store` header in any cache or CDN, and the two
 well-known files. Algolia is found through the storefront page (`window.algoliaConfig`), so it
-follows the host.
+follows the host. So do the WebP copies of product images: the app asks the GraphQL host for
+`<resized image>.webp` and falls back to the original on any failure, so a host without them still
+works (one extra request per image); check with `curl -I` on a resized product image plus `.webp`.
 
 ## 6. Turning on push (when the Firebase project exists)
 

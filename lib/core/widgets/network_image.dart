@@ -2,14 +2,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../config/app_config.dart';
 import '../util/image_cache_config.dart';
+import '../util/media.dart';
 import 'shimmer.dart';
 import '../../app/theme/hub_icons.dart';
 
 /// The single entry point for every network image in the app.
 ///
 /// Feature code must not construct [CachedNetworkImage] directly — this widget
-/// owns three things that were previously left to each call site (and were
+/// owns four things that were previously left to each call site (and were
 /// therefore wrong almost everywhere):
 ///
 /// 1. **No fade.** `cached_network_image` defaults to a 500ms fade-in *and* a
@@ -23,6 +25,13 @@ import '../../app/theme/hub_icons.dart';
 /// 3. **A shared [ImageProvider] identity.** [provider] builds the *exact* same
 ///    provider the widget uses, so `precacheImage` warms the key the widget
 ///    later looks up. A mismatched decode width silently re-decodes.
+/// 4. **The WebP copy.** A resized product image on the store's own host is
+///    requested as its `.webp` twin ([webpTwinUrl]) — a third to a tenth of
+///    the bytes at the same pixel size, the same file the website's
+///    `<picture>` serves. Not every image has one (a copy appears within about
+///    ten minutes of an upload, and the "no image" placeholder never gets
+///    one), so a failed load falls back to the original URL, and the miss is
+///    remembered for the session instead of asking again at every scroll.
 class HubImage extends StatelessWidget {
   const HubImage({
     super.key,
@@ -68,6 +77,26 @@ class HubImage extends StatelessWidget {
   final BorderRadiusGeometry? borderRadius;
   final String? semanticLabel;
 
+  /// The host whose resized product images have a WebP copy: the store's own,
+  /// the one the GraphQL endpoint is on. A variable only so a test can pin it.
+  @visibleForTesting
+  static String webpHost =
+      Uri.tryParse(AppConfig.current.graphqlEndpoint)?.host ?? '';
+
+  /// Images whose WebP copy failed to load this session — asked for as they
+  /// are from then on.
+  static final Set<String> _withoutWebp = <String>{};
+
+  @visibleForTesting
+  static void forgetWebpMisses() => _withoutWebp.clear();
+
+  /// What to request for [url]: its WebP copy where it has one and that copy
+  /// hasn't failed this session, otherwise [url] itself.
+  static String _requested(String url) {
+    if (_withoutWebp.contains(url)) return url;
+    return webpTwinUrl(url, storeHost: webpHost) ?? url;
+  }
+
   /// The provider [HubImage] itself resolves — use it for `precacheImage`.
   ///
   /// Mirrors what `CachedNetworkImage` builds internally (octo_image applies
@@ -79,7 +108,7 @@ class HubImage extends StatelessWidget {
       (decodeWidth != null && decodeWidth > 0) ? decodeWidth : null,
       null,
       CachedNetworkImageProvider(
-        url,
+        _requested(url),
         cacheManager: HubImageCacheManager.instance,
       ),
     );
@@ -119,8 +148,23 @@ class HubImage extends StatelessWidget {
   }
 
   Widget _cached(BuildContext context, int? memCacheWidth) {
+    final original = url!;
+    final requested = _requested(original);
+    return _load(requested, memCacheWidth, (context) {
+      if (requested == original) return _sized(_error(context));
+      // The WebP copy isn't there (yet): remember that, load the original.
+      _withoutWebp.add(original);
+      return _load(
+        original,
+        memCacheWidth,
+        (context) => _sized(_error(context)),
+      );
+    });
+  }
+
+  Widget _load(String imageUrl, int? memCacheWidth, WidgetBuilder onError) {
     return CachedNetworkImage(
-      imageUrl: url!,
+      imageUrl: imageUrl,
       cacheManager: HubImageCacheManager.instance,
       fit: fit,
       width: width,
@@ -130,7 +174,7 @@ class HubImage extends StatelessWidget {
       fadeOutDuration: kFadeOut,
       placeholderFadeInDuration: kFadeIn,
       placeholder: (context, _) => _sized(_placeholder(context)),
-      errorWidget: (context, _, __) => _sized(_error(context)),
+      errorWidget: (context, _, __) => onError(context),
     );
   }
 

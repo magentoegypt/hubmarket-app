@@ -33,6 +33,43 @@ String resolveMediaUrl(String? raw, String base) {
   return httpsMediaUrl('$b$value') ?? '';
 }
 
+/// The WebP copy the storefront keeps beside each resized product image: the
+/// same URL plus `.webp` (`…/cache/<hash>/a/b/file.jpg` →
+/// `…/cache/<hash>/a/b/file.jpg.webp`). It has the same pixel size for about a
+/// third (JPEG) to a tenth (PNG) of the bytes — measured on the live catalogue
+/// on 1 Oct 2026 — and for images uploaded from that day on it is encoded from
+/// the original upload, so it is also the sharper one.
+///
+/// Null when [url] has no such copy, in which case it is loaded as it is:
+///   * another host than the store's own [storeHost] — the public host answers
+///     a copy that is not made yet with the JPEG, the uncached `multi.` origin
+///     with a 404;
+///   * anything but a resized product image — the "no image" placeholder, the
+///     original uploads and every other media folder have none (404 even on
+///     the public host);
+///   * a format other than JPEG or PNG, or a URL with a query or fragment.
+String? webpTwinUrl(String? url, {required String storeHost}) {
+  if (url == null || url.isEmpty) return null;
+  final uri = Uri.tryParse(url);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.host != storeHost ||
+      uri.hasQuery ||
+      uri.hasFragment ||
+      !uri.path.startsWith(_resizedProductMedia)) {
+    return null;
+  }
+  final path = uri.path.toLowerCase();
+  if (!_webpSources.any(path.endsWith)) return null;
+  return '$url.webp';
+}
+
+/// The formats the storefront re-encodes to WebP.
+const List<String> _webpSources = ['.jpg', '.jpeg', '.png'];
+
+/// Where Magento keeps a product image resized for the storefront.
+const String _resizedProductMedia = '/media/catalog/product/cache/';
+
 /// Scheme + host (+ explicit port) of [base], or empty when it isn't a usable
 /// absolute URL. `Uri.origin` throws on those, so the parts are read directly.
 String _origin(String base) {

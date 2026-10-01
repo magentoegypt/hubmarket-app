@@ -6,13 +6,16 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 /// normal browse session evicts the top of the grid before the user has scrolled
 /// back to it — the image then re-downloads and the screen looks slow again.
 ///
-/// Product media is served `Cache-Control: public, max-age=31536000, immutable`
-/// (verified against the CDN on 2026-08-21), and the URL carries a content hash,
+/// Product media on `hub-market.magento2.click` is served `Cache-Control:
+/// public, max-age=604800` (verified 2026-10-01; only the uncached `multi.`
+/// origin says a year, `immutable`), and a replaced image gets a new file name,
 /// so a long local TTL can never serve a stale image.
 ///
 /// Note [Config.maxNrOfCacheObjects] caps the object *count*, not bytes: 600 ×
-/// ~40KB ≈ 24MB in the typical case, but the store currently serves some 300KB+
-/// PNGs. Revisit the count if/when the backend adds per-role image presets.
+/// ~40KB ≈ 24MB in the typical case. Before the WebP copies (see `HubImage`)
+/// the store's PNGs ran to 300KB+ each. Revisit the count if/when the backend
+/// adds per-role image presets: today every role gets the one 800-1600px
+/// derivative.
 class HubImageCacheManager extends CacheManager with ImageCacheManager {
   HubImageCacheManager._()
     : super(
