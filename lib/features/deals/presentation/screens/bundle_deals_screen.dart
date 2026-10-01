@@ -16,7 +16,7 @@ import '../bundle_deals_controller.dart';
 import '../widgets/bundle_card.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
-import '../widgets/star_glyph.dart';
+import '../../../../core/widgets/star_glyph.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro (the Home's

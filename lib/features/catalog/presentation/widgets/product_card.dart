@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/widgets/network_image.dart';
+import '../../../../core/widgets/star_glyph.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
@@ -405,7 +406,7 @@ class _RatingLine extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 12, color: AppColors.ratingStar),
+          const StarGlyph(),
           const SizedBox(width: ProductCardMetrics.rowGap),
           Text(
             value,

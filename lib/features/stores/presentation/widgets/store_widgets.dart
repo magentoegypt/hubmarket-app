@@ -14,7 +14,7 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
-import '../../../deals/presentation/widgets/star_glyph.dart';
+import '../../../../core/widgets/star_glyph.dart';
 import '../../domain/store.dart';
 
 /// Opens [store]'s page, handing over the card so the header paints at once.

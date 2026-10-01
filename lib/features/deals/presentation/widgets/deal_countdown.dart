@@ -77,12 +77,20 @@ String countdownClock(Duration left) {
 }
 
 /// `2d 14:32:19` (the days in the reader's language before the clock), or
-/// `14:32:19` inside the last day.
+/// `14:32:19` inside the last day. [compactDays] writes the days as the Home's
+/// pill does in both languages ("2d"), instead of the Deals banner's words
+/// ("يومان").
 class CountdownText extends StatelessWidget {
-  const CountdownText({super.key, required this.left, required this.style});
+  const CountdownText({
+    super.key,
+    required this.left,
+    required this.style,
+    this.compactDays = false,
+  });
 
   final Duration left;
   final TextStyle style;
+  final bool compactDays;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +104,10 @@ class CountdownText extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          AppLocalizations.of(context).dealsCountdownDays(left.inDays),
+          compactDays
+              ? '${left.inDays}d'
+              : AppLocalizations.of(context).dealsCountdownDays(left.inDays),
+          textDirection: compactDays ? TextDirection.ltr : null,
           style: style,
         ),
         const SizedBox(width: 4),
@@ -137,6 +148,7 @@ class DealCountdownPill extends StatelessWidget {
             const SizedBox(width: 8),
             CountdownText(
               left: left,
+              compactDays: true,
               style: t.bodyStrong.copyWith(color: Colors.white),
             ),
             const SizedBox(width: 8),

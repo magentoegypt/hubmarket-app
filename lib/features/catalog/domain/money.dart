@@ -26,8 +26,10 @@ class Money {
   /// The dirham sign of the Arabic format.
   static const String _aedSignAr = 'د.إ';
 
-  String formatted() {
-    final whole = (amount * 100).round() % 100 == 0;
+  /// [exact] keeps the fils of a whole amount too ("AED 120.00"): a ledger
+  /// figure such as store credit, unlike a price.
+  String formatted({bool exact = false}) {
+    final whole = !exact && (amount * 100).round() % 100 == 0;
     final number = (whole ? _wholeFormat : _format).format(amount);
     if (!arabic) return '$currency $number';
     final sign = currency == 'AED' ? _aedSignAr : currency;

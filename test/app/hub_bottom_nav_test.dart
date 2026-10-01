@@ -18,6 +18,7 @@ Widget _nav({
   AppTab current = AppTab.home,
   String locale = 'en',
   double textScale = 1,
+  double bottomInset = 0,
 }) => ProviderScope(
   overrides: [
     localCacheProvider.overrideWithValue(FakeLocalCache()),
@@ -35,9 +36,10 @@ Widget _nav({
     ],
     theme: AppTheme.light(locale),
     builder: (context, child) => MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+        padding: EdgeInsets.only(bottom: bottomInset),
+      ),
       child: child!,
     ),
     home: Scaffold(bottomNavigationBar: HubBottomNav(current: current)),
@@ -80,6 +82,15 @@ void main() {
     expect(find.text('حسابي'), findsOneWidget);
     // 55 + the 1 px rule.
     expect(tester.getSize(find.byType(HubBottomNav)).height, 56);
+  });
+
+  testWidgets('is 84 px high on an iPhone, as the frame: the 34 px inset loses 6', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_nav(bottomInset: 34));
+
+    // 1 rule + 55 tabs + 28 = 84, as the Tab bar component.
+    expect(tester.getSize(find.byType(HubBottomNav)).height, 84);
   });
 
   testWidgets('grows with the text size instead of overflowing', (

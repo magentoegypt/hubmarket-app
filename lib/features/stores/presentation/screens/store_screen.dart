@@ -35,7 +35,7 @@ import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../../catalog/presentation/widgets/product_skeletons.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../../catalog/presentation/widgets/sort_sheet.dart';
-import '../../../deals/presentation/widgets/star_glyph.dart';
+import '../../../../core/widgets/star_glyph.dart';
 import '../../domain/store.dart';
 import '../store_products_controller.dart';
 import '../store_reviews_controller.dart';

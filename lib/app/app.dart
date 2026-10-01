@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,6 +19,7 @@ import 'notification_routes.dart';
 import 'shell/back_swipe.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
+import 'theme/status_bar.dart';
 import 'theme/theme_mode_controller.dart';
 
 /// Root widget. Locale, theme (incl. font), and text direction are all driven by
@@ -139,14 +141,22 @@ class _HubAppState extends ConsumerState<HubApp>
       //
       // Maintenance mode and a required update (Hub Market App settings) hold
       // every route behind their own screen, offline strip included.
-      builder: (context, child) => Directionality(
-        textDirection: store.isRtl ? TextDirection.rtl : TextDirection.ltr,
-        child: AppStatusGate(
-          child: OfflineBannerHost(
-            child: AppBackSwipe(
-              router: router,
-              navigatorKey: rootNavigatorKey,
-              child: child ?? const SizedBox.shrink(),
+      //
+      // The status bar defaults to dark icons (the pages are light). A screen
+      // with a dark header — the Home's navy, the splash — sets its own light
+      // style over this; one that sets none no longer inherits the last
+      // screen's.
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: StatusBar.onLight,
+        child: Directionality(
+          textDirection: store.isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: AppStatusGate(
+            child: OfflineBannerHost(
+              child: AppBackSwipe(
+                router: router,
+                navigatorKey: rootNavigatorKey,
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         ),

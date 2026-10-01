@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../app/theme/status_bar.dart';
 import 'hub_back_button.dart';
 
 /// Figma "App bar": a 56 px row under the status bar — an optional 40 px back
@@ -98,7 +99,7 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
               ));
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value: dark ? StatusBar.onDark : StatusBar.onLight,
       child: Material(
         color: backgroundColor,
         child: SafeArea(

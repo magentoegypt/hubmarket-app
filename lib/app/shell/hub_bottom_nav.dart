@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,11 +33,15 @@ class HubBottomNav extends ConsumerWidget {
         color: Colors.white,
         border: Border(top: BorderSide(color: AppColors.borderSubtle)),
       ),
-      child: SafeArea(
-        top: false,
-        // Figma: 84 = 1 rule + 55 tabs + 28 home-indicator padding; the last
-        // part is the device's own bottom inset here. The tabs grow with the
-        // user's text size instead of overflowing.
+      child: Padding(
+        // Figma: 84 = 1 rule + 55 tabs + 28 home-indicator padding. An iPhone's
+        // inset is 34 and the home indicator only reaches into its lower part,
+        // so the bar keeps the frame's 28 (6 less than the inset); other devices
+        // lose the same 6 px of dead space. The tabs grow with the user's text
+        // size instead of overflowing.
+        padding: EdgeInsets.only(
+          bottom: math.max(0, MediaQuery.paddingOf(context).bottom - 6),
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 55),
           child: IntrinsicHeight(

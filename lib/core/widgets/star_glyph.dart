@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
+import '../../app/theme/app_colors.dart';
 
 /// A filled rating star in a [size] px slot, as Figma's `icon/star` draws it:
 /// the glyph fills about 10 of its 12 px. The Material rounded star leaves a
