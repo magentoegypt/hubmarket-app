@@ -742,6 +742,16 @@
   "cartAlsoLike": "You might also like",
   "cartCouponError": "That code didn't work.",
   "wishlistHeading": "My Wishlist",
+  "wishlistTitle": "Wishlist",
+  "wishlistShareTitle": "My Hub Market wishlist",
+  "wishlistStoreCount": "{count, plural, =1{1 store} other{{count} stores}}",
+  "@wishlistStoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "wishlistSavedCount": "{count, plural, =1{1 saved item} other{{count} saved items}}",
   "@wishlistSavedCount": {
     "placeholders": {
@@ -750,7 +760,7 @@
       }
     }
   },
-  "wishlistAddAll": "Add all to Bag",
+  "wishlistAddAll": "Add all to bag",
   "wishlistEmptyTitle": "Your wishlist is empty",
   "wishlistEmptyBody": "Tap the heart on any product to save it here.",
   "wishlistSignInPrompt": "Sign in to save items to your wishlist.",
