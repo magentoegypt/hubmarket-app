@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,10 +54,14 @@ void main() {
         late SceneRun run;
         await withRealShadows(() async {
           run = await runScene(tester, scene, locale, (name, boundary) async {
-            // Asset images decode asynchronously; finish them first.
+            // Asset images decode asynchronously; finish them first. A
+            // network image never answers in the test renderer, so waiting
+            // for one would hang the sweep: those are left as they are.
             await tester.runAsync(() async {
               for (final element in find.byType(Image).evaluate()) {
-                await precacheImage((element.widget as Image).image, element);
+                final image = (element.widget as Image).image;
+                if (_isNetwork(image)) continue;
+                await precacheImage(image, element);
               }
             });
             await tester.pump();
@@ -79,4 +84,9 @@ void main() {
       });
     }
   }
+}
+
+bool _isNetwork(ImageProvider<Object> provider) {
+  final inner = provider is ResizeImage ? provider.imageProvider : provider;
+  return inner is NetworkImage || inner is CachedNetworkImageProvider;
 }

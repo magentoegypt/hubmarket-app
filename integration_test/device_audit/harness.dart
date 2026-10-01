@@ -3,9 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 
 import '../../test/support/audit_pump.dart';
+import '../../test/support/fakes.dart';
 import 'audit_scene.dart';
 
 /// Takes one capture: [name] is the file name without `.png`; [boundary] wraps
@@ -56,6 +58,14 @@ Future<SceneRun> runScene(
   final run = SceneRun(scene, locale);
   final original = FlutterError.onError;
   FlutterError.onError = (details) => run.errors.add(describeError(details));
+  // The integration test binding leaves the fake keyboard uninstalled ("to test
+  // real IME input"), so on the phone `enterText`, and a field with `autofocus`,
+  // would raise the phone's own keyboard and its inset would resize the screen
+  // under the capture. The scenes want what the widget tests get: text goes in,
+  // no keyboard shows.
+  final keyboard = tester.testTextInput;
+  final fakeKeyboard = !keyboard.isRegistered;
+  if (fakeKeyboard) keyboard.register();
   ProviderContainer? container;
   try {
     // Prices read "425 د.إ" in Arabic (the app root sets this from the store).
@@ -70,7 +80,13 @@ Future<SceneRun> runScene(
         wishlist: setup.wishlist,
         features: setup.features,
         hubApp: setup.hubApp,
-        overrides: setup.overrides,
+        // No scene may reach the server: the token-less client, which the Hub
+        // Market App data (stores, deals, brands, the Home sections) goes
+        // through, is a fake unless the scene brings its own.
+        overrides: [
+          publicGraphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+          ...setup.overrides,
+        ],
       ),
     );
     final router = auditRouter(
@@ -113,9 +129,18 @@ Future<SceneRun> runScene(
     try {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
+      // Host only: a timer a screen started (the splash's hold, a countdown)
+      // fires after the screen is gone; let the fake clock run it out, or the
+      // test ends with a pending timer.
+      if (tester.binding is! LiveTestWidgetsFlutterBinding) {
+        await tester.pump(const Duration(seconds: 3));
+      }
       tester.takeException();
     } catch (_) {}
     container?.dispose();
+    // After the tree is gone, so its fields close their connections through the
+    // fake keyboard.
+    if (fakeKeyboard) keyboard.unregister();
     FlutterError.onError = original;
   }
   return run;
