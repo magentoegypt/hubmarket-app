@@ -16,6 +16,7 @@ import '../bundle_deals_controller.dart';
 import '../widgets/bundle_card.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
+import '../widgets/star_glyph.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro (the Home's
@@ -365,9 +366,7 @@ class _Stars extends StatelessWidget {
       children: [
         for (var star = 1; star <= 5; star++) ...[
           if (star > 1) const SizedBox(width: 2),
-          Icon(
-            Icons.star_rounded,
-            size: 12,
+          StarGlyph(
             color: star <= lit ? AppColors.ratingStar : AppColors.ratingEmpty,
           ),
         ],

@@ -14,6 +14,7 @@ import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
+import '../../../deals/presentation/widgets/star_glyph.dart';
 import '../../domain/store.dart';
 
 /// Opens [store]'s page, handing over the card so the header paints at once.
@@ -174,7 +175,7 @@ class StoreRatingLine extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star_rounded, size: 12, color: AppColors.ratingStar),
+        const StarGlyph(),
         const SizedBox(width: 4),
         Text(
           formatStoreRating(store.rating!),

@@ -34,6 +34,7 @@ import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../../catalog/presentation/widgets/product_skeletons.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../../catalog/presentation/widgets/sort_sheet.dart';
+import '../../../deals/presentation/widgets/star_glyph.dart';
 import '../../domain/store.dart';
 import '../store_products_controller.dart';
 import '../store_reviews_controller.dart';
@@ -984,11 +985,7 @@ class _StoreRow extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    size: 12,
-                    color: AppColors.ratingStar,
-                  ),
+                  const StarGlyph(),
                   const SizedBox(width: 4),
                   Text(
                     formatStoreRating(store.rating!),
