@@ -4,16 +4,19 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/config/free_shipping.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
 import '../../../catalog/domain/product.dart';
 import '../../../catalog/domain/product_detail.dart';
 import '../../../catalog/domain/product_preview.dart';
+import '../../../catalog/presentation/low_stock_text.dart';
 import '../cart_controller.dart';
-import '../../../../core/widgets/hub_bottom_sheet.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// What was just added, as the sheet shows it.
 class AddedItem {
@@ -23,10 +26,13 @@ class AddedItem {
     this.imageUrl,
     this.unitPrice,
     this.options = const <String>[],
+    this.onlyLeft,
+    this.onlyLeftOption,
   });
 
   /// From the product page: the chosen variant's image and price, and the
-  /// chosen options as "Size: M", like the cart lines.
+  /// chosen options as "Size: M", like the cart lines — and how many of that
+  /// variant are left, when the store says.
   factory AddedItem.fromDetail(
     ProductDetail product,
     Map<String, int> selection,
@@ -46,6 +52,8 @@ class AddedItem {
             if (value.valueIndex == selection[option.attributeCode])
               '${option.label}: ${value.label}',
       ],
+      onlyLeft: product.onlyLeftFor(selection),
+      onlyLeftOption: product.stockOptionLabel(selection),
     );
   }
 
@@ -62,6 +70,12 @@ class AddedItem {
   final String? imageUrl;
   final Money? unitPrice;
   final List<String> options;
+
+  /// Units left of what was added (`only_x_left_in_stock`), with the option
+  /// they are of ("size M"): the sheet's "Only 3 left in size M". Null when the
+  /// store doesn't say.
+  final int? onlyLeft;
+  final String? onlyLeftOption;
 
   /// What this add put in the cart.
   Money? get amount => unitPrice == null
@@ -110,10 +124,14 @@ class AddedToCartSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final cart = ref.watch(cartControllerProvider.select((s) => s.cart));
     final threshold = ref.watch(freeShippingThresholdProvider).valueOrNull;
     final subtotal = cart.totals.subtotal;
     final router = GoRouter.maybeOf(context);
+    // The frame leaves 28 px under the buttons (the home-indicator zone); the
+    // sheet's wrapper already lifts the content by the device's own inset.
+    final inset = MediaQueryData.fromView(View.of(context)).padding.bottom;
 
     // Close the sheet, then go on from the page underneath it.
     void leaveTo(String location, {Object? extra}) {
@@ -121,124 +139,85 @@ class AddedToCartSheet extends ConsumerWidget {
       router?.push(location, extra: extra);
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final blocks = <Widget>[
+      // Figma "Bottom sheet" handle: 40 × 4, `border/strong`.
+      Center(
+        child: Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.borderStrong,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+      Row(
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderStrong,
-                borderRadius: BorderRadius.circular(2),
-              ),
+          Container(
+            width: 28,
+            height: 28,
+            decoration: const BoxDecoration(
+              color: AppColors.successStrong,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(HubIcons.check, size: 16, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              l10n.cartAdded,
+              style: t.heading2.copyWith(color: AppColors.inkHeading),
             ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
-                  color: AppColors.successStrong,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(HubIcons.check, size: 16, color: Colors.white),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.cartAdded,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.inkHeading,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(HubIcons.x, size: 22),
-                color: AppColors.inkHeading,
-                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
+          HubIconButton(
+            icon: HubIcons.x,
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          const SizedBox(height: 14),
-          _AddedItemCard(item: item),
-          if (threshold != null && subtotal != null) ...[
-            const SizedBox(height: 14),
-            _FreeShippingProgress(subtotal: subtotal, threshold: threshold),
-          ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.cartSubtotalItems(cart.itemCount),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.inkMuted,
-                  ),
-                ),
-              ),
-              Text(
-                subtotal?.formatted() ?? '—',
-                textDirection: TextDirection.ltr,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkHeading,
-                ),
-              ),
-            ],
+        ],
+      ),
+      _AddedItemCard(item: item),
+      if (threshold != null && subtotal != null)
+        _FreeShippingProgress(subtotal: subtotal, threshold: threshold),
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.cartSubtotalItems(cart.itemCount),
+              style: t.body.copyWith(color: AppColors.inkSubtle),
+            ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => leaveTo(AppRoutes.cart),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.brandPrimary,
-                    minimumSize: const Size.fromHeight(52),
-                    side: const BorderSide(
-                      color: AppColors.brandPrimary,
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: _buttonText(context),
-                  ),
-                  child: Text(l10n.cartViewCart),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => leaveTo(AppRoutes.checkout),
-                  style: FilledButton.styleFrom(
-                    textStyle: _buttonText(context),
-                  ),
-                  child: Text(l10n.cartCheckout),
-                ),
-              ),
-            ],
+          Text(
+            subtotal?.formatted() ?? '—',
+            textDirection: TextDirection.ltr,
+            style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
           ),
-          if (recommendations.isNotEmpty) ...[
-            const SizedBox(height: 18),
+        ],
+      ),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => leaveTo(AppRoutes.cart),
+              child: Text(l10n.cartViewCart),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: FilledButton(
+              onPressed: () => leaveTo(AppRoutes.checkout),
+              child: Text(l10n.cartCheckout),
+            ),
+          ),
+        ],
+      ),
+      if (recommendations.isNotEmpty)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Text(
               l10n.cartAlsoLike,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkHeading,
-              ),
+              style: t.title.copyWith(color: AppColors.inkHeading),
             ),
             const SizedBox(height: 10),
             // A plain scrolling row rather than a fixed-height list: the
@@ -263,19 +242,28 @@ class AddedToCartSheet extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+    ];
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(16, 8, 16, (28 - inset).clamp(0, 28)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < blocks.length; i++) ...[
+            if (i > 0) const SizedBox(height: 14),
+            blocks[i],
+          ],
         ],
       ),
     );
   }
-
-  /// Figma "EN/Button" on the theme's face — a bare TextStyle would replace the
-  /// theme's and lose the locale font.
-  static TextStyle? _buttonText(BuildContext context) => Theme.of(
-    context,
-  ).textTheme.labelLarge?.copyWith(fontSize: 15, fontWeight: FontWeight.w700);
 }
 
-/// The added product: image, name, options + quantity, and what it added.
+/// The added product (Figma "item"): its 64 px photo, the name, the options and
+/// quantity, "Only 3 left in size M" in red when the store says so, and what the
+/// add put in the cart.
 class _AddedItemCard extends StatelessWidget {
   const _AddedItemCard({required this.item});
 
@@ -284,7 +272,9 @@ class _AddedItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final amount = item.amount;
+    final left = item.onlyLeft;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -309,20 +299,20 @@ class _AddedItemCard extends StatelessWidget {
                   item.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.inkHeading,
-                  ),
+                  style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   [...item.options, l10n.itemQty(item.quantity)].join(' · '),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.inkMuted,
-                  ),
+                  style: t.caption.copyWith(color: AppColors.inkMuted),
                 ),
+                if (left != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    lowStockText(l10n, left, item.onlyLeftOption),
+                    style: t.captionStrong.copyWith(color: AppColors.danger),
+                  ),
+                ],
               ],
             ),
           ),
@@ -331,11 +321,7 @@ class _AddedItemCard extends StatelessWidget {
             Text(
               amount.formatted(),
               textDirection: TextDirection.ltr,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.inkHeading,
-              ),
+              style: t.price.copyWith(color: AppColors.inkHeading),
             ),
           ],
         ],
@@ -345,7 +331,7 @@ class _AddedItemCard extends StatelessWidget {
 }
 
 /// "Add AED 7 more for free shipping" with its bar — or, past the threshold,
-/// the unlocked line with a full bar.
+/// the unlocked line with a full bar (Figma "free-shipping").
 class _FreeShippingProgress extends StatelessWidget {
   const _FreeShippingProgress({
     required this.subtotal,
@@ -360,6 +346,7 @@ class _FreeShippingProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final unlocked = subtotal.amount >= threshold;
     final remaining = Money(
       amount: (threshold - subtotal.amount).clamp(0.0, threshold),
@@ -381,11 +368,7 @@ class _FreeShippingProgress extends StatelessWidget {
                 unlocked
                     ? l10n.cartFreeDeliveryUnlocked
                     : l10n.cartFreeDeliveryRemaining(remaining.formatted()),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkHeading,
-                ),
+                style: t.captionStrong.copyWith(color: AppColors.inkHeading),
               ),
             ),
           ],
@@ -407,7 +390,8 @@ class _FreeShippingProgress extends StatelessWidget {
   }
 }
 
-/// A "You might also like" tile: image, name, price.
+/// A "You might also like" tile (Figma "mini-card"): a 104 px photo with radius
+/// 12, the name in Caption over two lines, and the price in Caption Strong.
 class _MiniCard extends StatelessWidget {
   const _MiniCard({required this.product, required this.onTap});
 
@@ -416,6 +400,7 @@ class _MiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final price = product.finalPrice ?? product.regularPrice;
     return SizedBox(
       width: 104,
@@ -437,18 +422,14 @@ class _MiniCard extends StatelessWidget {
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: AppColors.inkHeading),
+              style: t.caption.copyWith(color: AppColors.inkHeading),
             ),
             if (price != null) ...[
               const SizedBox(height: 4),
               Text(
                 price.formatted(),
                 textDirection: TextDirection.ltr,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.inkHeading,
-                ),
+                style: t.captionStrong.copyWith(color: AppColors.inkHeading),
               ),
             ],
           ],
