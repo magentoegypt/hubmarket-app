@@ -28,7 +28,7 @@ would only show empty states.
 |---|---|---|
 | `01-home` | `/home` | Home as the admin has arranged it (search, delivery strip, hero, promo tiles, categories) |
 | `02-brands` | `/brands` | Brands: logos with product counts, the A-Z strip and brand search |
-| `03-category` | `/category/NTM=` | A category listing (Shoes): sub-categories, price and filter chips, ratings, discounts and the seller of each product |
+| `03-category` | `/category/MTQy` | A category listing (Men's Clothing): price and filter chips, ratings, discounts and the seller of each product |
 | `04-product` | `/product/dress-code-2156` | A product page with "Sold by", the store's rating and the price on the Add to Cart button |
 | `05-stores` | `/stores` | Stores: chips with counts, the featured store, ratings and product counts |
 | `06-store` | `/store/loly` | A store page: rating, products, "Contact vendor", tabs |
@@ -41,9 +41,15 @@ the store has real ones.
 
 The list is in `integration_test/screenshots_test.dart`; the category uid, the product url key, the
 store code and the search term are four constants in front of it, so re-pointing the shots at other
-content is a four-line change. A category or search shot waits 24 s: on the live server the
-category's own query and the search key are the slowest answers, and a shorter wait captured the
-page with the fallback title "Categories".
+content is a four-line change. Two things to know when picking them:
+
+- **Use a category from the menu tree.** The listing takes its title and sub-categories from the
+  tree the app loads, which holds only the categories the admin shows in the menu. Shoes and Bags
+  are not in it, so they were captured with the generic title "Categories" and no sub-category
+  strip. (Opened from a search result or a link, such a category still lists its products.)
+- **The live server is slow on the first call**, so the category, product and search shots wait
+  20-24 s. The test prints `IMAGES <shot>: n painted, m pending <urls>` for each shot, so a blank
+  photo in a capture shows up in the log.
 
 ## How to capture
 

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
@@ -71,6 +73,28 @@ void main() {
 
     final router = container.read(routerProvider);
 
+    // Says which network images have painted when a shot is taken, and which
+    // are still loading (with the URL they asked for): a blank photo in a
+    // capture is then one line in the log, not a guess.
+    void logImages(String name) {
+      final images = tester
+          .widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage))
+          .toList();
+      final pending = <String>[
+        for (final w in images)
+          if (find
+              .descendant(of: find.byWidget(w), matching: find.byType(RawImage))
+              .evaluate()
+              .isEmpty)
+            w.imageUrl,
+      ];
+      // ignore: avoid_print
+      print(
+        'IMAGES $name: ${images.length - pending.length} painted, '
+        '${pending.length} pending${pending.isEmpty ? '' : ' ${pending.join(' ')}'}',
+      );
+    }
+
     Future<void> shot(
       String name,
       String route, {
@@ -79,6 +103,7 @@ void main() {
     }) async {
       router.go(route, extra: extra);
       await settle(wait);
+      logImages(name);
       await binding.takeScreenshot('$locale-$name');
     }
 
@@ -93,21 +118,24 @@ void main() {
     //
     // The data-dependent routes use the live catalogue of 1 Oct 2026, picked
     // for how well it is photographed (the rest of it is test data, see
-    // docs/release/screenshots.md): the Shoes category (uid NTM=, "أحذية" in
-    // Arabic), one in-stock product with three gallery images ("Square-Neck
-    // Dress with Lapel"), the store "loly" and a search for "samsung". The
-    // category and search shots wait longer: the category's own query and the
-    // search key are the slowest answers of the live server. Point them at
-    // other content once the client's catalogue is in.
-    const category = '/category/NTM=';
+    // docs/release/screenshots.md): the Men's Clothing category (uid MTQy,
+    // "ملابس رجالية" in Arabic), one in-stock product with three gallery
+    // images ("Square-Neck Dress with Lapel"), the store "loly" and a search
+    // for "samsung". The category must be one of the menu tree's: the listing
+    // takes its title and sub-categories from it, so a category outside the
+    // menu (Shoes, Bags) is captured with the generic title "Categories". The
+    // category, product and search shots wait longer: the live server's own
+    // answers are slow there. Point them at other content once the client's
+    // catalogue is in.
+    const category = '/category/MTQy';
     const product = '/product/dress-code-2156';
     const store = '/store/loly';
     const searchTerm = 'samsung';
 
     await shot('01-home', '/home', wait: 10);
     await shot('02-brands', '/brands', wait: 14);
-    await shot('03-category', category, wait: 24);
-    await shot('04-product', product, wait: 12);
+    await shot('03-category', category, wait: 20);
+    await shot('04-product', product, wait: 22);
     await shot('05-stores', '/stores', wait: 12);
     await shot('06-store', store, wait: 12);
     await shot('07-search', '/search', wait: 24, extra: searchTerm);
