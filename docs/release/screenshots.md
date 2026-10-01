@@ -41,12 +41,8 @@ the store has real ones.
 
 The list is in `integration_test/screenshots_test.dart`; the category uid, the product url key, the
 store code and the search term are four constants in front of it, so re-pointing the shots at other
-content is a four-line change. Two things to know when picking them:
+content is a four-line change. One thing to know when picking them:
 
-- **Use a category from the menu tree.** The listing takes its title and sub-categories from the
-  tree the app loads, which holds only the categories the admin shows in the menu. Shoes and Bags
-  are not in it, so they were captured with the generic title "Categories" and no sub-category
-  strip. (Opened from a search result or a link, such a category still lists its products.)
 - **The live server is slow on the first call**, so the category, product and search shots wait
   20-24 s. The test prints `IMAGES <shot>: n painted, m pending <urls>` for each shot, so a blank
   photo in a capture shows up in the log.

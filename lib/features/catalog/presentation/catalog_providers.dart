@@ -25,8 +25,10 @@ final categoryTreeProvider = FutureProvider.autoDispose<List<Category>>((ref) {
 });
 
 /// Resolves a single category (top-level or nested) by uid from the already
-/// loaded tree — backs the sub-category drill-down without an extra fetch.
-final categoryByUidProvider = FutureProvider.autoDispose
+/// loaded menu tree — no request. Null for a category the tree does not hold:
+/// one the admin keeps out of the menu (`include_in_menu` 0: Shoes, Bags ...)
+/// or a uid nobody has. [categoryByUidProvider] goes on from there.
+final categoryInTreeProvider = FutureProvider.autoDispose
     .family<Category?, String>((ref, uid) async {
       final cats = await ref.watch(categoryTreeProvider.future);
       Category? find(List<Category> list) {
@@ -39,6 +41,24 @@ final categoryByUidProvider = FutureProvider.autoDispose
       }
 
       return find(cats);
+    });
+
+/// A category by uid, for what a listing draws from it: its title and its
+/// sub-category rail. From the menu tree when it is there (no request, backs
+/// the sub-category drill-down), otherwise fetched on its own: a banner link, a
+/// push notification or a website link opens `/category/<uid>` for any category,
+/// and one the menu leaves out used to come back as null, so its listing was
+/// titled "Categories" with no rail. A failed fetch is an error, as a failed
+/// tree is; the listing reads it as "no category" and draws the generic title.
+///
+/// Whoever must not wait for a request (the listing controller, which asks
+/// before it loads the first page of products) uses [categoryInTreeProvider].
+final categoryByUidProvider = FutureProvider.autoDispose
+    .family<Category?, String>((ref, uid) async {
+      final repository = ref.watch(catalogRepositoryProvider);
+      final inTree = await ref.watch(categoryInTreeProvider(uid).future);
+      if (inTree != null) return inTree;
+      return repository.fetchCategoryByUid(uid);
     });
 
 /// Product-image stand-ins for a set of categories, keyed by uid.
