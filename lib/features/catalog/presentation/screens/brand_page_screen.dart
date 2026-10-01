@@ -120,7 +120,8 @@ class _BrandPage extends ConsumerWidget {
         tooltip: l10n.navSearch,
         onPressed: () => context.push(AppRoutes.search),
       ),
-      if (brand.url.isNotEmpty)
+      if (brand.url.isNotEmpty) ...[
+        const SizedBox(width: 4), // the frames' 4 px between app bar items
         HubIconButton(
           icon: HubIcons.share2,
           tooltip: l10n.actionShare,
@@ -128,6 +129,7 @@ class _BrandPage extends ConsumerWidget {
             ShareParams(text: '${brand.title}\n${brand.url}'),
           ),
         ),
+      ],
     ];
     if (optionId == null) {
       return HubScaffold(

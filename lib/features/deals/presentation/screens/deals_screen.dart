@@ -350,35 +350,34 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
           ),
         ),
         // 8 above and 12 below the 24 px title, as Figma's header; Reset is a
-        // 32 px target centred on the same line.
-        DecoratedBox(
+        // 32 px target centred on the same line. A Container, so that the rule
+        // takes its pixel (Figma's border-box).
+        Container(
           decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
           ),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.filtersLabel,
-                    style: t.heading2.copyWith(color: AppColors.inkHeading),
-                  ),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.filtersLabel,
+                  style: t.heading2.copyWith(color: AppColors.inkHeading),
                 ),
-                TextButton(
-                  onPressed: () =>
-                      setState(() => _filters = const DealsFilters()),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.accentStrong,
-                    minimumSize: const Size(0, 32),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: t.bodyStrong,
-                  ),
-                  child: Text(l10n.filterResetLabel),
+              ),
+              TextButton(
+                onPressed: () =>
+                    setState(() => _filters = const DealsFilters()),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.accentStrong,
+                  minimumSize: const Size(0, 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: t.bodyStrong,
                 ),
-              ],
-            ),
+                child: Text(l10n.filterResetLabel),
+              ),
+            ],
           ),
         ),
         Flexible(
@@ -395,16 +394,14 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
             ),
           ),
         ),
-        DecoratedBox(
+        Container(
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: AppColors.borderSubtle)),
           ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, footerBottom),
-            child: HubButton(
-              label: l10n.filterApplyLabel,
-              onPressed: () => Navigator.of(context).pop(_filters),
-            ),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, footerBottom),
+          child: HubButton(
+            label: l10n.filterApplyLabel,
+            onPressed: () => Navigator.of(context).pop(_filters),
           ),
         ),
       ],

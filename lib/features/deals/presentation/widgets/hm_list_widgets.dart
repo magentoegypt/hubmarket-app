@@ -45,6 +45,8 @@ class HmTitleAppBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: l10n.navSearch,
               onPressed: () => context.push(AppRoutes.search),
             ),
+            // The frames' app bars space their children 4 px apart.
+            const SizedBox(width: 4),
             HubIconButton(
               icon: HubIcons.shoppingCart,
               tooltip: l10n.navCart,

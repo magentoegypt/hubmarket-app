@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/util/launch.dart';
+import 'package:hubmarket_app/core/widgets/hub_top_bar.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/product_card.dart';
 
 import '../../../support/hubapp_fakes.dart';
@@ -157,6 +158,61 @@ void main() {
         'in': [kHomeFurnitureUid],
       },
     });
+  });
+
+  testWidgets('Figma 13 / 13b: Products is the front page, the other tabs are '
+      'the inside pages', (tester) async {
+    await phoneSurface(tester, height: 1400);
+    await tester.pumpWidget(
+      storesHarness(
+        location: '/store/MIA',
+        backend: FakeStoresBackend(storesAnswers()),
+        hubApp: const HubAppState.available(kVendorsHmAppConfig),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The front page: the banner is the header, there is no app bar.
+    expect(find.byType(HubTopBar), findsNothing);
+    expect(find.text('Contact vendor'), findsOneWidget);
+
+    await tester.tap(find.text('About'));
+    await tester.pumpAndSettle();
+
+    // The inside page: the bar names the store, the store row says where it is
+    // and since when it sells, with its rating in a pill.
+    final bar = find.byType(HubTopBar);
+    expect(bar, findsOneWidget);
+    expect(
+      find.descendant(of: bar, matching: find.text('MIA CO')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Dubai, United Arab Emirates · Selling since Jun 2023'),
+      findsOneWidget,
+    );
+    expect(find.text('4.8'), findsOneWidget);
+    expect(find.text('Contact vendor'), findsNothing);
+    // Four equal columns, the labels centred in them.
+    for (final (i, label) in [
+      'Products',
+      'Reviews',
+      'About',
+      'Policies',
+    ].indexed) {
+      expect(
+        tester.getCenter(find.text(label)).dx,
+        closeTo(390 * (2 * i + 1) / 8, 1),
+        reason: label,
+      );
+    }
+
+    // Products brings the front page back.
+    await tester.tap(find.text('Products'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HubTopBar), findsNothing);
+    expect(find.text('Contact vendor'), findsOneWidget);
+    expect(find.text('Search MIA CO products'), findsOneWidget);
   });
 
   testWidgets('Policies: the seller\'s HTML drawn natively; links stay in', (
