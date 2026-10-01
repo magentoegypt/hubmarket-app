@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/domain/customer_address.dart';
+import '../../../auth/presentation/widgets/auth_field.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Step 1 cards (Figma 17 / 17a): the guest's contact card, the saved-address
 /// picker, "Ship to" and the shipping methods.
@@ -18,14 +19,17 @@ class ContactCard extends StatelessWidget {
   const ContactCard({
     super.key,
     required this.email,
-    required this.focusNode,
+    required this.onEmailFocusChange,
     required this.registeredEmail,
     required this.onSignIn,
     required this.onForgotPassword,
   });
 
   final TextEditingController email;
-  final FocusNode focusNode;
+
+  /// The email field gained (`true`) or lost focus: leaving it asks the store
+  /// whether the address has an account.
+  final ValueChanged<bool> onEmailFocusChange;
 
   /// The address the store reported as having an account. The prompt shows
   /// while the field still holds it.
@@ -39,42 +43,31 @@ class ContactCard extends StatelessWidget {
     return CheckoutCard(
       title: l10n.checkoutContactTitle,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.checkoutEmailLabel, style: CheckoutText.captionStrong),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: email,
-              focusNode: focusNode,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-              decoration: InputDecoration(
-                hintText: l10n.authEmailHint,
-                prefixIcon: const Icon(
-                  HubIcons.mail,
-                  size: 20,
-                  color: AppColors.inkMuted,
-                ),
-              ),
-              validator: (v) => Validators.email(context, v),
-            ),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: email,
-              builder: (context, value, _) =>
-                  registeredEmail != null &&
-                      value.text.trim() == registeredEmail
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: _ExistingAccountNote(
-                        onSignIn: onSignIn,
-                        onForgotPassword: onForgotPassword,
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
+        // Focus follows the field inside it; this node only listens.
+        Focus(
+          canRequestFocus: false,
+          skipTraversal: true,
+          onFocusChange: onEmailFocusChange,
+          child: AuthField(
+            controller: email,
+            label: l10n.checkoutEmailLabel,
+            icon: HubIcons.mail,
+            hint: l10n.authEmailHint,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            ltrInput: true,
+            validator: (v) => Validators.email(context, v),
+          ),
+        ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: email,
+          builder: (context, value, _) =>
+              registeredEmail != null && value.text.trim() == registeredEmail
+              ? _ExistingAccountNote(
+                  onSignIn: onSignIn,
+                  onForgotPassword: onForgotPassword,
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );
@@ -93,6 +86,7 @@ class _ExistingAccountNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -110,35 +104,41 @@ class _ExistingAccountNote extends StatelessWidget {
               children: [
                 Text(
                   l10n.checkoutExistingAccount,
-                  style: CheckoutText.bodyStrong.copyWith(
-                    color: AppColors.info,
-                  ),
+                  style: t.bodyStrong.copyWith(color: AppColors.info),
                 ),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 14,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    FilledButton(
-                      onPressed: onSignIn,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 30),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        shape: const StadiumBorder(),
-                        textStyle: checkoutButtonText(
-                          context,
-                          fontSize: 12,
-                        )?.copyWith(fontWeight: FontWeight.w600),
+                    // The "Sign in" pill: 28 px, navy, Caption Strong in white.
+                    Material(
+                      color: AppColors.brandPrimary,
+                      shape: const StadiumBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: onSignIn,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            l10n.checkoutSignIn,
+                            style: t.captionStrong.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                       ),
-                      child: Text(l10n.checkoutSignIn),
                     ),
                     InkWell(
                       onTap: onForgotPassword,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Text(
                           l10n.checkoutForgotPassword,
-                          style: CheckoutText.link.copyWith(fontSize: 12),
+                          style: t.linkSmall,
                         ),
                       ),
                     ),
@@ -176,6 +176,7 @@ class SavedAddressPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -205,19 +206,16 @@ class SavedAddressPicker extends StatelessWidget {
               const Icon(
                 HubIcons.mapPinPlus,
                 size: 18,
-                color: AppColors.brandPrimary,
+                color: AppColors.accentStrong,
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  l10n.checkoutUseNewAddress,
-                  style: CheckoutText.bodyStrong,
-                ),
+                child: Text(l10n.checkoutUseNewAddress, style: t.bodyStrong),
               ),
             ],
           ),
         ),
-        if (useNew) ...[const SizedBox(height: 14), newAddressForm],
+        if (useNew) ...[const SizedBox(height: 12), newAddressForm],
       ],
     );
   }
@@ -231,6 +229,7 @@ class _AddressSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     final label = address.labelText;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,7 +241,7 @@ class _AddressSummary extends StatelessWidget {
                 address.fullName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: CheckoutText.bodyStrong,
+                style: t.bodyStrong,
               ),
             ),
             if (label != null && label.isNotEmpty) ...[
@@ -257,16 +256,17 @@ class _AddressSummary extends StatelessWidget {
         ),
         if (address.telephone.isNotEmpty) ...[
           const SizedBox(height: 2),
-          Text(displayPhone(address.telephone), style: CheckoutText.caption),
+          Text(displayPhone(address.telephone), style: t.caption),
         ],
         const SizedBox(height: 2),
-        Text(address.summary, style: CheckoutText.caption),
+        Text(address.summary, style: t.caption),
       ],
     );
   }
 }
 
-/// The small grey pill after "Ship to" — the address label ("Home").
+/// The small grey pill after "Ship to" — the address label ("Home"): muted
+/// ground, Micro text, 8 px of side padding.
 class AddressLabelChip extends StatelessWidget {
   const AddressLabelChip({super.key, required this.label});
 
@@ -279,14 +279,7 @@ class AddressLabelChip extends StatelessWidget {
       color: AppColors.surfaceSubtle,
       borderRadius: BorderRadius.circular(999),
     ),
-    child: Text(
-      label,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: AppColors.inkMuted,
-      ),
-    ),
+    child: Text(label, style: CheckoutText.of(context).micro),
   );
 }
 
@@ -301,9 +294,10 @@ class ShipToCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     final label = shipTo.label;
     return CheckoutCard(
-      spacing: 6,
+      spacing: 8,
       children: [
         Row(
           children: [
@@ -313,7 +307,7 @@ class ShipToCard extends StatelessWidget {
               color: AppColors.accentStrong,
             ),
             const SizedBox(width: 8),
-            Text(l10n.checkoutShipTo, style: CheckoutText.title),
+            Text(l10n.checkoutShipTo, style: t.title),
             if (label != null && label.isNotEmpty) ...[
               const SizedBox(width: 8),
               AddressLabelChip(label: label),
@@ -324,9 +318,9 @@ class ShipToCard extends StatelessWidget {
         ),
         Text(
           '${shipTo.name} · ${displayPhone(shipTo.telephone)}',
-          style: CheckoutText.bodyStrong,
+          style: t.bodyStrong,
         ),
-        Text(shipTo.address, style: CheckoutText.bodyMuted),
+        Text(shipTo.address, style: t.bodyMuted),
       ],
     );
   }
@@ -348,12 +342,13 @@ class ShippingMethodsCard extends StatelessWidget {
   final ValueChanged<ShippingMethodOption> onSelect;
 
   /// Magento's free-shipping minimum; null (the row hides) when the store
-  /// publishes none — Hub Market today.
+  /// publishes none.
   final Money? freeShippingOver;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     return CheckoutCard(
       title: l10n.checkoutShippingMethodTitle,
       spacing: 10,
@@ -370,10 +365,10 @@ class ShippingMethodsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(m.title, style: CheckoutText.bodyStrong),
+                      Text(m.title, style: t.bodyStrong),
                       if (m.detail.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(m.detail, style: CheckoutText.caption),
+                        Text(m.detail, style: t.caption),
                       ],
                     ],
                   ),
@@ -382,7 +377,7 @@ class ShippingMethodsCard extends StatelessWidget {
                 m.isFree
                     ? Text(
                         l10n.cartDeliveryFree,
-                        style: CheckoutText.bodyStrong.copyWith(
+                        style: t.bodyStrong.copyWith(
                           color: AppColors.successStrong,
                         ),
                       )
@@ -402,9 +397,7 @@ class ShippingMethodsCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   l10n.checkoutFreeShippingOver(freeShippingOver!.formatted()),
-                  style: CheckoutText.caption.copyWith(
-                    color: AppColors.successStrong,
-                  ),
+                  style: t.caption.copyWith(color: AppColors.successStrong),
                 ),
               ),
             ],

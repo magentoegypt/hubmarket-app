@@ -5,42 +5,47 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/address/regions.dart';
 import '../../../../core/config/backend_capabilities.dart';
 import '../../../../core/config/free_shipping.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/address_form.dart';
 import '../../../../core/widgets/failure_message.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/data/account_repository.dart';
 import '../../../account/domain/customer_address.dart';
-import '../../../account/presentation/widgets/postcode_field.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
+import '../../domain/payment_refusal.dart';
 import '../../domain/shipping_address_input.dart';
 import '../checkout_controller.dart';
 import '../checkout_credit_controller.dart';
+import '../widgets/checkout_address_form.dart';
+import '../widgets/checkout_packages_card.dart';
 import '../widgets/checkout_parts.dart';
 import '../widgets/checkout_review_step.dart';
 import '../widgets/checkout_shipping_step.dart';
 import '../widgets/guest_verify_card.dart';
+import '../widgets/payment_failed_sheet.dart';
 import '../widgets/payment_method_tile.dart';
 import '../widgets/store_credit_row.dart';
 import 'order_success_screen.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Checkout in three steps (Figma 17 → 18 → 18b), ending on Order placed (19):
 ///
 /// 1. **Shipping** — a guest gives an email and the address (17a); a customer
-///    starts from their default saved address. Then "Ship to" and the shipping
-///    methods Magento offers for it (17).
+///    starts from their default saved address. Then "Ship to", the shipping
+///    methods Magento offers for it and the packages the order ships in (17).
 /// 2. **Payment** — the methods the app can take (cash on delivery on Hub
 ///    Market) and the order summary (18).
 /// 3. **Review** — address, method, payment, items and totals, then Place
-///    order (18b).
+///    order (18b). When the store refuses the payment, the "Payment declined"
+///    sheet (S5) offers the ways on.
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -51,7 +56,6 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _emailFocus = FocusNode();
   late final AddressFormController _address;
 
   /// Only shown (and sent) when the store requires a postcode for the UAE.
@@ -95,7 +99,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _address.fullName.text = '${customer.firstName} ${customer.lastName}'
           .trim();
     }
-    _emailFocus.addListener(_onEmailFocus);
     // Start every checkout from a clean slate. The checkout controller is a
     // session-wide singleton, so without this a second checkout in the same
     // session (or a checkout after logout) inherits the previous order's
@@ -110,8 +113,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   void dispose() {
-    _emailFocus.removeListener(_onEmailFocus);
-    _emailFocus.dispose();
     _email.dispose();
     _address.dispose();
     _postcode.dispose();
@@ -123,10 +124,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   bool get _isGuest => !ref.read(authControllerProvider).isAuthenticated;
 
+  /// The locale's comma, for the address on one line.
+  String get _comma =>
+      Localizations.localeOf(context).languageCode == 'ar' ? '، ' : ', ';
+
   /// Leaving the email field asks the store whether the address already has an
   /// account (17a's sign-in prompt).
-  void _onEmailFocus() {
-    if (!mounted || _emailFocus.hasFocus || !_isGuest) return;
+  void _onEmailFocusChange(bool hasFocus) {
+    if (!mounted || hasFocus || !_isGuest) return;
     final email = _email.text.trim();
     if (Validators.email(context, email) != null) return;
     _controller.checkGuestEmail(email);
@@ -136,28 +141,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// `region_id` when it has UAE regions, otherwise as the free-text `region`
   /// name (Hub Market has none — see [regionInput]); the single Full Name is
   /// split into firstname/lastname and the apartment line becomes `street[1]`.
+  /// `city` is the Area the shopper typed, or the emirate's name without one.
   Map<String, dynamic> _addressInput() {
     final name = _address.splitName();
     final postcode = _postcode.text.trim();
+    final regions = ref.read(regionsProvider).valueOrNull ?? const [];
     return <String, dynamic>{
       'firstname': name.first,
       'lastname': name.last,
       'telephone': _address.e164Phone(),
       'street': _address.streetLines(),
-      'city': _address.area.text.trim(),
+      'city': CheckoutAddressForm.cityFor(_address, regions),
       'country_code': addressCountryCode,
       ...regionInput(
         regionId: _address.regionId.value,
-        regions: ref.read(regionsProvider).valueOrNull ?? const [],
+        regions: regions,
         fallbackName: _address.region.text,
       ),
       if (postcode.isNotEmpty) 'postcode': postcode,
     };
   }
 
-  /// The typed address on one line — street, apartment, emirate — as the Ship
-  /// to and Review cards show it.
-  String _typedAddressLine() {
+  /// The typed address on one line, as the Ship to and Review cards show it:
+  /// apartment, street, area, emirate, country.
+  String _typedAddressLine(AppLocalizations l10n) {
     var emirate = _address.region.text.trim();
     final regions = ref.read(regionsProvider).valueOrNull ?? const [];
     for (final r in regions) {
@@ -166,21 +173,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         break;
       }
     }
-    return [
-      ..._address.streetLines(),
-      emirate,
-    ].where((p) => p.isNotEmpty).join(', ');
+    return shipToAddressLine(
+      apartment: _address.apartment.text,
+      street: _address.street.text,
+      area: _address.area.text,
+      emirate: emirate,
+      country: l10n.checkoutAddressCountry,
+      separator: _comma,
+    );
   }
+
+  /// A saved address on one line, in the same order.
+  String _savedAddressLine(CustomerAddress a, AppLocalizations l10n) =>
+      shipToAddressLine(
+        apartment: a.apartment,
+        street: a.street,
+        area: a.city,
+        emirate: a.region.isNotEmpty ? a.region : a.city,
+        country: l10n.checkoutAddressCountry,
+        separator: _comma,
+      );
 
   /// The new-address form: the shared fields plus, when the store requires
   /// one for the UAE, a postcode.
-  Widget _newAddressForm() => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      AddressForm(controller: _address),
-      PostcodeField(controller: _postcode),
-    ],
-  );
+  Widget _newAddressForm() =>
+      CheckoutAddressForm(controller: _address, postcode: _postcode);
 
   /// Default shipping address id (or the first) from the saved list.
   int? _defaultId(List<CustomerAddress> list) {
@@ -217,7 +234,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       shipTo: ShipTo(
         name: _address.fullName.text.trim(),
         telephone: telephone,
-        address: _typedAddressLine(),
+        address: _typedAddressLine(AppLocalizations.of(context)),
       ),
     );
   }
@@ -232,7 +249,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     shipTo: ShipTo(
       name: a.fullName,
       telephone: a.telephone,
-      address: a.summary,
+      address: _savedAddressLine(a, AppLocalizations.of(context)),
       label: a.labelText,
     ),
   );
@@ -300,7 +317,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           before.shipTo?.firstName;
       final packages = placedPackagesOf(ref.read(cartControllerProvider).cart);
       final result = await _controller.placeOrder();
-      if (!mounted || result == null) return;
+      if (!mounted) return;
+      if (result == null) {
+        await _orderRefused(before);
+        return;
+      }
       // Every method checkout offers completes on placeOrder (payableInApp):
       // cash on delivery, Zero Subtotal `free`, check / money order.
       context.go(
@@ -315,6 +336,47 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       );
     } finally {
       if (mounted) setState(() => _placing = false);
+    }
+  }
+
+  /// The store refused the order. A payment refusal opens the "Payment
+  /// declined" sheet (Figma S5) with the ways on; any other refusal — stock, an
+  /// address it rejects, the connection — is the one-line message it always was.
+  Future<void> _orderRefused(CheckoutState before) async {
+    final l10n = AppLocalizations.of(context);
+    final error = ref.read(checkoutControllerProvider).error;
+    if (error == null) return;
+    final reason = paymentRefusalReason(error);
+    final failed = before.selectedPayment;
+    if (reason == null || failed == null) {
+      _snack(serverMessageOr(context, error, l10n.errorGeneric));
+      return;
+    }
+    final others = [
+      for (final m in before.paymentMethods)
+        if (m.code != failed.code) m,
+    ];
+    PaymentMethodOption? cod;
+    for (final m in others) {
+      if (m.isCashOnDelivery) cod = m;
+    }
+    final action = await showPaymentFailedSheet(
+      context,
+      methodTitle: failed.title,
+      reason: reason,
+      canTryAnotherMethod: others.isNotEmpty,
+      canPayCashOnDelivery: cod != null,
+    );
+    if (!mounted) return;
+    switch (action) {
+      case PaymentFailedAction.tryAnotherMethod:
+        _controller.goTo(CheckoutStep.payment);
+      case PaymentFailedAction.payCashOnDelivery:
+        if (cod != null) await _selectPayment(cod);
+      case PaymentFailedAction.backToCart:
+        context.go(AppRoutes.cart);
+      case null:
+        break;
     }
   }
 
@@ -371,12 +433,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     // Surface the store's own message when Magento refuses a step (an address
     // it rejects, an out-of-stock item at placeOrder) instead of a blanket
-    // "Something went wrong" (QA: "check api").
+    // "Something went wrong" (QA: "check api"). A refused Place order is
+    // handled by [_placeOrder] itself, which may open the payment sheet.
     ref.listen<Object?>(checkoutControllerProvider.select((s) => s.error), (
       previous,
       next,
     ) {
-      if (next != null && !identical(previous, next)) {
+      if (next != null && !identical(previous, next) && !_placing) {
         _snack(serverMessageOr(context, next, l10n.errorGeneric));
       }
     });
@@ -402,20 +465,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         },
         child: Scaffold(
           backgroundColor: AppColors.surfaceSubtle,
-          appBar: AppBar(
-            toolbarHeight: 56,
-            centerTitle: false,
-            titleSpacing: 0,
-            scrolledUnderElevation: 0,
-            leading: IconButton(
-              icon: const Icon(HubIcons.arrowLeft, size: 22),
-              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              onPressed: busy ? null : _onBack,
-            ),
-            title: Text(
-              l10n.checkoutTitle,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
+          appBar: HubTopBar(
+            title: l10n.checkoutTitle,
+            showBack: true,
+            onBack: () {
+              if (!busy) _onBack();
+            },
           ),
           bottomNavigationBar: _footer(
             l10n,
@@ -522,7 +577,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           if (isGuest) ...[
             ContactCard(
               email: _email,
-              focusNode: _emailFocus,
+              onEmailFocusChange: _onEmailFocusChange,
               registeredEmail: state.registeredEmail,
               onSignIn: () => context.push(AppRoutes.signIn),
               onForgotPassword: () => context.push(AppRoutes.forgotPassword),
@@ -569,7 +624,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         error: (_, _) => _newAddressForm(),
       );
 
-  /// 17: where it ships, and how.
+  /// 17: where it ships, how, and in how many packages.
   List<Widget> _shippingChoices(
     AppLocalizations l10n,
     CheckoutState state,
@@ -602,7 +657,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ? null
             : Money(amount: threshold, currency: currency),
       ),
+      // One package per store (HubApp); nothing without it.
+      if (packageCountOf(cart) != null) CheckoutPackagesCard(cart: cart),
     ];
+  }
+
+  /// "4 items · 2 packages" beside the summary's title (the packages part only
+  /// when the lines name their stores).
+  String _summaryCount(AppLocalizations l10n, Cart cart) {
+    final items = l10n.cartItemCount(cart.itemCount);
+    final packages = packageCountOf(cart);
+    return packages == null
+        ? items
+        : '$items · ${l10n.checkoutPackageCount(packages)}';
   }
 
   /// 18: the methods the app can take, and the order summary.
@@ -613,11 +680,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   ) => [
     Text(
       l10n.checkoutPaymentMethodTitle,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: AppColors.inkHeading,
-      ),
+      style: CheckoutText.of(context).heading2,
     ),
     // "Use my credit" (HubAppAccount), while the customer can spend some.
     if (ref.watch(checkoutCreditProvider.select((s) => s.offered)))
@@ -630,7 +693,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ),
     CheckoutTotalsCard(
       title: l10n.checkoutOrderSummaryTitle,
-      trailing: l10n.cartItemCount(cart.itemCount),
+      trailing: _summaryCount(l10n, cart),
+      spacing: 10,
       cart: cart,
       shipping: state.selectedShipping,
       grandTotal: state.grandTotal,
@@ -643,20 +707,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     CheckoutState state,
     Cart cart,
   ) {
-    final isEn = Localizations.localeOf(context).languageCode != 'ar';
     final payment = state.selectedPayment;
     return [
-      Text(
-        l10n.checkoutReviewTitle,
-        style: TextStyle(
-          // Playfair Display has no Arabic glyphs; Arabic keeps the theme's
-          // face.
-          fontFamily: isEn ? AppTheme.displayFont : null,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-          color: AppColors.inkHeading,
-        ),
-      ),
+      Text(l10n.checkoutReviewTitle, style: CheckoutText.of(context).heading1),
       ReviewShippingCard(
         shipTo: state.shipTo,
         method: state.selectedShipping,
@@ -687,14 +740,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     required bool showEditor,
     required bool needsGuestOtp,
   }) {
+    final t = CheckoutText.of(context);
     final total = state.grandTotal ?? cart.totals.grandTotal;
+    // The "encrypted" line belongs to a payment taken online; cash on delivery
+    // and a free order have nothing to encrypt.
+    final online = state.selectedPayment?.isOnline ?? false;
     switch (state.step) {
       case CheckoutStep.shipping:
         if (showEditor) {
           return CheckoutFooter(
             children: [
               FilledButton(
-                style: checkoutButtonStyle(context),
                 onPressed: busy ? null : _submitAddress,
                 child: Text(l10n.checkoutContinueToShipping),
               ),
@@ -706,13 +762,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             CheckoutAmountRow(
               label: l10n.checkoutTotalInclShipping,
               value: total?.formatted() ?? '—',
-              valueStyle: CheckoutText.price,
+              valueStyle: t.price,
             ),
             if (needsGuestOtp)
               Text(
                 l10n.checkoutVerifyMobileTitle,
                 textAlign: TextAlign.center,
-                style: CheckoutText.caption,
+                style: t.caption,
               ),
             // The store offers only methods the app can't take yet (an online
             // gateway): say so rather than leave a dead button.
@@ -722,10 +778,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text(
                 l10n.checkoutNoPaymentMethods,
                 textAlign: TextAlign.center,
-                style: CheckoutText.caption,
+                style: t.caption,
               ),
             FilledButton(
-              style: checkoutButtonStyle(context),
               onPressed: (busy || !state.shippingDone || needsGuestOtp)
                   ? null
                   : _controller.continueToPayment,
@@ -735,9 +790,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
       case CheckoutStep.payment:
         return CheckoutFooter(
+          spacing: 10,
           children: [
+            if (online) CheckoutSecureNote(l10n.checkoutPaymentsEncrypted),
             FilledButton.icon(
-              style: checkoutButtonStyle(context),
               onPressed: (busy || !state.paymentDone)
                   ? null
                   : _controller.continueToReview,
@@ -748,9 +804,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
       case CheckoutStep.review:
         return CheckoutFooter(
+          spacing: 10,
           children: [
+            if (online) CheckoutSecureNote(l10n.checkoutPaymentSecure),
             FilledButton.icon(
-              style: checkoutButtonStyle(context),
               onPressed:
                   (busy ||
                       needsGuestOtp ||

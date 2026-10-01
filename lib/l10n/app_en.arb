@@ -654,7 +654,27 @@
       }
     }
   },
-  "cartHeading": "My Cart",
+  "cartHeading": "My cart",
+  "cartSelect": "Select",
+  "cartSelectAll": "Select all",
+  "cartSelectNone": "Deselect all",
+  "cartSelectedCount": "{count} selected",
+  "@cartSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartRemoveSelected": "Remove ({count})",
+  "@cartRemoveSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartRemove": "Remove",
   "cartItemCount": "{count, plural, =0{No items} =1{1 item} other{{count} items}}",
   "@cartItemCount": {
     "placeholders": {
@@ -681,10 +701,11 @@
     }
   },
   "cartSecureCheckout": "Proceed To Checkout",
-  "cartEmptyTitle": "Your bag is empty",
+  "cartEmptyTitle": "Your cart is empty",
   "cartEmptyBody": "Looks like you haven't added anything yet. Items you add will show up here.",
+  "cartEmptyWishlist": "View wishlist",
   "cartContinueShopping": "Continue shopping",
-  "cartStartShopping": "Start Shopping",
+  "cartStartShopping": "Start shopping",
   "cartOrderSummary": "Order Summary",
   "cartSubtotal": "Subtotal",
   "cartSubtotalCount": "Subtotal ({count, plural, =1{1 item} other{{count} items}})",
@@ -704,7 +725,9 @@
     }
   },
   "cartDiscount": "Discount",
+  "cartYouSave": "You save",
   "cartDelivery": "Delivery",
+  "cartShippingEstimated": "Shipping (estimated)",
   "cartDeliveryFree": "FREE",
   "cartDeliveryCalculated": "Calculated at checkout",
   "cartFreeDeliveryUnlocked": "You've unlocked free delivery!",
@@ -716,9 +739,19 @@
       }
     }
   },
+  "cartFreeShippingUnlocked": "You've unlocked free shipping!",
+  "cartFreeShippingRemaining": "Add {amount} more for free shipping",
+  "@cartFreeShippingRemaining": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "cartTotal": "Total",
   "cartCheckout": "Checkout",
-  "cartCouponHint": "Gift or promo code",
+  "cartCouponLabel": "Order coupon",
+  "cartCouponHint": "Discount code",
   "cartApply": "Apply",
   "cartCouponCopied": "Promo code copied",
   "cartCouponApplied": "{code} applied",
@@ -1199,6 +1232,51 @@
     "description": "Words inside <terms>…</terms>, <privacy>…</privacy> or <cookies>…</cookies> link to that page of the store (CMS block hm_footer_legal): keep the tags around the translated words."
   },
   "checkoutFreeOrder": "No payment needed — your order total is free",
+  "checkoutFieldFullName": "Full name",
+  "checkoutFieldMobile": "Mobile number",
+  "checkoutFieldEmirate": "Emirate",
+  "checkoutFieldArea": "Area",
+  "checkoutFieldStreet": "Street & building",
+  "checkoutFieldApartment": "Apartment / villa",
+  "checkoutAddressCountry": "UAE",
+  "checkoutShipsInPackages": "{count, plural, =1{Your order ships in 1 package} other{Your order ships in {count} packages}}",
+  "@checkoutShipsInPackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkoutPackageCount": "{count, plural, =1{1 package} other{{count} packages}}",
+  "@checkoutPackageCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "checkoutPaymentsEncrypted": "Payments are encrypted by our payment partner",
+  "checkoutPaymentSecure": "Your payment information is encrypted and secure",
+  "paymentFailedTitle": "Payment declined",
+  "paymentFailedBody": "We couldn't take the payment with {method}. You haven't been charged — your cart and delivery choices are saved.",
+  "@paymentFailedBody": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentFailedReason": "Reason: {reason}",
+  "@paymentFailedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentFailedTryAnother": "Try another method",
+  "paymentFailedPayCod": "Pay cash on delivery",
+  "paymentFailedBackToCart": "Back to cart",
   "countryUae": "United Arab Emirates",
   "savedCardsTitle": "Payment Methods",
   "savedCardsEmptyTitle": "No saved cards",

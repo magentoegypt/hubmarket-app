@@ -58,7 +58,11 @@ void main() {
       find.text('Sara Ahmed · \u2066+971 50 123 4567\u2069'),
       findsOneWidget,
     );
-    expect(find.text('Marina Gate 2, Apt 1204, Dubai'), findsOneWidget);
+    // The frame's order: apartment, street, area, emirate, country.
+    expect(
+      find.text('1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+      findsOneWidget,
+    );
     expect(find.text('Standard delivery'), findsOneWidget);
     expect(find.text('Express delivery'), findsOneWidget);
     expect(find.text('Contact'), findsNothing);
