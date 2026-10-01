@@ -27,17 +27,23 @@ would only show empty states.
 | File | Route | Shows |
 |---|---|---|
 | `01-home` | `/home` | Home as the admin has arranged it (search, delivery strip, hero, promo tiles, categories) |
-| `02-deals` | `/deals` | Today's Deals: countdown, department chips, sort and filters |
-| `03-category` | `/category/MTQw` | A category listing (Fashion) with its sub-categories |
+| `02-brands` | `/brands` | Brands: logos with product counts, the A-Z strip and brand search |
+| `03-category` | `/category/NTM=` | A category listing (Shoes): sub-categories, price and filter chips, ratings, discounts and the seller of each product |
 | `04-product` | `/product/dress-code-2156` | A product page with "Sold by", the store's rating and the price on the Add to Cart button |
 | `05-stores` | `/stores` | Stores: chips with counts, the featured store, ratings and product counts |
 | `06-store` | `/store/loly` | A store page: rating, products, "Contact vendor", tabs |
-| `07-bundles` | `/bundles` | Bundle deals with the saving on each |
+| `07-search` | `/search` (the term in `extra`) | Search results for "samsung", answered by Algolia like the website |
 | `08-categories` | `/categories` | Category tiles |
 
-The list is in `integration_test/screenshots_test.dart`; the category uid, the product url key and
-the store code are three constants at the top of it, so re-pointing the shots at other content is a
-three-line change.
+Today's Deals and Bundle deals were in the 30 Sep list; they are out of it because the live deals
+and the only bundle are test items (a black "Test" picture). Put `/deals` and `/bundles` back once
+the store has real ones.
+
+The list is in `integration_test/screenshots_test.dart`; the category uid, the product url key, the
+store code and the search term are four constants in front of it, so re-pointing the shots at other
+content is a four-line change. A category or search shot waits 24 s: on the live server the
+category's own query and the search key are the slowest answers, and a shorter wait captured the
+page with the fallback title "Categories".
 
 ## How to capture
 

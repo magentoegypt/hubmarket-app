@@ -71,8 +71,13 @@ void main() {
 
     final router = container.read(routerProvider);
 
-    Future<void> shot(String name, String route, {int wait = 8}) async {
-      router.go(route);
+    Future<void> shot(
+      String name,
+      String route, {
+      int wait = 8,
+      Object? extra,
+    }) async {
+      router.go(route, extra: extra);
       await settle(wait);
       await binding.takeScreenshot('$locale-$name');
     }
@@ -86,23 +91,26 @@ void main() {
     // out on purpose: a fresh install has nothing in them, so they would only
     // show empty states.
     //
-    // The three data-dependent routes use the live catalogue of 30 Sep 2026,
-    // which is test data: the Fashion category (uid MTQw, "أزياء" in Arabic),
-    // one of its in-stock products ("Square-Neck Dress with Lapel", three
-    // gallery images) and the store "loly". Point them at real, well
-    // photographed content once the client's catalogue is in
-    // (docs/release/screenshots.md).
-    const category = '/category/MTQw';
+    // The data-dependent routes use the live catalogue of 1 Oct 2026, picked
+    // for how well it is photographed (the rest of it is test data, see
+    // docs/release/screenshots.md): the Shoes category (uid NTM=, "أحذية" in
+    // Arabic), one in-stock product with three gallery images ("Square-Neck
+    // Dress with Lapel"), the store "loly" and a search for "samsung". The
+    // category and search shots wait longer: the category's own query and the
+    // search key are the slowest answers of the live server. Point them at
+    // other content once the client's catalogue is in.
+    const category = '/category/NTM=';
     const product = '/product/dress-code-2156';
     const store = '/store/loly';
+    const searchTerm = 'samsung';
 
     await shot('01-home', '/home', wait: 10);
-    await shot('02-deals', '/deals', wait: 12);
-    await shot('03-category', category, wait: 12);
+    await shot('02-brands', '/brands', wait: 14);
+    await shot('03-category', category, wait: 24);
     await shot('04-product', product, wait: 12);
     await shot('05-stores', '/stores', wait: 12);
     await shot('06-store', store, wait: 12);
-    await shot('07-bundles', '/bundles', wait: 12);
+    await shot('07-search', '/search', wait: 24, extra: searchTerm);
     await shot('08-categories', '/categories', wait: 8);
   }, timeout: const Timeout(Duration(minutes: 10)));
 }
