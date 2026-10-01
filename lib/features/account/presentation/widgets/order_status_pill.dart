@@ -33,45 +33,40 @@ class StatusPill extends StatelessWidget {
     super.key,
     required this.label,
     this.verticalPadding = 3,
-  })
-    : background = AppColors.infoSubtle,
-      foreground = AppColors.info;
+  }) : background = AppColors.infoSubtle,
+       foreground = AppColors.info;
 
   /// Waiting on the store: new, being prepared.
   const StatusPill.warning({
     super.key,
     required this.label,
     this.verticalPadding = 3,
-  })
-    : background = AppColors.warningSubtle,
-      foreground = AppColors.warning;
+  }) : background = AppColors.warningSubtle,
+       foreground = AppColors.warning;
 
   /// Done: delivered, complete.
   const StatusPill.success({
     super.key,
     required this.label,
     this.verticalPadding = 3,
-  })
-    : background = AppColors.successSubtle,
-      foreground = AppColors.successStrong;
+  }) : background = AppColors.successSubtle,
+       foreground = AppColors.successStrong;
 
   /// Cancelled, closed, refused.
   const StatusPill.danger({
     super.key,
     required this.label,
     this.verticalPadding = 3,
-  })
-    : background = AppColors.dangerSurface,
-      foreground = AppColors.danger;
+  }) : background = AppColors.dangerSurface,
+       foreground = AppColors.danger;
 
   /// No tone: on hold, or a status the app does not know.
   const StatusPill.neutral({
     super.key,
     required this.label,
     this.verticalPadding = 3,
-  })
-    : background = AppColors.surfaceMuted,
-      foreground = AppColors.inkMuted;
+  }) : background = AppColors.surfaceMuted,
+       foreground = AppColors.inkMuted;
 
   /// A return the customer has open on the package (the frames' "RETURN IN
   /// PROGRESS", purple on the page grey).
@@ -79,9 +74,8 @@ class StatusPill extends StatelessWidget {
     super.key,
     required this.label,
     this.verticalPadding = 3,
-  })
-    : background = AppColors.surfaceSubtle,
-      foreground = kReturnsInk;
+  }) : background = AppColors.surfaceSubtle,
+       foreground = kReturnsInk;
 
   @override
   Widget build(BuildContext context) {

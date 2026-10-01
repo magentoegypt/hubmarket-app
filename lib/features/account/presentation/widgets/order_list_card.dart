@@ -144,14 +144,18 @@ class OrderListCard extends ConsumerWidget {
                           l10n.orderNumber(order.number),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: t.title.copyWith(color: context.scaffoldHeading),
+                          style: t.title.copyWith(
+                            color: context.scaffoldHeading,
+                          ),
                         ),
                         Text(
                           '${orderFmtDate(order.date, locale, storeZone)} · '
                           '${l10n.orderItemCount(order.itemCount)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: t.caption.copyWith(color: context.scaffoldMuted),
+                          style: t.caption.copyWith(
+                            color: context.scaffoldMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -214,7 +218,9 @@ class OrderListCard extends ConsumerWidget {
         : openReturns.any(
             (r) => returnSellerKey(r.seller) == returnSellerKey(view.seller),
           );
-    if (returnOpen) return StatusPill.returns(label: l10n.orderReturnInProgress);
+    if (returnOpen) {
+      return StatusPill.returns(label: l10n.orderReturnInProgress);
+    }
     final package = view.package;
     if (package != null && package.statusLabel.trim().isNotEmpty) {
       return OrderPackageStatusPill(package: package);
@@ -260,7 +266,9 @@ class _PackageRow extends StatelessWidget {
                     seller.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
+                    style: t.bodyStrong.copyWith(
+                      color: context.scaffoldHeading,
+                    ),
                   ),
                   const SizedBox(height: 4),
                 ],

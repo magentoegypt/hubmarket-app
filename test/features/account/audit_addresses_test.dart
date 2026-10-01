@@ -43,8 +43,8 @@ class _AddressBook extends FakeAccountRepository {
 
   /// The store's `address_label` options.
   @override
-  Future<List<({String value, String label})>> fetchAddressLabelOptions() async =>
-      locale == 'ar'
+  Future<List<({String value, String label})>>
+  fetchAddressLabelOptions() async => locale == 'ar'
       ? const [
           (value: '1', label: 'المنزل'),
           (value: '2', label: 'العمل'),
@@ -109,14 +109,13 @@ void main() {
 
   testWidgets('24 Saved addresses: the radio cards', (tester) async {
     final book = _AddressBook(_book('en'));
-    await pumpAudit(
-      tester,
-      screen: const AddressesScreen(),
-      account: book,
-    );
+    await pumpAudit(tester, screen: const AddressesScreen(), account: book);
     expect(find.text('Addresses'), findsOneWidget);
     expect(find.text('DEFAULT'), findsOneWidget);
-    expect(find.text('Sara Ahmed · \u2066+971 50 123 4567\u2069'), findsNWidgets(2));
+    expect(
+      find.text('Sara Ahmed · \u2066+971 50 123 4567\u2069'),
+      findsNWidgets(2),
+    );
     expect(
       find.text('Apt 1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
       findsOneWidget,
@@ -162,7 +161,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(ar ? 'دبي' : 'Dubai').last);
       await tester.pumpAndSettle();
-      await tester.enterText(fields.at(2), ar ? 'مارينا جيت 2' : 'Marina Gate 2');
+      await tester.enterText(
+        fields.at(2),
+        ar ? 'مارينا جيت 2' : 'Marina Gate 2',
+      );
       await tester.enterText(fields.at(3), '1204');
       await tester.tap(find.text(ar ? 'المنزل' : 'Home').last);
       await tester.tap(
@@ -234,7 +236,10 @@ void main() {
     );
     expect(find.text('Edit address'), findsOneWidget);
     final fields = find.byType(TextField);
-    expect(tester.widget<TextField>(fields.at(0)).controller!.text, 'Sara Ahmed');
+    expect(
+      tester.widget<TextField>(fields.at(0)).controller!.text,
+      'Sara Ahmed',
+    );
     expect(
       tester.widget<TextField>(fields.at(1)).controller!.text,
       '+971 50 123 4567',

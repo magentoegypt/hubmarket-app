@@ -64,12 +64,63 @@ Product _product(
 List<Product> _products(String locale, {bool sellerKnown = true}) {
   final ar = locale == 'ar';
   return [
-    _product('sofa', ar ? 'كنبة سرير ركنه' : 'Corner Sofa Bed', 'MIA CO', 4.6, 18, 425, was: 500, sellerKnown: sellerKnown),
-    _product('dress', ar ? 'فستان صدر طباعة الأزهار رباط مشد خصر' : 'Floral Print Corset-Waist Tie Dress', 'loly store', 4.3, 27, 50, sellerKnown: sellerKnown),
-    _product('chair', ar ? 'كرسي هزاز عنابي' : 'Burgundy Rocking Chair', 'MIA CO', 4.7, 21, 180, sellerKnown: sellerKnown),
-    _product('milk', ar ? 'حليب كامل الدسم جهينة 1 لتر' : 'Juhayna Full Cream Milk 1 L', 'walmart', 4.7, 96, 35, sellerKnown: sellerKnown),
-    _product('polo', ar ? 'قميص بولو' : 'Polo Shirt', 'loly store', 4.5, 33, 13, sellerKnown: sellerKnown),
-    _product('desk', ar ? 'مكتب مدير عصري 160 سم' : 'Modern Executive Desk 160 cm', 'MIA CO', 4.5, 7, 350, sellerKnown: sellerKnown),
+    _product(
+      'sofa',
+      ar ? 'كنبة سرير ركنه' : 'Corner Sofa Bed',
+      'MIA CO',
+      4.6,
+      18,
+      425,
+      was: 500,
+      sellerKnown: sellerKnown,
+    ),
+    _product(
+      'dress',
+      ar
+          ? 'فستان صدر طباعة الأزهار رباط مشد خصر'
+          : 'Floral Print Corset-Waist Tie Dress',
+      'loly store',
+      4.3,
+      27,
+      50,
+      sellerKnown: sellerKnown,
+    ),
+    _product(
+      'chair',
+      ar ? 'كرسي هزاز عنابي' : 'Burgundy Rocking Chair',
+      'MIA CO',
+      4.7,
+      21,
+      180,
+      sellerKnown: sellerKnown,
+    ),
+    _product(
+      'milk',
+      ar ? 'حليب كامل الدسم جهينة 1 لتر' : 'Juhayna Full Cream Milk 1 L',
+      'walmart',
+      4.7,
+      96,
+      35,
+      sellerKnown: sellerKnown,
+    ),
+    _product(
+      'polo',
+      ar ? 'قميص بولو' : 'Polo Shirt',
+      'loly store',
+      4.5,
+      33,
+      13,
+      sellerKnown: sellerKnown,
+    ),
+    _product(
+      'desk',
+      ar ? 'مكتب مدير عصري 160 سم' : 'Modern Executive Desk 160 cm',
+      'MIA CO',
+      4.5,
+      7,
+      350,
+      sellerKnown: sellerKnown,
+    ),
   ];
 }
 

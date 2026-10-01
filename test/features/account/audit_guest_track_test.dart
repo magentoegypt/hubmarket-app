@@ -127,7 +127,11 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
     expect(find.text('Track order'), findsOneWidget);
     expect(find.text(l10n.guestTrackHeading), findsOneWidget);
-    for (final label in ['Order number', 'Billing last name', 'Email address']) {
+    for (final label in [
+      'Order number',
+      'Billing last name',
+      'Email address',
+    ]) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('Find order'), findsOneWidget);
@@ -152,10 +156,11 @@ void main() {
     await _fillAndFind(tester, 'en');
 
     // Sent as typed (the device then re-reads the order it remembers).
-    expect(
-      repo.lookups.first,
-      (number: 'HM-100248', email: 'sara.ahmed@gmail.com', lastname: 'Ahmed'),
-    );
+    expect(repo.lookups.first, (
+      number: 'HM-100248',
+      email: 'sara.ahmed@gmail.com',
+      lastname: 'Ahmed',
+    ));
     expect(find.text('Order #HM-100248'), findsOneWidget);
     expect(find.text('OUT FOR DELIVERY'), findsOneWidget);
     expect(

@@ -36,8 +36,13 @@ OrderPackage _package(
   ],
 );
 
-OrderLine _line(String name, String uid, HmSellerSummary store) =>
-    OrderLine(name: name, quantity: 1, sku: 'SKU-$uid', seller: store, uid: uid);
+OrderLine _line(String name, String uid, HmSellerSummary store) => OrderLine(
+  name: name,
+  quantity: 1,
+  sku: 'SKU-$uid',
+  seller: store,
+  uid: uid,
+);
 
 List<CustomerOrder> _orders(String locale) {
   final ar = locale == 'ar';
@@ -67,12 +72,10 @@ List<CustomerOrder> _orders(String locale) {
           const ['a'],
           shipped: true,
         ),
-        _package(
-          mia,
-          ar ? 'قيد التجهيز' : 'Processing',
-          'new',
-          const ['b', 'c'],
-        ),
+        _package(mia, ar ? 'قيد التجهيز' : 'Processing', 'new', const [
+          'b',
+          'c',
+        ]),
       ],
     ),
     // Delivered by walmart.
@@ -91,12 +94,11 @@ List<CustomerOrder> _orders(String locale) {
         _line('Water', 'f', walmart),
       ],
       packages: [
-        _package(
-          walmart,
-          ar ? 'تم التوصيل' : 'Delivered',
-          'complete',
-          const ['d', 'e', 'f'],
-        ),
+        _package(walmart, ar ? 'تم التوصيل' : 'Delivered', 'complete', const [
+          'd',
+          'e',
+          'f',
+        ]),
       ],
     ),
     // A return open on it.
@@ -110,12 +112,9 @@ List<CustomerOrder> _orders(String locale) {
       total: _aed(43),
       lines: [_line('Short Square-Neck T-Shirt', 'g', loly)],
       packages: [
-        _package(
-          loly,
-          ar ? 'تم التوصيل' : 'Delivered',
-          'complete',
-          const ['g'],
-        ),
+        _package(loly, ar ? 'تم التوصيل' : 'Delivered', 'complete', const [
+          'g',
+        ]),
       ],
     ),
   ];
@@ -241,9 +240,7 @@ void main() {
       boundary: key,
       screen: const OrdersScreen(),
       settle: false,
-      overrides: [
-        ordersControllerProvider.overrideWith(_LoadingOrders.new),
-      ],
+      overrides: [ordersControllerProvider.overrideWith(_LoadingOrders.new)],
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

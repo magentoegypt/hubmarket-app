@@ -93,7 +93,9 @@ CustomerOrder _order(String locale, {bool cancel = true}) {
                 carrierCode: 'aramex',
                 carrierTitle: 'Aramex',
                 number: '3345 1182',
-                trackingUrl: Uri.parse('https://www.aramex.com/track/3345-1182'),
+                trackingUrl: Uri.parse(
+                  'https://www.aramex.com/track/3345-1182',
+                ),
               ),
             ],
           ),
@@ -110,14 +112,142 @@ CustomerOrder _order(String locale, {bool cancel = true}) {
   );
 }
 
+/// The orders the frame does not draw, from the same lines.
+List<(String, CustomerOrder)> _variants(String locale) {
+  final base = _order(locale);
+  final ar = locale == 'ar';
+  final longName = ar
+      ? 'كرسي طعام بارجل ذهبية معدنية وتنجيد مخملي فاخر بلون أزرق سماوي'
+      : 'Dining Chair with Gold Metal Legs and Premium Velvet Upholstery in Sky Blue';
+  // The server did not split it: one list, the order's own timeline and note.
+  final unsplit = CustomerOrder(
+    number: base.number,
+    status: ar ? 'قيد التنفيذ' : 'Processing',
+    date: base.date,
+    id: base.id,
+    availableActions: const {'CANCEL'},
+    invoiceCount: 1,
+    total: base.total,
+    subtotal: base.subtotal,
+    shippingAmount: base.shippingAmount,
+    discount: _aed(25),
+    discountLabel: ar ? 'خصم الإطلاق' : 'Launch offer',
+    paymentMethodName: ar ? 'الدفع عند الاستلام' : 'Cash on delivery',
+    shippingName: base.shippingName,
+    shippingAddress: base.shippingAddress,
+    billingName: ar ? 'أحمد' : 'Ahmed Hassan',
+    billingAddress: ar
+        ? 'مكتب 12، برج الخليج، دبي'
+        : 'Office 12, Gulf Tower, Dubai',
+    lines: [
+      for (final l in base.lines)
+        OrderLine(
+          name: l.name,
+          quantity: l.quantity,
+          price: l.price,
+          sku: l.sku,
+          options: l.options,
+        ),
+    ],
+    trackings: const [
+      OrderTracking(title: 'Standard', number: '3345 1182', carrier: 'aramex'),
+    ],
+    comments: const [
+      OrderComment(message: 'Packed', timestamp: '2026-09-28 16:05:00'),
+      OrderComment(
+        message: 'Handed to Aramex',
+        timestamp: '2026-09-29 09:10:00',
+      ),
+    ],
+    shipmentCount: 1,
+  );
+  CustomerOrder withStatus(
+    String status,
+    String state, {
+    bool shipped = true,
+  }) => CustomerOrder(
+    number: base.number,
+    status: status,
+    date: base.date,
+    id: base.id,
+    availableActions: const {'REORDER'},
+    invoiceCount: 1,
+    shipmentCount: shipped ? 1 : 0,
+    total: base.total,
+    subtotal: base.subtotal,
+    paymentMethodName: base.paymentMethodName,
+    shippingName: base.shippingName,
+    shippingAddress: base.shippingAddress,
+    lines: base.lines,
+    packages: [
+      for (final p in base.packages)
+        OrderPackage(
+          seller: p.seller,
+          statusCode: state,
+          statusLabel: status,
+          state: state,
+          itemUids: p.itemUids,
+          shipments: shipped ? p.shipments : const [],
+        ),
+    ],
+  );
+  final long = CustomerOrder(
+    number: base.number,
+    status: base.status,
+    date: base.date,
+    id: base.id,
+    paymentMethodName: 'Visa •••• 4242 (Emirates NBD Platinum Credit)',
+    shippingName: ar
+        ? 'سارة أحمد عبد الرحمن المنصوري'
+        : 'Sara Ahmed Abdulrahman Al Mansoori',
+    shippingAddress: ar
+        ? 'شقة 1204، برج مارينا غيت 2، شارع المارينا، دبي مارينا، دبي، الإمارات العربية المتحدة'
+        : 'Apt 1204, Marina Gate Tower 2, Marina Walk Street, Dubai Marina, Dubai, United Arab Emirates',
+    subtotal: _aed(12345.5),
+    shippingAmount: _aed(10),
+    total: _aed(12355.5),
+    lines: [
+      OrderLine(
+        name: longName,
+        quantity: 12,
+        price: _aed(1028.8),
+        options: [
+          ar ? 'اللون: أزرق سماوي فاتح جدا' : 'Colour: Very light sky blue',
+          ar ? 'المادة: مخمل' : 'Material: Velvet',
+        ],
+        seller: seller(
+          'verylongstore',
+          ar
+              ? 'متجر الأثاث العصري الفاخر للمنزل'
+              : 'The Modern Luxury Home Furniture Store',
+        ),
+        uid: 'x',
+      ),
+    ],
+  );
+  return [
+    ('an order the server did not split', unsplit),
+    ('a delivered order', withStatus(ar ? 'مكتمل' : 'Complete', 'complete')),
+    (
+      'a cancelled order',
+      withStatus(ar ? 'ملغي' : 'Canceled', 'canceled', shipped: false),
+    ),
+    (
+      'an order on hold',
+      withStatus(ar ? 'معلق' : 'On Hold', 'holded', shipped: false),
+    ),
+    ('long names and amounts', long),
+  ];
+}
+
 /// Both stores' phones: "Contact store" is drawn only for a store that has one.
 List<Override> _phones() => [
-  orderContactPhoneProvider('loly').overrideWithValue(
-    Uri.parse('tel:+971501234567'),
-  ),
-  orderContactPhoneProvider('mia').overrideWithValue(
-    Uri.parse('tel:+971507654321'),
-  ),
+  orderContactPhoneProvider(
+    'loly',
+  ).overrideWithValue(Uri.parse('tel:+971501234567')),
+  orderContactPhoneProvider(
+    'mia',
+  ).overrideWithValue(Uri.parse('tel:+971507654321')),
   // Magento's stamps are read as the device's own, whatever zone the machine
   // running the capture is in.
   storeTimezoneProvider.overrideWith((ref) async => ''),
@@ -141,6 +271,30 @@ void main() {
       await captureScreen(tester, key, 'audit_22_order_detail_$locale');
       expect(tester.takeException(), isNull);
     });
+  }
+
+  // Orders that are not the frame's: the page must still lay out at phone
+  // width (no overflow) in both languages — an order the server did not
+  // split, a delivered one, a cancelled one, one on hold, long names.
+  for (final locale in ['en', 'ar']) {
+    final variants = _variants(locale);
+    for (var i = 0; i < variants.length; i++) {
+      final (name, order) = variants[i];
+      testWidgets('22 Order detail: $name lays out ($locale)', (tester) async {
+        final key = GlobalKey();
+        await pumpAudit(
+          tester,
+          locale: locale,
+          boundary: key,
+          height: 1800,
+          screen: OrderDetailScreen(order: order),
+          overrides: _phones(),
+        );
+        await captureScreen(tester, key, 'audit_22_state${i}_$locale');
+        expect(tester.takeException(), isNull);
+        expect(find.byType(OrderDetailScreen), findsOneWidget);
+      });
+    }
   }
 
   testWidgets('22 Order detail: what the frame draws, from the backend', (
@@ -206,9 +360,9 @@ void main() {
       height: 1700,
       screen: OrderDetailScreen(order: _order('en')),
       overrides: [
-        orderContactPhoneProvider('mia').overrideWithValue(
-          Uri.parse('tel:+971507654321'),
-        ),
+        orderContactPhoneProvider(
+          'mia',
+        ).overrideWithValue(Uri.parse('tel:+971507654321')),
         storeTimezoneProvider.overrideWith((ref) async => ''),
       ],
     );

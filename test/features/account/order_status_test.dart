@@ -39,12 +39,17 @@ void main() {
   group('order status with the server\'s packages', () {
     test('delivered only when every package is complete', () {
       expect(
-        _order('مكتمل', [_package('complete'), _package('complete')]).isDelivered,
+        _order('مكتمل', [
+          _package('complete'),
+          _package('complete'),
+        ]).isDelivered,
         isTrue,
       );
       expect(
-        _order('Complete', [_package('complete'), _package('processing')])
-            .isDelivered,
+        _order('Complete', [
+          _package('complete'),
+          _package('processing'),
+        ]).isDelivered,
         isFalse,
       );
     });
