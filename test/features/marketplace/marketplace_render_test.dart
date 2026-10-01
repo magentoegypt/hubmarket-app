@@ -5,11 +5,16 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
+import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_buy_bar.dart';
+import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_sections.dart';
+import 'package:hubmarket_app/features/marketplace/presentation/other_sellers.dart';
+import 'package:hubmarket_app/features/marketplace/presentation/seller_widgets.dart';
 
 import '../../support/bundle_fixtures.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 import '../../support/marketplace_fakes.dart';
+import '../../support/pdp_fixtures.dart';
 import '../../support/store_credit_fakes.dart';
 import '../checkout/checkout_harness.dart' as checkout;
 import 'marketplace_harness.dart';
@@ -119,6 +124,7 @@ class _SellerCheckoutCart extends checkout.CheckoutCartRepository {
 
 void main() {
   setUpAll(loadAppFonts);
+  quietNetworkImages();
 
   Future<void> render(
     WidgetTester tester,
@@ -149,6 +155,8 @@ void main() {
     final n = _names(locale);
 
     testWidgets('14 product page with "Sold by" ($locale)', (tester) async {
+      // The whole of Figma 14 (390 x 2379, the buy bar at the foot): the
+      // dress in Beige floral, size M — three left — with two other sellers.
       await render(
         tester,
         (key) => marketplaceHarness(
@@ -156,36 +164,49 @@ void main() {
           location: AppRoutes.product('floral-dress'),
           boundary: key,
           catalogRepository: DetailRepository(
-            ProductDetail(
-              sku: 'LOLY-DR-0231',
-              name: n.dress,
-              urlKey: 'floral-dress',
-              typeId: 'simple',
-              regularPrice: aed(50),
-              finalPrice: aed(50),
-              ratingSummary: 86,
-              reviewCount: 27,
-              description: 'Polyester crepe.',
-            ),
+            floralDressDetail(locale: locale),
           ),
+          cmsBlocks: {
+            'hm_home_trust': locale == 'ar' ? kTrustBlockAr : kTrustBlockEn,
+          },
           publicAnswers: {
             'HmProductMarketplace': {
               'products': {
-                'items': [
-                  {
-                    'sku': 'LOLY-DR-0231',
-                    'hm_seller': sellerJson('loly', n.loly, rating: 4.3),
-                  },
-                ],
+                'items': [floralDressMarketplaceItem(locale: locale)],
               },
             },
           },
         ),
         'p3_14_sold_by_$locale',
-        height: 900,
+        height: locale == 'ar' ? 2479 : 2379,
         locale: locale,
+        before: () async {
+          await tester.tap(find.byKey(const ValueKey('pdp-option-color-11')));
+          await tester.tap(find.byKey(const ValueKey('pdp-option-size-23')));
+          await tester.pumpAndSettle();
+          // The blocks have the heights of the frame (English; 14 px apart).
+          double height(Finder f, [int index = 0]) =>
+              tester.getRect(f.at(index)).height;
+          if (locale == 'en') {
+            expect(height(find.byType(SoldByRow)), 48);
+            expect(height(find.byType(PdpPriceRow)), 30);
+            expect(height(find.byType(PdpOptionPicker), 0), 64);
+            expect(height(find.byType(PdpOptionPicker), 1), 68);
+            expect(height(find.byType(OtherSellersCard)), 170);
+            expect(height(find.byType(OfferTile)), 59);
+            expect(height(find.byType(PdpAccordion), 0), 51);
+            expect(height(find.byType(PdpAccordion), 1), 177);
+            expect(height(find.byType(PdpReviewsSection)), 276);
+          }
+        },
       );
-      expect(find.text(n.loly), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SoldByRow),
+          matching: find.text(n.loly),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('14b bundle page ($locale)', (tester) async {

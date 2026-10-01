@@ -22,7 +22,7 @@ import '../../domain/bundle_choice.dart';
 import '../../domain/bundle_product.dart';
 import '../../domain/money.dart';
 import '../../domain/product_detail.dart';
-import 'product_detail_screen.dart';
+import '../widgets/product_gallery.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
 import '../../../../app/theme/hub_icons.dart';
 

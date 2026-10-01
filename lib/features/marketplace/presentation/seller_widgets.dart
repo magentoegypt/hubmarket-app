@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/theme_x.dart';
 import '../../../core/assets/app_images.dart';
 import '../../../core/hubapp/hubapp.dart';
@@ -105,7 +106,8 @@ class _Initial extends StatelessWidget {
   );
 }
 
-/// The ✓ after an approved seller's name. The backend returns a seller only
+/// The ✓ (Figma "icon/verified", a ticked circle) after an approved seller's
+/// name. The backend returns a seller only
 /// once it is approved (`hm_seller` is null otherwise), so every named store
 /// carries it; Hub Market itself doesn't.
 class SellerVerifiedIcon extends StatelessWidget {
@@ -116,12 +118,14 @@ class SellerVerifiedIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     label: AppLocalizations.of(context).sellerVerified,
-    child: Icon(HubIcons.badgeCheck, size: size, color: AppColors.info),
+    child: Icon(HubIcons.circleCheck, size: size, color: AppColors.info),
   );
 }
 
-/// Figma 14 "Sold by" (16:1020): the seller's logo, name, ✓ and rating on a
-/// blue band, and "Visit store" to its page. The whole row opens the store.
+/// Figma 14 "sold-by" (16:1020): a `info-subtle` card with a 12 px radius — the
+/// seller's 28 px logo, "Sold by" (Caption, muted), the name in Body Strong and
+/// the vendor blue, the ✓, and at the end "Visit store" and a chevron. The
+/// whole row opens the store. (The frame carries no rating here.)
 class SoldByRow extends StatelessWidget {
   const SoldByRow({super.key, required this.seller});
 
@@ -130,7 +134,7 @@ class SoldByRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final rating = seller.rating;
+    final t = AppTextStyles.of(context);
     final canVisit = seller.storeCode != null;
     return Material(
       color: AppColors.infoSubtle,
@@ -144,51 +148,31 @@ class SoldByRow extends StatelessWidget {
             children: [
               SellerLogo(seller: seller, bordered: false),
               const SizedBox(width: 8),
+              Text(
+                l10n.pdpSoldBy,
+                style: t.caption.copyWith(color: AppColors.inkMuted),
+              ),
+              const SizedBox(width: 8),
               // The name gives way (ellipsis) to a long name or a large text
               // size; "Visit store ›" keeps its place at the end.
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      l10n.pdpSoldBy,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.inkMuted,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        seller.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.info,
-                        ),
-                      ),
-                    ),
-                    if (!seller.isMarketplace) ...[
-                      const SizedBox(width: 8),
-                      const SellerVerifiedIcon(),
-                    ],
-                    if (rating != null) ...[
-                      const SizedBox(width: 8),
-                      _Rating(rating: rating),
-                    ],
-                  ],
+              Flexible(
+                child: Text(
+                  seller.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.bodyStrong.copyWith(color: AppColors.info),
                 ),
               ),
+              if (!seller.isMarketplace) ...[
+                const SizedBox(width: 8),
+                const SellerVerifiedIcon(),
+              ],
+              const Spacer(),
               if (canVisit) ...[
                 const SizedBox(width: 8),
                 Text(
                   l10n.pdpVisitStore,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.info,
-                  ),
+                  style: t.captionStrong.copyWith(color: AppColors.info),
                 ),
                 const SizedBox(width: 8),
                 const Icon(
@@ -200,38 +184,6 @@ class SoldByRow extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// ★ 4.4 — a seller's rating out of 5.
-class _Rating extends StatelessWidget {
-  const _Rating({required this.rating});
-
-  final double rating;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = rating.toStringAsFixed(1);
-    return Semantics(
-      label: AppLocalizations.of(context).sellerRating(text),
-      excludeSemantics: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.star, size: 12, color: AppColors.accentGold),
-          const SizedBox(width: 2),
-          Text(
-            text,
-            textDirection: TextDirection.ltr,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.inkMuted,
-            ),
-          ),
-        ],
       ),
     );
   }

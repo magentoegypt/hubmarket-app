@@ -18,6 +18,7 @@ import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/search_screen.dart';
+import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_buy_bar.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
@@ -146,12 +147,13 @@ ProductDetail _bundle({bool inStock = true}) => ProductDetail(
   finalPrice: const Money(amount: 60.56, currency: 'AED'),
 );
 
-/// The sticky bar's Add to Cart button.
+/// The sticky bar's Add to cart button (a `FilledButton.icon`, a subclass:
+/// `find.byType` is an exact-type match, so it looks for the subtype by test).
 FilledButton _addToCart(WidgetTester tester, AppLocalizations l10n) =>
     tester.widget<FilledButton>(
       find.ancestor(
-        of: find.textContaining(l10n.productAddToCart),
-        matching: find.byType(FilledButton),
+        of: find.textContaining(l10n.pdpAddToCart),
+        matching: find.byWidgetPredicate((widget) => widget is FilledButton),
       ),
     );
 
@@ -180,24 +182,24 @@ void main() {
     expect(find.text('AED 299'), findsWidgets);
   });
 
-  testWidgets('reviews tab shows the empty state (store has zero reviews)', (
-    tester,
-  ) async {
+  testWidgets('"Ratings & reviews" shows the empty state (store has zero '
+      'reviews) and still invites the first one', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 3600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(_harness('en'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Reviews'));
-    await tester.pumpAndSettle();
-
+    expect(find.text('Ratings & reviews'), findsOneWidget);
     expect(find.text('No reviews yet'), findsOneWidget);
+    expect(find.text('Write a review'), findsOneWidget);
+    // No stars, no bars and no "See all" for reviews nobody wrote.
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.textContaining('See all'), findsNothing);
   });
 
-  testWidgets('reviews tab draws the per-star bars from the loaded reviews', (
-    tester,
-  ) async {
+  testWidgets('"Ratings & reviews" draws the per-star bars from the loaded '
+      'reviews', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 3600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -225,9 +227,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Reviews'));
-    await tester.pumpAndSettle();
-
     final bars = tester
         .widgetList<LinearProgressIndicator>(
           find.byType(LinearProgressIndicator),
@@ -236,10 +235,14 @@ void main() {
         .toList();
     // 5★ → 1★: two of three reviews are 5★, one is 4★.
     expect(bars, [0.67, 0.33, 0.0, 0.0, 0.0]);
-    expect(find.text('3 reviews'), findsOneWidget);
+    // The rating line under the title and the summary both say it.
+    expect(find.text('3 reviews'), findsNWidgets(2));
+    expect(find.text('See all 3'), findsOneWidget);
+    // The newest review, in its own card.
+    expect(find.text('Good value'), findsOneWidget);
   });
 
-  testWidgets('"You may also like" hides when the product links nothing', (
+  testWidgets('"Looking similar" hides when the product links nothing', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 3600));
@@ -248,10 +251,10 @@ void main() {
     await tester.pumpWidget(_harness('en'));
     await tester.pumpAndSettle();
 
-    expect(find.text('You may also like'), findsNothing);
+    expect(find.text('Looking similar'), findsNothing);
   });
 
-  testWidgets('"You may also like" lists the linked products', (tester) async {
+  testWidgets('"Looking similar" lists the linked products', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 3600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -272,8 +275,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('You may also like'), findsOneWidget);
+    expect(find.text('Looking similar'), findsOneWidget);
     expect(find.text('Sauvage EDT'), findsOneWidget);
+    // Without a category on the product there is nowhere for "See all" to go.
+    expect(find.text('See all'), findsNothing);
   });
 
   group('a bundle on the plain page (no Hub Market App bundles)', () {
@@ -327,7 +332,25 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(l10n.productOutOfStock), findsOneWidget);
+      // Under the rating, and on the bar's button.
+      expect(find.text(l10n.productOutOfStock), findsNWidgets(2));
+      expect(
+        find.descendant(
+          of: find.byType(PdpBuyBar),
+          matching: find.text(l10n.productOutOfStock),
+        ),
+        findsOneWidget,
+      );
+      final button = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.descendant(
+            of: find.byType(PdpBuyBar),
+            matching: find.text(l10n.productOutOfStock),
+          ),
+          matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
       expect(find.text(l10n.pdpBundleOnWebsite), findsNothing);
     });
 
@@ -349,7 +372,7 @@ void main() {
     });
   });
 
-  group('trust row from the hm_home_trust block', () {
+  group('delivery card from the hm_home_trust block', () {
     setUpAll(loadAppFonts);
 
     for (final locale in ['en', 'ar']) {
@@ -368,43 +391,71 @@ void main() {
         await tester.pumpAndSettle();
         await captureScreen(tester, key, 'pdp_trust_row_$locale');
 
+        // The card takes the block's delivery and returns items; the
+        // trust and payment ones are the Home's.
+        Finder icon(IconData data) => find.descendant(
+          of: find.byType(PdpTrustRow),
+          matching: find.byIcon(data),
+        );
         if (locale == 'ar') {
-          expect(find.text('بائعون موثوقون'), findsOneWidget);
-          expect(find.text('الدفع عند الاستلام وفيزا وماستركارد'), findsOneWidget);
+          expect(find.text('توصيل سريع'), findsOneWidget);
+          expect(find.text('لجميع المناطق'), findsOneWidget);
+          expect(find.text('بائعون موثوقون'), findsNothing);
+          expect(find.text('الدفع عند الاستلام وفيزا وماستركارد'), findsNothing);
           expect(find.text('شحن مجاني'), findsNothing);
+          expect(icon(HubIcons.truck), findsOneWidget);
         } else {
-          expect(find.text('Trusted Sellers'), findsOneWidget);
-          expect(find.text('Verified & approved'), findsOneWidget);
-          // A fourth item scrolls in from the edge.
+          expect(find.text('Fast Delivery'), findsOneWidget);
+          expect(find.text('Nationwide'), findsOneWidget);
           expect(find.text('Easy Returns'), findsOneWidget);
+          expect(find.text('14-day return policy'), findsOneWidget);
+          expect(find.text('Trusted Sellers'), findsNothing);
+          expect(find.text('Secure Payments'), findsNothing);
           // The app's old claims are gone.
           expect(find.text('Free'), findsNothing);
           expect(find.text('easy returns'), findsNothing);
-          // Glyphs follow each item's title first: "Secure Payments — Cash
-          // on delivery" is a card, not a truck.
-          Finder icon(IconData data) => find.descendant(
-            of: find.byType(PdpTrustRow),
-            matching: find.byIcon(data),
-          );
-          expect(icon(HubIcons.shieldCheck), findsOneWidget);
-          expect(icon(HubIcons.creditCard), findsOneWidget);
+          // Glyphs follow each item's title first.
           expect(icon(HubIcons.truck), findsOneWidget);
           expect(icon(HubIcons.rotateCcw), findsOneWidget);
+          expect(icon(HubIcons.shieldCheck), findsNothing);
+          expect(icon(HubIcons.creditCard), findsNothing);
         }
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('no block, no row', (tester) async {
+    testWidgets('no block, no card', (tester) async {
       await _phone(tester);
       // The CMS read fails in tests (offline client): nothing to show.
       await tester.pumpWidget(_harness('en'));
       await tester.pumpAndSettle();
 
+      expect(find.byType(PdpTrustRow), findsNothing);
       expect(find.text('Trusted Sellers'), findsNothing);
       expect(find.text('Free'), findsNothing);
       expect(find.text('Verified'), findsNothing);
       expect(find.text('14-day'), findsNothing);
+    });
+
+    testWidgets('a block with neither delivery nor returns draws no card', (
+      tester,
+    ) async {
+      await _phone(tester);
+      await tester.pumpWidget(
+        _harness(
+          'en',
+          cmsBlocks: {
+            'hm_home_trust':
+                '<div class="hm-trust"><div class="hm-trust__item">'
+                '<span class="hm-trust__title">Trusted Sellers</span>'
+                '<span class="hm-trust__text">Verified &amp; approved</span>'
+                '</div></div>',
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdpTrustRow), findsNothing);
     });
   });
 

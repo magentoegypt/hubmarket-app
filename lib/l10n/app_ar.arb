@@ -777,6 +777,32 @@
   "priceFrom": "ابتداءً من",
   "productAddToCart": "أضف إلى السلة",
   "productOutOfStock": "غير متوفّر",
+  "pdpAddToCart": "أضف إلى السلة",
+  "pdpInStock": "متوفر",
+  "pdpInclusiveVat": "شامل الضريبة",
+  "pdpOnlyLeft": "تبقّى {count} فقط",
+  "@pdpOnlyLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pdpOnlyLeftIn": "تبقّى {count} فقط من {option}",
+  "@pdpOnlyLeftIn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "pdpDescriptionMaterial": "الوصف والمواد",
+  "pdpSpecifications": "المواصفات",
+  "pdpRatingsReviews": "التقييمات والمراجعات",
+  "pdpLookingSimilar": "منتجات مشابهة",
   "productCardRating": "{count, plural, =0{التقييم {rating} من 5} =1{التقييم {rating} من 5، من تقييم واحد} =2{التقييم {rating} من 5، من تقييمين} few{التقييم {rating} من 5، من {count} تقييمات} other{التقييم {rating} من 5، من {count} تقييم}}",
   "productCardSoldBy": "يبيعه {seller}",
   "tabDetails": "التفاصيل",
@@ -827,7 +853,7 @@
   "bundleOutOfStock": "{item} غير متوفر — استبدله للمتابعة.",
   "bundleUnavailable": "لا يمكن إضافة الباقات من التطبيق حالياً.",
   "reviewsCount": "{count} تقييم",
-  "reviewsSeeAll": "عرض الكل {count}",
+  "reviewsSeeAll": "عرض الكل ({count})",
   "pdpRatingReviews": "{rating} · {count} تقييم",
   "menuShop": "تسوّق",
   "menuViewAll": "عرض الكل",

@@ -10,7 +10,10 @@ import '../../domain/product_detail.dart';
 /// Shared review UI for the product page, the Reviews screen (Figma 15) and
 /// My product reviews (Figma 20f).
 
-/// Five stars, the first [stars] filled.
+/// Five stars, the first [stars] filled: Figma "icon/star" in a [size] box (11,
+/// 12 or 14 px), 2 px apart, `rating-star` lit and `rating-empty` unlit. The
+/// frame's star fills 6/7 of its box; the Material glyph only 5/7 of its own,
+/// so it is drawn a fifth larger than the box and the box keeps the pitch.
 class ReviewStars extends StatelessWidget {
   const ReviewStars({super.key, required this.stars, this.size = 14});
 
@@ -21,12 +24,22 @@ class ReviewStars extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      for (var i = 1; i <= 5; i++)
-        Icon(
-          Icons.star_rounded,
-          size: size,
-          color: i <= stars ? AppColors.accentGold : const Color(0xFFD1D5DB),
+      for (var i = 1; i <= 5; i++) ...[
+        if (i > 1) const SizedBox(width: 2),
+        SizedBox(
+          width: size,
+          height: size,
+          child: OverflowBox(
+            maxWidth: size * 1.2,
+            maxHeight: size * 1.2,
+            child: Icon(
+              Icons.star_rounded,
+              size: size * 1.2,
+              color: i <= stars ? AppColors.ratingStar : AppColors.ratingEmpty,
+            ),
+          ),
         ),
+      ],
     ],
   );
 }

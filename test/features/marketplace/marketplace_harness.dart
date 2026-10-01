@@ -25,6 +25,7 @@ import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
+import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/store_credit/data/store_credit_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
@@ -154,10 +155,13 @@ Widget marketplaceHarness({
   bool signedIn = false,
   StoreCreditRepository? storeCredit,
   GlobalKey? boundary,
+  Map<String, String>? cmsBlocks,
+  List<RouteBase> extraRoutes = const [],
 }) {
   final router = GoRouter(
     initialLocation: location,
     routes: [
+      ...extraRoutes,
       GoRoute(
         path: '/product/:urlKey',
         builder: (_, state) =>
@@ -235,6 +239,8 @@ Widget marketplaceHarness({
       storeTimezoneProvider.overrideWith((ref) async => 'Asia/Riyadh'),
       storeFeaturesProvider.overrideWith((ref) async => StoreFeatures.none),
       accountRepositoryProvider.overrideWithValue(FakeAccountRepository()),
+      if (cmsBlocks != null)
+        homeCmsBlocksProvider.overrideWith((ref) async => cmsBlocks),
     ],
     child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
   );

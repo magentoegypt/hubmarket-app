@@ -1334,6 +1334,55 @@
   "priceFrom": "From",
   "productAddToCart": "Add to Cart",
   "productOutOfStock": "Out of stock",
+  "pdpAddToCart": "Add to cart",
+  "@pdpAddToCart": {
+    "description": "Figma 14 buy bar: followed by the price, 'Add to cart · AED 50'."
+  },
+  "pdpInStock": "In stock",
+  "@pdpInStock": {
+    "description": "Figma 14, after the rating: the product can be bought."
+  },
+  "pdpInclusiveVat": "Inclusive of VAT",
+  "@pdpInclusiveVat": {
+    "description": "Figma 14, beside the price."
+  },
+  "pdpOnlyLeft": "Only {count} left",
+  "@pdpOnlyLeft": {
+    "description": "Low-stock line when the store reports how many are left and the product has no options.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pdpOnlyLeftIn": "Only {count} left in {option}",
+  "@pdpOnlyLeftIn": {
+    "description": "Figma 14 / 14c low-stock line; option is the chosen option as 'size M'.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "pdpDescriptionMaterial": "Description & material",
+  "@pdpDescriptionMaterial": {
+    "description": "Figma 14 accordion: the product's description and key features."
+  },
+  "pdpSpecifications": "Specifications",
+  "@pdpSpecifications": {
+    "description": "Figma 14 accordion: the attribute table."
+  },
+  "pdpRatingsReviews": "Ratings & reviews",
+  "@pdpRatingsReviews": {
+    "description": "Figma 14 section title."
+  },
+  "pdpLookingSimilar": "Looking similar",
+  "@pdpLookingSimilar": {
+    "description": "Figma 14 rail: the product's related and up-sell links."
+  },
   "productCardRating": "{count, plural, =0{Rated {rating} out of 5} =1{Rated {rating} out of 5, from 1 review} other{Rated {rating} out of 5, from {count} reviews}}",
   "@productCardRating": {
     "description": "Screen-reader label of a product card's stars. count is 0 when the source doesn't say how many reviews there are.",
