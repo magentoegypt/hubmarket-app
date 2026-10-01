@@ -70,25 +70,24 @@ class SheetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppTextStyles.of(context);
-    return DecoratedBox(
+    // A Container, whose rule takes room: the frame's row is 45 pt with it.
+    return Container(
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
       ),
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: t.heading2.copyWith(color: AppColors.inkHeading),
-              ),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.heading2.copyWith(color: AppColors.inkHeading),
             ),
-            if (action != null) action!,
-          ],
-        ),
+          ),
+          if (action != null) action!,
+        ],
       ),
     );
   }

@@ -345,12 +345,15 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
       currentTab: AppTab.categories,
       appBar: HubTopBar(
         title: widget.title ?? parent?.name ?? l10n.navCategories,
+        // The frame's app bar is 4 pt between its items, the title included.
         actions: [
+          const SizedBox(width: 4),
           HubIconButton(
             icon: HubIcons.search,
             tooltip: l10n.searchHint,
             onPressed: () => context.push(AppRoutes.search),
           ),
+          const SizedBox(width: 4),
           HubIconButton(
             icon: HubIcons.shoppingCart,
             tooltip: l10n.navCart,

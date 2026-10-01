@@ -36,7 +36,10 @@ class FilterSection extends StatelessWidget {
             ),
             if (caption != null && caption!.isNotEmpty) ...[
               const SizedBox(width: 12),
-              Flexible(
+              // Not a flex child, which would share the row with the title
+              // and stop short of the end; as wide as it is, up to a limit.
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
                 child: Text(
                   caption!,
                   maxLines: 1,

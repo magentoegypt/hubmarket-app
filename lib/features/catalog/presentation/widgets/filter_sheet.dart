@@ -464,26 +464,24 @@ class _FilterSheetState extends State<FilterSheet> {
                 ],
               ),
             ),
-            DecoratedBox(
+            Container(
               decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.borderSubtle)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: FilledButton(
-                        onPressed: _apply,
-                        child: Text(_buttonLabel(l10n)),
-                      ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton(
+                      onPressed: _apply,
+                      child: Text(_buttonLabel(l10n)),
                     ),
-                    const SheetBottomSpace(),
-                  ],
-                ),
+                  ),
+                  const SheetBottomSpace(),
+                ],
               ),
             ),
           ],
@@ -576,7 +574,7 @@ class _RatingLabel extends StatelessWidget {
       children: [
         Text(number),
         // The frame's ★ is text in the chip's ink, not a gold star.
-        const Icon(Icons.star, size: 13),
+        const Icon(Icons.star, size: 14),
         const SizedBox(width: 3),
         Text(l10n.filterRatingAndUp),
       ],
