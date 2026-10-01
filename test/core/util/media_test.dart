@@ -73,4 +73,74 @@ void main() {
       expect(resolveMediaUrl('/media/a.png', 'not-a-url'), '');
     });
   });
+
+  group('webpTwinUrl', () {
+    const host = 'hub-market.magento2.click';
+    const resized =
+        'https://$host/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/s/c/screenshot_107';
+
+    test('is the same URL plus .webp for a resized JPEG or PNG', () {
+      for (final ext in ['jpg', 'jpeg', 'png', 'JPG', 'PNG']) {
+        expect(
+          webpTwinUrl('$resized.$ext', storeHost: host),
+          '$resized.$ext.webp',
+          reason: ext,
+        );
+      }
+    });
+
+    test('keeps a percent-encoded file name as it is', () {
+      const name =
+          'https://$host/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/_/-/_-_19%20(1).jpg';
+      expect(webpTwinUrl(name, storeHost: host), '$name.webp');
+    });
+
+    test('is null for another host: the uncached origin 404s a missing copy',
+        () {
+      expect(
+        webpTwinUrl(
+          'https://multi.magento2.click/media/catalog/product/cache/a/b/c.jpg',
+          storeHost: host,
+        ),
+        isNull,
+      );
+      expect(webpTwinUrl('$resized.jpg', storeHost: 'multi.magento2.click'), isNull);
+      expect(webpTwinUrl('$resized.jpg', storeHost: ''), isNull);
+    });
+
+    test('is null outside the resized product images — they have no copy', () {
+      for (final path in [
+        // the "no image" placeholder and an original upload: 404 on .webp
+        '/media/catalog/product/placeholder/hm-placeholder.png',
+        '/media/catalog/product/s/c/screenshot_107.jpg',
+        '/media/catalog/category/shoes.jpg',
+        '/media/wysiwyg/promo.png',
+        '/media/ves_vendors/logo.png',
+      ]) {
+        expect(webpTwinUrl('https://$host$path', storeHost: host), isNull, reason: path);
+      }
+    });
+
+    test('is null for other formats, an existing copy, queries and non-https',
+        () {
+      for (final url in [
+        '$resized.gif',
+        '$resized.svg',
+        '$resized.webp',
+        '$resized.jpg.webp',
+        '$resized.jpg?width=300',
+        '$resized.jpg#top',
+        resized,
+        'http://$host/media/catalog/product/cache/a/b/c.jpg',
+        '/media/catalog/product/cache/a/b/c.jpg',
+      ]) {
+        expect(webpTwinUrl(url, storeHost: host), isNull, reason: url);
+      }
+    });
+
+    test('is null for null and empty', () {
+      expect(webpTwinUrl(null, storeHost: host), isNull);
+      expect(webpTwinUrl('', storeHost: host), isNull);
+    });
+  });
 }
