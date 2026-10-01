@@ -100,7 +100,7 @@
   "homeDealBadge": "خصم",
   "reviewsScreenTitle": "التقييمات",
   "categoriesSubtitle": "تسوّقي حسب ما تحبين",
-  "categoryProductCount": "{count} منتج",
+  "categoryProductCount": "{count, plural, =1{منتج واحد} =2{منتجان} few{{count} منتجات} many{{count} منتج} other{{count} منتج}}",
   "@categoryProductCount": {
     "placeholders": {
       "count": {
@@ -133,7 +133,7 @@
       }
     }
   },
-  "categoryProductCountFrom": "{count} منتج من {store}",
+  "categoryProductCountFrom": "{count, plural, =1{منتج واحد من {store}} =2{منتجان من {store}} few{{count} منتجات من {store}} many{{count} منتج من {store}} other{{count} منتج من {store}}}",
   "@categoryProductCountFrom": {
     "placeholders": {
       "count": {
