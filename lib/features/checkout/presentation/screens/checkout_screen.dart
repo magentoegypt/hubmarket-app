@@ -308,35 +308,36 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _placeOrder() async {
     if (_placing) return;
+    // Read before placing: a placed order resets the cart.
+    final before = ref.read(checkoutControllerProvider);
+    final firstName =
+        ref.read(authControllerProvider).customer?.firstName ??
+        before.shipTo?.firstName;
+    final packages = placedPackagesOf(ref.read(cartControllerProvider).cart);
     setState(() => _placing = true);
+    final PlaceOrderResult? result;
     try {
-      // Read before placing: a placed order resets the cart.
-      final before = ref.read(checkoutControllerProvider);
-      final firstName =
-          ref.read(authControllerProvider).customer?.firstName ??
-          before.shipTo?.firstName;
-      final packages = placedPackagesOf(ref.read(cartControllerProvider).cart);
-      final result = await _controller.placeOrder();
-      if (!mounted) return;
-      if (result == null) {
-        await _orderRefused(before);
-        return;
-      }
-      // Every method checkout offers completes on placeOrder (payableInApp):
-      // cash on delivery, Zero Subtotal `free`, check / money order.
-      context.go(
-        AppRoutes.orderSuccess,
-        extra: OrderPlacedArgs(
-          orderNumber: result.orderNumber,
-          firstName: firstName,
-          total: before.grandTotal,
-          payment: before.selectedPayment,
-          packages: packages,
-        ),
-      );
+      result = await _controller.placeOrder();
     } finally {
       if (mounted) setState(() => _placing = false);
     }
+    if (!mounted) return;
+    if (result == null) {
+      await _orderRefused(before);
+      return;
+    }
+    // Every method checkout offers completes on placeOrder (payableInApp):
+    // cash on delivery, Zero Subtotal `free`, check / money order.
+    context.go(
+      AppRoutes.orderSuccess,
+      extra: OrderPlacedArgs(
+        orderNumber: result.orderNumber,
+        firstName: firstName,
+        total: before.grandTotal,
+        payment: before.selectedPayment,
+        packages: packages,
+      ),
+    );
   }
 
   /// The store refused the order. A payment refusal opens the "Payment

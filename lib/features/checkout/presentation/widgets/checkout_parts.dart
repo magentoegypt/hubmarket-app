@@ -460,23 +460,22 @@ class CheckoutFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottom = math.max(30.0, MediaQuery.paddingOf(context).bottom);
-    return DecoratedBox(
+    // A Container, so the hairline on top adds its own pixel to the height.
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: AppColors.borderSubtle)),
       ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < children.length; i++) ...[
-              if (i > 0) SizedBox(height: spacing),
-              children[i],
-            ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) SizedBox(height: spacing),
+            children[i],
           ],
-        ),
+        ],
       ),
     );
   }

@@ -769,7 +769,7 @@
   "checkoutPaymentsEncrypted": "مدفوعاتك مشفّرة لدى شريك الدفع",
   "checkoutPaymentSecure": "بيانات الدفع مشفّرة وآمنة",
   "paymentFailedTitle": "تم رفض الدفع",
-  "paymentFailedBody": "تعذّر إتمام الدفع عبر {method}. لم يتم خصم أي مبلغ — سلتك وخيارات التوصيل محفوظة.",
+  "paymentFailedBody": "تم رفض {method}. لم يتم خصم أي مبلغ — سلتك وخيارات التوصيل محفوظة.",
   "paymentFailedReason": "السبب: {reason}",
   "paymentFailedTryAnother": "جرّب طريقة أخرى",
   "paymentFailedPayCod": "الدفع عند الاستلام",

@@ -43,7 +43,7 @@ void main() {
 
       // AED 100 in the cart, free over AED 150.
       expect(
-        find.text(l10n.cartFreeDeliveryRemaining('AED 50')),
+        find.text(l10n.cartFreeShippingRemaining('AED 50')),
         findsOneWidget,
       );
       final bar = tester.widget<LinearProgressIndicator>(

@@ -1258,7 +1258,7 @@
   "checkoutPaymentsEncrypted": "Payments are encrypted by our payment partner",
   "checkoutPaymentSecure": "Your payment information is encrypted and secure",
   "paymentFailedTitle": "Payment declined",
-  "paymentFailedBody": "We couldn't take the payment with {method}. You haven't been charged — your cart and delivery choices are saved.",
+  "paymentFailedBody": "{method} was declined. You haven't been charged — your cart and delivery choices are saved.",
   "@paymentFailedBody": {
     "placeholders": {
       "method": {

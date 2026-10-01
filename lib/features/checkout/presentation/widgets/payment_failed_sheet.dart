@@ -165,7 +165,7 @@ class PaymentFailedSheet extends StatelessWidget {
             if (canTryAnotherMethod) ...[
               FilledButton.icon(
                 onPressed: () => pop(PaymentFailedAction.tryAnotherMethod),
-                icon: const Icon(HubIcons.wallet, size: 20),
+                icon: const Icon(HubIcons.creditCard, size: 20),
                 label: Text(l10n.paymentFailedTryAnother),
               ),
               const SizedBox(height: 10),

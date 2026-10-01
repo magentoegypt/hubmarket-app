@@ -388,7 +388,7 @@ void main() {
 
       expect(credit.calls, contains(startsWith('fetchCartCredit:')));
       expect(find.text(_en.checkoutStoreCredit), findsOneWidget);
-      expect(find.text('−AED 50'), findsOneWidget);
+      expect(find.text('− AED 50'), findsOneWidget);
     });
 
     testWidgets('no line while no credit is used', (tester) async {

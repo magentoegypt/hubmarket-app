@@ -70,6 +70,19 @@ Cart _cart(String locale, String id, {CartTotals? totals}) {
   );
 }
 
+/// The trust block as the frame's ticks read (titles only).
+String _cartTrust(String locale) => locale == 'ar'
+    ? '<div class="hm-trust">'
+          '<div class="hm-trust__item"><span class="hm-trust__title">دفع آمن بتشفير SSL</span></div>'
+          '<div class="hm-trust__item"><span class="hm-trust__title">طلبات من عدة بائعين في عملية دفع واحدة</span></div>'
+          '<div class="hm-trust__item"><span class="hm-trust__title">إرجاع خلال 14 يومًا لمعظم المنتجات</span></div>'
+          '</div>'
+    : '<div class="hm-trust">'
+          '<div class="hm-trust__item"><span class="hm-trust__title">Secure checkout with SSL encryption</span></div>'
+          '<div class="hm-trust__item"><span class="hm-trust__title">Orders from multiple vendors in one checkout</span></div>'
+          '<div class="hm-trust__item"><span class="hm-trust__title">14-day returns on most items</span></div>'
+          '</div>';
+
 CustomerOrder _order(String locale) {
   final n = _names(locale);
   final base = twoStoreOrder();
@@ -266,9 +279,15 @@ void main() {
           location: AppRoutes.cart,
           boundary: key,
           cartRepository: CannedCartRepository(_cart(locale, 'guest-1')),
+          // The frame's free-shipping bar needs the store's threshold, and
+          // its ticks come from the storefront's trust block.
+          freeShipping: 600,
+          cmsBlocks: {'hm_home_trust': _cartTrust(locale)},
         ),
         'p3_16_cart_$locale',
-        height: 1350,
+        // The frame (1310 / 1334 tall) plus the 6 px its tab bar lacks under
+        // the iPhone's 34 px home-indicator inset.
+        height: locale == 'ar' ? 1340 : 1316,
         locale: locale,
       );
       expect(find.text(n.mia), findsOneWidget);
@@ -305,7 +324,8 @@ void main() {
       );
       // The summary adds up: the delivery fee chosen at checkout is shown.
       expect(find.text('AED 10'), findsOneWidget);
-      expect(find.text('AED 503'), findsOneWidget);
+      // The summary's total and the pinned bar's.
+      expect(find.text('AED 503'), findsNWidgets(2));
     });
 
     testWidgets('18b review by store ($locale)', (tester) async {

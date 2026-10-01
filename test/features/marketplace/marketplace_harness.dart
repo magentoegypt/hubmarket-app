@@ -25,6 +25,7 @@ import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
+import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/store_credit/data/store_credit_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
@@ -153,6 +154,13 @@ Widget marketplaceHarness({
   bool storeRoute = true,
   bool signedIn = false,
   StoreCreditRepository? storeCredit,
+
+  /// The store's free-shipping threshold (AED), as `hmAppConfig.shipping.free_over`
+  /// publishes it; none by default.
+  double? freeShipping,
+
+  /// CMS blocks by identifier (`hm_home_trust` feeds the cart's ticks).
+  Map<String, String>? cmsBlocks,
   GlobalKey? boundary,
 }) {
   final router = GoRouter(
@@ -231,7 +239,9 @@ Widget marketplaceHarness({
       catalogRepositoryProvider.overrideWithValue(
         catalogRepository ?? FakeCatalogRepository(),
       ),
-      freeShippingThresholdProvider.overrideWith((ref) async => null),
+      freeShippingThresholdProvider.overrideWith((ref) async => freeShipping),
+      if (cmsBlocks != null)
+        homeCmsBlocksProvider.overrideWith((ref) async => cmsBlocks),
       storeTimezoneProvider.overrideWith((ref) async => 'Asia/Riyadh'),
       storeFeaturesProvider.overrideWith((ref) async => StoreFeatures.none),
       accountRepositoryProvider.overrideWithValue(FakeAccountRepository()),
