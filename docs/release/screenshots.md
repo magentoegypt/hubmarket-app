@@ -71,21 +71,29 @@ without cropping (a 1080×2400 capture becomes 1080×2160). **The phone must be 
 screen on for the whole run**: a sleeping screen draws no frames and the test just waits. Turn on
 *Stay awake* in Developer options while it runs.
 
+A phone whose OS asks for a tap on Install every time (HyperOS) gives `flutter drive` only three
+unanswered prompts. For it run `TARGET=integration_test/device_check_test.dart SHOT_LOCALE=en
+AUDIT_ONLY=zzz bash tool/device_audit.sh` instead (`SHOT_LOCALE=ar` for Arabic, one tap each): it
+builds first and keeps offering the APK for about 12 minutes until someone taps Install, and
+`AUDIT_ONLY=zzz` skips the audit scenes ([../device-audit.md](../device-audit.md)). The raw captures
+land in `OUT_DIR`; fit them with `tool/fit_play_screenshots.py` as above.
+
 The captures show the app only: the system status bar is not part of them, so the top band of each
 shot is empty. A framed screenshot covers it with the headline.
 
 ## Where it stands (1 Oct 2026)
 
-Captured again on 1 Oct 2026, after the Figma UI audit changed almost every screen, so the earlier
-30 Sep set is out of date:
+Both stores' sets are captured on the shot list above, after the Figma UI audit and the device-audit
+fixes, so the 30 Sep sets (which still had Today's Deals and Bundle deals) are out of date:
 
-- **iOS:** English run 36833714424 and Arabic run 36833719244 (`Screenshots · iOS`, both succeeded):
-  16 distinct screenshots, 1284×2778 (the 6.5-inch slot), alpha dropped with `--flatten-only`.
-- **Android:** captured on a Redmi 24116RNC1I (Android 16, **720×1640**), English and Arabic, 16 files.
-  The phone's native width is below Play's 1080 px featuring size, so `fit_play_screenshots.py`
-  scales each capture up onto a 1080×2160 canvas; for sharper Play images capture on a 1080p phone or
-  an emulator (`wm size` is not changed by the script).
-- Both sets show what the live server holds that day (test data, see below); nothing was edited.
+- **iOS:** English run 36848770120 and Arabic run 36859104297 (`Screenshots · iOS`, both succeeded, on
+  `main` d886422): 8 screenshots each, 1284×2778 (the 6.5-inch slot), alpha dropped with `--flatten-only`.
+- **Android:** captured on a Redmi 24116RNC1I (Android 16, **720×1640**) from `main` e043a8c, English
+  and Arabic, 8 screenshots each, every photo painted (the log's `IMAGES` lines say so). The phone's
+  native width is below Play's 1080 px featuring size, so `fit_play_screenshots.py` scales each capture
+  onto a 1080×2160 canvas with a navy band at each side; for sharper Play images capture on a 1080p
+  phone or an emulator (`wm size` is not changed by the script).
+- All four sets show what the live server holds that day (test data, see below); nothing was edited.
 
 ## What is not store-ready
 
