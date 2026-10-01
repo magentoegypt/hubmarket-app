@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,11 +39,6 @@ void main() {
   const locale = String.fromEnvironment('SHOT_LOCALE', defaultValue: 'en');
 
   testWidgets('capture App Store screenshots', (tester) async {
-    // The app does not lock its orientation: a phone held sideways would be
-    // captured in landscape. The listing's shots are portrait.
-    await SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.portraitUp,
-    ]);
     await initializeDateFormatting();
     await Hive.initFlutter();
     final cache = await LocalCache.open();
@@ -146,6 +140,5 @@ void main() {
     await shot('06-store', store, wait: 12);
     await shot('07-search', '/search', wait: 24, extra: searchTerm);
     await shot('08-categories', '/categories', wait: 8);
-    await SystemChrome.setPreferredOrientations(const []);
   }, timeout: const Timeout(Duration(minutes: 10)));
 }

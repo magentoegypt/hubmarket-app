@@ -14,9 +14,12 @@
         android:label="Hub Market"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Portrait only, as every Figma frame is. Android 16 ignores the lock
+             on tablets and foldables (smallest width 600 dp and up). -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:screenOrientation="portrait"
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
