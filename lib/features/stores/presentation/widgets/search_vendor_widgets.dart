@@ -83,7 +83,8 @@ class SearchVendorCard extends StatelessWidget {
                   color: AppColors.accentStrong,
                 ),
               ),
-              const SizedBox(width: 4),
+              // Figma 09c: 10 pt between "View" and its chevron.
+              const SizedBox(width: 10),
               // chevron_right mirrors itself in RTL.
               const Icon(
                 HubIcons.chevronRight,

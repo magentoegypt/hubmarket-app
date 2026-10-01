@@ -240,6 +240,15 @@ class _FilterSheetState extends State<FilterSheet> {
     _changed(() => _price = RangeValues(start, end));
   }
 
+  /// Hands the selection back — after a Min or Max that is still being typed
+  /// has been taken (it commits when it loses focus).
+  Future<void> _apply() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    Navigator.of(context).pop(_result());
+  }
+
   FilterResult _result() {
     final b = _bounds;
     // Only treat the price as an active filter when the user narrowed it.
@@ -468,7 +477,7 @@ class _FilterSheetState extends State<FilterSheet> {
                       width: double.infinity,
                       height: 52,
                       child: FilledButton(
-                        onPressed: () => Navigator.of(context).pop(_result()),
+                        onPressed: _apply,
                         child: Text(_buttonLabel(l10n)),
                       ),
                     ),

@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/core/error/failure.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
+import 'package:hubmarket_app/core/network/connectivity.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/widgets/shimmer.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/category.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/categories_screen.dart';
@@ -95,6 +100,9 @@ Widget _harness(
   required String locale,
   bool hubApp = true,
   List<Category>? tree,
+  CatalogRepository? catalog,
+  String location = '/categories',
+  List<Override> overrides = const <Override>[],
   void Function(String location)? onOpen,
 }) {
   Widget stub(String text) => Scaffold(
@@ -102,9 +110,19 @@ Widget _harness(
     body: Center(child: Text(text)),
   );
   final router = GoRouter(
-    initialLocation: '/categories',
+    initialLocation: location,
     routes: [
-      GoRoute(path: '/categories', builder: (_, __) => const CategoriesScreen()),
+      GoRoute(
+        path: '/categories',
+        builder: (_, __) => const CategoriesScreen(),
+      ),
+      GoRoute(
+        path: '/subcategories/:uid',
+        builder: (_, state) => SubcategoriesScreen(
+          categoryUid: state.pathParameters['uid']!,
+          title: 'Sub',
+        ),
+      ),
       GoRoute(
         path: '/category/:uid',
         builder: (_, state) {
@@ -128,7 +146,7 @@ Widget _harness(
       localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       catalogRepositoryProvider.overrideWithValue(
-        FakeCatalogRepository(categories: tree ?? _tree(locale)),
+        catalog ?? FakeCatalogRepository(categories: tree ?? _tree(locale)),
       ),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(
@@ -139,6 +157,7 @@ Widget _harness(
       publicGraphqlClientProvider.overrideWithValue(
         FakeStoresBackend(_stores(locale)).client,
       ),
+      ...overrides,
     ],
     child: RepaintBoundary(
       key: boundary,
@@ -178,7 +197,9 @@ void main() {
         await tester.pumpWidget(_harness(key, locale: locale));
         await tester.pumpAndSettle();
         // The frame has Furniture picked.
-        await tester.tap(find.text(locale == 'ar' ? 'أثاث' : 'Furniture').first);
+        await tester.tap(
+          find.text(locale == 'ar' ? 'أثاث' : 'Furniture').first,
+        );
         await tester.pumpAndSettle();
         await captureScreen(tester, key, 'audit_08_categories_$locale');
       });
@@ -269,4 +290,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('BUNDLES'), findsOneWidget);
   });
+
+  testWidgets('loading shows the page\'s skeleton, in its place', (
+    tester,
+  ) async {
+    _phone(tester);
+    final key = GlobalKey();
+    final tree = Completer<List<Category>>();
+    await tester.pumpWidget(
+      _harness(key, locale: 'en', catalog: _SlowCatalog(tree.future)),
+    );
+    await tester.pump();
+    await captureScreen(tester, key, 'audit_08_categories_loading_en');
+    // The rail's and the panel's.
+    expect(find.byType(Shimmer), findsNWidgets(2));
+    expect(find.byType(TypeTile), findsNothing);
+
+    tree.complete(_tree('en'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Shimmer), findsNothing);
+    // Grocery is picked: it is the rail's row and the banner's name.
+    expect(find.text('Grocery'), findsNWidgets(2));
+  });
+
+  testWidgets('a failed read says so and offers Retry', (tester) async {
+    _phone(tester);
+    final tree = Completer<List<Category>>();
+    await tester.pumpWidget(
+      _harness(
+        GlobalKey(),
+        locale: 'en',
+        catalog: _SlowCatalog(tree.future),
+        overrides: [isOfflineProvider.overrideWithValue(false)],
+      ),
+    );
+    await tester.pump();
+    tree.completeError(const Failure(FailureKind.server));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('the sub-category route lists the tiles of the category', (
+    tester,
+  ) async {
+    _phone(tester);
+    await tester.pumpWidget(
+      _harness(
+        GlobalKey(),
+        locale: 'en',
+        location: '/subcategories/${categoryUidFromId('74')}',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TypeTile), findsNWidgets(5));
+    expect(find.text('Furniture'), findsOneWidget);
+    await tester.tap(find.text('Rocking Chairs'));
+    await tester.pumpAndSettle();
+    expect(find.text('PLP Rocking Chairs'), findsOneWidget);
+  });
+}
+
+/// A catalogue whose category tree arrives when the test says.
+class _SlowCatalog extends FakeCatalogRepository {
+  _SlowCatalog(this.tree);
+
+  final Future<List<Category>> tree;
+
+  @override
+  Future<List<Category>> fetchCategoryTree() => tree;
 }

@@ -113,7 +113,7 @@
   "homeDealBadge": "DEAL",
   "reviewsScreenTitle": "Reviews",
   "categoriesSubtitle": "Shop by what you love",
-  "categoryProductCount": "{count} products",
+  "categoryProductCount": "{count, plural, =1{1 product} other{{count} products}}",
   "@categoryProductCount": {
     "placeholders": {
       "count": {

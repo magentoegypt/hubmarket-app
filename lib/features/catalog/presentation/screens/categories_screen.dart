@@ -12,6 +12,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/network_image.dart';
+import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../stores/domain/store.dart';
 import '../../../stores/presentation/stores_providers.dart';
@@ -75,6 +76,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
       body: AsyncValueView(
         value: categories,
         onRetry: () => ref.invalidate(categoryTreeProvider),
+        loading: () => const _CategoriesSkeleton(),
         data: (items) {
           final menu = [
             for (final c in items)
@@ -113,6 +115,78 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+/// The page while the categories load: the rail's rows, the banner, the
+/// tiles — in their places, shimmering.
+class _CategoriesSkeleton extends StatelessWidget {
+  const _CategoriesSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget bar(double width) => SkeletonBox(width: width, height: 12);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: _CategoryRail.width,
+          child: ColoredBox(
+            color: AppColors.surfaceSubtle,
+            // Darker than the page's blocks: they sit on the rail's grey.
+            child: Shimmer(
+              base: AppColors.borderSubtle,
+              child: Column(
+                children: [
+                  for (var i = 0; i < 8; i++)
+                    SizedBox(
+                      height: 48,
+                      child: Center(child: bar(i.isEven ? 56 : 44)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Shimmer(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(14, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SkeletonBox(height: 96, borderRadius: 12),
+                  const SizedBox(height: 14),
+                  const SkeletonBox(width: 110, height: 16),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 14,
+                    children: [
+                      for (var i = 0; i < 6; i++)
+                        const SizedBox(
+                          width: TypeTile.size,
+                          child: Column(
+                            children: [
+                              SkeletonBox(
+                                width: TypeTile.size,
+                                height: TypeTile.size,
+                                borderRadius: 14,
+                              ),
+                              SizedBox(height: 6),
+                              SkeletonBox(width: 56, height: 10),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -223,7 +297,9 @@ class _RailItem extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: (selected ? t.captionStrong : t.caption).copyWith(
-                  color: selected ? AppColors.accentStrong : AppColors.inkSubtle,
+                  color: selected
+                      ? AppColors.accentStrong
+                      : AppColors.inkSubtle,
                 ),
               ),
             ),
@@ -378,8 +454,7 @@ class _Banner extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (_) =>
                       const ColoredBox(color: AppColors.brandPrimary),
-                  error: (_) =>
-                      const ColoredBox(color: AppColors.brandPrimary),
+                  error: (_) => const ColoredBox(color: AppColors.brandPrimary),
                 ),
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -408,7 +483,9 @@ class _Banner extends StatelessWidget {
                         counts,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: t.caption.copyWith(color: AppColors.borderStrong),
+                        style: t.caption.copyWith(
+                          color: AppColors.borderStrong,
+                        ),
                       ),
                     ],
                   ],
@@ -493,10 +570,8 @@ class TypeTile extends StatelessWidget {
 }
 
 /// Opens a category's listing, which draws its own sub-category rail.
-void openCategory(BuildContext context, Category category) => context.push(
-  AppRoutes.category(category.uid),
-  extra: category.name,
-);
+void openCategory(BuildContext context, Category category) =>
+    context.push(AppRoutes.category(category.uid), extra: category.name);
 
 /// One of the category's top stores (Figma "top-stores/row"): logo, name,
 /// "★ 4.8 · 38 products" and a chevron. Opens the store.
@@ -582,11 +657,7 @@ class _StoreRow extends StatelessWidget {
 /// tile opens the listing, which draws its own sub-category rail); the route
 /// stays for links that name one.
 class SubcategoriesScreen extends ConsumerWidget {
-  const SubcategoriesScreen({
-    super.key,
-    required this.categoryUid,
-    this.title,
-  });
+  const SubcategoriesScreen({super.key, required this.categoryUid, this.title});
 
   final String categoryUid;
   final String? title;

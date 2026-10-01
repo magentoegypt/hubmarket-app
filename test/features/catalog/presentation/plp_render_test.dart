@@ -303,6 +303,32 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('a category with sub-categories keeps its rail in $locale', (
+      tester,
+    ) async {
+      _surface(tester);
+      final key = GlobalKey();
+      await withRealShadows(() async {
+        final router = _router(
+          PlpScreen(
+            categoryUid: kFurnitureUid,
+            title: locale == 'ar' ? 'أثاث' : 'Furniture',
+          ),
+        );
+        await tester.pumpWidget(_app(key, locale: locale, router: router));
+        await tester.pumpAndSettle();
+        unawaited(router.push('/page'));
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'plp_with_subcategories_$locale');
+      });
+      // The rail names the sub-categories (Home Furniture, Living Room Sets).
+      expect(
+        find.text(locale == 'ar' ? 'أطقم غرف المعيشة' : 'Living Room Sets'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('11 Filters sheet renders in $locale', (tester) async {
       _surface(tester, height: 963);
       final key = GlobalKey();
