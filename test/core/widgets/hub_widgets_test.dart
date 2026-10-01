@@ -115,8 +115,11 @@ void main() {
       await tester.pumpWidget(
         _app(const Scaffold(appBar: HubTopBar(title: 'Title'))),
       );
+      // The bar fills the status bar's inset (non-zero with UI_AUDIT) plus the
+      // 56 px row.
+      final inset = MediaQueryData.fromView(tester.view).padding.top;
       final bar = tester.getSize(find.byType(HubTopBar));
-      expect(bar.height, 56);
+      expect(bar.height, 56 + inset);
     });
   });
 
