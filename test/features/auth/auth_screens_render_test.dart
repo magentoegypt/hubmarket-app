@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/core/error/failure.dart';
+import 'package:hubmarket_app/features/auth/domain/password_reset_ticket.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/verify_code_screen.dart';
 import 'package:hubmarket_app/features/auth/presentation/widgets/auth_widgets.dart';
 
@@ -160,6 +161,26 @@ void main() {
               find.byType(TextField),
               'sara.ahmed@gmail.com',
             );
+            await tester.pumpAndSettle();
+          },
+        );
+      });
+
+      // No frame: the new-password step is 06's layout (badge, heading, fields).
+      testWidgets('Reset password (06\'s layout, no frame)', (tester) async {
+        await render(
+          tester,
+          locale: locale,
+          name: 'reset_password',
+          location: AppRoutes.resetPassword,
+          extra: const PasswordResetTicket(
+            email: 'sara.ahmed@gmail.com',
+            token: 'abc123',
+          ),
+          act: () async {
+            final fields = find.byType(TextField);
+            await tester.enterText(fields.at(0), 'Sara@2026x');
+            await tester.enterText(fields.at(1), 'Sara@2026x');
             await tester.pumpAndSettle();
           },
         );
