@@ -61,11 +61,11 @@ void main() {
       // A right-to-left isolate around "425 د.إ" (number first, sign to its left).
       expect(
         const Money(amount: 425, currency: 'AED').formatted(),
-        '⁧425 د.إ⁩',
+        '\u2067425 د.إ\u2069',
       );
       expect(
         const Money(amount: 1250.5, currency: 'AED').formatted(),
-        '⁧1,250.50 د.إ⁩',
+        '\u20671,250.50 د.إ\u2069',
       );
     });
 

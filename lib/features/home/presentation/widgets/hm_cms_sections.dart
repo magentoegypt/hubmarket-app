@@ -6,16 +6,20 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/config/app_config.dart';
+import '../../../../core/widgets/hub_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../catalog/presentation/storefront_links.dart';
 import '../../../cms/domain/cms_document.dart';
 import '../../../cms/presentation/widgets/cms_html_view.dart';
+import '../../data/home_content_repository.dart';
 import '../../domain/home_content.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// The delivery-promise strip under the header (Figma 07 "utility-strip"):
-/// the `hm_delivery_promise` block's line and "Track order ›".
+/// the `hm_delivery_promise` block's line and "Track order ›". 8 pt above and
+/// below its Caption Strong line (32 pt in English, 34 in Arabic); the track
+/// link's hit area runs the strip's height and ends 16 pt from the edge.
 class HmDeliveryStrip extends ConsumerWidget {
   const HmDeliveryStrip({super.key, required this.text});
 
@@ -29,67 +33,83 @@ class HmDeliveryStrip extends ConsumerWidget {
       authControllerProvider.select((s) => s.isAuthenticated),
     );
     final style = t.captionStrong.copyWith(color: AppColors.accentStrong);
-    return Container(
-      color: const Color(0xFFFFF4EC),
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
-      child: Row(
-        children: [
-          const Icon(
-            HubIcons.truck,
-            size: 14,
-            color: AppColors.accentStrong,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style,
-            ),
-          ),
-          InkWell(
-            onTap: () => context.push(
-              signedIn ? AppRoutes.orders : AppRoutes.guestTrackOrder,
-            ),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    HubIcons.package,
-                    size: 14,
-                    color: AppColors.accentStrong,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(l10n.homeTrackOrder, style: style),
-                  const Icon(
-                    HubIcons.chevronRight,
-                    size: 14,
-                    color: AppColors.accentStrong,
-                  ),
-                ],
+    return Material(
+      color: AppColors.accentSubtle,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 8, 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      HubIcons.truck,
+                      size: 14,
+                      color: AppColors.accentStrong,
+                    ),
+                    const SizedBox(width: 6),
+                    // One line, as the frame draws it; the admin's longer copy
+                    // ("… · Fast nationwide shipping") wraps instead of being cut.
+                    Expanded(
+                      child: Text(
+                        text,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: style,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+            InkWell(
+              onTap: () => context.push(
+                signedIn ? AppRoutes.orders : AppRoutes.guestTrackOrder,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      HubIcons.package,
+                      size: 14,
+                      color: AppColors.accentStrong,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(l10n.homeTrackOrder, style: style),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      HubIcons.chevronRight,
+                      size: 14,
+                      color: AppColors.accentStrong,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Promo banners from `hm_home_promos` (Figma 07 "Promo banners"): gradient
-/// cards — emoji + kicker, headline, line, and a white arrow disc.
+/// Promo banners from `hm_home_promos` (Figma 07 "Promo banners"): 104 pt
+/// gradient cards — emoji + kicker, headline, line, and a white arrow disc.
+/// The text takes the width the disc leaves (no gap, as in the frame) and is
+/// centred in the card; a longer text grows the card.
 class HmPromoBanners extends ConsumerWidget {
   const HmPromoBanners({super.key, required this.promos});
 
   final List<PromoTile> promos;
 
+  /// The frame's three gradients, start to end: navy, green, purple.
   static const List<List<Color>> _palettes = <List<Color>>[
     <Color>[Color(0xFF0F2144), Color(0xFF1E3A6E)],
-    <Color>[Color(0xFF14532D), Color(0xFF2E7D32)],
+    <Color>[Color(0xFF1A4731), Color(0xFF2D7A3A)],
     <Color>[Color(0xFF3B1F6E), Color(0xFF6B3FA0)],
   ];
 
@@ -124,10 +144,12 @@ class HmPromoBanners extends ConsumerWidget {
                         ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 104),
+                    // 16 at the sides; a 2-line headline (86 pt of text) fills
+                    // the 104 pt card with 9 pt above and below.
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 16,
+                        vertical: 9,
                       ),
                       child: Row(
                         children: [
@@ -137,17 +159,39 @@ class HmPromoBanners extends ConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (promos[i].icon.isNotEmpty ||
-                                    promos[i].kicker.isNotEmpty)
-                                  Text(
-                                    [
-                                      promos[i].icon,
-                                      promos[i].kicker.toUpperCase(),
-                                    ].where((s) => s.isNotEmpty).join(' '),
-                                    style: t.micro.copyWith(
-                                      color: AppColors.accentOnDark,
-                                    ),
+                                    promos[i].kicker.isNotEmpty) ...[
+                                  Row(
+                                    children: [
+                                      if (promos[i].icon.isNotEmpty) ...[
+                                        SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: FittedBox(
+                                            child: Text(
+                                              promos[i].icon,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                height: 1,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      Flexible(
+                                        child: Text(
+                                          promos[i].kicker.toUpperCase(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: t.micro.copyWith(
+                                            color: AppColors.accentOnDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                const SizedBox(height: 4),
+                                  const SizedBox(height: 4),
+                                ],
                                 Text(
                                   promos[i].title,
                                   style: t.heading2.copyWith(
@@ -159,14 +203,13 @@ class HmPromoBanners extends ConsumerWidget {
                                   Text(
                                     promos[i].text,
                                     style: t.caption.copyWith(
-                                      color: Colors.white70,
+                                      color: AppColors.onInverseMuted,
                                     ),
                                   ),
                                 ],
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
                           Container(
                             width: 40,
                             height: 40,
@@ -252,7 +295,7 @@ class HmTrustGrid extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceSubtle,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,17 +348,151 @@ class HmTrustGrid extends StatelessWidget {
   }
 }
 
+/// "Sell on Hub Market" (Figma 07): the CMS block `hm_home_sell` — a heading,
+/// its line and an optional link — as the navy card: the orange store tile
+/// beside the heading, the line, and the link as an accent button. Everything
+/// but the tile is the block's own text, so it is edited in Content › Blocks
+/// like the rest of the Home; a block with no heading is not this card.
+class HmSellCard extends ConsumerWidget {
+  const HmSellCard({
+    super.key,
+    required this.title,
+    this.text = '',
+    this.ctaLabel,
+    this.ctaUrl,
+  });
+
+  final String title;
+  final String text;
+
+  /// The block's link: its text and target. The button shows only with both.
+  final String? ctaLabel;
+  final String? ctaUrl;
+
+  /// The card for [blocks]: the first heading is the title, the paragraphs are
+  /// its line, and a paragraph that is only a link is the button. Null when
+  /// there is no heading.
+  static HmSellCard? fromBlocks(List<CmsBlock> blocks) {
+    String? title;
+    final lines = <String>[];
+    String? ctaLabel;
+    String? ctaUrl;
+    for (final block in blocks) {
+      switch (block) {
+        case CmsHeading():
+          if (title == null && block.text.isNotEmpty) title = block.text;
+        case CmsParagraph():
+          final link = block.inlines
+              .where((i) => i.href != null && i.text.trim().isNotEmpty)
+              .firstOrNull;
+          if (link != null && ctaUrl == null && block.text == link.text.trim()) {
+            ctaLabel = link.text.trim();
+            ctaUrl = link.href;
+          } else if (block.text.isNotEmpty) {
+            lines.add(block.text);
+          }
+        default:
+          break;
+      }
+    }
+    if (title == null) return null;
+    return HmSellCard(
+      title: title,
+      text: lines.join('\n'),
+      ctaLabel: ctaLabel,
+      ctaUrl: ctaUrl,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = AppTextStyles.of(context);
+    final label = ctaLabel;
+    final url = ctaUrl;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.brandPrimary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    HubIcons.store,
+                    size: 22,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.heading2.copyWith(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            if (text.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                text,
+                style: t.caption.copyWith(color: AppColors.onInverseMuted),
+              ),
+            ],
+            if (label != null && url != null) ...[
+              const SizedBox(height: 10),
+              HubButton(
+                label: label,
+                style: HubButtonStyle.accent,
+                expand: false,
+                onPressed: () => openStorefrontUrl(
+                  context,
+                  ref,
+                  url,
+                  title: title,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Any CMS block (CMS_BLOCK), drawn natively; its links go through the
-/// storefront-link router.
+/// storefront-link router. The Home's `hm_home_sell` block ([identifier]) is
+/// the "Sell on Hub Market" card ([HmSellCard]).
 class HmCmsBlockView extends ConsumerWidget {
-  const HmCmsBlockView({super.key, required this.html});
+  const HmCmsBlockView({super.key, required this.html, this.identifier});
 
   final String html;
+
+  /// The block's CMS identifier, when known.
+  final String? identifier;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blocks = CmsDocument.parse(html);
     if (blocks.isEmpty) return const SizedBox.shrink();
+    if (identifier == HomeCmsBlocks.sell) {
+      final card = HmSellCard.fromBlocks(blocks);
+      if (card != null) return card;
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: CmsHtmlView(

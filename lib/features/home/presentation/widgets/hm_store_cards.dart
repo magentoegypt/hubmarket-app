@@ -8,6 +8,7 @@ import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'hm_metrics.dart';
 
 /// Opens a seller's store page (`/store/:code`).
 void openStore(BuildContext context, HmStoreCard store) =>
@@ -23,7 +24,7 @@ class HmFeaturedStoresRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 212,
+      height: HmFeaturedStoreCard.heightFor(context),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -35,18 +36,43 @@ class HmFeaturedStoresRail extends StatelessWidget {
   }
 }
 
+/// A 148 pt card: 1 pt border, 16 above the 64 pt logo, 6 between the rows
+/// (name, rating, counts) and the 34 pt Visit Store button, 14 below — 212 pt
+/// in English. A store without a rating keeps the rating row's height, so the
+/// buttons of a rail line up.
 class HmFeaturedStoreCard extends StatelessWidget {
   const HmFeaturedStoreCard({super.key, required this.store});
 
   final HmStoreCard store;
+
+  static const double width = 148;
+
+  /// The card's height for the language and text size of [context].
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return 2 + // the border
+        16 +
+        64 +
+        6 +
+        HmMetrics.line(context, t.title) +
+        6 +
+        HmMetrics.line(context, t.bodyStrong) +
+        6 +
+        HmMetrics.line(context, t.caption) +
+        6 +
+        34 +
+        14 +
+        HmMetrics.slack(context);
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppTextStyles.of(context);
     final l10n = AppLocalizations.of(context);
     final dispatch = store.dispatchTime?.label;
+    const statColor = AppColors.inkSubtle;
     return SizedBox(
-      width: 148,
+      width: width,
       child: Material(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -56,62 +82,60 @@ class HmFeaturedStoreCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => openStore(context, store),
+          // The 1 pt border takes room: 13 | 17 above | 15 below.
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
+            padding: const EdgeInsetsDirectional.fromSTEB(13, 17, 13, 15),
             child: Column(
               children: [
                 _VerifiedAvatar(store: store, size: 64, badge: 22),
                 const SizedBox(height: 6),
-                Text(
-                  store.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: t.title.copyWith(color: AppColors.inkHeading),
-                ),
-                const SizedBox(height: 4),
-                if (store.rating != null)
-                  _Rating(
-                    rating: store.rating!,
-                    style: t.bodyStrong,
-                    size: 14,
+                SizedBox(
+                  width: 124,
+                  child: Text(
+                    store.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: t.title.copyWith(color: AppColors.inkHeading),
                   ),
-                const SizedBox(height: 4),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: HmMetrics.line(context, t.bodyStrong),
+                  child: store.rating == null
+                      ? null
+                      : _Rating(
+                          rating: store.rating!,
+                          style: t.bodyStrong,
+                          star: 14,
+                        ),
+                ),
+                const SizedBox(height: 6),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      HubIcons.package,
-                      size: 13,
-                      color: Color(0xFF535D70),
-                    ),
+                    const Icon(HubIcons.package, size: 13, color: statColor),
                     const SizedBox(width: 3),
                     Text(
                       '${store.productCount}',
-                      style: t.caption.copyWith(color: const Color(0xFF535D70)),
+                      style: t.caption.copyWith(color: statColor),
                     ),
                     if (dispatch != null) ...[
                       const SizedBox(width: 6),
-                      const Icon(
-                        HubIcons.clock,
-                        size: 13,
-                        color: Color(0xFF535D70),
-                      ),
+                      const Icon(HubIcons.clock, size: 13, color: statColor),
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(
                           dispatch,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: t.caption.copyWith(
-                            color: const Color(0xFF535D70),
-                          ),
+                          style: t.caption.copyWith(color: statColor),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const Spacer(),
+                const SizedBox(height: 6),
                 Container(
                   height: 34,
                   alignment: Alignment.center,
@@ -135,8 +159,8 @@ class HmFeaturedStoreCard extends StatelessWidget {
   }
 }
 
-/// Top Vendors This Month (Figma 07, component "Top vendor card"): navy
-/// cover, "#1 VENDOR" on the first, logo + verified, rating · products.
+/// Top Vendors This Month (Figma 07, component "Top vendor card"): navy cover,
+/// "#1 VENDOR" on the first, logo + verified, rating · products.
 class HmTopVendorsRail extends StatelessWidget {
   const HmTopVendorsRail({super.key, required this.stores});
 
@@ -145,7 +169,7 @@ class HmTopVendorsRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 154,
+      height: HmTopVendorCard.heightFor(context),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -158,18 +182,36 @@ class HmTopVendorsRail extends StatelessWidget {
   }
 }
 
+/// A 150 pt card: the 86 pt top (the cover's 54 pt navy band, the 56 pt logo
+/// ringed in white and its verified badge, the rank pill), then the name and
+/// "rating · products" — 147 pt in English, border included.
 class HmTopVendorCard extends StatelessWidget {
   const HmTopVendorCard({super.key, required this.store, this.first = false});
 
   final HmStoreCard store;
   final bool first;
 
+  static const double width = 150;
+
+  /// The card's height for the language and text size of [context].
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return 2 + // the border
+        86 +
+        4 +
+        HmMetrics.line(context, t.title) +
+        3 +
+        HmMetrics.line(context, t.caption) +
+        14 +
+        HmMetrics.slack(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppTextStyles.of(context);
     final l10n = AppLocalizations.of(context);
     return SizedBox(
-      width: 150,
+      width: width,
       child: Material(
         color: Colors.white,
         shape: RoundedRectangleBorder(
@@ -179,94 +221,129 @@ class HmTopVendorCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => openStore(context, store),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 86,
-                child: Stack(
-                  children: [
-                    const PositionedDirectional(
-                      top: 0,
-                      start: 0,
-                      end: 0,
-                      height: 54,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: AlignmentDirectional.centerStart,
-                            end: AlignmentDirectional.centerEnd,
-                            colors: [AppColors.brandPrimary, Color(0xFF1E3A6E)],
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (first)
-                      PositionedDirectional(
-                        top: 10,
-                        start: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
+          // The 1 pt border takes room.
+          child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 86,
+                  child: Stack(
+                    children: [
+                      // The cover is 164 pt wide: the card clips it, so the
+                      // gradient ends in navy-blue just past the edge.
+                      const PositionedDirectional(
+                        top: 0,
+                        start: 0,
+                        width: 164,
+                        height: 54,
+                        child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFACC15),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            l10n.homeTopVendorBadge,
-                            style: t.micro.copyWith(color: AppColors.inkHeading),
+                            gradient: LinearGradient(
+                              begin: AlignmentDirectional.centerStart,
+                              end: AlignmentDirectional.centerEnd,
+                              colors: [
+                                AppColors.brandPrimary,
+                                Color(0xFF1E3A6E),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    PositionedDirectional(
-                      top: 28,
-                      start: 12,
-                      child: _VerifiedAvatar(store: store, size: 56, badge: 20),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      store.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: t.title.copyWith(color: AppColors.inkHeading),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        if (store.rating != null) ...[
-                          _Rating(
-                            rating: store.rating!,
-                            style: t.captionStrong,
-                            size: 13,
+                      if (first)
+                        PositionedDirectional(
+                          top: 10,
+                          start: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.promo,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              l10n.homeTopVendorBadge,
+                              style: t.micro.copyWith(
+                                color: AppColors.inkHeading,
+                              ),
+                            ),
                           ),
-                          Text(
-                            ' · ',
-                            style: t.caption.copyWith(color: AppColors.inkMuted),
+                        ),
+                      // The logo sits in a 3 pt white ring (62 pt in all).
+                      PositionedDirectional(
+                        top: 25,
+                        start: 9,
+                        child: Container(
+                          width: 62,
+                          height: 62,
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: StoreAvatar(store: store, size: 56),
+                        ),
+                      ),
+                      const PositionedDirectional(
+                        top: 64,
+                        start: 50,
+                        child: _VerifiedBadge(size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 126,
+                        child: Text(
+                          store.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.title.copyWith(color: AppColors.inkHeading),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          if (store.rating != null) ...[
+                            _Rating(
+                              rating: store.rating!,
+                              style: t.captionStrong,
+                              star: 13,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '·',
+                              style: t.caption.copyWith(
+                                color: AppColors.inkMuted,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Flexible(
+                            child: Text(
+                              l10n.hmProductCount(store.productCount),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.caption.copyWith(
+                                color: AppColors.inkMuted,
+                              ),
+                            ),
                           ),
                         ],
-                        Flexible(
-                          child: Text(
-                            l10n.hmProductCount(store.productCount),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: t.caption.copyWith(color: AppColors.inkMuted),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -448,6 +525,26 @@ class StoreAvatar extends StatelessWidget {
   }
 }
 
+/// The blue check disc (22 pt on the Featured card's logo, 20 on the vendor's):
+/// a white 2 pt ring and the check at 55 % of the disc.
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: AppColors.info,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white, width: 2),
+    ),
+    child: Icon(HubIcons.check, size: size * 0.55, color: Colors.white),
+  );
+}
+
 class _VerifiedAvatar extends StatelessWidget {
   const _VerifiedAvatar({
     required this.store,
@@ -467,37 +564,37 @@ class _VerifiedAvatar extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         StoreAvatar(store: store, size: size, border: true),
+        // 22 pt at (44, 44): its end edge 2 pt past the logo's.
         PositionedDirectional(
           end: -2,
           bottom: -2,
-          child: Container(
-            width: badge,
-            height: badge,
-            decoration: BoxDecoration(
-              color: AppColors.info,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: Icon(HubIcons.check, size: badge * 0.55, color: Colors.white),
-          ),
+          child: _VerifiedBadge(size: badge),
         ),
       ],
     ),
   );
 }
 
+/// ★ 4.4: the star and the average, 4 pt apart.
 class _Rating extends StatelessWidget {
-  const _Rating({required this.rating, required this.style, required this.size});
+  const _Rating({
+    required this.rating,
+    required this.style,
+    required this.star,
+  });
 
   final double rating;
   final TextStyle style;
-  final double size;
+
+  /// The star's size in the frame; Material's rounded star is drawn 2 pt
+  /// larger to fill the same box as the frame's Lucide star.
+  final double star;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(Icons.star_rounded, size: size + 2, color: AppColors.accentGold),
+      Icon(Icons.star_rounded, size: star + 2, color: AppColors.ratingStar),
       const SizedBox(width: 4),
       Text(
         rating.toStringAsFixed(1),

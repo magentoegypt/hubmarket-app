@@ -34,7 +34,7 @@ class Money {
     // A right-to-left isolate (U+2067 … U+2069): the number comes first and the
     // sign lies to its left, wherever the surrounding text is laid out — also
     // inside a Text that forces left-to-right and inside an Arabic sentence.
-    return '⁧$number $sign⁩';
+    return '\u2067$number $sign\u2069';
   }
 
   @override

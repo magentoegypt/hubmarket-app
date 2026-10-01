@@ -5,8 +5,13 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// A Home section header (Figma 07 "section-header/…"): an optional leading
-/// glyph, the admin's title (Heading 1) and subtitle (Caption), and the
-/// orange "See all →" action on the end side.
+/// glyph, the admin's title (Heading 1) and subtitle (Caption, 2 pt under it),
+/// and the orange "See All →" action (Body Strong, 2 pt before a 16 pt arrow)
+/// on the end side, centred on the whole header.
+///
+/// The header is as tall as its text: 28 for a title, 46 with a subtitle (30
+/// with the 30 pt glyph). The action's tap target is the header's full height,
+/// so it never makes the header taller than the frame draws it.
 class HmSectionHeader extends StatelessWidget {
   const HmSectionHeader({
     super.key,
@@ -31,49 +36,54 @@ class HmSectionHeader extends StatelessWidget {
     final action = actionLabel;
     return Padding(
       padding: padding,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (leading != null) ...[
-                      leading!,
-                      const SizedBox(width: 8),
-                    ],
-                    Expanded(
-                      child: Text(
-                        title,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (leading != null) ...[
+                          leading!,
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: Text(
+                            title,
+                            // "Top Brands on Hub Market" takes two lines in
+                            // English and three in Arabic.
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.heading1.copyWith(
+                              color: AppColors.inkHeading,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if ((subtitle ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: t.heading1.copyWith(color: AppColors.inkHeading),
+                        style: t.caption.copyWith(color: AppColors.inkMuted),
                       ),
-                    ),
+                    ],
                   ],
                 ),
-                if ((subtitle ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: t.caption.copyWith(color: AppColors.inkMuted),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-          if (action != null && onAction != null) ...[
-            const SizedBox(width: 8),
-            InkWell(
-              onTap: onAction,
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+            if (action != null && onAction != null)
+              InkWell(
+                onTap: onAction,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -92,9 +102,8 @@ class HmSectionHeader extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -118,15 +127,19 @@ class HmHeaderGlyph extends StatelessWidget {
   );
 }
 
-/// An emoji set as a section glyph (🏆 Best sellers, 🆕 New stores).
+/// An emoji set as a section glyph (🏆 Best sellers, 🆕 New stores): a 22 pt
+/// square, as the frame draws it.
 class HmHeaderEmoji extends StatelessWidget {
   const HmHeaderEmoji(this.emoji, {super.key});
 
   final String emoji;
 
   @override
-  Widget build(BuildContext context) => Text(
-    emoji,
-    style: const TextStyle(fontSize: 20, height: 1.1),
+  Widget build(BuildContext context) => SizedBox(
+    width: 22,
+    height: 22,
+    child: FittedBox(
+      child: Text(emoji, style: const TextStyle(fontSize: 20, height: 1)),
+    ),
   );
 }

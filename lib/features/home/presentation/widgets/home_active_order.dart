@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/config/store_timezone.dart';
 import '../../../../core/util/store_time.dart';
 import '../../../../l10n/l10n.dart';
@@ -33,7 +34,7 @@ class HomeActiveOrder extends ConsumerWidget {
   }
 }
 
-/// Figma 07 "Active order": a compact white card — green truck tile, the
+/// Figma 07 "Active order": a compact white card — green truck disc, the
 /// order's status over its number, date and item count, and Track. Tapping
 /// the card opens the order; Track opens its tracking.
 ///
@@ -47,6 +48,7 @@ class ActiveOrderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     // Magento stamps order dates in the store's zone — see orderFmtDate.
     final storeZone = ref.watch(storeTimezoneProvider).valueOrNull ?? '';
@@ -56,16 +58,16 @@ class ActiveOrderCard extends ConsumerWidget {
       if (_shortDate(order.date, locale, storeZone) case final date?) date,
       if (order.itemCount > 0) l10n.orderItemCount(order.itemCount),
     ].join(' · ');
-    final radius = BorderRadius.circular(12);
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: const BorderSide(color: AppColors.borderDefault),
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: AppColors.borderSubtle),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push(AppRoutes.orderDetail, extra: order),
+        // 1 pt border + 12 pt of padding.
         child: Padding(
           padding: const EdgeInsets.all(13),
           child: Row(
@@ -73,9 +75,9 @@ class ActiveOrderCard extends ConsumerWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.successSubtle,
-                  borderRadius: BorderRadius.circular(10),
+                  shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   HubIcons.truck,
@@ -93,23 +95,14 @@ class ActiveOrderCard extends ConsumerWidget {
                       status.isEmpty ? l10n.orderNumber(order.number) : status,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 20 / 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.inkHeading,
-                      ),
+                      style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       details,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 16 / 12,
-                        color: AppColors.inkMuted,
-                      ),
+                      style: t.caption.copyWith(color: AppColors.inkMuted),
                     ),
                   ],
                 ),
@@ -122,13 +115,13 @@ class ActiveOrderCard extends ConsumerWidget {
                   backgroundColor: AppColors.brandPrimary,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(0, 32),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: const StadiumBorder(),
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  textStyle: t.captionStrong,
                 ),
                 child: Text(l10n.orderTrack),
               ),

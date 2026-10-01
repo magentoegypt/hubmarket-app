@@ -23,7 +23,40 @@ class BundleRailCard extends StatelessWidget {
   final BundleDeal deal;
 
   static const double width = 300;
+
+  /// The card's height in English at 1× text: 1 pt border, the 150 pt photo,
+  /// and the 238 pt body (14 | seller 16 · name 22 · line 16 · thumbs 44 ·
+  /// price 20 · button 52, 8 apart | 14).
   static const double height = 390;
+
+  /// The card's height for the language and text size of [context]: [height]
+  /// in English, 398 in Arabic (taller lines), so the body keeps its 8 pt
+  /// between the rows.
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    double line(TextStyle style) =>
+        scaler.scale(style.fontSize! * style.height!);
+    // A point for the rounding of scaled lines; none at normal text size,
+    // where the frame's numbers are exact.
+    final slack = scaler.scale(100) == 100 ? 0.0 : 1.0;
+    return 2 + // the border
+        150 +
+        14 +
+        line(t.captionStrong) +
+        8 +
+        line(t.title) +
+        8 +
+        line(t.caption) +
+        8 +
+        44 +
+        8 +
+        line(t.button) +
+        8 +
+        52 +
+        14 +
+        slack;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +86,11 @@ class BundleRailCard extends StatelessWidget {
                       fit: BoxFit.contain,
                       placeholder: (_) => const ColoredBox(color: Colors.white),
                     ),
+                    // The frame lays the card out inside its 1 pt border: the
+                    // badges sit 10 pt in from the photo, which starts 1 pt in.
                     PositionedDirectional(
-                      top: 10,
-                      start: 10,
+                      top: 11,
+                      start: 11,
                       child: Row(
                         children: [
                           if (deal.hasSaving) ...[
@@ -76,10 +111,12 @@ class BundleRailCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // 8 pt from the end: the frame's 300 pt photo runs 2 pt past
+                    // the card's inner width, and the pill is placed on it.
                     if (deal.itemCount > 0)
                       PositionedDirectional(
-                        top: 10,
-                        end: 10,
+                        top: 11,
+                        end: 8,
                         child: _ItemCountPill(count: deal.itemCount),
                       ),
                   ],
@@ -87,7 +124,8 @@ class BundleRailCard extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(14),
+                  // 14 pt inside the body, which starts inside the 1 pt border.
+                  padding: const EdgeInsets.all(15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -243,6 +281,8 @@ class BundleThumbnails extends StatelessWidget {
             ),
             child: Text(
               '+${deal.moreThumbnails}',
+              // A count: "+1" reads the same in both directions.
+              textDirection: TextDirection.ltr,
               style: t.captionStrong.copyWith(color: const Color(0xFF535D70)),
             ),
           ),

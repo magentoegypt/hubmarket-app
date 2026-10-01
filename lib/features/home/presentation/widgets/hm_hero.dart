@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../domain/hm_home.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'hm_metrics.dart';
 
 /// The Hero Banner carousel (Figma 07 "Hero carousel"): a 220 pt slide per
 /// banner — the admin's image under its tone scrim, kicker pill, headline,
@@ -23,6 +25,25 @@ class HmHeroCarousel extends ConsumerStatefulWidget {
 
   final List<HmHeroBanner> slides;
   final Duration interval;
+
+  /// A slide's height for the language and text size of [context]: the frame's
+  /// 220, or taller when a larger text setting needs the room for the fullest
+  /// slide — 18 pt of padding around the kicker pill, a two-line headline, a
+  /// two-line supporting line and the CTA, 8 pt apart.
+  static double slideHeightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final content =
+        2 * 18 +
+        (HmMetrics.line(context, t.micro) + 8) +
+        8 +
+        2 * HmMetrics.line(context, t.heading1) +
+        8 +
+        2 * HmMetrics.line(context, t.caption) +
+        8 +
+        (HmMetrics.line(context, t.captionStrong) + 16) +
+        HmMetrics.slack(context);
+    return math.max(220, content);
+  }
 
   @override
   ConsumerState<HmHeroCarousel> createState() => _HmHeroCarouselState();
@@ -76,7 +97,7 @@ class _HmHeroCarouselState extends ConsumerState<HmHeroCarousel> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 220,
+          height: HmHeroCarousel.slideHeightFor(context),
           child: NotificationListener<ScrollStartNotification>(
             onNotification: (n) {
               if (n.dragDetails != null) _schedule();
@@ -170,13 +191,16 @@ class HmHeroSlide extends StatelessWidget {
                     if (banner.subtitle != null) ...[
                       const SizedBox(height: 8),
                       ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 240),
+                        // 240 in the English frame, 250 in the Arabic one.
+                        constraints: BoxConstraints(
+                          maxWidth: t.arabic ? 250 : 240,
+                        ),
                         child: Text(
                           banner.subtitle!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: t.caption.copyWith(
-                            color: const Color(0xFFCBD3E2),
+                            color: AppColors.onInverseMuted,
                           ),
                         ),
                       ),
@@ -230,10 +254,26 @@ class HmPromoTiles extends ConsumerWidget {
 
   final List<HmHeroBanner> tiles;
 
+  /// The tiles' height for the language and text size of [context]: the
+  /// frame's 100, or taller when a larger text setting needs the room for the
+  /// kicker, the title and the line, in 12 pt of padding.
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final content =
+        24 +
+        HmMetrics.line(context, t.micro) +
+        2 +
+        HmMetrics.line(context, t.title) +
+        2 +
+        HmMetrics.line(context, t.caption) +
+        HmMetrics.slack(context);
+    return math.max(100, content);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
-      height: 100,
+      height: heightFor(context),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -290,19 +330,24 @@ class HmPromoTile extends StatelessWidget {
                     ),
                   ),
                 ],
+                // 12 pt around the text; the title may run on into the end
+                // padding (it is one line, as in the frame), the subtitle stops
+                // at 144 pt.
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 0, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      if (banner.kicker != null)
+                      if (banner.kicker != null) ...[
                         Text(
                           banner.kicker!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: t.micro.copyWith(color: Colors.white),
                         ),
+                        const SizedBox(height: 2),
+                      ],
                       Text(
                         banner.title,
                         maxLines: 1,
@@ -311,14 +356,17 @@ class HmPromoTile extends StatelessWidget {
                       ),
                       if (banner.subtitle != null) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          banner.subtitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.caption.copyWith(
-                            color: hasImage
-                                ? const Color(0xFFCBD3E2)
-                                : Colors.white,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 144),
+                          child: Text(
+                            banner.subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.caption.copyWith(
+                              color: hasImage
+                                  ? AppColors.onInverseMuted
+                                  : Colors.white,
+                            ),
                           ),
                         ),
                       ],
