@@ -21,6 +21,7 @@ import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/product_route_query.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
+import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_buy_bar.dart';
 import 'package:hubmarket_app/features/marketplace/presentation/other_sellers.dart';
 import 'package:hubmarket_app/features/marketplace/presentation/seller_widgets.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
@@ -214,9 +215,8 @@ void main() {
   for (final locale in const ['en', 'ar']) {
     final l10n = lookupAppLocalizations(Locale(locale));
 
-    testWidgets('Figma 14: "Sold by N other sellers" under "Sold by" ($locale)', (
-      tester,
-    ) async {
+    testWidgets('Figma 14: the "Sold by N other sellers" card lists the offers '
+        '($locale)', (tester) async {
       phoneView(tester, height: 1000);
       final key = GlobalKey();
       final public = _public();
@@ -226,41 +226,51 @@ void main() {
       await tester.pumpAndSettle();
       await captureScreen(tester, key, 'pdp_other_sellers_$locale');
 
-      final row = find.byType(OtherSellersRow);
-      expect(row, findsOneWidget);
+      final card = find.byType(OtherSellersCard);
+      expect(card, findsOneWidget);
       expect(find.text(l10n.pdpOtherSellers(2)), findsOneWidget);
       expect(find.text(l10n.pdpOtherSellersCompare), findsOneWidget);
-      // Under the seller, above the title.
+      // After the seller and the title, as the frame orders them.
       expect(
-        tester.getTopLeft(row).dy,
+        tester.getTopLeft(card).dy,
         greaterThan(tester.getTopLeft(find.byType(SoldByRow)).dy),
       );
       expect(
-        tester.getTopLeft(row).dy,
-        lessThan(tester.getTopLeft(find.text('Joust Duffle Bag').first).dy),
+        tester.getTopLeft(card).dy,
+        greaterThan(tester.getTopLeft(find.text('Joust Duffle Bag').first).dy),
       );
+      // The cheapest offers are on the card itself, each with its "+".
+      expect(
+        find.descendant(of: card, matching: find.byType(OfferTile)),
+        findsNWidgets(2),
+      );
+      expect(find.descendant(of: card, matching: find.text('ENARA')), findsOneWidget);
+      expect(find.descendant(of: card, matching: find.text('AED 34')), findsOneWidget);
+      expect(find.byTooltip(l10n.offerAddToCart('ENARA')), findsOneWidget);
       // One public read, with the offers.
       expect(_operations(public), ['HmProductMarketplace']);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('the sheet lists the offers cheapest first ($locale)', (
-      tester,
-    ) async {
+    testWidgets('"Compare" opens the sheet, which lists the offers cheapest '
+        'first ($locale)', (tester) async {
       phoneView(tester);
       final key = GlobalKey();
       await tester.pumpWidget(
         _app(locale: locale, public: _public(), cart: _Cart(), boundary: key),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byType(OtherSellersRow));
+      await tester.tap(find.text(l10n.pdpOtherSellersCompare));
       await tester.pumpAndSettle();
       await captureScreen(tester, key, 'pdp_other_sellers_sheet_$locale');
 
       final sheet = find.byType(OtherSellersSheet);
       expect(sheet, findsOneWidget);
-      final tiles = find.byType(OfferTile);
-      expect(tiles, findsNWidgets(2));
+      // The card on the page lists the same two; the sheet its own.
+      expect(
+        find.descendant(of: sheet, matching: find.byType(OfferTile)),
+        findsNWidgets(2),
+      );
       Finder inSheet(String text) =>
           find.descendant(of: sheet, matching: find.text(text));
       expect(inSheet(l10n.pdpOtherSellers(2)), findsOneWidget);
@@ -277,7 +287,10 @@ void main() {
         lessThan(tester.getTopLeft(inSheet('Hassan Store')).dy),
       );
       expect(
-        find.byTooltip(l10n.offerAddToCart('ENARA')),
+        find.descendant(
+          of: sheet,
+          matching: find.byTooltip(l10n.offerAddToCart('ENARA')),
+        ),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -293,15 +306,45 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     // Quantity 2 on the page.
-    await tester.tap(find.byIcon(HubIcons.plus).first);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(QuantityPill),
+        matching: find.byIcon(HubIcons.plus),
+      ),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(OtherSellersRow));
-    await tester.pumpAndSettle();
+    // The "+" on ENARA's row of the card.
     await tester.tap(find.byTooltip(l10n.offerAddToCart('ENARA')));
     await tester.pumpAndSettle();
 
     expect(cart.added, [
       {'sku': 'SKU-2287', 'quantity': 2},
+    ]);
+    expect(find.byType(OtherSellersSheet), findsNothing);
+    expect(find.text(l10n.cartAdded), findsOneWidget);
+  });
+
+  testWidgets('"+" in the Compare sheet adds the offer the same way', (
+    tester,
+  ) async {
+    phoneView(tester, height: 1000);
+    final cart = _Cart();
+    await tester.pumpWidget(_app(locale: 'en', public: _public(), cart: cart));
+    await tester.pumpAndSettle();
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    await tester.tap(find.text(l10n.pdpOtherSellersCompare));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(OtherSellersSheet),
+        matching: find.byTooltip(l10n.offerAddToCart('ENARA')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(cart.added, [
+      {'sku': 'SKU-2287', 'quantity': 1},
     ]);
     expect(find.byType(OtherSellersSheet), findsNothing);
     expect(find.text(l10n.cartAdded), findsOneWidget);
@@ -315,8 +358,7 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = lookupAppLocalizations(const Locale('en'));
 
-    await tester.tap(find.byType(OtherSellersRow));
-    await tester.pumpAndSettle();
+    // Its row on the card.
     await tester.tap(find.text('Hassan Store'));
     await tester.pumpAndSettle();
 
@@ -357,8 +399,6 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
     expect(find.text(l10n.pdpOtherSellers(1)), findsOneWidget);
 
-    await tester.tap(find.byType(OtherSellersRow));
-    await tester.pumpAndSettle();
     expect(find.byTooltip(l10n.offerAddToCart('Hassan Store')), findsNothing);
     await tester.tap(
       find.byTooltip(l10n.offerChooseOptions('Hassan Store')),
@@ -379,7 +419,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(SoldByRow), findsOneWidget);
-    expect(find.byType(OtherSellersRow), findsNothing);
+    expect(find.byType(OtherSellersCard), findsNothing);
   });
 
   testWidgets('Build 1: no row and no second request', (tester) async {
@@ -394,7 +434,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(OtherSellersRow), findsNothing);
+    expect(find.byType(OtherSellersCard), findsNothing);
     expect(public.requests, isEmpty);
   });
 }

@@ -227,6 +227,7 @@ ProductDetail productDetailFromJson(
           imageUrl: httpsMediaUrl(
             (product?['image'] as Map<String, dynamic>?)?['url'] as String?,
           ),
+          onlyLeft: _unitsLeft(product?['only_x_left_in_stock']),
         );
       })
       .toList();
@@ -301,6 +302,8 @@ ProductDetail productDetailFromJson(
     ratingSummary: (json['rating_summary'] as num?)?.round() ?? 0,
     reviewCount: (json['review_count'] as int?) ?? 0,
     alsoLike: alsoLikeFromJson(json, now: now),
+    onlyLeft: _unitsLeft(json['only_x_left_in_stock']),
+    categories: productCategoriesFromJson(json['categories']),
     reviews:
         ((json['reviews'] as Map<String, dynamic>?)?['items']
                     as List<dynamic>? ??
@@ -317,6 +320,14 @@ ProductDetail productDetailFromJson(
             )
             .toList(),
   );
+}
+
+/// `only_x_left_in_stock`: a Float the store fills only while the "Only X left"
+/// threshold is set and the stock is at or under it. Null for anything but a
+/// positive number.
+int? _unitsLeft(Object? value) {
+  final left = _number(value);
+  return left != null && left > 0 ? left.round() : null;
 }
 
 /// Most "You may also like" cards the PDP shows.

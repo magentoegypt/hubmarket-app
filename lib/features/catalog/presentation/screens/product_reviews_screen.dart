@@ -4,26 +4,26 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/not_found_state.dart';
 import '../../../../app/routes.dart';
-import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/theme_x.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_button.dart';
 import '../../../../l10n/l10n.dart';
+import '../../domain/review_subject.dart';
 import '../reviews_controllers.dart';
 import '../widgets/review_widgets.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// All of a product's published reviews (Figma 15), reached from the product
 /// page's "See all". Pages through core `products { reviews }` 20 at a time
 /// as the list scrolls.
 ///
-/// From the frame: the summary card, star filters, the review list and
-/// "Write a review". Left out because core reviews carry none of it: "With
-/// photos", verified-purchase badges, the variant line, helpful votes and
-/// store replies. The per-star bars and filters appear only once every
+/// From the frame: the summary card, the star filters, the review list and
+/// "Write a review" in the footer. Left out because core reviews carry none of
+/// it: "With photos", verified-purchase badges, the variant line, helpful votes
+/// and store replies. The per-star bars and filters appear only once every
 /// review is loaded, so they are counts, never an extrapolation.
 class ProductReviewsScreen extends ConsumerStatefulWidget {
   const ProductReviewsScreen({super.key, required this.urlKey});
@@ -68,13 +68,22 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
     final state = ref.watch(productReviewsControllerProvider(widget.urlKey));
     final product = state.product;
 
-    return HubScaffold(
-      currentTab: AppTab.home,
-      appBar: subpageAppBar(context, l10n.reviewsScreenTitle),
-      bottomBar: product == null
+    // The frame has no tab bar: a footer with "Write a review" instead.
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: RuledTopBar(title: l10n.reviewsScreenTitle),
+      bottomNavigationBar: product == null
           ? null
-          : _WriteReviewBar(
-              onTap: () => context.push(AppRoutes.review(product.sku)),
+          : ScreenFooter(
+              child: HubButton(
+                label: l10n.reviewsWrite,
+                icon: HubIcons.pencil,
+                style: HubButtonStyle.outline,
+                onPressed: () => context.push(
+                  AppRoutes.review(product.sku),
+                  extra: ReviewSubject(sku: product.sku, name: product.name),
+                ),
+              ),
             ),
       body: _body(l10n, state),
     );
@@ -132,9 +141,10 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
         ? state.reviews
         : state.reviews.where((r) => r.stars == stars).toList();
 
+    // Figma "Body": 16 px above and around, 14 px between the blocks.
     return ListView(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       children: [
         ReviewsSummaryCard(
           ratingSummary: product.ratingSummary,
@@ -150,22 +160,23 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
             onSelected: (value) => setState(() => _stars = value),
           ),
         ],
-        const SizedBox(height: 4),
-        for (var i = 0; i < visible.length; i++) ...[
-          if (i > 0) Divider(height: 1, thickness: 1, color: context.hairline),
-          ReviewCard(review: visible[i]),
-        ],
+        const SizedBox(height: 14),
+        for (final review in visible) ReviewCard(review: review),
         if (state.isLoadingMore)
           const Padding(
             padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator()),
           ),
+        const SizedBox(height: 14),
       ],
     );
   }
 }
 
-/// "All" plus one chip per star level that has reviews.
+/// "All" plus one chip per star level that has reviews (Figma "Chip": a 36 px
+/// pill, 14 px padding, Body Strong — white with a `border/strong` outline,
+/// navy and white once chosen), 8 px apart. The frame's "With photos" is left
+/// out: core reviews carry no photos.
 class _StarFilters extends StatelessWidget {
   const _StarFilters({
     required this.stars,
@@ -181,41 +192,40 @@ class _StarFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     Widget chip(String label, int? value) {
       final on = selected == value;
-      final color = on ? Colors.white : context.scaffoldHeading;
+      final color = on ? Colors.white : AppColors.inkHeading;
       return Padding(
         key: ValueKey('review-filter-${value ?? 'all'}'),
         padding: const EdgeInsetsDirectional.only(end: 8),
-        child: Material(
-          color: on ? AppColors.brandPrimary : groupCardColor(context),
-          shape: StadiumBorder(
-            side: BorderSide(
-              color: on ? AppColors.brandPrimary : context.hairline,
+        child: Semantics(
+          button: true,
+          selected: on,
+          child: Material(
+            color: on ? AppColors.brandPrimary : Colors.white,
+            shape: StadiumBorder(
+              side: on
+                  ? BorderSide.none
+                  : const BorderSide(color: AppColors.borderStrong),
             ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => onSelected(value),
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => onSelected(value),
+              child: SizedBox(
+                height: 36,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(label, style: t.bodyStrong.copyWith(color: color)),
+                      // A glyph, not "★": the Arabic font has no star.
+                      if (value != null)
+                        StarGlyph(size: 14, color: color),
+                    ],
                   ),
-                  // An icon, not "★": the Arabic font has no star glyph.
-                  if (value != null)
-                    Icon(Icons.star_rounded, size: 15, color: color),
-                ],
+                ),
               ),
             ),
           ),
@@ -230,44 +240,6 @@ class _StarFilters extends StatelessWidget {
           chip(allLabel, null),
           for (final s in stars) chip('$s', s),
         ],
-      ),
-    );
-  }
-}
-
-/// The pinned "Write a review" action (Figma 15, 15b).
-class _WriteReviewBar extends StatelessWidget {
-  const _WriteReviewBar({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(top: BorderSide(color: context.hairline)),
-      ),
-      child: SizedBox(
-        height: 52,
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: onTap,
-          icon: const Icon(HubIcons.pencil, size: 20),
-          label: Text(
-            l10n.reviewsWrite,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: context.scaffoldHeading,
-            side: BorderSide(color: context.scaffoldHeading, width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
       ),
     );
   }

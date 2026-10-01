@@ -159,13 +159,16 @@ Widget marketplaceHarness({
   /// publishes it; none by default.
   double? freeShipping,
 
-  /// CMS blocks by identifier (`hm_home_trust` feeds the cart's ticks).
+  /// CMS blocks by identifier (`hm_home_trust` feeds the cart's ticks and the
+  /// product page's delivery card).
   Map<String, String>? cmsBlocks,
   GlobalKey? boundary,
+  List<RouteBase> extraRoutes = const [],
 }) {
   final router = GoRouter(
     initialLocation: location,
     routes: [
+      ...extraRoutes,
       GoRoute(
         path: '/product/:urlKey',
         builder: (_, state) =>

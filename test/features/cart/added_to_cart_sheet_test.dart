@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hubmarket_app/app/theme/app_colors.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
 import 'package:hubmarket_app/core/config/free_shipping.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
@@ -65,6 +66,28 @@ const _related = <Product>[
   Product(
     sku: 'POLO',
     name: 'Polo Shirt',
+    urlKey: 'polo-shirt',
+    finalPrice: Money(amount: 13, currency: 'AED'),
+  ),
+];
+
+/// The same neighbours as the Arabic store view names them (Figma 14c, Arabic).
+const _relatedAr = <Product>[
+  Product(
+    sku: 'TOP',
+    name: 'تيشيرت قصير ياقة مربع',
+    urlKey: 'square-neck-t-shirt',
+    finalPrice: Money(amount: 43, currency: 'AED'),
+  ),
+  Product(
+    sku: 'SHORTS',
+    name: 'شورت قصير جيب جانبي',
+    urlKey: 'flap-pocket-shorts',
+    finalPrice: Money(amount: 13, currency: 'AED'),
+  ),
+  Product(
+    sku: 'POLO',
+    name: 'تيشيرت بولو',
     urlKey: 'polo-shirt',
     finalPrice: Money(amount: 13, currency: 'AED'),
   ),
@@ -141,13 +164,16 @@ Widget _harness(
 }
 
 /// A page with a button that opens the sheet, as an add-to-cart would.
-Widget _opener({List<Product> recommendations = const []}) => Scaffold(
+Widget _opener({
+  List<Product> recommendations = const [],
+  AddedItem item = _item,
+}) => Scaffold(
   body: Builder(
     builder: (context) => Center(
       child: TextButton(
         onPressed: () => AddedToCartSheet.show(
           context,
-          item: _item,
+          item: item,
           recommendations: recommendations,
         ),
         child: const Text('open'),
@@ -185,6 +211,72 @@ void main() {
     expect(find.text('Polo Shirt'), findsOneWidget);
     // No threshold published → no free-shipping bar.
     expect(find.byType(LinearProgressIndicator), findsNothing);
+  });
+
+  testWidgets('"Only 3 left in size M" shows in red when the store says so', (
+    tester,
+  ) async {
+    _phone(tester);
+    await tester.pumpWidget(
+      _harness(
+        Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => AddedToCartSheet.show(
+                context,
+                item: const AddedItem(
+                  name: 'Floral Print Corset-Waist Tie Dress',
+                  quantity: 1,
+                  unitPrice: Money(amount: 50, currency: 'AED'),
+                  options: ['Size: M'],
+                  onlyLeft: 3,
+                  onlyLeftOption: 'size M',
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+
+    final line = find.text('Only 3 left in size M');
+    expect(line, findsOneWidget);
+    expect(tester.widget<Text>(line).style!.color, AppColors.danger);
+    // Without the count, no line.
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(_harness(_opener()));
+    await tester.pumpAndSettle();
+    await _open(tester);
+    expect(find.textContaining('left'), findsNothing);
+  });
+
+  testWidgets('from the product page the sheet carries what is left of the '
+      'chosen variant', (tester) async {
+    const product = ProductDetail(
+      sku: 'DRESS',
+      name: 'Dress',
+      urlKey: 'dress',
+      options: [
+        ConfigurableOption(
+          attributeCode: 'size',
+          label: 'Size',
+          values: [SwatchValue(valueIndex: 1, label: 'M')],
+        ),
+      ],
+      variants: [
+        ProductVariant(sku: 'DRESS-M', attributes: {'size': 1}, onlyLeft: 3),
+      ],
+    );
+    final item = AddedItem.fromDetail(product, {'size': 1}, 2);
+    expect(item.onlyLeft, 3);
+    expect(item.onlyLeftOption, 'size M');
+    expect(item.options, ['Size: M']);
+    // A choice not made yet: nothing is claimed.
+    expect(AddedItem.fromDetail(product, {}, 1).onlyLeft, isNull);
   });
 
   testWidgets('without linked products the row is left out', (tester) async {
@@ -243,7 +335,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapText(tester, 'Add to Cart · AED 50');
+    await tapText(tester, 'Add to cart · AED 50');
 
     expect(find.text('Added to cart'), findsOneWidget);
     expect(find.text('Qty 1'), findsOneWidget);
@@ -285,10 +377,28 @@ void main() {
       testWidgets(locale, (tester) async {
         _phone(tester);
         final key = GlobalKey();
+        // The frame's add: size M, three left, the store counting down to its
+        // free-shipping line — named as the store view of the language does.
+        final ar = locale == 'ar';
         await tester.pumpWidget(
           _harness(
-            _opener(recommendations: _related),
+            _opener(
+              recommendations: ar ? _relatedAr : _related,
+              item: AddedItem(
+                name: ar
+                    ? 'فستان صدر طباعة الأزهار رباط مشد خصر'
+                    : 'Floral Print Corset-Waist Tie Dress',
+                quantity: 1,
+                unitPrice: const Money(amount: 50, currency: 'AED'),
+                options: ar
+                    ? ['المقاس: M', 'اللون: بيج مزهر']
+                    : ['Size: M', 'Colour: Beige floral'],
+                onlyLeft: 3,
+                onlyLeftOption: ar ? 'مقاس M' : 'size M',
+              ),
+            ),
             locale: locale,
+            freeShippingOver: 600,
             boundary: key,
           ),
         );

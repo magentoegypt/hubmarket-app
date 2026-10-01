@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 
 import '../../../support/fakes.dart';
@@ -39,6 +40,88 @@ void main() {
     test('no reviews -> hasReviews is false and no histogram', () {
       expect(kSampleDetail.hasReviews, isFalse);
       expect(kSampleDetail.ratingHistogram, isEmpty);
+    });
+
+    group('what is left ("Only 3 left in size M")', () {
+      const sizes = ConfigurableOption(
+        attributeCode: 'size',
+        label: 'Size',
+        values: [
+          SwatchValue(valueIndex: 1, label: 'S'),
+          SwatchValue(valueIndex: 2, label: 'M'),
+        ],
+      );
+      const colours = ConfigurableOption(
+        attributeCode: 'color',
+        label: 'Colour',
+        values: [SwatchValue(valueIndex: 9, label: 'Beige floral')],
+      );
+      const dress = ProductDetail(
+        sku: 'DRESS',
+        name: 'Dress',
+        urlKey: 'dress',
+        options: [colours, sizes],
+        variants: [
+          ProductVariant(
+            sku: 'DRESS-S',
+            attributes: {'color': 9, 'size': 1},
+            onlyLeft: 12,
+          ),
+          ProductVariant(sku: 'DRESS-M', attributes: {'color': 9, 'size': 2}),
+        ],
+      );
+
+      test("a variant's count, once the whole choice is made", () {
+        expect(dress.onlyLeftFor({'color': 9, 'size': 1}), 12);
+        // Not reported for M; nothing chosen yet; half a choice.
+        expect(dress.onlyLeftFor({'color': 9, 'size': 2}), isNull);
+        expect(dress.onlyLeftFor({}), isNull);
+        expect(dress.onlyLeftFor({'color': 9}), isNull);
+      });
+
+      test('a product without options has its own count', () {
+        const simple = ProductDetail(
+          sku: 'S',
+          name: 'S',
+          urlKey: 's',
+          onlyLeft: 2,
+        );
+        expect(simple.onlyLeftFor({}), 2);
+        expect(simple.stockOptionLabel({}), isNull);
+      });
+
+      test('names the chosen value of the last option, as "size M"', () {
+        expect(dress.stockOptionLabel({'color': 9, 'size': 2}), 'size M');
+        expect(dress.stockOptionLabel({'color': 9}), isNull);
+      });
+    });
+
+    group('primaryCategory (where "See all" goes)', () {
+      ProductDetail filed(List<ProductCategoryRef> categories) => ProductDetail(
+        sku: 'S',
+        name: 'S',
+        urlKey: 's',
+        categories: categories,
+      );
+
+      test('the deepest category in the menu', () {
+        final detail = filed(const [
+          ProductCategoryRef(uid: 'a', name: 'Clothes', level: 2),
+          ProductCategoryRef(uid: 'b', name: 'Dresses', level: 3),
+          ProductCategoryRef(uid: 'c', name: 'Hidden', level: 4, inMenu: false),
+        ]);
+        expect(detail.primaryCategory?.uid, 'b');
+      });
+
+      test('a category outside the menu only when nothing else is filed', () {
+        expect(
+          filed(const [
+            ProductCategoryRef(uid: 'c', name: 'Hidden', level: 4, inMenu: false),
+          ]).primaryCategory?.uid,
+          'c',
+        );
+        expect(filed(const []).primaryCategory, isNull);
+      });
     });
   });
 

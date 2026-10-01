@@ -237,6 +237,13 @@ query ProductDetail($urlKey: String!) {
       new_to_date
       rating_summary
       review_count
+      only_x_left_in_stock
+      categories {
+        uid
+        name
+        level
+        include_in_menu
+      }
       related_products {
         ...LinkedProductFields
       }
@@ -312,6 +319,7 @@ query ProductDetail($urlKey: String!) {
           product {
             sku
             stock_status
+            only_x_left_in_stock
             image {
               url
             }

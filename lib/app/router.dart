@@ -30,6 +30,7 @@ import '../features/auth/domain/password_reset_ticket.dart';
 import '../features/auth/presentation/screens/verify_code_screen.dart';
 import '../features/catalog/domain/brand.dart';
 import '../features/catalog/domain/product_preview.dart';
+import '../features/catalog/domain/review_subject.dart';
 import '../features/catalog/presentation/screens/brand_page_screen.dart';
 import '../features/catalog/presentation/screens/brands_screen.dart';
 import '../features/catalog/presentation/screens/categories_screen.dart';
@@ -176,8 +177,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/review/:sku',
-        builder: (context, state) =>
-            WriteReviewScreen(sku: state.pathParameters['sku']!),
+        builder: (context, state) => WriteReviewScreen(
+          sku: state.pathParameters['sku']!,
+          // Present when the product page or the Reviews screen opened the
+          // form; a link straight to it has none.
+          subject: state.extra is ReviewSubject
+              ? state.extra! as ReviewSubject
+              : null,
+        ),
       ),
       GoRoute(
         path: '/reviews/:urlKey',

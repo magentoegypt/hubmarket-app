@@ -9,6 +9,7 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
+import 'package:hubmarket_app/features/catalog/domain/review_subject.dart';
 import 'package:hubmarket_app/features/catalog/presentation/reviews_controllers.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_reviews_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/review_widgets.dart';
@@ -101,6 +102,97 @@ void main() {
     });
   });
 
+  group('reviewerInitials', () {
+    test('two Latin initials, first and last, in capitals', () {
+      expect(reviewerInitials('Nour A.'), 'NA');
+      expect(reviewerInitials('  reem   khaled al marri '), 'RM');
+      expect(reviewerInitials('sara'), 'S');
+    });
+
+    test('an Arabic name is its first letter alone, as in the frame', () {
+      expect(reviewerInitials('نور أ.'), 'ن');
+      expect(reviewerInitials('ريم كمال'), 'ر');
+    });
+
+    test('a nickname with nothing in it is a question mark', () {
+      expect(reviewerInitials(''), '?');
+      expect(reviewerInitials('   '), '?');
+    });
+  });
+
+  group('ScreenFooter', () {
+    Widget host(Widget child, {double bottomInset = 0}) => ProviderScope(
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MediaQuery(
+          data: MediaQueryData(padding: EdgeInsets.only(bottom: bottomInset)),
+          child: Scaffold(body: child),
+        ),
+      ),
+    );
+
+    testWidgets('the footer keeps the home-indicator zone less its gap', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ScreenFooter(child: SizedBox(height: 52, key: ValueKey('a'))),
+                ScreenFooter(
+                  indicatorGap: 6,
+                  child: SizedBox(height: 52, key: ValueKey('b')),
+                ),
+              ],
+            ),
+          ),
+          bottomInset: 34,
+        ),
+      );
+      Size sizeOf(String key) => tester.getSize(
+        find.ancestor(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byType(Container),
+        ).first,
+      );
+      // 1 (rule) + 12 + 52 + (34 - gap): the Reviews frame's 95 and the form's
+      // 93 — before the form's note.
+      expect(sizeOf('a').height, 95);
+      expect(sizeOf('b').height, 93);
+    });
+
+    testWidgets('a short inset still leaves 12 px under the button', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: ScreenFooter(child: SizedBox(height: 52, key: ValueKey('a'))),
+          ),
+        ),
+      );
+      expect(
+        tester
+            .getSize(
+              find.ancestor(
+                of: find.byKey(const ValueKey('a')),
+                matching: find.byType(Container),
+              ).first,
+            )
+            .height,
+        1 + 12 + 52 + 12,
+      );
+    });
+  });
+
   group('ProductReviewsScreen', () {
     Future<void> pump(
       WidgetTester tester,
@@ -120,7 +212,10 @@ void main() {
           ),
           GoRoute(
             path: '/review/:sku',
-            builder: (_, s) => Text('WRITE ${s.pathParameters['sku']}'),
+            builder: (_, s) => Text(
+              'WRITE ${s.pathParameters['sku']} '
+              '${(s.extra as ReviewSubject?)?.name}',
+            ),
           ),
           for (final p in ['/home', '/categories', '/cart', '/wishlist', '/account'])
             GoRoute(path: p, builder: (_, __) => const Scaffold()),
@@ -179,11 +274,22 @@ void main() {
       expect(find.byKey(const ValueKey('review-filter-5')), findsNothing);
     });
 
-    testWidgets('Write a review opens the review form', (tester) async {
+    testWidgets('Write a review opens the review form, with the product', (
+      tester,
+    ) async {
       await pump(tester, FakeReviewsRepository(productReviews: [sampleReview(4)]));
       await tester.tap(find.text(en.reviewsWrite));
       await tester.pumpAndSettle();
-      expect(find.text('WRITE SKU-dress'), findsOneWidget);
+      expect(find.text('WRITE SKU-dress Product dress'), findsOneWidget);
+    });
+
+    testWidgets('has no tab bar: its footer is the Write a review button', (
+      tester,
+    ) async {
+      await pump(tester, FakeReviewsRepository(productReviews: [sampleReview(4)]));
+      expect(find.byType(BottomNavigationBar), findsNothing);
+      expect(find.text(en.navCart), findsNothing);
+      expect(find.text(en.reviewsWrite), findsOneWidget);
     });
 
     testWidgets('renders right-to-left in Arabic', (tester) async {

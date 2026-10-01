@@ -64,9 +64,7 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('Figma 14 — "Sold by" on the product page', () {
-    testWidgets('names the seller with its rating and opens its store', (
-      tester,
-    ) async {
+    testWidgets('names the seller and opens its store', (tester) async {
       phoneView(tester);
       final public = fakeHubAppClient(_answer(_dressItem()));
       await tester.pumpWidget(
@@ -84,7 +82,8 @@ void main() {
       expect(public.requests.single.variables, {'urlKey': 'floral-dress'});
       expect(find.text(_en.pdpSoldBy), findsOneWidget);
       expect(find.text('loly store'), findsOneWidget);
-      expect(find.text('4.3'), findsOneWidget);
+      // The frame's band carries no rating (the seller's 4.3 is not shown).
+      expect(find.text('4.3'), findsNothing);
 
       await tester.tap(find.text(_en.pdpVisitStore));
       await tester.pumpAndSettle();

@@ -41,6 +41,7 @@ class ProductVariant {
     this.price,
     this.inStock = true,
     this.imageUrl,
+    this.onlyLeft,
   });
 
   final String sku;
@@ -48,6 +49,10 @@ class ProductVariant {
   final Money? price;
   final bool inStock;
   final String? imageUrl;
+
+  /// Units left, when the store reports it (Magento's "Only X left" stock
+  /// threshold, `only_x_left_in_stock`); null otherwise.
+  final int? onlyLeft;
 }
 
 /// A single published product review.
@@ -201,6 +206,8 @@ class ProductDetail {
     this.reviewCount = 0,
     this.reviews = const <ProductReview>[],
     this.alsoLike = const <Product>[],
+    this.onlyLeft,
+    this.categories = const <ProductCategoryRef>[],
   });
 
   final String sku;
@@ -254,6 +261,29 @@ class ProductDetail {
   /// capped at 8. Empty when the catalogue links nothing; the rail then hides.
   final List<Product> alsoLike;
 
+  /// Units left of a product with no options, when the store reports it
+  /// (`only_x_left_in_stock`); a configurable's are on its [variants].
+  final int? onlyLeft;
+
+  /// The categories the product is filed under (`categories`); where the
+  /// "Looking similar → See all" link goes. Empty when the query didn't say.
+  final List<ProductCategoryRef> categories;
+
+  /// The category "See all" opens: the deepest one shown in the menu, else
+  /// the deepest of any (the rule a search hit's "in Home Furniture" follows).
+  /// Null without categories.
+  ProductCategoryRef? get primaryCategory {
+    ProductCategoryRef? best;
+    for (final category in categories) {
+      if (best == null ||
+          (category.inMenu && !best.inMenu) ||
+          (category.inMenu == best.inMenu && category.level > best.level)) {
+        best = category;
+      }
+    }
+    return best;
+  }
+
   bool get isConfigurable => options.isNotEmpty;
   bool get isBundle => typeId == 'bundle';
   bool get hasReviews => reviewCount > 0;
@@ -285,6 +315,30 @@ class ProductDetail {
         (e) => variant.attributes[e.key] == e.value,
       );
       if (matches) return variant;
+    }
+    return null;
+  }
+
+  /// Units left of what [selection] picks: the chosen variant's, or the
+  /// product's own when it has no options. Null when the store doesn't say —
+  /// today it doesn't, until the "Only X left" threshold is set in the admin.
+  int? onlyLeftFor(Map<String, int> selection) {
+    if (!isConfigurable) return onlyLeft;
+    final left = variantFor(selection)?.onlyLeft;
+    return left != null && left > 0 ? left : null;
+  }
+
+  /// What the low-stock line names: the chosen value of the last option, as
+  /// "size M" (the option's label, lower-cased, then the value) — the frame's
+  /// "Only 3 left in size M". Null for a product without options.
+  String? stockOptionLabel(Map<String, int> selection) {
+    if (options.isEmpty) return null;
+    final option = options.last;
+    final index = selection[option.attributeCode];
+    for (final value in option.values) {
+      if (value.valueIndex == index) {
+        return '${option.label.toLowerCase()} ${value.label}'.trim();
+      }
     }
     return null;
   }

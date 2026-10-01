@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../domain/product_preview.dart';
 import '../product_navigation.dart';
 import 'product_card.dart';
+import 'product_gallery.dart';
 
 /// A loading placeholder for [ProductCard] (Figma S4 "card-skeleton"): a square
 /// image block, then four bars 8 px apart — the seller, the name on two lines
@@ -81,8 +83,9 @@ class ProductGridSkeleton extends StatelessWidget {
   }
 }
 
-/// The PDP's loading state, shaped like its content: a square gallery, then the
-/// title/price block and the bars standing in for options, quantity and tabs.
+/// The PDP's loading state, shaped like its content: the 400 px photo stage, then
+/// the title/price block and the bars standing in for the options and the
+/// sections after them.
 ///
 /// When [preview] is present (the user tapped a listing card) the hero image,
 /// brand, name and price are the *real* ones and paint in the first frame —
@@ -99,13 +102,23 @@ class ProductDetailSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = preview;
     final price = p?.finalPrice ?? p?.regularPrice;
+    final t = AppTextStyles.of(context);
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        AspectRatio(
-          aspectRatio: 1,
+        // The photo stage of Figma 14: 400 high on `bg/muted`, the photo
+        // contained in it.
+        SizedBox(
+          height: ProductGallery.defaultHeight,
           child: (p != null && p.hasImage)
-              ? HubImage(url: p.imageUrl, decodeWidth: pdpImageWidth(context))
+              ? ColoredBox(
+                  color: AppColors.surfaceSubtle,
+                  child: HubImage(
+                    url: p.imageUrl,
+                    fit: BoxFit.contain,
+                    decodeWidth: pdpImageWidth(context),
+                  ),
+                )
               : const Shimmer(child: SkeletonBox(borderRadius: 0)),
         ),
         Padding(
@@ -116,7 +129,7 @@ class ProductDetailSkeleton extends StatelessWidget {
               if (p?.brand != null && p!.brand!.isNotEmpty)
                 Text(
                   p.brand!,
-                  style: const TextStyle(color: AppColors.inkMuted),
+                  style: t.captionStrong.copyWith(color: AppColors.brandPrimary),
                 )
               else
                 const Shimmer(
@@ -128,7 +141,10 @@ class ProductDetailSkeleton extends StatelessWidget {
                 ),
               const SizedBox(height: 8),
               if (p?.name != null && p!.name!.isNotEmpty)
-                Text(p.name!, style: Theme.of(context).textTheme.headlineSmall)
+                Text(
+                  p.name!,
+                  style: t.heading1.copyWith(color: AppColors.inkHeading),
+                )
               else
                 const Shimmer(
                   child: Column(
@@ -150,11 +166,7 @@ class ProductDetailSkeleton extends StatelessWidget {
                   price.formatted(),
                   // Keep the "AED 1,234.00" token LTR inside an RTL paragraph.
                   textDirection: TextDirection.ltr,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.brandPrimary,
-                    fontSize: 20,
-                  ),
+                  style: t.priceLarge.copyWith(color: AppColors.inkHeading),
                 )
               else
                 const Shimmer(
