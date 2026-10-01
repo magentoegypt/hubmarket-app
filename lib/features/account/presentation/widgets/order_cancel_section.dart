@@ -9,6 +9,7 @@ import '../../../../core/config/store_features.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
 import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_radio_dot.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/order.dart';
 import '../order_cancellation.dart';
@@ -364,20 +365,7 @@ class _ReasonRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected
-                        ? AppColors.brandPrimary
-                        : AppColors.borderControl,
-                    width: selected ? 7 : 1.5,
-                  ),
-                ),
-              ),
+              HubRadioDot(selected: selected),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

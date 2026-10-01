@@ -39,6 +39,7 @@ class HubButton extends StatelessWidget {
     this.loading = false,
     this.expand = true,
     this.height = 52,
+    this.iconSize = 18,
   });
 
   final String label;
@@ -48,6 +49,10 @@ class HubButton extends StatelessWidget {
   final bool loading;
   final bool expand;
   final double height;
+
+  /// The leading icon's size: 18 px, the 20 px "lead" slot of the footer
+  /// buttons (Add new address, New return request) where a frame draws it.
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +93,7 @@ class HubButton extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2, color: ink),
           )
         else if (icon != null)
-          Icon(icon, size: 18),
+          Icon(icon, size: iconSize),
         if (loading || icon != null) const SizedBox(width: 8),
         Flexible(
           child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
