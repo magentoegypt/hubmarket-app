@@ -32,9 +32,11 @@ Future<void> openCmsHref(
 
 /// Icon for a footer legal link, picked by the page it opens (as in Figma 27).
 IconData legalLinkIcon(CmsLink link) => switch (legalPageOf(link)) {
-  LegalPage.privacy => HubIcons.shield,
+  // The frames' "icon/shield" is shield-check.
+  LegalPage.privacy => HubIcons.shieldCheck,
   LegalPage.cookies => HubIcons.globe,
-  LegalPage.terms => HubIcons.pencil,
+  // The frames' "icon/edit" is the plain pen, not the pencil with a ferrule.
+  LegalPage.terms => HubIcons.pen,
 };
 
 /// Opens a link known to point at a storefront CMS page (the footer's legal

@@ -214,6 +214,10 @@ abstract final class HubIcons {
   /// `party-popper`
   static const IconData partyPopper = IconData(0xe343, fontFamily: _family);
 
+  /// `pen` (the font's legacy `edit-2`) — the plain pencil. The frames'
+  /// "icon/edit" draws this one; [pencil] has the ferrule line.
+  static const IconData pen = IconData(0xe12f, fontFamily: _family);
+
   /// `pencil`
   static const IconData pencil = IconData(0xe1f9, fontFamily: _family);
 

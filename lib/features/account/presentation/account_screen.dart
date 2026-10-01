@@ -177,12 +177,14 @@ class _EditProfilePill extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          // 12 / 8 of padding plus the 1 px outline, which the frame adds to the
+          // size (108 x 34) where a Material paints it inside.
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                HubIcons.pencil,
+                HubIcons.pen,
                 size: 14,
                 color: AppColors.inkHeading,
               ),
@@ -358,7 +360,8 @@ class _Authenticated extends ConsumerWidget {
               // (or a reviewer) finds it here; Privacy & data holds the action,
               // and Settings keeps its copy too.
               GroupRow(
-                icon: HubIcons.shield,
+                // The frames' "icon/shield" is Lucide shield-check.
+                icon: HubIcons.shieldCheck,
                 label: l10n.privacyDataTitle,
                 value: l10n.deleteAccountTitle,
                 onTap: () => context.push(AppRoutes.privacyData),

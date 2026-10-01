@@ -45,7 +45,7 @@ import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 
 /// Renders the P1 stream-B screens — Figma 15, 20f, 21b, 20h, 27, 28 and 20b (the
-/// Account ones as p1_<name>: the audit captures are in account_subpages_audit_test)
+/// Account ones as `p1_NAME`: the audit captures are in account_subpages_audit_test)
 /// — in English and Arabic to `build/test_screens/` for comparison with the
 /// frames (build/ is gitignored; nothing is asserted on the images). Each
 /// render also fails on any layout exception, so it doubles as an RTL and
