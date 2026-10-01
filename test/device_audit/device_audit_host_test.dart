@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -37,7 +38,18 @@ void main() {
       .where((e) => e.isNotEmpty)
       .toList();
 
-  setUpAll(loadAppFonts);
+  setUpAll(() async {
+    await loadAppFonts();
+    // The first network image of the process creates the image cache manager,
+    // which asks the path_provider plugin for a directory; the test renderer
+    // has no plugins (the phone does), and the error would land on whichever
+    // scene happens to be up.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => Directory.systemTemp.path,
+        );
+  });
 
   for (final scene in allScenes()) {
     if (wanted.isNotEmpty && !wanted.any(scene.id.contains)) continue;

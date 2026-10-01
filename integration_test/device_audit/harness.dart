@@ -129,15 +129,19 @@ Future<SceneRun> runScene(
     try {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
+    } catch (_) {}
+    // The providers go with the screen: their timers (a retry, a refresh) are
+    // cancelled by their own dispose.
+    container?.dispose();
+    try {
       // Host only: a timer a screen started (the splash's hold, a countdown)
       // fires after the screen is gone; let the fake clock run it out, or the
       // test ends with a pending timer.
       if (tester.binding is! LiveTestWidgetsFlutterBinding) {
-        await tester.pump(const Duration(seconds: 3));
+        await tester.pump(const Duration(seconds: 30));
       }
       tester.takeException();
     } catch (_) {}
-    container?.dispose();
     // After the tree is gone, so its fields close their connections through the
     // fake keyboard.
     if (fakeKeyboard) keyboard.unregister();
