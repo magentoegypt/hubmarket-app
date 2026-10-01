@@ -9,9 +9,9 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/offline_state.dart';
 import '../../../../l10n/l10n.dart';
-import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../../catalog/presentation/widgets/product_skeletons.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'hm_list_widgets.dart';
 
 /// What a Hub Market App list page shows when its load failed: offline, the
 /// store's own trouble with Retry — or, when the server has no such list
@@ -66,7 +66,7 @@ class HmListError extends ConsumerWidget {
   }
 }
 
-/// A two-column grid of card skeletons.
+/// A two-column grid of card skeletons, laid out as the lists' own grid.
 class HmGridSkeleton extends StatelessWidget {
   const HmGridSkeleton({super.key, this.count = 4});
 
@@ -77,7 +77,7 @@ class HmGridSkeleton extends StatelessWidget {
     physics: const NeverScrollableScrollPhysics(),
     shrinkWrap: true,
     padding: const EdgeInsets.all(16),
-    gridDelegate: productGridDelegate(context),
+    gridDelegate: hmGridDelegate(context),
     itemCount: count,
     itemBuilder: (_, __) => const ProductCardSkeleton(),
   );

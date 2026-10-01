@@ -4,14 +4,18 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/hubapp/hubapp.dart';
+import '../../../../core/widgets/hub_chip.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
+import '../../../deals/presentation/widgets/star_glyph.dart';
 import '../../domain/store.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Opens [store]'s page, handing over the card so the header paints at once.
 void openStore(BuildContext context, HmStoreCard store) =>
@@ -165,25 +169,17 @@ class StoreRatingLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    const muted = TextStyle(
-      fontSize: 12,
-      height: 16 / 12,
-      color: AppColors.inkMuted,
-    );
+    final t = AppTextStyles.of(context);
+    final muted = t.caption.copyWith(color: AppColors.inkMuted);
     if (!store.isRated) return Text(l10n.storeNoReviews, style: muted);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star_rounded, size: 14, color: AppColors.accentGold),
+        const StarGlyph(),
         const SizedBox(width: 4),
         Text(
           formatStoreRating(store.rating!),
-          style: const TextStyle(
-            fontSize: 12,
-            height: 16 / 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.inkHeading,
-          ),
+          style: t.captionStrong.copyWith(color: AppColors.inkHeading),
         ),
         const SizedBox(width: 4),
         Flexible(
@@ -222,85 +218,119 @@ InlineSpan ratingSpan(
   );
 }
 
-/// A 36 pt pill (Figma "Chip"): navy when [selected], outlined otherwise.
-/// As wide as its label, in a row or a wrap. A [count] follows the label in a
-/// lighter weight ("Furniture 3") and [semanticLabel] then reads it out.
+/// A 36 pt pill (Figma "Chip"): navy when [selected], outlined otherwise —
+/// `HubChip`. [semanticLabel] reads out what the label alone doesn't ("Furniture,
+/// 3 stores").
 class StorePill extends StatelessWidget {
   const StorePill({
     super.key,
     required this.label,
     required this.onTap,
     this.selected = false,
-    this.count,
     this.semanticLabel,
   });
 
   final String label;
   final VoidCallback onTap;
   final bool selected;
-  final int? count;
   final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    final shape = StadiumBorder(
-      side: selected
-          ? BorderSide.none
-          : BorderSide(color: SearchStyle.chipBorder(context)),
-    );
-    final color = selected ? Colors.white : context.scaffoldHeading;
-    final text = Text(
-      label,
-      maxLines: 1,
-      style: TextStyle(
-        fontSize: 14,
-        height: 20 / 14,
-        fontWeight: FontWeight.w600,
-        color: color,
-      ),
-    );
-    final count = this.count;
+    final chip = HubChip(label: label, selected: selected, onTap: onTap);
+    final spoken = semanticLabel;
+    if (spoken == null) return chip;
     return Semantics(
-      label: semanticLabel,
+      label: spoken,
       button: true,
       selected: selected,
-      excludeSemantics: semanticLabel != null,
-      child: Material(
-        color: selected
-            ? AppColors.brandPrimary
-            : (context.isDarkMode ? Colors.transparent : Colors.white),
-        shape: shape,
-        child: InkWell(
-          customBorder: shape,
-          onTap: onTap,
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Center(
-              widthFactor: 1,
-              child: count == null
-                  ? text
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        text,
-                        const SizedBox(width: 6),
-                        Text(
-                          storeCount(count),
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 16 / 12,
-                            fontWeight: FontWeight.w500,
-                            color: selected
-                                ? Colors.white70
-                                : context.scaffoldMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
+      onTap: onTap,
+      excludeSemantics: true,
+      child: chip,
+    );
+  }
+}
+
+/// The grey search field of the stores pages (Figma 12 "search", 13
+/// "store-search"): [height] px, radius 12, `muted` fill and no outline, an
+/// 18 px search icon 14 px in and 10 before the text, a clear button once typed
+/// in, and [trailing] (the store page's filter action) at the end.
+class StoreSearchField extends StatelessWidget {
+  const StoreSearchField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+    required this.onClear,
+    this.focusNode,
+    this.onSubmitted,
+    this.trailing,
+    this.height = 44,
+  });
+
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final VoidCallback onClear;
+  final Widget? trailing;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    final muted = context.scaffoldMuted;
+    const none = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+      borderSide: BorderSide.none,
+    );
+    // The text line is 20 px high (22 in Arabic); the rest of [height] is the
+    // padding around it.
+    final pad = (height - t.body.fontSize! * t.body.height!) / 2;
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: TextInputAction.search,
+      style: t.body.copyWith(color: context.scaffoldHeading),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintMaxLines: 1,
+        hintStyle: t.body.copyWith(color: muted),
+        filled: true,
+        fillColor: SearchStyle.pillFill(context),
+        // Without it the field is at least 48 px high.
+        isDense: true,
+        border: none,
+        enabledBorder: none,
+        focusedBorder: none,
+        contentPadding: EdgeInsetsDirectional.fromSTEB(0, pad, 14, pad),
+        prefixIcon: Padding(
+          // 10 before the text, less the 4 px Material 3 puts after an icon.
+          padding: const EdgeInsetsDirectional.only(start: 14, end: 6),
+          child: Icon(HubIcons.search, size: 18, color: muted),
         ),
+        prefixIconConstraints: const BoxConstraints(),
+        suffixIcon: controller.text.isEmpty && trailing == null
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (controller.text.isNotEmpty)
+                    HubIconButton(
+                      icon: HubIcons.x,
+                      iconSize: 18,
+                      color: muted,
+                      tooltip: l10n.searchClearField,
+                      onPressed: onClear,
+                    ),
+                  ?trailing,
+                ],
+              ),
+        suffixIconConstraints: const BoxConstraints(),
       ),
     );
   }
@@ -326,6 +356,7 @@ class StoreListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final shape = RoundedRectangleBorder(
       side: const BorderSide(color: AppColors.borderSubtle),
       borderRadius: BorderRadius.circular(16),
@@ -338,7 +369,8 @@ class StoreListTile extends StatelessWidget {
         onTap: onTap,
         customBorder: shape,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          // 12 inside the 1 px outline, as Figma's border-box: 86 px high.
+          padding: const EdgeInsets.all(13),
           child: Row(
             children: [
               StoreLogo(store: store, size: 56),
@@ -349,30 +381,21 @@ class StoreListTile extends StatelessWidget {
                   children: [
                     StoreNameLine(
                       name: store.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        height: 22 / 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.inkHeading,
-                      ),
+                      style: t.title.copyWith(color: AppColors.inkHeading),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       detail,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 16 / 12,
-                        color: AppColors.inkMuted,
-                      ),
+                      style: t.caption.copyWith(color: AppColors.inkMuted),
                     ),
                     const SizedBox(height: 3),
                     StoreRatingLine(store: store),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               // chevron_right mirrors itself in RTL.
               const Icon(
                 HubIcons.chevronRight,
@@ -393,7 +416,7 @@ class StoreListTileSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 84,
+    height: 86,
     decoration: BoxDecoration(
       color: Colors.white,
       border: Border.all(color: AppColors.borderSubtle),

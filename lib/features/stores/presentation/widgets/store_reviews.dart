@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -109,6 +110,7 @@ class StoreReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     final created = review.createdAt;
     final date = created == null
@@ -124,16 +126,14 @@ class StoreReviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              // As Figma 15's reviewers: a 40 px disc, the initials in Body
+              // Strong accent.
               CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFFFF1E6),
+                radius: 20,
+                backgroundColor: AppColors.accentSubtle,
                 child: Text(
                   reviewerInitials(review.nickname),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppColors.accentStrong,
-                  ),
+                  style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
                 ),
               ),
               const SizedBox(width: 12),
@@ -145,9 +145,7 @@ class StoreReviewCard extends StatelessWidget {
                       review.nickname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      style: t.bodyStrong.copyWith(
                         color: context.scaffoldHeading,
                       ),
                     ),
@@ -161,8 +159,7 @@ class StoreReviewCard extends StatelessWidget {
                         if (date.isNotEmpty)
                           Text(
                             date,
-                            style: TextStyle(
-                              fontSize: 12,
+                            style: t.caption.copyWith(
                               color: context.scaffoldMuted,
                             ),
                           ),
@@ -177,23 +174,12 @@ class StoreReviewCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.scaffoldHeading,
-              ),
+              style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
             ),
           ],
           if (text != null) ...[
             const SizedBox(height: 4),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.45,
-                color: context.scaffoldHeading,
-              ),
-            ),
+            Text(text, style: t.body.copyWith(color: context.scaffoldHeading)),
           ],
           if (product != null) ...[
             const SizedBox(height: 10),
@@ -245,7 +231,9 @@ class _ReviewedProduct extends StatelessWidget {
               product.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12.5, color: context.scaffoldHeading),
+              style: AppTextStyles.of(
+                context,
+              ).caption.copyWith(color: context.scaffoldHeading),
             ),
           ),
           if (urlKey != null) ...[

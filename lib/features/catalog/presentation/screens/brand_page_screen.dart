@@ -9,6 +9,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/hub_chip.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../deals/presentation/widgets/hm_list_widgets.dart';
@@ -59,12 +61,20 @@ class BrandPageScreen extends ConsumerWidget {
     return ref.watch(brandByUrlKeyProvider(urlKey)).when(
       loading: () => HubScaffold(
         currentTab: AppTab.home,
-        appBar: HmTitleAppBar(title: '', actions: const <Widget>[]),
+        appBar: HmTitleAppBar(
+          title: '',
+          actions: const <Widget>[],
+          divider: false,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => HubScaffold(
         currentTab: AppTab.home,
-        appBar: HmTitleAppBar(title: '', actions: const <Widget>[]),
+        appBar: HmTitleAppBar(
+          title: '',
+          actions: const <Widget>[],
+          divider: false,
+        ),
         body: HmListError(
           error: error,
           onRetry: () => ref.invalidate(brandsProvider),
@@ -75,7 +85,11 @@ class BrandPageScreen extends ConsumerWidget {
       data: (found) => found == null
           ? HubScaffold(
               currentTab: AppTab.home,
-              appBar: HmTitleAppBar(title: '', actions: const <Widget>[]),
+              appBar: HmTitleAppBar(
+          title: '',
+          actions: const <Widget>[],
+          divider: false,
+        ),
               body: EmptyState(
                 icon: HubIcons.store,
                 title: l10n.brandsEmpty,
@@ -98,26 +112,33 @@ class _BrandPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final t = AppTextStyles.of(context);
     final optionId = brand.optionId;
+    // Figma 10e: search and share, no divider under the bar (the brand header
+    // carries the rule).
     final actions = [
-      IconButton(
-        icon: const Icon(HubIcons.search, size: 22),
-        color: AppColors.inkHeading,
+      HubIconButton(
+        icon: HubIcons.search,
+        tooltip: l10n.navSearch,
         onPressed: () => context.push(AppRoutes.search),
       ),
-      if (brand.url.isNotEmpty)
-        IconButton(
-          icon: const Icon(HubIcons.share2, size: 22),
-          color: AppColors.inkHeading,
+      if (brand.url.isNotEmpty) ...[
+        const SizedBox(width: 4), // the frames' 4 px between app bar items
+        HubIconButton(
+          icon: HubIcons.share2,
           tooltip: l10n.actionShare,
-          onPressed: () =>
-              SharePlus.instance.share(ShareParams(text: '${brand.title}\n${brand.url}')),
+          onPressed: () => SharePlus.instance.share(
+            ShareParams(text: '${brand.title}\n${brand.url}'),
+          ),
         ),
-      const SizedBox(width: 4),
+      ],
     ];
     if (optionId == null) {
       return HubScaffold(
         currentTab: AppTab.home,
-        appBar: HmTitleAppBar(title: brand.title, actions: actions),
+        appBar: HmTitleAppBar(
+          title: brand.title,
+          actions: actions,
+          divider: false,
+        ),
         body: EmptyState(icon: HubIcons.store, title: l10n.brandsEmpty),
       );
     }
@@ -162,7 +183,11 @@ class _BrandPage extends ConsumerWidget {
 
     return HubScaffold(
       currentTab: AppTab.home,
-      appBar: HmTitleAppBar(title: brand.title, actions: actions),
+      appBar: HmTitleAppBar(
+        title: brand.title,
+        actions: actions,
+        divider: false,
+      ),
       body: RefreshIndicator(
         color: AppColors.brandPrimary,
         onRefresh: controller.refresh,
@@ -229,13 +254,13 @@ class _BrandPage extends ConsumerWidget {
                   sliver: SliverToBoxAdapter(
                     child: HmChipRow(
                       chips: [
-                        HmFilterChip(
+                        HubChip(
                           label: l10n.brandsFilterAll,
                           selected: selected.isEmpty,
                           onTap: () => pickCategory(null),
                         ),
                         for (final c in categories)
-                          HmFilterChip(
+                          HubChip(
                             label: c.label,
                             selected: selected.contains(c.value),
                             onTap: () => pickCategory(
@@ -295,7 +320,7 @@ class _BrandPage extends ConsumerWidget {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   sliver: SliverGrid.builder(
-                    gridDelegate: productGridDelegate(context),
+                    gridDelegate: hmGridDelegate(context),
                     itemCount: state.products.length,
                     itemBuilder: (context, i) => ProductCard(
                       product: state.products[i],

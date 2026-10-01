@@ -7,13 +7,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/network/connectivity.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/hub_back_button.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/offline_state.dart';
 import '../../../../l10n/l10n.dart';
@@ -21,6 +23,7 @@ import '../../../catalog/domain/category.dart';
 import '../../../catalog/presentation/search_providers.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../../catalog/presentation/widgets/sort_sheet.dart';
+import '../../../deals/presentation/widgets/hm_list_widgets.dart';
 import '../../domain/store.dart';
 import '../store_list_controller.dart';
 import '../stores_providers.dart';
@@ -137,30 +140,18 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final available = ref.watch(storesAvailableProvider);
-    final canPop = ModalRoute.of(context)?.impliesAppBarDismissal ?? false;
     return HubScaffold(
       currentTab: AppTab.home,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: canPop ? const HubBackButton() : null,
-        centerTitle: false,
-        titleSpacing: canPop ? 0 : 16,
-        title: Text(
-          l10n.storesTitle,
-          style: TextStyle(
-            fontSize: 18,
-            height: 24 / 18,
-            fontWeight: FontWeight.w700,
-            color: context.scaffoldHeading,
-          ),
-        ),
+      // Figma 12's "App bar": the title (a back arrow only when the page was
+      // pushed) and search.
+      appBar: HubTopBar(
+        title: l10n.storesTitle,
         actions: [
-          IconButton(
-            icon: const Icon(HubIcons.search, size: 22),
+          HubIconButton(
+            icon: HubIcons.search,
             tooltip: l10n.navSearch,
             onPressed: () => context.push(AppRoutes.search),
           ),
-          const SizedBox(width: 4),
         ],
       ),
       body: available ? _body(context, l10n) : const StoresUnavailable(),
@@ -208,7 +199,7 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
           SliverPadding(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
             sliver: SliverToBoxAdapter(
-              child: _SearchField(
+              child: StoreSearchField(
                 controller: _search,
                 hint: l10n.storesSearchHint,
                 onChanged: _onSearchChanged,
@@ -238,8 +229,10 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
                 ),
               ),
             ),
+          // 12 either side of the 32 px row: Figma's 16 around a 24 px one, with
+          // the sort action a 32 px target.
           SliverPadding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
             sliver: SliverToBoxAdapter(
               child: _ListHeading(
                 title: l10n.storesAllTitle,
@@ -263,7 +256,7 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
     if (list.isLoading && list.items.isEmpty) {
       return [
         SliverPadding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
           sliver: SliverList.separated(
             itemCount: 4,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -328,7 +321,7 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
     }
     return [
       SliverPadding(
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 0),
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 0),
         sliver: SliverList.separated(
           itemCount: list.items.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -363,60 +356,10 @@ String storeSortLabel(AppLocalizations l10n, StoreSort sort) => switch (sort) {
   StoreSort.productCount => l10n.storesSortMostProducts,
 };
 
-/// "Search stores": a filled 44 pt field with a clear button once typed in.
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.hint,
-    required this.onChanged,
-    required this.onClear,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.search,
-      style: TextStyle(
-        fontSize: 14,
-        height: 20 / 14,
-        color: context.scaffoldHeading,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(
-          fontSize: 14,
-          height: 20 / 14,
-          color: context.scaffoldMuted,
-        ),
-        filled: true,
-        fillColor: SearchStyle.pillFill(context),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        prefixIcon: Icon(HubIcons.search, size: 18, color: context.scaffoldMuted),
-        prefixIconConstraints: const BoxConstraints(minWidth: 42),
-        suffixIcon: controller.text.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(HubIcons.x, size: 18),
-                color: context.scaffoldMuted,
-                tooltip: l10n.searchClearField,
-                onPressed: onClear,
-              ),
-      ),
-    );
-  }
-}
-
-/// "All · Grocery · Furniture · …": the top-level categories as 36 pt pills,
-/// the chosen one navy, each with its seller count when the list has them.
+/// "All · Grocery · Furniture · …": the top-level categories as 36 pt pills
+/// (Figma 12 "store-filters", full width), the chosen one navy. A category's
+/// seller count, when the list has it, is read out rather than drawn
+/// ("Furniture, 3 stores").
 class _CategoryChips extends StatelessWidget {
   const _CategoryChips({
     required this.chips,
@@ -435,33 +378,30 @@ class _CategoryChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: chips.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final chip = i == 0 ? null : chips[i - 1];
-          final label = chip?.name ?? l10n.filterAll;
-          final count = chip == null ? allCount : chip.count;
-          return StorePill(
-            label: label,
-            count: count,
-            semanticLabel: count == null
+    // "All" first, then the categories.
+    final all = <({String? uid, String label, int? count})>[
+      (uid: null, label: l10n.filterAll, count: allCount),
+      for (final c in chips) (uid: c.uid, label: c.name, count: c.count),
+    ];
+    return HmChipRow(
+      bleed: true,
+      chips: [
+        for (final c in all)
+          StorePill(
+            label: c.label,
+            semanticLabel: c.count == null
                 ? null
-                : l10n.storesCategoryChip(label, count),
-            selected: chip?.uid == selectedUid,
-            onTap: () => onPick(chip?.uid),
-          );
-        },
-      ),
+                : l10n.storesCategoryChip(c.label, c.count!),
+            selected: c.uid == selectedUid,
+            onTap: () => onPick(c.uid),
+          ),
+      ],
     );
   }
 }
 
-/// "All stores" with the sort action (⇅ Top rated).
+/// "All stores" with the sort action (⇅ Top rated): Heading 2 and, at the end,
+/// the 16 px icon and Caption Strong (Figma 12 "row").
 class _ListHeading extends StatelessWidget {
   const _ListHeading({
     required this.title,
@@ -475,6 +415,7 @@ class _ListHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final color = context.scaffoldHeading;
     return Row(
       children: [
@@ -483,33 +424,20 @@ class _ListHeading extends StatelessWidget {
             title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 18,
-              height: 24 / 18,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+            style: t.heading2.copyWith(color: color),
           ),
         ),
         InkWell(
           onTap: onSort,
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 0, 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(HubIcons.arrowUpDown, size: 16, color: color),
                 const SizedBox(width: 4),
-                Text(
-                  sortLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 16 / 12,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
+                Text(sortLabel, style: t.captionStrong.copyWith(color: color)),
               ],
             ),
           ),
@@ -538,6 +466,7 @@ class FeaturedStoreBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final store = profile.card;
     final banner = profile.bannerUrl ?? '';
     final products = l10n.categoryProductCount(store.productCount);
@@ -586,12 +515,7 @@ class FeaturedStoreBanner extends StatelessWidget {
                     ),
                     child: Text(
                       l10n.storesFeaturedBadge,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        height: 14 / 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                      style: t.micro.copyWith(color: Colors.white),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -611,12 +535,7 @@ class FeaturedStoreBanner extends StatelessWidget {
                             StoreNameLine(
                               name: store.name,
                               markColor: AppColors.accentOnDark,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                height: 24 / 18,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
+                              style: t.heading2.copyWith(color: Colors.white),
                             ),
                             const SizedBox(height: 2),
                             // "Furniture · ★ 4.8 · 38 products"
@@ -639,9 +558,7 @@ class FeaturedStoreBanner extends StatelessWidget {
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 16 / 12,
+                              style: t.caption.copyWith(
                                 color: AppColors.borderStrong,
                               ),
                             ),
@@ -660,10 +577,7 @@ class FeaturedStoreBanner extends StatelessWidget {
                         ),
                         child: Text(
                           l10n.storesVisit,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            height: 16 / 12,
-                            fontWeight: FontWeight.w600,
+                          style: t.captionStrong.copyWith(
                             color: AppColors.inkHeading,
                           ),
                         ),

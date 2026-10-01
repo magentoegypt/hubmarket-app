@@ -262,8 +262,10 @@ class BundlePriceRow extends StatelessWidget {
 
   final BundleDeal deal;
 
-  /// The 10c list: "Save AED 11" instead of "You save AED 11", and the price
-  /// in ink rather than the sale orange (as the frames draw them).
+  /// The 10c list: "Save AED 11" instead of "You save AED 11", the price in
+  /// ink rather than the sale orange, the regular total plain rather than
+  /// struck through, and the row's items centred rather than on one baseline
+  /// (as the frame draws them).
   final bool compactSaving;
 
   @override
@@ -272,7 +274,9 @@ class BundlePriceRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final price = deal.price.formatted();
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
+      crossAxisAlignment: compactSaving
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
         Text(
@@ -289,7 +293,7 @@ class BundlePriceRow extends StatelessWidget {
             deal.regularTotal!.formatted(),
             style: t.caption.copyWith(
               color: AppColors.inkMuted,
-              decoration: TextDecoration.lineThrough,
+              decoration: compactSaving ? null : TextDecoration.lineThrough,
             ),
           ),
         ],

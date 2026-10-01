@@ -266,7 +266,8 @@ void main() {
       testWidgets('banner, chips, count, sort, filters and grid ($locale)', (
         tester,
       ) async {
-        await _phone(tester, height: 1100);
+        // The frame's size, so the capture lines up with Figma 10b.
+        await _phone(tester);
         final key = GlobalKey();
         final deals = _FakeDeals();
         await tester.pumpWidget(
@@ -351,7 +352,8 @@ void main() {
     for (final locale in ['en', 'ar']) {
       testWidgets('the Filters sheet: sort, minimum discount, department '
           '($locale)', (tester) async {
-        await _phone(tester, height: 1000);
+        // Figma 11's height.
+        await _phone(tester, height: 963);
         final key = GlobalKey();
         final deals = _FakeDeals();
         await tester.pumpWidget(
@@ -394,6 +396,23 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('the Filters sheet stops 40 px under the top, as Figma 11 '
+        'draws it, and scrolls within', (tester) async {
+      await _phone(tester, height: 480);
+      await tester.pumpWidget(
+        _harness(const DealsScreen(), deals: _FakeDeals()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Filters'));
+      await tester.pumpAndSettle();
+
+      final sheet = tester.getRect(find.byType(DealsFilterSheet));
+      expect(sheet.top, greaterThanOrEqualTo(40));
+      expect(find.text('Apply Filters'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('filters that leave nothing: say so, and clear them', (
       tester,
@@ -490,7 +509,9 @@ void main() {
           find.textContaining(l10n.bundleSoldBy('Test 1')),
           findsOneWidget,
         );
-        expect(find.text(l10n.bundleAdd), findsNWidgets(2));
+        // Figma 10c words the button "Add bundle" (the Home card's is "Add
+        // Bundle").
+        expect(find.text(l10n.bundleListAdd), findsNWidgets(2));
         expect(tester.takeException(), isNull);
       });
     }
@@ -563,7 +584,7 @@ void main() {
       // The chips stay while one is selected.
       expect(find.text('Electronics & Tech'), findsOneWidget);
 
-      await tester.tap(find.text('Add Bundle').first);
+      await tester.tap(find.text('Add bundle').first);
       await tester.pumpAndSettle();
       expect(find.text('PDP home-fitness-starter-pack'), findsOneWidget);
     });

@@ -6,6 +6,7 @@ import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/hub_chip.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../home/domain/hm_home.dart';
@@ -15,6 +16,7 @@ import '../bundle_deals_controller.dart';
 import '../widgets/bundle_card.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
+import '../widgets/star_glyph.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro (the Home's
@@ -58,30 +60,23 @@ class BundleDealsScreen extends ConsumerWidget {
                 const SizedBox(height: 14),
               ],
               if (state.categories.length > 1) ...[
-                SizedBox(
-                  height: 36,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: state.categories.length + 1,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      if (i == 0) {
-                        return HmFilterChip(
-                          label: l10n.bundlesAllChip,
-                          selected: state.categoryId == null,
-                          onTap: () => controller.selectCategory(null),
-                        );
-                      }
-                      final c = state.categories[i - 1];
-                      return HmFilterChip(
+                HmChipRow(
+                  padded: false,
+                  chips: [
+                    HubChip(
+                      label: l10n.bundlesAllChip,
+                      selected: state.categoryId == null,
+                      onTap: () => controller.selectCategory(null),
+                    ),
+                    for (final c in state.categories)
+                      HubChip(
                         label: c.name,
                         selected: state.categoryId == c.id,
                         onTap: () => controller.selectCategory(
                           state.categoryId == c.id ? null : c.id,
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 14),
               ],
@@ -91,10 +86,7 @@ class BundleDealsScreen extends ConsumerWidget {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (state.items.isEmpty)
-                EmptyState(
-                  icon: HubIcons.package,
-                  title: l10n.bundlesEmpty,
-                )
+                EmptyState(icon: HubIcons.package, title: l10n.bundlesEmpty)
               else
                 for (final (i, deal) in state.items.indexed) ...[
                   if (i > 0) const SizedBox(height: 14),
@@ -241,125 +233,144 @@ class BundleListCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => openBundle(context, deal),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 112,
-              color: AppColors.surfaceSubtle,
-              child: Row(
-                children: [
-                  if (images.isEmpty)
-                    const Expanded(child: HubImage(url: null))
-                  else
-                    for (final (i, url) in images.indexed) ...[
-                      if (i > 0) const SizedBox(width: 2),
-                      Expanded(
-                        child: HubImage(url: url, fit: BoxFit.cover),
-                      ),
-                    ],
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (deal.hasSaving) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.accentSale,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            l10n.bundleDiscountBadge(deal.discountPercent),
-                            style: t.micro.copyWith(color: Colors.white),
-                          ),
+        // Everything sits inside the 1 px outline, as Figma's border-box: the
+        // card is 2 px taller than its content.
+        child: Padding(
+          padding: const EdgeInsets.all(1),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 112,
+                color: AppColors.surfaceSubtle,
+                child: Row(
+                  children: [
+                    if (images.isEmpty)
+                      const Expanded(child: HubImage(url: null))
+                    else
+                      for (final (i, url) in images.indexed) ...[
+                        if (i > 0) const SizedBox(width: 2),
+                        Expanded(
+                          child: HubImage(url: url, fit: BoxFit.cover),
                         ),
-                        const SizedBox(width: 8),
                       ],
-                      if (deal.itemCount > 0)
-                        Text(
-                          l10n.bundleItemCount(deal.itemCount),
-                          style: t.caption.copyWith(color: AppColors.inkMuted),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    deal.name,
-                    style: t.title.copyWith(color: AppColors.inkHeading),
-                  ),
-                  if (rating != null || deal.seller != null) ...[
-                    const SizedBox(height: 6),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        if (rating != null) ...[
-                          for (var s = 1; s <= 5; s++)
-                            Icon(
-                              rating >= s - 0.25
-                                  ? Icons.star_rounded
-                                  : rating >= s - 0.75
-                                  ? Icons.star_half_rounded
-                                  : Icons.star_outline_rounded,
-                              size: 14,
-                              color: AppColors.accentGold,
+                        if (deal.hasSaving) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
                             ),
-                          const SizedBox(width: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentSale,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              l10n.bundleListBadge(deal.discountPercent),
+                              style: t.micro.copyWith(color: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (deal.itemCount > 0)
                           Text(
-                            '${rating.toStringAsFixed(1)} (${deal.reviewCount})',
+                            l10n.bundleItemCount(deal.itemCount),
                             style: t.caption.copyWith(
                               color: AppColors.inkMuted,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                        ],
-                        if (deal.seller != null)
-                          Flexible(
-                            child: Text(
-                              // The dot only separates it from a rating before it.
-                              '${rating != null ? '· ' : ''}'
-                              '${l10n.bundleSoldBy(deal.seller!.name)}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: t.caption.copyWith(color: AppColors.info),
-                            ),
-                          ),
                       ],
                     ),
-                  ],
-                  const SizedBox(height: 6),
-                  BundlePriceRow(deal: deal, compactSaving: true),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    height: 52,
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => openBundle(context, deal),
-                      icon: const Icon(HubIcons.shoppingCart, size: 20),
-                      label: Text(l10n.bundleAdd),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brandPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        textStyle: t.button,
+                    const SizedBox(height: 6),
+                    Text(
+                      deal.name,
+                      style: t.title.copyWith(color: AppColors.inkHeading),
+                    ),
+                    if (rating != null || deal.seller != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          if (rating != null) ...[
+                            _Stars(rating: rating),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${rating.toStringAsFixed(1)} (${deal.reviewCount})',
+                              style: t.caption.copyWith(
+                                color: AppColors.inkMuted,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          if (deal.seller != null)
+                            Flexible(
+                              child: Text(
+                                // The dot only separates it from a rating before it.
+                                '${rating != null ? '· ' : ''}'
+                                '${l10n.bundleSoldBy(deal.seller!.name)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.caption.copyWith(
+                                  color: AppColors.info,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    BundlePriceRow(deal: deal, compactSaving: true),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 52,
+                      width: double.infinity,
+                      // The theme's FilledButton is Figma's Button: 52 px,
+                      // radius 12, navy, EN/Button label.
+                      child: FilledButton.icon(
+                        onPressed: () => openBundle(context, deal),
+                        icon: const Icon(HubIcons.shoppingCart, size: 20),
+                        label: Text(l10n.bundleListAdd),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Five 12 px stars, 2 apart: as many lit as the rating rounds to (4.5 lights
+/// five, 4.2 four), the rest in the unlit grey — Figma 10c.
+class _Stars extends StatelessWidget {
+  const _Stars({required this.rating});
+
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final lit = rating.round().clamp(0, 5);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var star = 1; star <= 5; star++) ...[
+          if (star > 1) const SizedBox(width: 2),
+          StarGlyph(
+            color: star <= lit ? AppColors.ratingStar : AppColors.ratingEmpty,
+          ),
+        ],
+      ],
     );
   }
 }

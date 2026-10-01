@@ -238,9 +238,8 @@ void main() {
   group('with the P3.1 seller fields (the server lists vendors)', () {
     const vendors = HubAppState.available(kVendorsHmAppConfig);
 
-    testWidgets('12: chips with their seller counts, cards with a category', (
-      tester,
-    ) async {
+    testWidgets('12: chips with their seller counts read out, cards with a '
+        'category', (tester) async {
       await phoneSurface(tester, height: 1400);
       final semantics = tester.ensureSemantics();
       final backend = FakeStoresBackend(storesAnswers());
@@ -250,7 +249,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(backend.of('HmStoreCategories'), hasLength(1));
-      // The seller API's chips, in menu order, each with its count.
+      // The seller API's chips, in menu order. Figma 12's chips are plain
+      // labels: each one's seller count is read out, not drawn.
       final chips = find.byType(StorePill);
       expect(
         find.descendant(of: chips.first, matching: find.text('All')),
@@ -258,9 +258,10 @@ void main() {
       );
       expect(
         find.descendant(of: chips.first, matching: find.text('5')),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.text('Grocery'), findsOneWidget);
+      expect(find.bySemanticsLabel('All, 5 stores'), findsOneWidget);
       expect(find.bySemanticsLabel('Grocery, 1 store'), findsOneWidget);
       // Every card names the seller's category before its products.
       expect(find.text('Fashion · 64 products'), findsOneWidget);
