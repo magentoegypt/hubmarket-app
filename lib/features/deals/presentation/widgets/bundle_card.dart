@@ -73,116 +73,115 @@ class BundleRailCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => openBundle(context, deal),
-          // The frame lays the card out inside its 1 pt border.
-          child: Padding(
-            padding: const EdgeInsets.all(1),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  height: 150,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      HubImage(
-                        url: deal.imageUrl,
-                        fit: BoxFit.contain,
-                        placeholder: (_) => const ColoredBox(color: Colors.white),
-                      ),
-                      PositionedDirectional(
-                        top: 10,
-                        start: 10,
-                        child: Row(
-                          children: [
-                            if (deal.hasSaving) ...[
-                              BundleBadge(
-                                label: l10n.bundleCardDiscount(
-                                  deal.discountPercent,
-                                ),
-                                color: AppColors.accentSale,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 150,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    HubImage(
+                      url: deal.imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (_) => const ColoredBox(color: Colors.white),
+                    ),
+                    // The frame lays the card out inside its 1 pt border: the
+                    // badges sit 10 pt in from the photo, which starts 1 pt in.
+                    PositionedDirectional(
+                      top: 11,
+                      start: 11,
+                      child: Row(
+                        children: [
+                          if (deal.hasSaving) ...[
+                            BundleBadge(
+                              label: l10n.bundleCardDiscount(
+                                deal.discountPercent,
                               ),
-                              const SizedBox(width: 6),
-                              BundleBadge(
-                                label: l10n.bundleCardSave(
-                                  deal.saving!.formatted(),
-                                ),
-                                color: AppColors.successStrong,
+                              color: AppColors.accentSale,
+                            ),
+                            const SizedBox(width: 6),
+                            BundleBadge(
+                              label: l10n.bundleCardSave(
+                                deal.saving!.formatted(),
                               ),
-                            ],
+                              color: AppColors.successStrong,
+                            ),
                           ],
+                        ],
+                      ),
+                    ),
+                    // 8 pt from the end: the frame's 300 pt photo runs 2 pt past
+                    // the card's inner width, and the pill is placed on it.
+                    if (deal.itemCount > 0)
+                      PositionedDirectional(
+                        top: 11,
+                        end: 8,
+                        child: _ItemCountPill(count: deal.itemCount),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  // 14 pt inside the body, which starts inside the 1 pt border.
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (deal.seller != null) ...[
+                        Text(
+                          deal.seller!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.captionStrong.copyWith(
+                            color: AppColors.info,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Text(
+                        deal.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.title.copyWith(color: AppColors.inkHeading),
+                      ),
+                      if (deal.description != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          deal.description!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.caption.copyWith(color: AppColors.inkMuted),
+                        ),
+                      ],
+                      const Spacer(),
+                      if (deal.thumbnails.isNotEmpty) ...[
+                        BundleThumbnails(deal: deal),
+                        const SizedBox(height: 8),
+                      ],
+                      BundlePriceRow(deal: deal),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 52,
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => openBundle(context, deal),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.brandPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: t.button,
+                          ),
+                          child: Text(l10n.bundleAdd),
                         ),
                       ),
-                      // 8 pt from the end: the frame's 300 pt photo runs 2 pt past
-                      // the card's inner width, and the pill is placed on it.
-                      if (deal.itemCount > 0)
-                        PositionedDirectional(
-                          top: 10,
-                          end: 8,
-                          child: _ItemCountPill(count: deal.itemCount),
-                        ),
                     ],
                   ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (deal.seller != null) ...[
-                          Text(
-                            deal.seller!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: t.captionStrong.copyWith(
-                              color: AppColors.info,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                        Text(
-                          deal.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.title.copyWith(color: AppColors.inkHeading),
-                        ),
-                        if (deal.description != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            deal.description!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: t.caption.copyWith(color: AppColors.inkMuted),
-                          ),
-                        ],
-                        const Spacer(),
-                        if (deal.thumbnails.isNotEmpty) ...[
-                          BundleThumbnails(deal: deal),
-                          const SizedBox(height: 8),
-                        ],
-                        BundlePriceRow(deal: deal),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 52,
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: () => openBundle(context, deal),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.brandPrimary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              textStyle: t.button,
-                            ),
-                            child: Text(l10n.bundleAdd),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
