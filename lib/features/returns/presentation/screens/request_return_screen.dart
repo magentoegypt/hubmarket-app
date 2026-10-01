@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../catalog/domain/money.dart';
@@ -72,10 +73,8 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
   final _tracking = TextEditingController();
 
   /// Text in the form's fields, which stay white in the dark theme too.
-  static const _fieldText = TextStyle(
-    fontSize: 14,
-    color: AppColors.inkHeading,
-  );
+  TextStyle get _fieldText =>
+      AppTextStyles.of(context).body.copyWith(color: AppColors.inkHeading);
 
   final _itemsKey = GlobalKey();
   final _reasonKey = GlobalKey();
@@ -132,7 +131,9 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
   /// prices.
   Map<int, Money> _unitPrices(ReturnDraft draft) {
     final fallback = draft.needsFallbackPrices
-        ? ref.watch(returnUnitRefundsProvider(draft.order.number)).valueOrNull ??
+        ? ref
+                  .watch(returnUnitRefundsProvider(draft.order.number))
+                  .valueOrNull ??
               const <int, Money>{}
         : const <int, Money>{};
     return {
@@ -218,10 +219,26 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     }
 
     return Scaffold(
-      appBar: subpageAppBar(context, l10n.returnsRequestTitle),
+      appBar: HubTopBar(title: l10n.returnsRequestTitle, divider: true),
       body: body,
       bottomNavigationBar: footer,
     );
+  }
+
+  /// "#HM-100150 · delivered 22 Sep" (Figma 23's order field): the number,
+  /// then the order's status and the day it was placed.
+  String _orderOption(
+    AppLocalizations l10n,
+    ReturnableOrder order,
+    String locale,
+  ) {
+    final details = [
+      order.statusLabel.toLowerCase(),
+      returnDay(order.createdAt, locale),
+    ].where((s) => s.isNotEmpty).join(' ');
+    return details.isEmpty
+        ? '#${order.number}'
+        : l10n.returnsOrderOption(order.number, details);
   }
 
   Widget _unavailable(AppLocalizations l10n) => EmptyState(
@@ -284,11 +301,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
           icon: HubIcons.package,
           text: draft == null
               ? null
-              : [
-                  '#${draft.order.number}',
-                  draft.order.statusLabel,
-                  returnDay(draft.order.createdAt, locale),
-                ].where((s) => s.isNotEmpty).join(' · '),
+              : _orderOption(l10n, draft.order, locale),
           placeholder: l10n.returnsChooseOrder,
           onTap: () => _pickOrder(draft),
         ),
@@ -447,7 +460,11 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ReturnFieldLabel(l10n.returnsSelectItems),
+        ReturnFieldLabel(
+          draft.order.items.length == 1
+              ? l10n.returnsSelectItem
+              : l10n.returnsSelectItems,
+        ),
         for (final group in groups.values) ...[
           if (grouped) ReturnSellerHeader(seller: group.first.seller),
           for (final item in group) ...[
@@ -599,7 +616,9 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
     );
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
+      hintStyle: AppTextStyles.of(
+        context,
+      ).body.copyWith(color: AppColors.inkMuted),
       helperText: helper,
       filled: true,
       fillColor: Colors.white,

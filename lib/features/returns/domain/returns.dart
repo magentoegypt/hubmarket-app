@@ -320,6 +320,19 @@ class ReturnSummary {
 
   ReturnTone get tone => ReturnTone.of(state, statusCode);
 
+  /// The store turned the return down (a status such as "rejected" or
+  /// "declined"), rather than the customer cancelling it: the case where
+  /// Figma 23b offers "Not happy with the store's answer? Escalate". Only the
+  /// detail knows whether it can still be escalated (`can_escalate`); the card
+  /// opens it.
+  bool get refusedByStore {
+    if (state == ReturnState.canceled) return false;
+    final code = statusCode.trim().toLowerCase();
+    return code.contains('reject') ||
+        code.contains('declin') ||
+        code.contains('refus');
+  }
+
   /// The same row, read by the customer.
   ReturnSummary markedRead() => ReturnSummary(
     id: id,

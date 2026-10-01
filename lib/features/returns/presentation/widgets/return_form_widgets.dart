@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/theme_x.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/hubapp/hubapp.dart';
+import '../../../../core/widgets/hub_bottom_action_bar.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_chip.dart';
+import '../../../../core/widgets/hub_radio_dot.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/return_draft.dart';
@@ -21,6 +25,7 @@ class ReturnStoreNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final name = seller?.trim() ?? '';
     return Container(
       padding: const EdgeInsets.all(12),
@@ -31,22 +36,14 @@ class ReturnStoreNote extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            HubIcons.store,
-            size: 18,
-            color: returnsSubtleText,
-          ),
+          const Icon(HubIcons.store, size: 18, color: returnsSubtleText),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               name.isEmpty
                   ? l10n.returnsStoreNote
                   : l10n.returnsStoreNoteSeller(name),
-              style: const TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                color: returnsSubtleText,
-              ),
+              style: t.caption.copyWith(color: returnsSubtleText),
             ),
           ),
         ],
@@ -73,6 +70,7 @@ class ReturnPickerField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = text?.trim() ?? '';
+    final t = AppTextStyles.of(context);
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
@@ -92,9 +90,7 @@ class ReturnPickerField extends StatelessWidget {
               Expanded(
                 child: Text(
                   value.isEmpty ? placeholder : value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
+                  style: t.body.copyWith(
                     color: value.isEmpty
                         ? AppColors.inkMuted
                         : AppColors.inkHeading,
@@ -124,26 +120,19 @@ class ReturnSellerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final name = seller?.name.trim() ?? '';
     if (name.isEmpty) return const SizedBox(height: 4);
     return Padding(
       padding: const EdgeInsetsDirectional.only(top: 10),
       child: Row(
         children: [
-          const Icon(
-            HubIcons.store,
-            size: 14,
-            color: returnsVendorColor,
-          ),
+          const Icon(HubIcons.store, size: 14, color: returnsVendorColor),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               l10n.returnsSoldBy(name),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: returnsVendorColor,
-              ),
+              style: t.captionStrong.copyWith(color: returnsVendorColor),
             ),
           ),
         ],
@@ -184,6 +173,7 @@ class ReturnLineTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final selected = availability == LineAvailability.selected;
     final enabled = selected || availability == LineAvailability.available;
     final caption = [
@@ -222,7 +212,8 @@ class ReturnLineTile extends StatelessWidget {
         child: InkWell(
           onTap: enabled ? onToggle : null,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            // The frame's 12 px padding sits inside the 1.5 / 1 px border.
+            padding: EdgeInsets.all(selected ? 13.5 : 13),
             child: Opacity(
               opacity: enabled ? 1 : 0.55,
               child: Row(
@@ -239,10 +230,7 @@ class ReturnLineTile extends StatelessWidget {
                           item.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 20 / 14,
-                            fontWeight: FontWeight.w600,
+                          style: t.bodyStrong.copyWith(
                             color: AppColors.inkHeading,
                           ),
                         ),
@@ -253,9 +241,7 @@ class ReturnLineTile extends StatelessWidget {
                               caption,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 16 / 12,
+                              style: t.caption.copyWith(
                                 color: AppColors.inkMuted,
                               ),
                             ),
@@ -265,9 +251,7 @@ class ReturnLineTile extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
                               why,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 16 / 12,
+                              style: t.caption.copyWith(
                                 color: AppColors.warning,
                               ),
                             ),
@@ -287,12 +271,7 @@ class ReturnLineTile extends StatelessWidget {
                     Text(
                       '×${quantity ?? item.qtyReturnable}',
                       textDirection: TextDirection.ltr,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 20 / 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.inkHeading,
-                      ),
+                      style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                     ),
                 ],
               ),
@@ -350,6 +329,7 @@ class _Stepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     Widget button(IconData icon, VoidCallback? onTap) => SizedBox(
       width: 28,
       height: 28,
@@ -372,20 +352,22 @@ class _Stepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          button(HubIcons.minus, value > min ? () => onChanged(value - 1) : null),
+          button(
+            HubIcons.minus,
+            value > min ? () => onChanged(value - 1) : null,
+          ),
           SizedBox(
             width: 28,
             child: Text(
               '$value',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkHeading,
-              ),
+              style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
             ),
           ),
-          button(HubIcons.plus, value < max ? () => onChanged(value + 1) : null),
+          button(
+            HubIcons.plus,
+            value < max ? () => onChanged(value + 1) : null,
+          ),
         ],
       ),
     );
@@ -416,35 +398,10 @@ class ReturnChoiceChips<T> extends StatelessWidget {
         Semantics(
           selected: value == selected,
           button: true,
-          child: Material(
-            color: value == selected ? AppColors.brandPrimary : Colors.white,
-            shape: StadiumBorder(
-              side: value == selected
-                  ? BorderSide.none
-                  : const BorderSide(color: AppColors.borderStrong),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => onSelected(value),
-              child: Container(
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                // Hug the label (an aligned Container would fill the row).
-                child: Center(
-                  widthFactor: 1,
-                  child: Text(
-                    label(value),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: value == selected
-                          ? Colors.white
-                          : AppColors.inkHeading,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          child: HubChip(
+            label: label(value),
+            selected: value == selected,
+            onTap: () => onSelected(value),
           ),
         ),
     ],
@@ -467,69 +424,55 @@ class ReturnRadioRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    inMutuallyExclusiveGroup: true,
-    checked: selected,
-    child: Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: selected ? AppColors.brandPrimary : AppColors.borderSubtle,
-          width: selected ? 1.5 : 1,
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Semantics(
+      inMutuallyExclusiveGroup: true,
+      checked: selected,
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? AppColors.brandPrimary : AppColors.borderSubtle,
+            width: selected ? 1.5 : 1,
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected
-                        ? AppColors.brandPrimary
-                        : AppColors.borderControl,
-                    width: selected ? 7 : 1.5,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            // The frame's 12 px padding sits inside the 1.5 / 1 px border.
+            padding: EdgeInsets.all(selected ? 13.5 : 13),
+            child: Row(
+              children: [
+                HubRadioDot(selected: selected),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: t.body.copyWith(
+                      color: selected
+                          ? AppColors.inkHeading
+                          : AppColors.inkMuted,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
-                    color: selected ? AppColors.inkHeading : AppColors.inkMuted,
+                if (trailing != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    trailing!,
+                    textDirection: TextDirection.ltr,
+                    style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                   ),
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                  trailing!,
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.inkHeading,
-                  ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// The Submit bar (Figma 65:2875).
@@ -546,37 +489,12 @@ class ReturnSubmitBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(top: BorderSide(color: context.hairline)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        12,
-        16,
-        12 + MediaQuery.viewPaddingOf(context).bottom,
-      ),
-      child: FilledButton(
-        onPressed: submitting ? null : onSubmit,
-        child: submitting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            // Styled on the Text so it keeps the theme's font (a button's
-            // textStyle replaces it).
-            : Text(
-                l10n.returnsSubmit,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+    return HubBottomActionBar(
+      child: HubButton(
+        label: l10n.returnsSubmit,
+        style: HubButtonStyle.primary,
+        loading: submitting,
+        onPressed: onSubmit,
       ),
     );
   }
@@ -597,11 +515,9 @@ class ReturnSheetTitle extends StatelessWidget {
     padding: padding,
     child: Text(
       text,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppColors.inkHeading,
-      ),
+      style: AppTextStyles.of(
+        context,
+      ).title.copyWith(color: AppColors.inkHeading),
     ),
   );
 }
@@ -621,26 +537,27 @@ class ReturnSheetOption extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    onTap: onTap,
-    selected: selected,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-    title: Text(
-      label,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-        color: AppColors.inkHeading,
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return ListTile(
+      onTap: onTap,
+      selected: selected,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      title: Text(
+        label,
+        style: (selected ? t.bodyStrong : t.body).copyWith(
+          color: AppColors.inkHeading,
+        ),
       ),
-    ),
-    subtitle: caption == null
-        ? null
-        : Text(
-            caption!,
-            style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
-          ),
-    trailing: selected
-        ? const Icon(HubIcons.check, color: AppColors.brandPrimary, size: 20)
-        : null,
-  );
+      subtitle: caption == null
+          ? null
+          : Text(
+              caption!,
+              style: t.caption.copyWith(color: AppColors.inkMuted),
+            ),
+      trailing: selected
+          ? const Icon(HubIcons.check, color: AppColors.brandPrimary, size: 20)
+          : null,
+    );
+  }
 }

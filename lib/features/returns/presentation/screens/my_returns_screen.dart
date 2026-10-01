@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -19,7 +22,8 @@ import '../../../../app/theme/hub_icons.dart';
 /// My returns (Figma 23b): the customer's returns, newest first, paged
 /// (`hmReturns`), each with its status — coloured by the store's status code,
 /// so a resolved return and a rejected one read apart — its first product and
-/// its refund, and New return request.
+/// its refund, and New return request. A return the store turned down offers
+/// "Not happy with the store's answer? Escalate", which opens it.
 class MyReturnsScreen extends ConsumerStatefulWidget {
   const MyReturnsScreen({super.key});
 
@@ -80,7 +84,7 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
     }
     return HubScaffold(
       currentTab: AppTab.account,
-      appBar: subpageAppBar(context, l10n.returnsMyReturns),
+      appBar: HubTopBar(title: l10n.returnsMyReturns, divider: true),
       body: ColoredBox(color: groupedPageColor(context), child: body),
     );
   }
@@ -141,7 +145,7 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
 /// One return (Figma 65:2908): number, date, outcome and refund, status pill,
 /// then its first product with its thumbnail (the order and its line count
 /// when the server has no first line), its seller and whether there's an
-/// unread reply.
+/// unread reply — and, when the store turned it down, the escalate banner.
 class _ReturnCard extends StatelessWidget {
   const _ReturnCard({required this.summary, required this.onTap});
 
@@ -151,6 +155,7 @@ class _ReturnCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     final day = returnDay(summary.createdAt, locale);
     final refund = summary.type == ReturnType.refund
@@ -168,7 +173,7 @@ class _ReturnCard extends StatelessWidget {
     final first = summary.firstItem;
     final more = summary.itemCount - 1;
     return Material(
-      color: Colors.white,
+      color: groupCardColor(context),
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -188,20 +193,11 @@ class _ReturnCard extends StatelessWidget {
                           l10n.returnsTitle(returnNumberLabel(summary.number)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 22 / 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.inkHeading,
-                          ),
+                          style: t.title.copyWith(color: AppColors.inkHeading),
                         ),
                         Text(
                           caption,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            height: 16 / 12,
-                            color: AppColors.inkMuted,
-                          ),
+                          style: t.caption.copyWith(color: AppColors.inkMuted),
                         ),
                       ],
                     ),
@@ -231,10 +227,7 @@ class _ReturnCard extends StatelessWidget {
                                         '${l10n.orderItemCount(summary.itemCount)}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 20 / 14,
-                                  fontWeight: FontWeight.w600,
+                                style: t.bodyStrong.copyWith(
                                   color: AppColors.inkHeading,
                                 ),
                               ),
@@ -243,9 +236,7 @@ class _ReturnCard extends StatelessWidget {
                               const SizedBox(width: 6),
                               Text(
                                 l10n.returnsMoreItems(more),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  height: 16 / 12,
+                                style: t.caption.copyWith(
                                   color: AppColors.inkMuted,
                                 ),
                               ),
@@ -259,9 +250,7 @@ class _ReturnCard extends StatelessWidget {
                               l10n.returnsSoldBy(seller),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                height: 16 / 12,
+                              style: t.caption.copyWith(
                                 color: returnsVendorColor,
                               ),
                             ),
@@ -282,9 +271,7 @@ class _ReturnCard extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Text(
                                   l10n.returnsNewReply,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                  style: t.captionStrong.copyWith(
                                     color: AppColors.accentStrong,
                                   ),
                                 ),
@@ -302,9 +289,50 @@ class _ReturnCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (summary.refusedByStore) ...[
+                const SizedBox(height: 10),
+                const _EscalateBanner(),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Figma 65:2928: "Not happy with the store's answer?  Escalate" on a return
+/// the store rejected — red on the red tint, 10 px radius. It is part of the
+/// card: tapping it opens the return, where Escalate is.
+class _EscalateBanner extends StatelessWidget {
+  const _EscalateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.dangerSurface,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(HubIcons.triangleAlert, size: 16, color: AppColors.danger),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.returnsRejectedPrompt,
+              style: t.caption.copyWith(color: AppColors.danger),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            l10n.returnsEscalate,
+            style: t.captionStrong.copyWith(color: AppColors.danger),
+          ),
+        ],
       ),
     );
   }
@@ -317,29 +345,11 @@ class _NewRequestButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: const Icon(HubIcons.plus, size: 20),
-        // Styled on the Text so it keeps the theme's font (a button's
-        // textStyle replaces it).
-        label: Text(
-          l10n.returnsNewRequest,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-        ),
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.brandPrimary,
-          side: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => HubButton(
+    label: AppLocalizations.of(context).returnsNewRequest,
+    icon: HubIcons.plus,
+    iconSize: 20,
+    style: HubButtonStyle.outline,
+    onPressed: onPressed,
+  );
 }

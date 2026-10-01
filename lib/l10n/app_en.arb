@@ -919,6 +919,7 @@
     }
   },
   "returnsNewReply": "New reply",
+  "returnsRejectedPrompt": "Not happy with the store’s answer?",
   "returnsMoreItems": "+{count} more",
   "@returnsMoreItems": {
     "description": "After the first product's name on a return's card, when the return has more lines.",
@@ -939,6 +940,17 @@
   },
   "returnsOrderLabel": "Order",
   "returnsChooseOrder": "Choose an order",
+  "returnsOrderOption": "#{number} · {details}",
+  "@returnsOrderOption": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "returnsMoreOrders": "Show more orders",
   "returnsNoOrdersTitle": "Nothing to return yet",
   "returnsNoOrdersBody": "Orders that are processing or delivered show up here once their items are invoiced.",
@@ -951,6 +963,7 @@
     }
   },
   "returnsSelectItems": "Select items",
+  "returnsSelectItem": "Select item",
   "returnsItemInReturn": "Already in return {numbers}",
   "@returnsItemInReturn": {
     "placeholders": {

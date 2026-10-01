@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
@@ -92,12 +93,7 @@ class ReturnStatusPill extends StatelessWidget {
         label.toUpperCase(),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 11,
-          height: 14 / 11,
-          fontWeight: FontWeight.w700,
-          color: foreground,
-        ),
+        style: AppTextStyles.of(context).micro.copyWith(color: foreground),
       ),
     );
   }
@@ -155,13 +151,10 @@ class ReturnFieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: TextStyle(
-      fontSize: 12,
-      height: 16 / 12,
-      fontWeight: FontWeight.w600,
-      // On the page itself, so it follows the theme.
-      color: context.scaffoldHeading,
-    ),
+    // On the page itself, so it follows the theme.
+    style: AppTextStyles.of(
+      context,
+    ).captionStrong.copyWith(color: context.scaffoldHeading),
   );
 }
 
@@ -176,7 +169,9 @@ class ReturnFieldError extends StatelessWidget {
     padding: const EdgeInsetsDirectional.only(top: 6),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 12, color: AppColors.danger),
+      style: AppTextStyles.of(
+        context,
+      ).caption.copyWith(color: AppColors.danger),
     ),
   );
 }
