@@ -67,6 +67,15 @@ class AuthField extends StatefulWidget {
 }
 
 class _AuthFieldState extends State<AuthField> {
+  /// The frame's inset from the field's outer edge to its content: the 1 px
+  /// outline plus 16 px of padding.
+  static const double _inset = 17;
+
+  /// Material 3's input decorator adds 4 px beside the text: after a prefix
+  /// icon, and as `_kInputExtraPadding` on an outlined field's open sides. The
+  /// paddings below are the frame's inset less that.
+  static const double _decoratorGap = 4;
+
   final _focus = FocusNode();
 
   @override
@@ -125,17 +134,18 @@ class _AuthFieldState extends State<AuthField> {
                 hintStyle: t.body.copyWith(color: AppColors.inkFaint),
                 hintTextDirection: widget.ltrInput ? TextDirection.ltr : null,
                 contentPadding: EdgeInsetsDirectional.fromSTEB(
-                  widget.icon == null ? 16 : 0,
+                  widget.icon == null ? _inset - _decoratorGap : 0,
                   vertical,
-                  widget.trailing == null ? 16 : 0,
+                  widget.trailing == null ? _inset - _decoratorGap : 0,
                   vertical,
                 ),
+                // A 20 px icon at the frame's inset, 10 px before the text.
                 prefixIcon: widget.icon == null
                     ? null
                     : Padding(
                         padding: const EdgeInsetsDirectional.only(
-                          start: 16,
-                          end: 10,
+                          start: _inset,
+                          end: 10 - _decoratorGap,
                         ),
                         child: Icon(
                           widget.icon,
@@ -144,10 +154,14 @@ class _AuthFieldState extends State<AuthField> {
                         ),
                       ),
                 prefixIconConstraints: const BoxConstraints(),
+                // The 40 px target of the trailing control centres its 20 px
+                // icon at the frame's inset from the edge.
                 suffixIcon: widget.trailing == null
                     ? null
                     : Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 6),
+                        padding: const EdgeInsetsDirectional.only(
+                          end: _inset - 10,
+                        ),
                         child: widget.trailing,
                       ),
                 suffixIconConstraints: const BoxConstraints(),
@@ -243,7 +257,8 @@ class AuthHelperLine extends StatelessWidget {
   }
 }
 
-/// The eye toggle inside a password field (shows / hides the characters).
+/// The eye toggle inside a password field (shows / hides the characters): the
+/// frame's 20 px icon in a 40 px target.
 class PasswordVisibilityToggle extends StatelessWidget {
   const PasswordVisibilityToggle({
     super.key,
@@ -260,7 +275,11 @@ class PasswordVisibilityToggle extends StatelessWidget {
     return IconButton(
       onPressed: onPressed,
       tooltip: obscured ? l10n.authShowPassword : l10n.authHidePassword,
-      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      style: IconButton.styleFrom(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       icon: Icon(
         obscured ? HubIcons.eye : HubIcons.eyeOff,
         size: 20,
