@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/not_found_state.dart';
+import 'package:hubmarket_app/core/config/free_shipping.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/network/connectivity.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/core/validation/password_policy.dart';
+import 'package:hubmarket_app/features/account/presentation/screens/orders_screen.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:hubmarket_app/features/auth/presentation/screens/sign_in_screen.dart';
@@ -15,13 +17,11 @@ import 'package:hubmarket_app/features/auth/presentation/screens/verify_code_scr
 import 'package:hubmarket_app/features/auth/presentation/widgets/auth_widgets.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/cart/presentation/screens/cart_screen.dart';
-import 'package:hubmarket_app/core/config/free_shipping.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/presentation/catalog_providers.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/plp_screen.dart';
 import 'package:hubmarket_app/features/cms/domain/cms_links.dart';
 import 'package:hubmarket_app/features/cms/presentation/cms_providers.dart';
-import 'package:hubmarket_app/features/account/presentation/screens/orders_screen.dart';
 import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
@@ -227,6 +227,7 @@ List<AuditScene> scenes() => [
     ),
     setup: (_) => AuditSetup(
       overrides: [
+        offlinePublicClient(),
         networkStatusSourceProvider.overrideWithValue(
           () => Stream<bool>.value(false),
         ),
@@ -271,15 +272,17 @@ List<AuditScene> scenes() => [
       ],
     ),
   ),
-  // My orders on its first load: three order-card skeletons.
+  // My orders on its first load: three order-card skeletons. The test opens it
+  // as the root route; in the app it is always pushed from Account (the back
+  // arrow of the E21 scene), so it is pushed here too.
   AuditScene(
     frame: 'F_S4_loading',
     name: 'orders_loading',
-    pushed: false,
     screen: (_) => const OrdersScreen(),
     setup: (_) => AuditSetup(
       account: SlowOrdersRepository(),
       hubApp: const HubAppState.unavailable(),
+      overrides: [offlinePublicClient()],
     ),
   ),
 
@@ -291,17 +294,20 @@ List<AuditScene> scenes() => [
     name: 'default',
     signedIn: false,
     screen: (_) => const NotFoundPage(),
+    setup: (_) => AuditSetup(overrides: [offlinePublicClient()]),
   ),
 ];
 
 /// What the auth screens run with (test/features/auth/auth_harness.dart): the
 /// live store's password rules (8 characters, 3 character classes), no legal
-/// links, and [repo] for the e-mail / code calls.
+/// links, and [repo] for the e-mail / code calls (the harness's, which signs in
+/// and out without an error, when null).
 AuditSetup _authSetup({FakeAuthRepository? repo}) => AuditSetup(
   features: const StoreFeatures(
     passwordPolicy: PasswordPolicy(minLength: 8, requiredClasses: 3),
   ),
   overrides: [
+    offlinePublicClient(),
     if (repo != null) authRepositoryProvider.overrideWithValue(repo),
     legalLinksProvider.overrideWith((ref) async => linksFromHtml('')),
   ],

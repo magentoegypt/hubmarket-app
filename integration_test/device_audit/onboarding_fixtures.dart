@@ -3,15 +3,14 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/error/failure.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
-import 'package:hubmarket_app/features/catalog/domain/product_page.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
+import 'package:hubmarket_app/features/catalog/domain/product_page.dart';
 import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 
 import '../../test/support/fakes.dart';
