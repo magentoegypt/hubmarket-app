@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -272,8 +274,14 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
     // (showHubBottomSheet), so the footer only tops up to 12 px when there is
     // less than that — Figma's 34 px under the button is the iPhone's.
     final view = View.of(context);
-    final footerBottom = (12 - view.padding.bottom / view.devicePixelRatio)
-        .clamp(0.0, 12.0);
+    final statusBar = view.padding.top / view.devicePixelRatio;
+    final navigationBar = view.padding.bottom / view.devicePixelRatio;
+    final footerBottom = (12 - navigationBar).clamp(0.0, 12.0);
+    // Never taller than Figma's sheet: it stops 40 px under the status bar.
+    final maxHeight = math.max(
+      0.0,
+      MediaQuery.sizeOf(context).height - statusBar - 40 - navigationBar,
+    );
 
     Widget section(String title, List<Widget> chips) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,82 +337,85 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
         ]),
     ];
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // The grabber: 40 x 4, 10 px from the top.
-        const Padding(
-          padding: EdgeInsets.only(top: 10, bottom: 4),
-          child: Center(
-            child: SizedBox(
-              width: 40,
-              height: 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.borderStrong,
-                  borderRadius: BorderRadius.all(Radius.circular(2)),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // The grabber: 40 x 4, 10 px from the top.
+          const Padding(
+            padding: EdgeInsets.only(top: 10, bottom: 4),
+            child: Center(
+              child: SizedBox(
+                width: 40,
+                height: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.borderStrong,
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        // 8 above and 12 below the 24 px title, as Figma's header; Reset is a
-        // 32 px target centred on the same line. A Container, so that the rule
-        // takes its pixel (Figma's border-box).
-        Container(
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
-          ),
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.filtersLabel,
-                  style: t.heading2.copyWith(color: AppColors.inkHeading),
-                ),
-              ),
-              TextButton(
-                onPressed: () =>
-                    setState(() => _filters = const DealsFilters()),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.accentStrong,
-                  minimumSize: const Size(0, 32),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  textStyle: t.bodyStrong,
-                ),
-                child: Text(l10n.filterResetLabel),
-              ),
-            ],
-          ),
-        ),
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          // 8 above and 12 below the 24 px title, as Figma's header; Reset is a
+          // 32 px target centred on the same line. A Container, so that the rule
+          // takes its pixel (Figma's border-box).
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            ),
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 8),
+            child: Row(
               children: [
-                for (final (i, s) in sections.indexed) ...[
-                  if (i > 0) const SizedBox(height: 22),
-                  s,
-                ],
+                Expanded(
+                  child: Text(
+                    l10n.filtersLabel,
+                    style: t.heading2.copyWith(color: AppColors.inkHeading),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _filters = const DealsFilters()),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accentStrong,
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: t.bodyStrong,
+                  ),
+                  child: Text(l10n.filterResetLabel),
+                ),
               ],
             ),
           ),
-        ),
-        Container(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: AppColors.borderSubtle)),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, s) in sections.indexed) ...[
+                    if (i > 0) const SizedBox(height: 22),
+                    s,
+                  ],
+                ],
+              ),
+            ),
           ),
-          padding: EdgeInsets.fromLTRB(16, 12, 16, footerBottom),
-          child: HubButton(
-            label: l10n.filterApplyLabel,
-            onPressed: () => Navigator.of(context).pop(_filters),
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.borderSubtle)),
+            ),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, footerBottom),
+            child: HubButton(
+              label: l10n.filterApplyLabel,
+              onPressed: () => Navigator.of(context).pop(_filters),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

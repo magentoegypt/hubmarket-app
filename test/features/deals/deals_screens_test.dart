@@ -397,6 +397,23 @@ void main() {
       });
     }
 
+    testWidgets('the Filters sheet stops 40 px under the top, as Figma 11 '
+        'draws it, and scrolls within', (tester) async {
+      await _phone(tester, height: 480);
+      await tester.pumpWidget(
+        _harness(const DealsScreen(), deals: _FakeDeals()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Filters'));
+      await tester.pumpAndSettle();
+
+      final sheet = tester.getRect(find.byType(DealsFilterSheet));
+      expect(sheet.top, greaterThanOrEqualTo(40));
+      expect(find.text('Apply Filters'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('filters that leave nothing: say so, and clear them', (
       tester,
     ) async {
