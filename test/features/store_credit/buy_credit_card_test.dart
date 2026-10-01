@@ -216,7 +216,7 @@ void main() {
       await _pump(tester, credit);
 
       expect(find.byType(BuyCreditCard), findsNothing);
-      expect(find.text('AED 120'), findsOneWidget);
+      expect(find.text('AED 120.00'), findsOneWidget);
       expect(find.text('Refund to credit'), findsOneWidget);
     });
   });
