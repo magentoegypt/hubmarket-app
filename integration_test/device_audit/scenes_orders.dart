@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/config/store_features.dart';
+import 'package:hubmarket_app/core/config/store_timezone.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
+import 'package:hubmarket_app/features/account/presentation/screens/order_detail_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/orders_screen.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/returns/domain/returns.dart';
+import 'package:hubmarket_app/features/returns/presentation/screens/my_returns_screen.dart';
+import 'package:hubmarket_app/features/returns/presentation/screens/request_return_screen.dart';
+import 'package:hubmarket_app/features/returns/presentation/screens/return_detail_screen.dart';
+import 'package:hubmarket_app/features/returns/presentation/widgets/return_photos.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../test/support/fakes.dart';
@@ -12,6 +19,7 @@ import '../../test/support/marketplace_fakes.dart';
 import '../../test/support/returns_fakes.dart';
 import 'audit_scene.dart';
 import 'harness.dart';
+import 'orders_fixtures.dart';
 
 /// Orders, returns, addresses and wishlist: E21 Orders, E21b Cancel order,
 /// E22 Order detail, E23 Return request, E23b My returns, E23c Return detail,
@@ -19,7 +27,8 @@ import 'harness.dart';
 ///
 /// E21 and E21b are the reference scenes (ported from
 /// test/features/account/audit_orders_list_test.dart); the rest follow the
-/// same pattern.
+/// same pattern, their fixtures in orders_fixtures.dart (copied from the widget
+/// test that renders the frame, named in that file).
 List<AuditScene> scenes() => [
   AuditScene(
     frame: 'E21_orders',
@@ -47,6 +56,72 @@ List<AuditScene> scenes() => [
       await pumpFor(tester, 500);
     },
   ),
+
+  // ---- E22 Order detail (1562 px: scrolls 2) ------------------------------
+  // audit_22_order_detail: one card per store, each with its own timeline.
+  AuditScene(
+    frame: 'E22_order_detail',
+    name: 'default',
+    screen: (locale) => OrderDetailScreen(order: detailOrder(locale)),
+    setup: (_) => AuditSetup(overrides: detailOverrides()),
+    scrolls: 2,
+  ),
+  // p3_22_order: an order the server did not split, the lines grouped by their
+  // store (the marketplace harness: store features off, so no cancellation).
+  // Pushed over Home like the real page; that harness mounts it as the root.
+  AuditScene(
+    frame: 'E22_order_detail',
+    name: 'by_store',
+    screen: (locale) => OrderDetailScreen(order: byStoreOrder(locale)),
+    setup: (_) => AuditSetup(
+      features: StoreFeatures.none,
+      overrides: [storeTimezoneProvider.overrideWith((ref) async => '')],
+    ),
+    scrolls: 2,
+  ),
+
+  // ---- E23 Request a return (1086 px: scrolls 1) --------------------------
+  // The frame's state: a reason chosen, the package opened, a photo attached.
+  AuditScene(
+    frame: 'E23_return_request',
+    name: 'default',
+    screen: (locale) =>
+        RequestReturnScreen(order: returnableOrder(locale == 'ar')),
+    setup: (locale) => AuditSetup(
+      returns: returnsRepo(locale == 'ar'),
+      overrides: [returnPhotoPickerOverride()],
+    ),
+    act: (tester, locale) async {
+      final l10n = lookupAppLocalizations(Locale(locale));
+      final reason = returnConfig(locale == 'ar').reasons.first.label;
+      await tapVisible(tester, find.text(l10n.returnsChooseReason));
+      await tapVisible(tester, find.text(reason));
+      await tapVisible(tester, find.text(l10n.returnsAnswerYes));
+      await tapVisible(tester, find.byType(ReturnAddPhotoTile));
+      await tapVisible(tester, find.text(l10n.returnsChoosePhotos));
+      // The state of the frame was reached: the reason shows in its field and
+      // the picked photo sits beside the Add tile.
+      expect(find.text(reason), findsOneWidget);
+      expect(find.byType(ReturnPhotoTile), findsOneWidget);
+      await scrollToTop(tester);
+    },
+    scrolls: 1,
+  ),
+  // 23b My returns: awaiting the store, refunded, rejected.
+  AuditScene(
+    frame: 'E23b_my_returns',
+    name: 'default',
+    screen: (_) => const MyReturnsScreen(),
+    setup: (locale) => AuditSetup(returns: returnsRepo(locale == 'ar')),
+  ),
+  // 23c Return detail: the customer's message and loly store's answer.
+  AuditScene(
+    frame: 'E23c_return_detail',
+    name: 'default',
+    screen: (_) => const ReturnDetailScreen(returnId: 31),
+    setup: (locale) => AuditSetup(returns: returnsRepo(locale == 'ar')),
+  ),
+
 ];
 
 Money _aed(double amount) => Money(amount: amount, currency: 'AED');
