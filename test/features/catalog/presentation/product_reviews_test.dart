@@ -132,6 +132,9 @@ void main() {
       ),
     );
 
+    // An iPhone: the thin home indicator never reaches the button, so the frame's
+    // space stands (a persistent Android navigation bar is cleared whole, see
+    // the next test).
     testWidgets('the footer keeps the home-indicator zone less its gap', (
       tester,
     ) async {
@@ -166,7 +169,37 @@ void main() {
       // 93 — before the form's note.
       expect(sizeOf('a').height, 95);
       expect(sizeOf('b').height, 93);
-    });
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+    testWidgets('a persistent Android navigation bar is cleared whole', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: ScreenFooter(child: SizedBox(height: 52, key: ValueKey('a'))),
+          ),
+          bottomInset: 47,
+        ),
+      );
+      // 1 (rule) + 12 + 52 + the whole 47 dp three-button bar: the Save and
+      // Write-a-review buttons were half under it.
+      expect(
+        tester
+            .getSize(
+              find.ancestor(
+                of: find.byKey(const ValueKey('a')),
+                matching: find.byType(Container),
+              ).first,
+            )
+            .height,
+        1 + 12 + 52 + 47,
+      );
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
     testWidgets('a short inset still leaves 12 px under the button', (
       tester,

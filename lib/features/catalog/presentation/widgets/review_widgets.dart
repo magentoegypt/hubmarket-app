@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/offline_state.dart';
+import '../../../../core/widgets/system_bar_clearance.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/product_detail.dart';
 
@@ -352,7 +353,7 @@ class ScreenFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottom = math.max(
-      MediaQuery.paddingOf(context).bottom - indicatorGap,
+      systemBarClearance(context, iosGap: indicatorGap),
       12.0,
     );
     return Column(

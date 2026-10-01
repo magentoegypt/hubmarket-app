@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -36,9 +37,17 @@ void main() {
         .toList();
     final locales = localesArg.split(',').map((e) => e.trim()).toList();
 
+    // The app does not lock its orientation, so a phone held sideways at the
+    // start would capture the first screens in landscape (it did: the splash and
+    // the Welcome screen, which overflows there). The audit is of the portrait
+    // screens: hold them there for the run.
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+    ]);
     // On Android the Flutter surface has to be converted to an image before
     // takeScreenshot can read it.
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
     if (Platform.isAndroid) await binding.convertFlutterSurfaceToImage();
     // ignore: avoid_print
     print('AUDIT view: ${describeView(tester)}');
@@ -68,6 +77,7 @@ void main() {
         if (run.errors.isNotEmpty) broken.add(run.id);
       }
     }
+    await SystemChrome.setPreferredOrientations(const []);
     // ignore: avoid_print
     print(
       'AUDIT done: $scenes scenes, $captures captures, '

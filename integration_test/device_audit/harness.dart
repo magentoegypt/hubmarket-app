@@ -112,6 +112,9 @@ Future<SceneRun> runScene(
       await scene.act!(tester, locale);
       await pumpFor(tester, 600);
     }
+    for (final reach in controlsUnderBottomInset(tester)) {
+      run.errors.add('INSET $reach');
+    }
     await capture(run.id, boundary);
     run.captures.add(run.id);
     for (var i = 1; i <= scene.scrolls; i++) {
@@ -171,6 +174,58 @@ bool scrollMain(WidgetTester tester) {
     math.min(best.pixels + best.viewportDimension * 0.85, best.maxScrollExtent),
   );
   return true;
+}
+
+/// Controls pinned at the bottom of the screen that reach into the system's
+/// bottom inset: behind a three-button navigation bar (47 dp on the test phone)
+/// such a button is half hidden by the bar's scrim and cannot be tapped there.
+/// Scrolling content is left out: it is meant to pass under the bar. A screen
+/// the phone holds sideways has no bottom inset, and nothing is reported.
+///
+/// The iPhone-sized renders of the first audit could not show this: a home
+/// indicator is a thin pill and the frames put the button over its zone.
+List<String> controlsUnderBottomInset(WidgetTester tester) {
+  final view = tester.view;
+  final ratio = view.devicePixelRatio;
+  final inset = view.padding.bottom / ratio;
+  if (inset < 1) return const [];
+  final height = view.physicalSize.height / ratio;
+  final zoneTop = height - inset;
+  final found = <String>[];
+  final controls = find.byWidgetPredicate(
+    (w) =>
+        w is ButtonStyleButton ||
+        w is InkResponse ||
+        w is Checkbox ||
+        w is Switch ||
+        w is Radio ||
+        w is TextField,
+  );
+  for (final element in controls.evaluate()) {
+    var inScroll = false;
+    element.visitAncestorElements((ancestor) {
+      if (ancestor.widget is Scrollable) {
+        inScroll = true;
+        return false;
+      }
+      return true;
+    });
+    if (inScroll) continue;
+    final box = element.renderObject;
+    if (box is! RenderBox || !box.attached || !box.hasSize) continue;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    if (rect.height < 8 || rect.top >= height) continue;
+    // The tab bar's tap area deliberately takes 6 dp of the inset (it keeps the
+    // frame's 84 px), so a few dp are not a finding.
+    if (rect.bottom > zoneTop + 8) {
+      found.add(
+        '${element.widget.runtimeType} reaches '
+        '${(rect.bottom - zoneTop).toStringAsFixed(0)} dp into the '
+        '${inset.toStringAsFixed(0)} dp system bar',
+      );
+    }
+  }
+  return found;
 }
 
 /// One line for a framework error: its first sentence and the widget it was

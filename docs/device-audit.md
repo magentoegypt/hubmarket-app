@@ -25,13 +25,25 @@ Captures are named `<locale>-<frame>__<state>[__s<n>].png`, for example `en-E21_
 `__s1`, `__s2` ... are the screen scrolled down by about a screen each (a tall frame shows the whole scroll,
 the phone one screen at a time).
 
-On the phone (the Android phone's OS asks for a tap on **Install** each time, so someone must hold it):
+On the phone (the Android phone's OS asks for a tap on **Install** each time, so someone must hold it
+unlocked; the script builds first and then keeps offering the APK for about 12 minutes, a prompt every 30 s,
+so nobody has to be quick):
 
 ```
-bash tool/device_audit.sh                    # en + ar
-AUDIT_ONLY=E21,E22 bash tool/device_audit.sh
+DEVICE=<adb serial> bash tool/device_audit.sh                    # en + ar
+DEVICE=<adb serial> AUDIT_ONLY=E21,E22 bash tool/device_audit.sh
+DEVICE=<adb serial> TARGET=integration_test/device_check_test.dart SHOT_LOCALE=en bash tool/device_audit.sh
 python tool/ui_audit/device_pairs.py en      # the frame on the left, the phone on the right
 ```
+
+The run holds the phone in portrait whatever way it is held (the app itself does not lock its orientation).
+
+**What the audit reports as errors:** a layout overflow or any other framework error raised while a screen
+is up, and `INSET`: a pinned control (a button outside any scroll view) that reaches more than 8 dp into the
+system's bottom inset. A three-button navigation bar is 47 dp tall on the test phone and covers what is under
+it; the Save button of Profile details lay 35 dp under it, which the iPhone-sized audit could not show (the
+thin home indicator never reaches a button). `systemBarClearance` in `lib/core/widgets/` is the rule every
+pinned bar follows: an iPhone keeps the frame's space, a persistent Android bar is cleared whole.
 
 ## Write a scene
 

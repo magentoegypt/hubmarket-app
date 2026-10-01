@@ -10,9 +10,11 @@
 #   TARGET=integration_test/device_check_test.dart bash tool/device_audit.sh   # the audit AND the live store
 #                                                                              # screenshots (SHOT_LOCALE) in one run
 #
-# A phone only: the Android phone's OS asks on the screen for a tap on Install each run (and the run quits
-# after three unanswered prompts), and it must stay unlocked with the screen on. Hold it, unlocked, and tap
-# Install when the prompt shows (about a minute after the build starts).
+# A phone only: the Android phone's OS asks on the screen for a tap on Install each run, and it must stay
+# unlocked with the screen on. flutter gives up after three unanswered prompts (about 75 s), so by default
+# the APK is built first and then offered to the phone again and again (`adb install`, a prompt every 30 s,
+# INSTALL_TRIES times, about 12 minutes by default) until someone taps Install; the test then runs on the
+# installed build. INSTALL_TRIES=0 leaves the install to flutter drive (three prompts).
 set -euo pipefail
 
 FLAVOR="${FLAVOR:-dev}"
@@ -43,12 +45,30 @@ if [[ -n "${AUDIT_LOCALES:-}" ]]; then
 fi
 
 export SHOT_OUT_DIR="$OUT_DIR"
-flutter drive \
-  --driver=test_driver/screenshot_driver.dart \
-  --target=integration_test/device_audit_test.dart \
-  ${DEVICE_ARGS[@]+"${DEVICE_ARGS[@]}"} \
-  --flavor "$FLAVOR" \
-  "${DEFINES[@]}" 2>&1 | tee "$OUT_DIR/run.log"
+
+INSTALL_TRIES="${INSTALL_TRIES:-25}"
+APK_ARGS=()
+if [[ "$INSTALL_TRIES" -gt 0 && -n "${DEVICE:-}" ]]; then
+  flutter build apk --debug --flavor "$FLAVOR" --target="$TARGET" "${DEFINES[@]}"
+  APK="build/app/outputs/flutter-apk/app-${FLAVOR}-debug.apk"
+  installed=0
+  for ((try = 1; try <= INSTALL_TRIES; try++)); do
+    echo "INSTALL offer $try of $INSTALL_TRIES: tap Install on the phone"
+    if adb -s "$DEVICE" install -r -t "$APK" 2>&1 | grep -q "Success"; then
+      installed=1
+      echo "INSTALL accepted on offer $try"
+      break
+    fi
+    sleep 2
+  done
+  if [[ "$installed" -ne 1 ]]; then
+    echo "INSTALL never accepted: nothing was run"
+    exit 1
+  fi
+  APK_ARGS=(--use-application-binary="$APK")
+fi
+
+flutter drive   --driver=test_driver/screenshot_driver.dart   --target="$TARGET"   ${DEVICE_ARGS[@]+"${DEVICE_ARGS[@]}"}   --flavor "$FLAVOR"   ${APK_ARGS[@]+"${APK_ARGS[@]}"}   "${DEFINES[@]}" 2>&1 | tee "$OUT_DIR/run.log"
 
 echo
 grep -a "^I/flutter.*AUDIT\|^AUDIT" "$OUT_DIR/run.log" | grep -a "done\|view" || true

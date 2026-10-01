@@ -14,6 +14,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
+import '../../../../core/widgets/system_bar_clearance.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../domain/return_photo.dart';
@@ -971,12 +972,13 @@ class _Composer extends StatelessWidget {
           border: Border(top: BorderSide(color: AppColors.borderSubtle)),
         ),
         // 30 px under the bar in the frame; an iPhone's 34 px home-indicator
-        // zone is only 4 px taller (see HubBottomActionBar).
+        // zone is only 4 px taller, a persistent navigation bar is cleared as a
+        // whole (see HubBottomActionBar).
         padding: EdgeInsets.fromLTRB(
           12,
           10,
           12,
-          math.max(30, MediaQuery.viewPaddingOf(context).bottom - 4),
+          math.max(30, systemBarClearance(context)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

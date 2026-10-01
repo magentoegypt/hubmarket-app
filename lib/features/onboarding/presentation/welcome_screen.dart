@@ -69,7 +69,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     // `hm_delivery_promise`, warmed by the splash); none without one.
     final promise = slides.isEmpty ? ref.watch(homePromiseProvider) : '';
     final inset = MediaQuery.viewPaddingOf(context).bottom;
-    final bottom = _afterActions + math.max(0.0, inset - _homeIndicator);
+    // An iPhone keeps the frame's spacing (its home indicator is a thin pill);
+    // a persistent Android navigation bar (47 dp with three buttons) covers
+    // what is under it, so the last button clears all of it.
+    final bottom = math.max(
+      _afterActions + math.max(0.0, inset - _homeIndicator),
+      Theme.of(context).platform == TargetPlatform.android ? inset : 0.0,
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // Dark status-bar icons on the white strip above the panel.

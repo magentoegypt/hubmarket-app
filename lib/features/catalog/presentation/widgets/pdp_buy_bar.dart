@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/widgets/offline_state.dart';
+import '../../../../core/widgets/system_bar_clearance.dart';
 
 /// Figma "Buy bar" (14, 14b): the sticky bottom bar of a product page — a white
 /// bar with a `border/subtle` rule on top and a soft shadow above it, the
@@ -42,8 +43,9 @@ class PdpBuyBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // The frame leaves 30 px under the button — the home-indicator zone, 34 on
-    // an iPhone — so this is the device's own bottom inset less those 4.
-    final bottom = math.max(MediaQuery.paddingOf(context).bottom - 4, 12.0);
+    // an iPhone — so this is the device's own bottom inset less those 4; a
+    // persistent Android navigation bar is cleared as a whole.
+    final bottom = math.max(systemBarClearance(context), 12.0);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
