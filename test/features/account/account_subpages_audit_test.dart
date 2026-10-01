@@ -11,7 +11,10 @@ import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
 import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
+import 'package:hubmarket_app/features/notifications/data/notification_inbox.dart';
+import 'package:hubmarket_app/features/notifications/domain/notification_item.dart';
 import 'package:hubmarket_app/features/notifications/presentation/notification_settings_screen.dart';
+import 'package:hubmarket_app/features/notifications/presentation/notifications_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -108,8 +111,83 @@ List<CustomerReview> _myReviews(bool ar) {
         ];
 }
 
+/// The five notifications of Figma 20g (the Arabic frame's wording for `ar`):
+/// two unread from today, then yesterday and two older ones.
+List<NotificationItem> _feed(bool ar) {
+  final now = DateTime.now();
+  NotificationItem item(
+    String id,
+    NotificationKind kind,
+    DateTime at,
+    String title,
+    String body, {
+    bool read = true,
+    Map<String, dynamic> data = const {},
+  }) => NotificationItem(
+    id: id,
+    kind: kind,
+    title: title,
+    body: body,
+    receivedAt: at,
+    read: read,
+    data: data,
+  );
+  DateTime today(int h, int m) => DateTime(now.year, now.month, now.day, h, m);
+  return [
+    item(
+      'n1',
+      NotificationKind.order,
+      today(8, 30),
+      ar ? 'في الطريق إليك' : 'Out for delivery',
+      ar
+          ? 'الطرد 1 من الطلب ‎#HM-100248 من متجر لولي يصل اليوم قبل 9 مساءً.'
+          : 'Package 1 of order ‎#HM-100248 from loly store arrives today by 9 pm.',
+      read: false,
+    ),
+    item(
+      'n2',
+      NotificationKind.returns,
+      today(9, 15),
+      ar ? 'ردّ متجر لولي على طلب الإرجاع' : 'loly store replied to your return',
+      ar
+          ? 'سيستلم المندوب الإرجاع ‎#R-000031 الثلاثاء 30 سبتمبر، 10:00 – 14:00.'
+          : 'A courier will collect return ‎#R-000031 on Tue 30 Sep, 10:00 – 14:00.',
+      read: false,
+    ),
+    item(
+      'n3',
+      NotificationKind.wishlist,
+      now.subtract(const Duration(days: 1)),
+      ar ? 'انخفض سعر منتج في مفضلتك' : 'Price drop on your wishlist',
+      ar
+          ? 'فستان صدر طباعة الأزهار رباط مشد خصر أصبح بسعر 50 د.إ.'
+          : 'Floral Print Corset-Waist Tie Dress is now AED 50.',
+      // No `image` URL: a network image never settles in a widget test.
+    ),
+    item(
+      'n4',
+      NotificationKind.credit,
+      now.subtract(const Duration(days: 5)),
+      ar ? 'أُضيف 43 د.إ إلى رصيدك' : 'AED 43 added to your credit',
+      ar
+          ? 'استرداد الإرجاع ‎#R-000031 جاهز للاستخدام.'
+          : 'Refund for return ‎#R-000031 is ready to spend.',
+    ),
+    item(
+      'n5',
+      NotificationKind.promo,
+      now.subtract(const Duration(days: 6)),
+      ar ? 'عروض اليوم تنتهي عند منتصف الليل' : "Today's Deals end at midnight",
+      ar
+          ? 'خصم حتى 29% على البقالة والأثاث.'
+          : 'Up to 29% off groceries and furniture.',
+    ),
+  ];
+}
+
 void main() {
   setUpAll(loadAppFonts);
+  tearDown(() => NotificationInbox.instance.items.value = const []);
 
   for (final locale in const ['en', 'ar']) {
     final l10n = lookupAppLocalizations(Locale(locale));
@@ -139,6 +217,16 @@ void main() {
         ],
       );
       await captureAudit(tester, boundary, '20f_my_reviews', locale);
+    });
+
+    testWidgets('20g Notifications ($locale)', (tester) async {
+      NotificationInbox.instance.items.value = _feed(locale == 'ar');
+      final boundary = await pumpAuditScreen(
+        tester,
+        screen: const NotificationsScreen(),
+        locale: locale,
+      );
+      await captureAudit(tester, boundary, 'audit_20g_notifications', locale);
     });
 
     testWidgets('20h Notification settings ($locale)', (tester) async {

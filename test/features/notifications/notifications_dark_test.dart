@@ -91,6 +91,6 @@ void main() {
 
     final title = tester.widget<Text>(find.text('Your order shipped'));
     expect(title.style?.color, AppColors.inkHeading);
-    expect(_rows(tester).single.color, AppColors.surfaceTint);
+    expect(_rows(tester).single.color, AppColors.accentSubtle);
   });
 }

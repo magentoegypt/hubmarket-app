@@ -1,5 +1,16 @@
 /// A single received notification, persisted in the local inbox.
-enum NotificationKind { order, promo, wishlist, delivered, welcome, general }
+enum NotificationKind {
+  order,
+  returns,
+  promo,
+  wishlist,
+  delivered,
+
+  /// Store credit added (Figma 20g's gift).
+  credit,
+  welcome,
+  general,
+}
 
 class NotificationItem {
   const NotificationItem({
@@ -63,6 +74,11 @@ class NotificationItem {
   /// Infers a kind from the push `type`/`kind` payload (falls back to general).
   static NotificationKind kindFrom(Map<String, dynamic> data) {
     final t = (data['type'] ?? data['kind'] ?? '').toString().toLowerCase();
+    // A return, a refund: before `order`, which a "return_order" would match.
+    if (t.contains('return') || t.contains('refund') || t.contains('rma')) {
+      return NotificationKind.returns;
+    }
+    if (t.contains('credit')) return NotificationKind.credit;
     if (t.contains('deliver')) return NotificationKind.delivered;
     if (t.contains('order') || t.contains('shipment')) {
       return NotificationKind.order;
