@@ -62,8 +62,8 @@ Override storesPublicClient(String locale) => publicGraphqlClientProvider
 
 /// The category tree the About tab names its categories from (the facet's
 /// uids are those of [kSearchTree]).
-Override storesCatalog(String locale) => catalogRepositoryProvider
-    .overrideWithValue(
+Override storesCatalog(String locale) =>
+    catalogRepositoryProvider.overrideWithValue(
       FakeCatalogRepository(
         categories: locale == 'ar' ? kSearchTreeAr : kSearchTree,
       ),
@@ -213,7 +213,8 @@ class DuffleRoutes extends ProductRouteRepository {
   DuffleRoutes() : super(fakeGraphQLClient());
 
   @override
-  Future<ProductDetail?> fetchDetail(String url) async => url == 'offer-2150.html'
+  Future<ProductDetail?> fetchDetail(String url) async =>
+      url == 'offer-2150.html'
       ? duffleDetail(sku: 'SKU-2150', urlKey: 'offer-2150')
       : null;
 }

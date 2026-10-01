@@ -28,29 +28,8 @@ import 'audit_scene.dart';
 import 'harness.dart';
 import 'stores_product_fixtures.dart';
 
-/// Stores and product: C12 Stores, C13 Store (tabs: products, reviews, about, policies), C13b Store about, C14 PDP (and the other-sellers variant), C14b Bundle PDP, C14c Added to cart sheet, C15 Reviews, C15b Write review.
-///
-/// One scene per frame state, ported from the widget test that renders it (see
-/// docs/ui-audit.md, `PAIRS` in tool/ui_audit/pairs.py names the captures):
-///
-/// - C12 / C13 / C13b: test/features/stores/presentation/stores_screens_render_test.dart
-///   (the P3.1 renders: a server that lists the `vendors` capability), mounted
-///   at the root of the router like the test does (a tab: no back arrow on the
-///   list), signed out.
-/// - C14 default: test/features/marketplace/marketplace_render_test.dart
-///   `14 product page with "Sold by"`; C14 other_sellers: other_sellers_test.dart.
-/// - C14b: marketplace_render_test.dart `14b bundle page` and `14b bundle with
-///   choices`.
-/// - C14c: test/features/cart/added_to_cart_sheet_test.dart `renders (Figma 14c)`:
-///   a page with a button that opens the sheet, as the test does.
-/// - C15: test/features/catalog/presentation/product_reviews_render_test.dart;
-///   C15b: write_review_screen_test.dart `audit_15b_write_review`.
-///
-/// Every scene installs the offline public client (or its own answers): the
-/// harness does not fake `publicGraphqlClientProvider`, and nothing here may
-/// leave the app. No scene carries a photo URL (`withBlankPhotos`): the host
-/// sweep cannot wait for a network image, and the phone would only ask the live
-/// store for files that do not exist. The product photos are placeholder tiles.
+/// A server that lists the `vendors` capability: the store pages' extras (the
+/// Reviews tab, Contact vendor, Sales and Call, the chips' counts).
 const HubAppState _vendors = HubAppState.available(kVendorsHmAppConfig);
 
 AppLocalizations _l10n(String locale) => lookupAppLocalizations(Locale(locale));
@@ -112,7 +91,9 @@ AuditSetup _dressSetup(String locale) {
     overrides: [
       catalogRepositoryProvider.overrideWithValue(
         DetailCatalog(
-          withBlankPhotos(floralDressDetail(locale: locale, withCategory: true)),
+          withBlankPhotos(
+            floralDressDetail(locale: locale, withCategory: true),
+          ),
         ),
       ),
       // The product page's delivery card is made from the trust block.
@@ -219,7 +200,9 @@ AddedItem _sheetItem(String locale) {
         : 'Floral Print Corset-Waist Tie Dress',
     quantity: 1,
     unitPrice: const Money(amount: 50, currency: 'AED'),
-    options: ar ? ['المقاس: M', 'اللون: بيج مزهر'] : ['Size: M', 'Colour: Beige floral'],
+    options: ar
+        ? ['المقاس: M', 'اللون: بيج مزهر']
+        : ['Size: M', 'Colour: Beige floral'],
     onlyLeft: 3,
     onlyLeftOption: ar ? 'مقاس M' : 'size M',
   );
@@ -256,6 +239,38 @@ Future<void> _loadAllReviews(WidgetTester tester) async {
   await pumpFor(tester, 500);
 }
 
+/// Stores and product: C12 Stores, C13 Store (tabs: products, reviews, about, policies), C13b Store about, C14 PDP (and the other-sellers variant), C14b Bundle PDP, C14c Added to cart sheet, C15 Reviews, C15b Write review.
+///
+/// One scene per frame state, ported from the widget test that renders it (see
+/// docs/ui-audit.md, `PAIRS` in tool/ui_audit/pairs.py names the captures):
+///
+/// - C12 / C13 / C13b: test/features/stores/presentation/stores_screens_render_test.dart
+///   (the P3.1 renders: a server that lists the `vendors` capability), mounted
+///   at the root of the router like the test does (a tab: no back arrow on the
+///   list), signed out. The test's `drag` on the About and Reviews tabs is left
+///   out: its 1075 / 1250 px surface held the whole tab, so it scrolled
+///   nothing, and on the phone it would hide the store row the frame shows.
+/// - C14 default: test/features/marketplace/marketplace_render_test.dart
+///   `14 product page with "Sold by"`; C14 other_sellers: other_sellers_test.dart.
+///   The product page draws its own back button, so root or pushed looks the same.
+/// - C14b: marketplace_render_test.dart `14b bundle page` and `14b bundle with
+///   choices`.
+/// - C14c: test/features/cart/added_to_cart_sheet_test.dart `renders (Figma 14c)`:
+///   a page with a button that opens the sheet, as the test does (the frame's
+///   page behind the sheet is a blank block too).
+/// - C15: test/features/catalog/presentation/product_reviews_render_test.dart
+///   (all 27 reviews, pushed so the app bar carries its back arrow);
+///   C15b: write_review_screen_test.dart `audit_15b_write_review` (pushed).
+///
+/// Beyond the listed captures, four states the tests render or the frames
+/// imply: C13_store `reviews`, C13b_store_about `policies` (no test captures
+/// it), C14_pdp `other_sellers_sheet` and C14b_bundle_pdp `choices`.
+///
+/// Every scene installs the offline public client (or its own answers): the
+/// harness does not fake `publicGraphqlClientProvider`, and nothing here may
+/// leave the app. No scene carries a photo URL (`withBlankPhotos`): the host
+/// sweep cannot wait for a network image, and the phone would only ask the live
+/// store for files that do not exist. The product photos are placeholder tiles.
 List<AuditScene> scenes() => [
   // ---- C12 Stores: the list with the counted category chips and the
   // category line on each card (stores_12_list_p31).
@@ -285,7 +300,8 @@ List<AuditScene> scenes() => [
     signedIn: false,
     screen: (_) => const StoreScreen(code: 'MIA'),
     setup: _storesSetup,
-    act: (tester, locale) => _openStoreTab(tester, _l10n(locale).storeTabReviews),
+    act: (tester, locale) =>
+        _openStoreTab(tester, _l10n(locale).storeTabReviews),
   ),
 
   // ---- C13b Store about: the About tab with Sales and Call
@@ -343,10 +359,8 @@ List<AuditScene> scenes() => [
     signedIn: false,
     screen: (_) => const ProductDetailScreen(urlKey: 'joust-duffle-bag'),
     setup: _duffleSetup,
-    act: (tester, locale) => _tapScrolled(
-      tester,
-      find.text(_l10n(locale).pdpOtherSellersCompare),
-    ),
+    act: (tester, locale) =>
+        _tapScrolled(tester, find.text(_l10n(locale).pdpOtherSellersCompare)),
   ),
 
   // ---- C14b Bundle PDP: the fixed package (p3_14b_bundle, 1156 px high) ...
@@ -355,11 +369,13 @@ List<AuditScene> scenes() => [
     name: 'default',
     pushed: false,
     signedIn: false,
-    screen: (_) => const ProductDetailScreen(urlKey: 'home-fitness-starter-pack'),
+    screen: (_) =>
+        const ProductDetailScreen(urlKey: 'home-fitness-starter-pack'),
     setup: _fitnessPackSetup,
     scrolls: 1,
   ),
-  // ... and a bundle with choices, a dropdown opened (p3_14b_bundle_choices).
+  // ... and a bundle with choices, its list of items opened
+  // (p3_14b_bundle_choices).
   AuditScene(
     frame: 'C14b_bundle_pdp',
     name: 'choices',
@@ -371,12 +387,12 @@ List<AuditScene> scenes() => [
       await _tapScrolled(tester, find.byIcon(HubIcons.chevronDown));
       _toTop(tester);
     },
-    scrolls: 2,
+    scrolls: 1,
   ),
 
-  // ---- C14c Added to cart: the sheet over a page, the cart of Figma 18b
-  // behind the subtotal and the store counting down to its free-shipping
-  // line (added_to_cart).
+  // ---- C14c Added to cart: the sheet over a page, its subtotal the cart of
+  // Figma 18b (4 items, AED 543) and the store counting down to its
+  // free-shipping line (added_to_cart).
   AuditScene(
     frame: 'C14c_added_to_cart',
     name: 'default',
@@ -429,8 +445,10 @@ List<AuditScene> scenes() => [
     frame: 'C15b_write_review',
     name: 'default',
     signedIn: false,
-    screen: (locale) =>
-        WriteReviewScreen(sku: 'LOLY-DR-0231', subject: dressReviewSubject(locale)),
+    screen: (locale) => WriteReviewScreen(
+      sku: 'LOLY-DR-0231',
+      subject: dressReviewSubject(locale),
+    ),
     setup: (locale) => AuditSetup(
       overrides: [
         catalogRepositoryProvider.overrideWithValue(ReviewFormCatalog()),
