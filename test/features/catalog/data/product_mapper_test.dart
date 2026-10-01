@@ -224,6 +224,72 @@ void main() {
     });
   });
 
+  group('PDP stock and categories', () {
+    test('only_x_left_in_stock: the product\'s and each variant\'s count', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'only_x_left_in_stock': 4.0,
+        'configurable_options': [
+          {
+            'attribute_code': 'size',
+            'label': 'Size',
+            'values': [
+              {'uid': 'u1', 'value_index': 1, 'label': 'S'},
+              {'uid': 'u2', 'value_index': 2, 'label': 'M'},
+            ],
+          },
+        ],
+        'variants': [
+          {
+            'attributes': [
+              {'code': 'size', 'value_index': 1},
+            ],
+            'product': {
+              'sku': 'S',
+              'stock_status': 'IN_STOCK',
+              'only_x_left_in_stock': 3,
+            },
+          },
+          {
+            'attributes': [
+              {'code': 'size', 'value_index': 2},
+            ],
+            'product': {'sku': 'M', 'stock_status': 'IN_STOCK'},
+          },
+        ],
+      });
+      expect(detail.onlyLeft, 4);
+      expect(detail.variants.map((v) => v.onlyLeft), [3, null]);
+    });
+
+    test('a store without the threshold says nothing about what is left', () {
+      // Null (the live store today), zero and rubbish are all "not reported".
+      expect(productDetailFromJson(_json()).onlyLeft, isNull);
+      for (final value in <Object?>[null, 0, -1, 'few']) {
+        expect(
+          productDetailFromJson({..._json(), 'only_x_left_in_stock': value})
+              .onlyLeft,
+          isNull,
+          reason: '$value',
+        );
+      }
+    });
+
+    test('categories become refs for "See all"', () {
+      final detail = productDetailFromJson({
+        ..._json(),
+        'categories': [
+          {'uid': 'a', 'name': 'Clothes', 'level': 2, 'include_in_menu': 1},
+          {'uid': 'b', 'name': 'Dresses', 'level': 3, 'include_in_menu': 1},
+          {'uid': '', 'name': 'No uid', 'level': 3},
+        ],
+      });
+      expect(detail.categories.map((c) => c.uid), ['a', 'b']);
+      expect(detail.primaryCategory?.name, 'Dresses');
+      expect(productDetailFromJson(_json()).primaryCategory, isNull);
+    });
+  });
+
   group('rating histogram from the loaded reviews', () {
     test('built from reviews.items, with no server histogram field', () {
       final detail = productDetailFromJson({
