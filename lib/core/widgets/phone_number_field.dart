@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_text_styles.dart';
 import '../../app/theme/hub_icons.dart';
 
-/// The phone-entry field for the WhatsApp-OTP flows (Figma: a combined
-/// `🇦🇪 +971 ⌄ | number` filled field). The country code is fixed to the UAE
+/// The phone-entry field for the WhatsApp-OTP flows, as the frames draw their
+/// mobile number (Figma "Input": a white 52 px field, the 20 px `phone` glyph,
+/// then `+971 50 123 4567` in Body). The country code is fixed to the UAE
 /// (`+971`) — the store's allowed countries are UAE-only today (INTEGRATION.md
-/// §10); the chevron is a cosmetic affordance for a future country picker.
+/// §10) — so it is drawn as the start of the text and only the digits after it
+/// are typed.
 ///
-/// The field **mirrors with the locale** to match Figma: the `+971` chip sits on
-/// the leading edge — left in English (LTR), right in the Arabic (RTL) mirror —
-/// while the dial code and the entered digits stay **Latin/LTR** internally
-/// (numbers don't reverse), and the number sits adjacent to the chip in both.
+/// The glyph and the dial code sit on the leading edge — left in English (LTR),
+/// right in Arabic (RTL) — while the dial code and the entered digits stay
+/// **Latin/LTR** internally (numbers don't reverse), and the number sits next
+/// to the dial code in both.
 class PhoneNumberField extends StatelessWidget {
   const PhoneNumberField({
     super.key,
@@ -24,7 +27,6 @@ class PhoneNumberField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.dialCode = '+971',
-    this.flag = '🇦🇪',
   });
 
   final TextEditingController controller;
@@ -39,16 +41,27 @@ class PhoneNumberField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final String dialCode;
-  final String flag;
+
+  /// The frame's inset from the field's outer edge to its content: the 1 px
+  /// outline plus 16 px of padding.
+  static const double _inset = 17;
+
+  /// Material 3's input decorator adds 4 px beside the text (after a prefix
+  /// icon, and on an outlined field's open sides).
+  static const double _decoratorGap = 4;
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final rtl = Directionality.of(context) == TextDirection.rtl;
+    final body = t.body.copyWith(color: AppColors.inkHeading);
+    // A 52 px field whatever the locale's line height (EN 20, AR 22).
+    final vertical = (52 - body.fontSize! * body.height!) / 2;
     // The InputDecorator places `prefixIcon` from the ambient direction, so the
-    // chip mirrors to the leading edge (left LTR / right RTL) — matching Figma.
+    // glyph and the dial code mirror to the leading edge (left LTR / right RTL).
     // The digits are forced LTR so numbers never reverse, and `textAlign` is
-    // pinned to the leading edge so the number sits right next to the chip in
-    // both locales (not detached across the field).
+    // pinned to the leading edge so the number sits right next to the dial code
+    // in both locales (not detached across the field).
     return TextFormField(
       controller: controller,
       enabled: enabled,
@@ -57,39 +70,76 @@ class PhoneNumberField extends StatelessWidget {
       textInputAction: TextInputAction.done,
       textDirection: TextDirection.ltr,
       textAlign: rtl ? TextAlign.right : TextAlign.left,
+      style: body,
+      cursorColor: AppColors.brandPrimary,
       validator: validator,
       forceErrorText: errorText,
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
+      errorBuilder: (context, error) => _FieldError(error),
       decoration: InputDecoration(
+        isDense: true,
         hintText: hint,
-        prefixIcon: _dialChip(),
-        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        hintStyle: t.body.copyWith(color: AppColors.inkFaint),
+        hintTextDirection: TextDirection.ltr,
+        contentPadding: EdgeInsetsDirectional.fromSTEB(
+          0,
+          vertical,
+          _inset - _decoratorGap,
+          vertical,
+        ),
+        prefixIcon: Padding(
+          padding: const EdgeInsetsDirectional.only(start: _inset),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(HubIcons.phone, size: 20, color: AppColors.inkMuted),
+              const SizedBox(width: 10),
+              // Force the dial code LTR so it reads "+971", not "971+", in
+              // Arabic.
+              Text(dialCode, textDirection: TextDirection.ltr, style: body),
+            ],
+          ),
+        ),
+        prefixIconConstraints: const BoxConstraints(),
       ),
     );
   }
+}
 
-  Widget _dialChip() => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(flag, style: const TextStyle(fontSize: 16)),
-        const SizedBox(width: 6),
-        // Force the dial code LTR so it reads "+971", not "971+", in Arabic.
-        Text(
-          dialCode,
-          textDirection: TextDirection.ltr,
-          style: const TextStyle(
-            fontSize: 14.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.inkHeading,
+/// The line under a field in error (Figma S6 "helper"): a 14 px alert and a red
+/// Caption, 6 px under the field.
+class _FieldError extends StatelessWidget {
+  const _FieldError(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Padding(
+      // The decorator keeps 4 px between the field and this line; the frame has 6.
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              HubIcons.triangleAlert,
+              size: 14,
+              color: AppColors.danger,
+            ),
           ),
-        ),
-        const Icon(HubIcons.chevronDown, size: 18, color: AppColors.inkFaint),
-        const SizedBox(width: 8),
-        Container(width: 1, height: 22, color: AppColors.borderDefault),
-      ],
-    ),
-  );
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: t.caption.copyWith(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
