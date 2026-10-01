@@ -81,6 +81,8 @@ class _GuestTrackOrderScreenState extends ConsumerState<GuestTrackOrderScreen> {
     final l10n = AppLocalizations.of(context);
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: AppBar(
         centerTitle: true,
         leading: const HubBackButton(),

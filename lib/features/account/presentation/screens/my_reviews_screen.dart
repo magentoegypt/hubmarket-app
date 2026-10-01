@@ -62,6 +62,8 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     final state = ref.watch(myReviewsControllerProvider);
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, l10n.myReviewsTitle),
       body: ColoredBox(
         color: groupedPageColor(context),

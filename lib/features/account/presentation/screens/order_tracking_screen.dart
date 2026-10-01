@@ -140,6 +140,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
 
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: AppBar(
         centerTitle: true,
         leading: const HubBackButton(),

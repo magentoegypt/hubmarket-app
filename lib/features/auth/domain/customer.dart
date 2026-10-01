@@ -18,8 +18,7 @@ class Customer {
   final String? mobileNumber;
 
   /// Always null on Hub Market: the backend has no customer-photo endpoint, so
-  /// avatars render initials. Kept only because the drawer
-  /// (`app/shell/menu_drawer.dart`) still reads it.
+  /// avatars render initials. Kept for the day the backend has one.
   final String? avatarUrl;
 
   String get fullName => '$firstName $lastName'.trim();

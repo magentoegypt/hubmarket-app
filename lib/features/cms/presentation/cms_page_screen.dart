@@ -93,6 +93,8 @@ class _CmsPageScreenState extends ConsumerState<CmsPageScreen> {
 
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(
         context,
         title,

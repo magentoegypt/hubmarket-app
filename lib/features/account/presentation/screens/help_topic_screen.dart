@@ -17,6 +17,8 @@ class HelpTopicScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, topic.title ?? ''),
       body: ColoredBox(
         color: groupedPageColor(context),

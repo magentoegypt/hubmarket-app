@@ -182,6 +182,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, l10n.profileTitle, divider: true),
       bottomBar: HubFooterBar(
         child: HubButton(

@@ -50,7 +50,7 @@ Future<int> _pumpAndDrag(
 
 void main() {
   group('BackSwipePolicy', () {
-    test('anything poppable takes the leading edge from the drawer', () {
+    test('anything poppable arms the leading edge', () {
       final policy = BackSwipePolicy.forRoute(
         canPop: true,
         isTabRoot: false,
@@ -59,19 +59,17 @@ void main() {
       expect(policy.enabled, isTrue);
       expect(policy.startEdge, isTrue);
       expect(policy.trailingEdge, isFalse);
-      expect(policy.drawerOwnsLeadingEdge, isFalse);
     });
 
-    test('a non-Home tab root leaves the leading edge to the drawer', () {
+    test('a non-Home tab root goes Home from the leading edge', () {
       final policy = BackSwipePolicy.forRoute(
         canPop: false,
         isTabRoot: true,
         isHome: false,
       );
       expect(policy.enabled, isTrue);
-      expect(policy.startEdge, isFalse);
-      expect(policy.trailingEdge, isTrue);
-      expect(policy.drawerOwnsLeadingEdge, isTrue);
+      expect(policy.startEdge, isTrue);
+      expect(policy.trailingEdge, isFalse);
     });
 
     test('Home arms nothing, there is nowhere further back to go', () {
@@ -81,7 +79,8 @@ void main() {
         isHome: true,
       );
       expect(policy.enabled, isFalse);
-      expect(policy.drawerOwnsLeadingEdge, isTrue);
+      expect(policy.startEdge, isFalse);
+      expect(policy.trailingEdge, isFalse);
     });
 
     test('a first route that is not a tab root arms nothing', () {
@@ -178,7 +177,9 @@ void main() {
       expect(backs, 1);
     });
 
-    testWidgets('the leading edge stays free for the drawer', (tester) async {
+    testWidgets('the leading edge stays free when only the trailing one is armed', (
+      tester,
+    ) async {
       final backs = await _pumpAndDrag(
         tester,
         direction: TextDirection.ltr,

@@ -123,6 +123,8 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
 
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, l10n.helpCentreTitle),
       body: ColoredBox(
         color: groupedPageColor(context),

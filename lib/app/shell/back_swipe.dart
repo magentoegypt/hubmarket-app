@@ -27,19 +27,15 @@ const double _kCommitVelocity = 700.0;
 /// below the commit distance so the gesture still feels immediate.
 const double _kEdgeAcceptSlop = 40.0;
 
-/// Which edges mean "back" on a given route, and whether the drawer keeps its
-/// edge-drag. Decided in one place so every screen behaves the same — the shell
-/// screens and the ~20 that use a bare [Scaffold] alike.
-///
-/// The drawer keeps the leading edge on tab roots: it opens with the *same*
-/// inward drag a leading-edge back swipe would use, so no direction test could
-/// separate the two in the gesture arena, and arming both would only make the
-/// drawer flaky.
+/// Which edges mean "back" on a given route. Decided in one place so every
+/// screen behaves the same — the shell screens and the ~20 that use a bare
+/// [Scaffold] alike. (There is no side menu: the design has none, so the
+/// leading edge is always free for "back".)
 ///
 /// | Route                  | Leading edge | Trailing edge |
 /// |------------------------|--------------|---------------|
-/// | Home                   | drawer       | —             |
-/// | Other tab root         | drawer       | → Home        |
+/// | Home                   | —            | —             |
+/// | Other tab root         | → Home       | —             |
 /// | Anything poppable      | → pop        | —             |
 /// | Splash / welcome       | —            | —             |
 ///
@@ -52,7 +48,6 @@ class BackSwipePolicy {
     required this.enabled,
     required this.startEdge,
     required this.trailingEdge,
-    required this.drawerOwnsLeadingEdge,
   });
 
   factory BackSwipePolicy.forRoute({
@@ -64,20 +59,14 @@ class BackSwipePolicy {
     final goesHome = !canPop && isTabRoot && !isHome;
     return BackSwipePolicy._(
       enabled: canPop || goesHome,
-      startEdge: canPop,
-      trailingEdge: goesHome,
-      // The drawer's edge-drag is a tab-root affordance; on a pushed route the
-      // hamburger isn't offered anyway, so the edge belongs to the back gesture.
-      drawerOwnsLeadingEdge: !canPop,
+      startEdge: canPop || goesHome,
+      trailingEdge: false,
     );
   }
 
   final bool enabled;
   final bool startEdge;
   final bool trailingEdge;
-
-  /// Feeds `Scaffold.drawerEnableOpenDragGesture`.
-  final bool drawerOwnsLeadingEdge;
 }
 
 /// An app-owned horizontal edge drag that means "back", placed **outboard of
@@ -127,8 +116,7 @@ class BackSwipeDetector extends StatelessWidget {
   /// routes to widen the framework's unreachable strip inward.
   final bool startEdge;
 
-  /// Arm the trailing edge — right in English, left in Arabic. Used on tab
-  /// roots, where the leading edge belongs to the drawer.
+  /// Arm the trailing edge — right in English, left in Arabic.
   final bool trailingEdge;
 
   final Widget child;
@@ -285,8 +273,8 @@ class _EdgeBackDrag extends HorizontalDragGestureRecognizer {
 ///
 /// Going through [NavigatorState.maybePop] rather than `router.pop()` is
 /// deliberate: it fires [PopScope], so `HubScaffold`'s existing ladder still
-/// runs — an open drawer closes first, and a tab root heads back to Home. When
-/// nothing handles the pop, a tab root falls through to Home explicitly.
+/// runs — a tab root heads back to Home. When nothing handles the pop, a tab
+/// root falls through to Home explicitly.
 class AppBackSwipe extends StatefulWidget {
   const AppBackSwipe({
     super.key,
@@ -360,8 +348,8 @@ class _AppBackSwipeState extends State<AppBackSwipe> {
   Future<void> _back() async {
     final navigator = widget.navigatorKey.currentState;
     if (navigator == null) return;
-    // maybePop fires PopScope, so HubScaffold's ladder still runs: an open
-    // drawer closes first, and a tab root heads back to Home.
+    // maybePop fires PopScope, so HubScaffold's ladder still runs: a tab root
+    // heads back to Home.
     if (await navigator.maybePop()) return;
     final location = _location;
     if (location != null &&

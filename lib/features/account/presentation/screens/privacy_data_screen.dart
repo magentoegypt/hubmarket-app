@@ -41,6 +41,8 @@ class PrivacyDataScreen extends ConsumerWidget {
 
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, l10n.privacyDataTitle),
       body: ColoredBox(
         color: groupedPageColor(context),

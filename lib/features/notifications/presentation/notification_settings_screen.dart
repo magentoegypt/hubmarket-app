@@ -109,6 +109,8 @@ class _NotificationSettingsScreenState
 
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, l10n.notificationSettingsTitle),
       bottomBar: hasSettings
           ? HubFooterBar(

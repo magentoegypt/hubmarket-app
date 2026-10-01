@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 /// Theme-aware colour resolvers for text/fills/hairlines that sit **directly on
-/// the dark scaffold** (or the white menu drawer). In light mode they return the
+/// the dark scaffold**. In light mode they return the
 /// original Figma tokens unchanged; in dark mode they flip to a legible
 /// counterpart.
 ///

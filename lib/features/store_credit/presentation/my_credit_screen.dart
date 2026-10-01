@@ -64,6 +64,8 @@ class _MyCreditScreenState extends ConsumerState<MyCreditScreen> {
     final topUp = ref.watch(storeCreditTopUpProvider).valueOrNull;
     return HubScaffold(
       currentTab: AppTab.account,
+      // Figma: a pushed page, no tab bar.
+      showTabBar: false,
       appBar: subpageAppBar(context, l10n.myCreditTitle),
       body: ColoredBox(
         color: groupedPageColor(context),
