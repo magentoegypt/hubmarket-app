@@ -8,6 +8,8 @@ import '../../../../core/network/connectivity.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/offline_state.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -119,7 +121,8 @@ class _Frame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(AppLocalizations.of(context).orderDetailsTitle)),
+    backgroundColor: groupedPageColor(context),
+    appBar: HubTopBar(title: AppLocalizations.of(context).orderDetailsTitle),
     body: child,
   );
 }

@@ -85,7 +85,8 @@ void main() {
         ),
         returns: repo,
       );
-      expect(find.text(en.orderReorder), findsOneWidget);
+      // The detail is up (its Payment card) and has no Return items.
+      expect(find.text(en.orderPaymentTitle), findsOneWidget);
       expect(find.text(en.returnsReturnItems), findsNothing);
       expect(repo.returnableOrderLookups, ['000000151']);
     });
@@ -119,7 +120,8 @@ void main() {
           hubApp: state,
           returns: repo,
         );
-        expect(find.text(en.orderReorder), findsOneWidget);
+        // The detail is up (its Payment card), without Return items.
+        expect(find.text(en.orderPaymentTitle), findsOneWidget);
         expect(find.text(en.returnsReturnItems), findsNothing);
         // Nothing is asked of a server that may not have returns.
         expect(repo.returnableOrderLookups, isEmpty);

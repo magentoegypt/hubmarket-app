@@ -831,6 +831,8 @@
   "orderStepPreparing": "Being prepared by store",
   "orderStepShipped": "Shipped",
   "orderStepDelivered": "Delivered",
+  "orderProgressConfirmed": "Confirmed",
+  "orderProgressPacked": "Packed",
   "orderPaymentTitle": "Payment",
   "orderDeliveryLabel": "Delivery",
   "orderPlacedOn": "Placed {date}",
@@ -889,6 +891,14 @@
   "orderBillingAddress": "Billing Address",
   "orderItemCount": "{count, plural, =1{1 item} other{{count} items}}",
   "@orderItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderPackagesCount": "{count, plural, =1{1 package} other{{count} packages}}",
+  "@orderPackagesCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -1163,12 +1173,16 @@
     }
   },
   "ordersGuestRemove": "Remove",
-  "guestTrackTitle": "Track Your Order",
-  "guestTrackIntro": "Enter your order number and the email and last name you used at checkout.",
+  "guestTrackTitle": "Track order",
+  "guestTrackHeading": "Find your order",
+  "guestTrackIntro": "Checked out as a guest? Enter your order number and the email you used — no account needed.",
   "guestTrackOrderNumber": "Order number",
-  "guestTrackEmail": "Email",
-  "guestTrackLastname": "Last name",
-  "guestTrackSubmit": "Find my order",
+  "guestTrackEmail": "Email address",
+  "guestTrackLastname": "Billing last name",
+  "guestTrackSubmit": "Find order",
+  "guestTrackViewOrder": "View order details",
+  "guestTrackHaveAccount": "Have an account?",
+  "guestTrackSignIn": "Sign in",
   "guestTrackNotFound": "We couldn't find an order with those details.",
   "addressesTitle": "Addresses",
   "addressesEmpty": "No saved addresses yet.",

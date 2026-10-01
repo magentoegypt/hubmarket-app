@@ -52,6 +52,9 @@ abstract final class HubIcons {
   /// `bell`
   static const IconData bell = IconData(0xe059, fontFamily: _family);
 
+  /// `box` — the plain cube (Track order's order number, Figma 26)
+  static const IconData box = IconData(0xe061, fontFamily: _family);
+
   /// `camera`
   static const IconData camera = IconData(0xe064, fontFamily: _family);
 
