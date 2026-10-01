@@ -763,6 +763,8 @@
   "savedCardsTitle": "طرق الدفع",
   "savedCardsEmptyTitle": "لا توجد بطاقات محفوظة",
   "savedCardsEmptyBody": "تظهر هنا البطاقات المحفوظة في حسابك.",
+  "savedCardsSection": "البطاقات المحفوظة",
+  "savedCardExpires": "تنتهي {date}",
   "savedCardExpired": "منتهية الصلاحية",
   "savedCardRemove": "إزالة البطاقة",
   "savedCardRemoveConfirmTitle": "هل تريد إزالة هذه البطاقة؟",

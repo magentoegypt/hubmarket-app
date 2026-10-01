@@ -1266,6 +1266,15 @@
   "savedCardsTitle": "Payment methods",
   "savedCardsEmptyTitle": "No saved cards",
   "savedCardsEmptyBody": "Cards saved to your account appear here.",
+  "savedCardsSection": "Saved cards",
+  "savedCardExpires": "Expires {date}",
+  "@savedCardExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "savedCardExpired": "Expired",
   "savedCardRemove": "Remove card",
   "savedCardRemoveConfirmTitle": "Remove this card?",
