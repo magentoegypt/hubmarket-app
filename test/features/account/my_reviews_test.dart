@@ -98,8 +98,9 @@ void main() {
     expect(find.text('Floral Print Dress'), findsOneWidget);
     expect(find.text('Corner Sofa Bed'), findsOneWidget);
     // Every page is in, so the count is exact.
+    // ... and the note carries on the sentence, as the frame prints it.
     expect(
-      find.text('${en.myReviewsCount(3)} · ${en.myReviewsApprovalNote}'),
+      find.text('3 reviews · reviews are published after a quick check'),
       findsOneWidget,
     );
     // No invented moderation badge: core reviews carry no status.

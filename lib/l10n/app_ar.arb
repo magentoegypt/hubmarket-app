@@ -722,7 +722,7 @@
   "reviewSubmitted": "شكرًا لك! مراجعتك قيد المراجعة.",
   "myReviewsTitle": "تقييماتي للمنتجات",
   "myReviewsCount": "{count, plural, =1{تقييم واحد} =2{تقييمان} few{{count} تقييمات} many{{count} تقييمًا} other{{count} تقييم}}",
-  "myReviewsApprovalNote": "تظهر التقييمات الجديدة في صفحة المنتج بعد اعتمادها",
+  "myReviewsApprovalNote": "تُنشر التقييمات بعد مراجعة سريعة",
   "myReviewsEmptyBody": "تظهر هنا التقييمات التي تكتبها في صفحات المنتجات.",
   "myReviewsSignIn": "سجّل الدخول لرؤية التقييمات التي كتبتها.",
   "checkoutTitle": "إتمام الشراء",

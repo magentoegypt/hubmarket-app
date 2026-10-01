@@ -1194,7 +1194,7 @@
       }
     }
   },
-  "myReviewsApprovalNote": "New reviews appear on the product page once approved",
+  "myReviewsApprovalNote": "Reviews are published after a quick check",
   "myReviewsEmptyBody": "Reviews you write on product pages show up here.",
   "myReviewsSignIn": "Sign in to see the reviews you've written.",
   "checkoutTitle": "Checkout",

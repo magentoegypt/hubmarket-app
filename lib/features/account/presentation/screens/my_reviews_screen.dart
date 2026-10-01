@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/grouped_list.dart';
@@ -14,7 +15,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../catalog/domain/review_pages.dart';
 import '../../../catalog/presentation/reviews_controllers.dart';
-import '../../../catalog/presentation/widgets/review_widgets.dart';
+import '../../../catalog/presentation/widgets/review_widgets.dart' show reviewDate;
 import '../../../../app/theme/hub_icons.dart';
 
 /// My product reviews (Figma 20f): the reviews the signed-in customer wrote,
@@ -22,7 +23,7 @@ import '../../../../app/theme/hub_icons.dart';
 ///
 /// No Pending / Published badge: the customer list includes reviews still
 /// awaiting approval, but core `ProductReview` has no status field, so the
-/// line under the title explains moderation instead of labelling each card.
+/// line above the cards explains moderation instead of labelling each card.
 class MyReviewsScreen extends ConsumerStatefulWidget {
   const MyReviewsScreen({super.key});
 
@@ -101,17 +102,19 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     final count = state.count;
     return ListView(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.only(start: 2, bottom: 10),
-          child: Text(
-            count == null
-                ? l10n.myReviewsApprovalNote
-                : '${l10n.myReviewsCount(count)} · ${l10n.myReviewsApprovalNote}',
-            style: TextStyle(fontSize: 12.5, color: context.scaffoldMuted),
-          ),
+        Text(
+          count == null
+              ? l10n.myReviewsApprovalNote
+              // "3 reviews · reviews are published after a quick check": the
+              // note continues the sentence, so it starts in lower case.
+              : '${l10n.myReviewsCount(count)} · ${_lowerFirst(l10n.myReviewsApprovalNote)}',
+          style: AppTextStyles.of(
+            context,
+          ).caption.copyWith(color: context.scaffoldMuted),
         ),
+        const SizedBox(height: 12),
         for (final item in state.items)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -134,13 +137,16 @@ class _MyReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     final review = item.review;
     final date = reviewDate(review.date, locale);
     final urlKey = item.productUrlKey;
+    // Figma `review`: 14 px of padding, 8 between the product row, the title
+    // and the text; 10 between the photo and the product.
     return Material(
       color: groupCardColor(context),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: urlKey == null || urlKey.isEmpty
@@ -149,7 +155,7 @@ class _MyReviewCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
@@ -162,9 +168,9 @@ class _MyReviewCard extends StatelessWidget {
                         url: item.productImageUrl,
                         decodeWidth: 48,
                         placeholder: (_) =>
-                            const ColoredBox(color: AppColors.surfaceTint),
+                            const ColoredBox(color: AppColors.surfaceSubtle),
                         error: (_) => const ColoredBox(
-                          color: AppColors.surfaceTint,
+                          color: AppColors.surfaceSubtle,
                           child: Icon(
                             HubIcons.image,
                             size: 18,
@@ -174,7 +180,7 @@ class _MyReviewCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,22 +189,19 @@ class _MyReviewCard extends StatelessWidget {
                           item.productName,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
+                          style: t.bodyStrong.copyWith(
                             color: context.scaffoldHeading,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Row(
                           children: [
-                            ReviewStars(stars: review.stars),
+                            _Stars(stars: review.stars),
                             if (date.isNotEmpty) ...[
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
                                 date,
-                                style: TextStyle(
-                                  fontSize: 12,
+                                style: t.caption.copyWith(
                                   color: context.scaffoldMuted,
                                 ),
                               ),
@@ -211,24 +214,20 @@ class _MyReviewCard extends StatelessWidget {
                 ],
               ),
               if (review.summary.trim().isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   review.summary.trim(),
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    color: context.scaffoldHeading,
-                  ),
+                  style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
                 ),
               ],
               if (review.text.trim().isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   review.text.trim(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.45,
-                    color: context.scaffoldMuted,
+                  style: t.caption.copyWith(
+                    color: context.isDarkMode
+                        ? context.scaffoldMuted
+                        : AppColors.inkSubtle,
                   ),
                 ),
               ],
@@ -239,3 +238,31 @@ class _MyReviewCard extends StatelessWidget {
     );
   }
 }
+
+/// The rating as the frame draws it: five 11 px stars 2 px apart, the lit ones
+/// `rating-star` yellow, the rest `rating-empty` grey.
+class _Stars extends StatelessWidget {
+  const _Stars({required this.stars});
+
+  final int stars;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (var i = 1; i <= 5; i++) ...[
+        if (i > 1) const SizedBox(width: 2),
+        Icon(
+          Icons.star_rounded,
+          size: 11,
+          color: i <= stars ? AppColors.ratingStar : AppColors.ratingEmpty,
+        ),
+      ],
+    ],
+  );
+}
+
+/// [text] with its first letter in lower case, to carry on a sentence; Arabic,
+/// which has no case, comes back as it is.
+String _lowerFirst(String text) =>
+    text.isEmpty ? text : text[0].toLowerCase() + text.substring(1);
