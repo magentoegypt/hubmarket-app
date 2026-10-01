@@ -12,6 +12,12 @@ import 'screenshots_test.dart' as shots;
 ///
 /// To run only the screenshots, give AUDIT_ONLY a value no scene id contains.
 void main() {
+  // ignore: avoid_print
+  print('CHECK registering the device audit');
   audit.main();
+  // ignore: avoid_print
+  print('CHECK registering the store screenshots');
   shots.main();
+  // ignore: avoid_print
+  print('CHECK both registered');
 }

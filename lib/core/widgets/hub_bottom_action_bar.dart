@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/theme_x.dart';
 import 'grouped_list.dart';
+import 'system_bar_clearance.dart';
 
 /// Figma "footer": the bar pinned under a form or a list — white, a 1 px
 /// `--hm-subtle` rule on top, 16 px at the sides, 12 px above its button and
@@ -13,7 +14,8 @@ import 'grouped_list.dart';
 /// Pass it as a `Scaffold`'s `bottomNavigationBar:`. The 30 px under the button
 /// is the frame's: an iPhone's 34 px home-indicator zone is 4 px taller, which
 /// the thin indicator never reaches, so the system inset is only given way to
-/// when it is larger than that (a 3-button navigation bar).
+/// when it is larger than that; a phone with a persistent navigation bar (a
+/// 3-button one is 47 dp) clears all of it (see [systemBarClearance]).
 class HubBottomActionBar extends StatelessWidget {
   const HubBottomActionBar({
     super.key,
@@ -31,7 +33,7 @@ class HubBottomActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inset = MediaQuery.viewPaddingOf(context).bottom;
+    final clearance = systemBarClearance(context);
     return Material(
       color: groupCardColor(context),
       child: Container(
@@ -39,7 +41,7 @@ class HubBottomActionBar extends StatelessWidget {
           16,
           12,
           16,
-          math.max(bottomSpace, inset - 4),
+          math.max(bottomSpace, clearance),
         ),
         decoration: BoxDecoration(
           border: Border(
