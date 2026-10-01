@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 
 /// Figma values the search screens (09 · 09b · 09c · S2) use that the app theme
@@ -26,13 +27,10 @@ abstract final class SearchStyle {
     Color(0xFFE8EAF6),
   ];
 
-  /// Section titles on the landing: 18 bold.
-  static TextStyle sectionTitle(BuildContext context) => TextStyle(
-    fontSize: 18,
-    height: 24 / 18,
-    fontWeight: FontWeight.w700,
-    color: context.scaffoldHeading,
-  );
+  /// Section titles on the landing: "Heading 2" (18 bold).
+  static TextStyle sectionTitle(BuildContext context) => AppTextStyles.of(
+    context,
+  ).heading2.copyWith(color: context.scaffoldHeading);
 
   /// Fill of the grey pills (trending searches) — `bg/subtle` on white.
   static Color pillFill(BuildContext context) =>

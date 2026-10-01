@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/hm_link_navigation.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
-import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../home/domain/hm_home.dart';
+import '../../../home/presentation/hm_home_providers.dart';
 import '../../domain/category.dart';
-import '../catalog_providers.dart';
+import '../category_icons.dart';
 import '../search_history.dart';
 import '../search_providers.dart';
 import 'search_style.dart';
@@ -37,9 +40,7 @@ class SearchLanding extends ConsumerWidget {
     // Only the admin's list (Hub Market App settings): without one — Build 1
     // or none configured — the section hides. The app never invents trends.
     final trending = ref.watch(trendingSearchesProvider);
-    final categories =
-        ref.watch(searchCategoryChoicesProvider).valueOrNull ??
-        const <Category>[];
+    final tiles = _popularTiles(context, ref);
 
     final sections = <List<Widget>>[
       if (recent.isNotEmpty)
@@ -49,8 +50,7 @@ class SearchLanding extends ConsumerWidget {
             actionLabel: l10n.searchClearHistory,
             onAction: () => ref.read(searchHistoryProvider.notifier).clear(),
           ),
-          // 14 in the frame, less the Clear button's taller tap target.
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           for (final term in recent)
             _RecentRow(
               term: term,
@@ -79,11 +79,20 @@ class SearchLanding extends ConsumerWidget {
             ),
           ),
         ],
-      if (categories.isNotEmpty)
+      if (tiles.isNotEmpty)
         [
           _SectionTitle(title: l10n.searchPopularCategories),
           const SizedBox(height: 14),
-          _PopularCategories(categories: categories),
+          SizedBox(
+            height: _CategoryTile.height,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: tiles.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) => _CategoryTile(tile: tiles[i]),
+            ),
+          ),
         ],
     ];
 
@@ -102,6 +111,57 @@ class SearchLanding extends ConsumerWidget {
       ],
     );
   }
+
+  /// The tiles of Popular categories: Home's "Shop by category" chips as the
+  /// admin set them up (their glyph, pastel and order — the same tile, the
+  /// same colours), else the store's top-level categories that hold products.
+  List<_Tile> _popularTiles(BuildContext context, WidgetRef ref) {
+    final home = ref.watch(hmHomeProvider).valueOrNull;
+    final chips = home == null ? null : _categoryChips(home);
+    if (chips != null) {
+      return [
+        for (final chip in chips.take(popularLimit))
+          _Tile(
+            name: chip.name,
+            urlKey: chip.urlKey,
+            count: chip.productCount,
+            glyph: chip.icon,
+            tint: chip.tint,
+            onTap: () =>
+                openHmLink(context, ref, chip.link, title: chip.name),
+          ),
+      ];
+    }
+    final categories =
+        ref.watch(searchCategoryChoicesProvider).valueOrNull ??
+        const <Category>[];
+    final shown = categories.take(popularLimit).toList(growable: false);
+    return [
+      for (var i = 0; i < shown.length; i++)
+        _Tile(
+          name: shown[i].name,
+          urlKey: shown[i].urlKey,
+          count: shown[i].productCount,
+          // Without the admin's slots, the pastels run in order.
+          tint: i,
+          onTap: () => context.push(
+            AppRoutes.category(shown[i].uid),
+            extra: shown[i].name,
+          ),
+        ),
+    ];
+  }
+
+  /// The first Shop by category section the admin shows, or null.
+  static List<HmCategoryChip>? _categoryChips(HmHome home) {
+    for (final section in home.visibleSections(DateTime.now())) {
+      if (section.type == HmSectionType.categoryChips &&
+          section.categories.isNotEmpty) {
+        return section.categories;
+      }
+    }
+    return null;
+  }
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -114,6 +174,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = actionLabel;
+    final t = AppTextStyles.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -121,22 +182,16 @@ class _SectionTitle extends StatelessWidget {
           Expanded(
             child: Text(title, style: SearchStyle.sectionTitle(context)),
           ),
+          // A text link as tall as the title's line (the frame's row is 24).
           if (label != null)
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.accentStrong,
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(48, 32),
-                alignment: AlignmentDirectional.centerEnd,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              // On the Text: a ButtonStyle textStyle would drop the theme font.
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+            InkWell(
+              onTap: onAction,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Text(
+                  label,
+                  style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
                 ),
               ),
             ),
@@ -147,7 +202,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// One recent search: clock · term · remove (x). Tapping the row searches it
-/// again.
+/// again; the remove target is the row's full height at its end.
 class _RecentRow extends StatelessWidget {
   const _RecentRow({
     required this.term,
@@ -162,42 +217,46 @@ class _RecentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        // 8 at the end: the remove button's 32 pt target puts its 16 pt glyph
-        // 16 from the edge, as drawn.
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 4),
-        child: Row(
-          children: [
-            Icon(HubIcons.clock, size: 18, color: context.scaffoldMuted),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                term,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 20 / 14,
-                  color: context.scaffoldHeading,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Icon(HubIcons.clock, size: 18, color: context.scaffoldMuted),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    term,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.body.copyWith(color: context.scaffoldHeading),
+                  ),
                 ),
+                const SizedBox(width: 12),
+                Icon(HubIcons.x, size: 16, color: context.scaffoldMuted),
+              ],
+            ),
+          ),
+          PositionedDirectional(
+            end: 0,
+            top: 0,
+            bottom: 0,
+            width: 48,
+            child: Semantics(
+              button: true,
+              label: l10n.searchRemoveRecent,
+              excludeSemantics: true,
+              child: Tooltip(
+                message: l10n.searchRemoveRecent,
+                child: InkResponse(onTap: onRemove, radius: 24),
               ),
             ),
-            IconButton(
-              onPressed: onRemove,
-              tooltip: l10n.searchRemoveRecent,
-              iconSize: 16,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-              style: IconButton.styleFrom(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              color: context.scaffoldMuted,
-              icon: const Icon(HubIcons.x),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -217,6 +276,7 @@ class _TrendingPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     return Material(
       color: SearchStyle.pillFill(context),
       shape: const StadiumBorder(),
@@ -230,21 +290,12 @@ class _TrendingPill extends StatelessWidget {
             children: [
               Text(
                 '$rank',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.accentStrong,
-                ),
+                style: t.captionStrong.copyWith(color: AppColors.accentStrong),
               ),
               const SizedBox(width: 6),
               Text(
                 term,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 20 / 14,
-                  fontWeight: FontWeight.w600,
-                  color: context.scaffoldHeading,
-                ),
+                style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
               ),
             ],
           ),
@@ -254,130 +305,89 @@ class _TrendingPill extends StatelessWidget {
   }
 }
 
-/// Popular categories: pastel tiles, each opening the category's listing.
-class _PopularCategories extends ConsumerWidget {
-  const _PopularCategories({required this.categories});
-
-  /// Every top-level category with products. Only the first
-  /// [SearchLanding.popularLimit] are drawn, but the stand-in thumbnail lookup
-  /// is keyed on the whole list — the key Home's Shop by category already
-  /// fetched, so this normally costs no request.
-  final List<Category> categories;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final thumbnails =
-        ref
-            .watch(categoryThumbnailsProvider(categoryThumbnailKey(categories)))
-            .valueOrNull ??
-        const <String, String>{};
-    final shown = categories
-        .take(SearchLanding.popularLimit)
-        .toList(growable: false);
-    return SizedBox(
-      height: _CategoryTile.height,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: shown.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, i) {
-          final category = shown[i];
-          final image = category.image ?? '';
-          return _CategoryTile(
-            category: category,
-            imageUrl: image.isNotEmpty ? image : thumbnails[category.uid],
-            tint:
-                SearchStyle.categoryTints[i % SearchStyle.categoryTints.length],
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// A 74 × 112 pastel tile: image (or a glyph), name, "7+ items". The tile is a
-/// light surface in both themes, so its text keeps the fixed ink tokens.
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.category,
-    required this.imageUrl,
-    required this.tint,
+/// What a Popular categories tile shows and opens.
+class _Tile {
+  const _Tile({
+    required this.name,
+    required this.urlKey,
+    required this.count,
+    required this.onTap,
+    this.glyph,
+    this.tint,
   });
 
-  final Category category;
-  final String? imageUrl;
-  final Color tint;
+  final String name;
+  final String urlKey;
+  final int count;
+
+  /// The admin's glyph (an emoji); null draws the category's own icon.
+  final String? glyph;
+
+  /// The pastel slot (0–7) the admin gave the category; null takes the one
+  /// the name's position picks.
+  final int? tint;
+  final VoidCallback onTap;
+}
+
+/// A 74 × 112 pastel tile (Figma "Category tile"): glyph, name, "7+ items".
+/// The tile is a light surface in both themes, so its text keeps the fixed
+/// ink tokens.
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.tile});
+
+  final _Tile tile;
 
   static const double width = 74;
   static const double height = 112;
-  static const double _media = 36;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    const glyph = Center(
-      child: Icon(
-        HubIcons.layoutGrid,
-        size: 28,
-        color: AppColors.brandPrimary,
-      ),
-    );
+    final t = AppTextStyles.of(context);
+    final glyph = tile.glyph;
+    final tints = SearchStyle.categoryTints;
     return SizedBox(
       width: width,
       child: Material(
-        color: tint,
+        color: tints[(tile.tint ?? 0) % tints.length],
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => context.push(
-            AppRoutes.category(category.uid),
-            extra: category.name,
-          ),
+          onTap: tile.onTap,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
             child: Column(
               children: [
-                SizedBox.square(
-                  dimension: _media,
-                  child: (imageUrl ?? '').isEmpty
-                      ? glyph
-                      : HubImage(
-                          url: imageUrl,
-                          width: _media,
-                          height: _media,
-                          borderRadius: BorderRadius.circular(8),
-                          placeholder: (_) => glyph,
-                          error: (_) => glyph,
-                        ),
+                SizedBox(
+                  height: 28,
+                  child: Center(
+                    child: glyph != null
+                        ? Text(glyph, style: const TextStyle(fontSize: 24, height: 1))
+                        : Icon(
+                            categoryIcon(tile.urlKey, tile.name),
+                            size: 24,
+                            color: AppColors.brandPrimary,
+                          ),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  category.name,
+                  tile.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 16 / 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.inkHeading,
-                  ),
+                  style: t.captionStrong.copyWith(color: AppColors.inkHeading),
                 ),
                 const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    l10n.searchCategoryItems(category.productCount),
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 14 / 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.inkMuted,
+                if (tile.count > 0)
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      l10n.searchCategoryItems(tile.count),
+                      maxLines: 1,
+                      style: t.micro.copyWith(color: AppColors.inkMuted),
                     ),
                   ),
-                ),
               ],
             ),
           ),

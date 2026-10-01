@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/store/store_controller.dart';
@@ -18,6 +19,7 @@ import '../../domain/search_results.dart';
 import '../product_navigation.dart';
 import '../search_controller.dart';
 import 'filter_sheet.dart';
+import 'meta_action.dart';
 import 'product_card.dart';
 import 'product_skeletons.dart';
 import 'search_no_results.dart';
@@ -164,30 +166,54 @@ class _ResultTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     return TabBar(
       isScrollable: true,
       tabAlignment: TabAlignment.start,
       padding: const EdgeInsetsDirectional.only(start: 16),
       labelPadding: const EdgeInsetsDirectional.only(end: 20),
       indicatorSize: TabBarIndicatorSize.label,
+      // The bar is its 41 pt tabs and the 1 pt rule: no extra indicator room.
+      indicatorWeight: 1,
+      // Sits on the rule, not over it.
       indicator: const UnderlineTabIndicator(
         borderSide: BorderSide(color: AppColors.accent, width: 3),
+        insets: EdgeInsets.only(bottom: 1),
       ),
-      dividerColor: context.hairline,
+      dividerColor: context.isDarkMode
+          ? Colors.white24
+          : AppColors.borderSubtle,
       labelColor: context.scaffoldHeading,
       unselectedLabelColor: context.scaffoldMuted,
-      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-      ),
+      labelStyle: t.bodyStrong,
+      unselectedLabelStyle: t.body,
       tabs: [
-        Tab(height: 41, text: products),
-        if (vendors != null) Tab(height: 41, text: vendors),
-        Tab(height: 41, text: categories),
+        _ResultTab(products),
+        if (vendors != null) _ResultTab(vendors!),
+        _ResultTab(categories),
       ],
     );
   }
+}
+
+/// One tab: the frame's 10 pt above the 20 pt label, then 8 and the 3 pt
+/// indicator below it (41 pt in all).
+class _ResultTab extends StatelessWidget {
+  const _ResultTab(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Tab(
+    height: 41,
+    child: SizedBox(
+      height: 41,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text(label, maxLines: 1, softWrap: false),
+      ),
+    ),
+  );
 }
 
 /// Products tab: "N results for “q”" with the Sort and Filter actions, then
@@ -361,9 +387,15 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
       controller: _scroll,
       slivers: [
         SliverToBoxAdapter(child: meta),
+        // The frame's body is a column with 14 pt between its blocks.
+        const SliverToBoxAdapter(child: SizedBox(height: 14)),
         if (vendor != null)
           SliverPadding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 16, 10),
+            padding: const EdgeInsetsDirectional.only(
+              start: 16,
+              end: 16,
+              bottom: 14,
+            ),
             sliver: SliverToBoxAdapter(child: SearchVendorCard(vendor: vendor)),
           ),
         if (state.products.isEmpty)
@@ -375,9 +407,12 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
           )
         else
           SliverPadding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 16),
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
             sliver: SliverGrid(
-              gridDelegate: productGridDelegate(context),
+              gridDelegate: ProductGridDelegate(
+                infoHeight: ProductCardMetrics.infoHeight(context),
+                mainAxisSpacing: 14,
+              ),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final product = state.products[index];
                 // The card's "+" adds a simple product by SKU; for a
@@ -414,7 +449,8 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
   }
 }
 
-/// "12 results for “sofa”" · ⇅ Relevance · Filter.
+/// "12 results for “sofa”" · ⇅ Relevance · Filter (Figma 09c "meta": 36 pt,
+/// 10 above and below, 14 between the two actions).
 class _MetaRow extends StatelessWidget {
   const _MetaRow({
     required this.summary,
@@ -432,9 +468,10 @@ class _MetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     return Padding(
       // 12 at the end: the Filter action's own 4 pt padding makes up the 16.
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 12, 4),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 12, 0),
       child: Row(
         children: [
           Expanded(
@@ -442,67 +479,18 @@ class _MetaRow extends StatelessWidget {
               summary,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                color: context.scaffoldMuted,
-              ),
+              style: t.caption.copyWith(color: context.scaffoldMuted),
             ),
           ),
           const SizedBox(width: 8),
-          _MetaAction(icon: HubIcons.arrowUpDown, label: sortLabel, onTap: onSort),
+          MetaAction(icon: HubIcons.arrowUpDown, label: sortLabel, onTap: onSort),
           const SizedBox(width: 6),
-          _MetaAction(icon: HubIcons.slidersHorizontal, label: filterLabel, onTap: onFilter),
+          MetaAction(
+            icon: HubIcons.slidersHorizontal,
+            label: filterLabel,
+            onTap: onFilter,
+          ),
         ],
-      ),
-    );
-  }
-}
-
-class _MetaAction extends StatelessWidget {
-  const _MetaAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = context.scaffoldHeading;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        // A 38 pt tall target around the 16 pt line (the frame's row is 10 +
-        // 18 + 10).
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 11),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            // Capped so a long sort name ("Price: High to Low", or its Arabic)
-            // can't push the row past the screen next to a long results line.
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 132),
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 16 / 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

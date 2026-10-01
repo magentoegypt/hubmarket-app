@@ -51,8 +51,15 @@ class SearchFieldBar extends StatelessWidget {
   /// else the app's own wording.
   final String? hint;
 
-  /// The 46 pt field plus 6 above and 10 below.
+  /// The 46 pt field plus 6 above and 10 below (Figma 09 · 09b · S2).
   static const double height = 62;
+
+  /// The results page (Figma 09c) closes the row 2 pt sooner: 6 above, 8 below.
+  static const double resultsHeight = 60;
+
+  /// The row's height for the page it heads.
+  static double heightFor({required bool results}) =>
+      results ? resultsHeight : height;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +67,12 @@ class SearchFieldBar extends StatelessWidget {
     final back = onBack;
     final cancel = onCancel;
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 6, 16, 10),
+      padding: EdgeInsetsDirectional.fromSTEB(
+        16,
+        6,
+        16,
+        back != null ? 8 : 10,
+      ),
       child: Row(
         children: [
           Visibility(

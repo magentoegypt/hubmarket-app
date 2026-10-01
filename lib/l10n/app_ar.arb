@@ -196,6 +196,7 @@
   "resultsCount": "{count} نتيجة",
   "searchHint": "ابحث في المتجر كامل هنا…",
   "searchFieldHint": "ابحث عن المنتجات والماركات…",
+  "searchFieldHintStores": "ابحث عن المنتجات والعلامات والبائعين…",
   "searchRecentTitle": "عمليات البحث الأخيرة",
   "searchTrendingTitle": "الأكثر بحثًا",
   "searchClearHistory": "مسح",

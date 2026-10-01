@@ -261,6 +261,7 @@
   },
   "searchHint": "Search for products…",
   "searchFieldHint": "Search for products, brands…",
+  "searchFieldHintStores": "Search products, brands, vendors…",
   "searchRecentTitle": "Recent searches",
   "searchTrendingTitle": "Trending searches",
   "searchClearHistory": "Clear",

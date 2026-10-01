@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/widgets/hub_chip.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../stores/presentation/stores_providers.dart';
 import '../../domain/product.dart';
@@ -54,14 +54,9 @@ class SearchNoResults extends ConsumerWidget {
         ? const <String>[]
         : ref.watch(searchTrySuggestionsProvider(query)).valueOrNull ??
               const <String>[];
-    final isEn = Localizations.localeOf(context).languageCode == 'en';
-    final display = TextStyle(
-      fontFamily: isEn ? AppTheme.displayFont : null,
-      fontSize: 22,
-      height: 28 / 22,
-      fontWeight: FontWeight.w700,
-      color: context.scaffoldHeading,
-    );
+    final t = AppTextStyles.of(context);
+    // Figma S2: "Heading 1" (Playfair Display 22/28 · AR Tajawal 22/30).
+    final display = t.heading1.copyWith(color: context.scaffoldHeading);
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.only(top: 24, bottom: 24),
@@ -79,7 +74,8 @@ class SearchNoResults extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          // The frame's title runs 372 pt wide on one line: 9 pt each side.
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
             l10n.searchNoResultsTitle(isolateQuery(query)),
             textAlign: TextAlign.center,
@@ -92,11 +88,7 @@ class SearchNoResults extends ConsumerWidget {
           child: Text(
             stores ? l10n.searchNoResultsBodyStores : l10n.searchNoResultsBody,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 20 / 14,
-              color: context.scaffoldMuted,
-            ),
+            style: t.body.copyWith(color: context.scaffoldMuted),
           ),
         ),
         if (tries.isNotEmpty) ...[
@@ -104,7 +96,7 @@ class SearchNoResults extends ConsumerWidget {
           _TryRow(terms: tries, onTry: onTry!),
         ],
         if (stores) ...[
-          const SizedBox(height: 24),
+          SizedBox(height: tries.isNotEmpty ? 10 : 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: OutlinedButton.icon(
@@ -136,7 +128,9 @@ class SearchNoResults extends ConsumerWidget {
           ),
         ],
         if (popular.isNotEmpty) ...[
-          const SizedBox(height: 28),
+          // 28 in the frame, less the 4 the 36 pt "View All" target adds above
+          // the title and below it.
+          const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -147,7 +141,7 @@ class SearchNoResults extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           SizedBox(
             height: ProductCardMetrics.heightFor(context, _cardWidth),
             child: ListView.separated(
@@ -170,8 +164,9 @@ class SearchNoResults extends ConsumerWidget {
   }
 }
 
-/// "Try" and the suggested searches as outlined chips, on a light panel
-/// (Figma S2).
+/// "Try" and the suggested searches as chips (the shared `HubChip`), on a
+/// light panel (Figma S2: 12 pt corners, 14 pt of padding, 8 between the label
+/// and the chips and between the chips).
 class _TryRow extends StatelessWidget {
   const _TryRow({required this.terms, required this.onTry});
 
@@ -181,20 +176,22 @@ class _TryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Container(
-        padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 14),
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: SearchStyle.pillFill(context),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               l10n.searchTryLabel,
-              style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+              style: t.captionStrong.copyWith(color: context.scaffoldMuted),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -202,18 +199,7 @@ class _TryRow extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final term in terms)
-                  ActionChip(
-                    label: Text(term),
-                    onPressed: () => onTry(term),
-                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                    side: BorderSide(color: context.hairline),
-                    shape: const StadiumBorder(),
-                    labelStyle: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: context.scaffoldHeading,
-                    ),
-                  ),
+                  HubChip(label: term, onTap: () => onTry(term)),
               ],
             ),
           ],
