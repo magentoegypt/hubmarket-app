@@ -43,8 +43,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Respect the platform "reduce motion" setting: no sweep, so no ticker.
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (reduceMotion) {
       _controller.stop();
     } else if (!_controller.isAnimating) {
@@ -62,7 +61,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     // Respect the platform "reduce motion" setting: paint a flat base tint
     // (still a skeleton, just not animated) instead of running the ticker.
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (reduceMotion) {
       return ShaderMask(
         blendMode: BlendMode.srcATop,
