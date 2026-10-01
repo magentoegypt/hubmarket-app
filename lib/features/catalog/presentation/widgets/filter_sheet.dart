@@ -44,13 +44,11 @@ class FilterResult {
 }
 
 /// The facets that name a store: the seller attribute on the listings
-/// (`VENDORID` / `vendor_id`, whose options are vendor ids) and Algolia's
-/// seller facet (whose values already are names).
-const Set<String> kStoreFacetCodes = <String>{
-  'VENDORID',
-  'vendor_id',
-  'seller',
-};
+/// (`VENDORID`, an equal-type filter whose options are vendor ids) and
+/// Algolia's seller facet (whose values already are names). The listings'
+/// other seller attribute, `vendor_id`, is a match filter that the facet
+/// filters can't send; the sheet never offers it.
+const Set<String> kStoreFacetCodes = <String>{'VENDORID', 'seller'};
 
 /// Filters bottom sheet (Figma 11 "Filters (full sheet)"): Sort by, Price with
 /// its Min / Max, Customer rating, the Store and every other facet of the
@@ -272,7 +270,11 @@ class _FilterSheetState extends State<FilterSheet> {
     final stores = <_Facet>[];
     final others = <_Facet>[];
     for (final facet in widget.aggregations) {
-      if (facet.attributeCode == 'price' || facet.options.isEmpty) continue;
+      if (facet.attributeCode == 'price' ||
+          facet.attributeCode == 'vendor_id' ||
+          facet.options.isEmpty) {
+        continue;
+      }
       if (kStoreFacetCodes.contains(facet.attributeCode)) {
         final named = facet.attributeCode == 'seller'
             ? facet.options
@@ -426,65 +428,77 @@ class _FilterSheetState extends State<FilterSheet> {
     ];
 
     return LayoutBuilder(
-      // A full sheet stops short of the status bar, as the frame's does.
-      builder: (context, constraints) => ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight:
-              constraints.maxHeight -
-              MediaQuery.paddingOf(context).top -
-              sheetTopGap,
+      // A full sheet stops short of the status bar, as the frame's does — and
+      // sits above the keyboard while a Min or Max is typed.
+      builder: (context, constraints) => AnimatedPadding(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.showHandle) const SheetHandle(),
-            SheetHeader(
-              title: l10n.filtersLabel,
-              action: InkWell(
-                onTap: _clear,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text(
-                    l10n.filterResetLabel,
-                    style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight:
+                constraints.maxHeight -
+                MediaQuery.paddingOf(context).top -
+                sheetTopGap -
+                MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.showHandle) const SheetHandle(),
+              SheetHeader(
+                title: l10n.filtersLabel,
+                action: InkWell(
+                  onTap: _clear,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      l10n.filterResetLabel,
+                      style: t.bodyStrong.copyWith(
+                        color: AppColors.accentStrong,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                children: [
-                  for (var i = 0; i < sections.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 22),
-                    sections[i],
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  children: [
+                    for (var i = 0; i < sections.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 22),
+                      sections[i],
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            Container(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.borderSubtle)),
-              ),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton(
-                      onPressed: _apply,
-                      child: Text(_buttonLabel(l10n)),
-                    ),
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: AppColors.borderSubtle),
                   ),
-                  const SheetBottomSpace(),
-                ],
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: _apply,
+                        child: Text(_buttonLabel(l10n)),
+                      ),
+                    ),
+                    const SheetBottomSpace(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

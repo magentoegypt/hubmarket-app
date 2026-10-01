@@ -38,18 +38,10 @@ class CategoriesScreen extends ConsumerStatefulWidget {
 class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
   /// The category the panel shows; the first one until the shopper picks.
   String? _selectedUid;
-  final ScrollController _panelScroll = ScrollController();
-
-  @override
-  void dispose() {
-    _panelScroll.dispose();
-    super.dispose();
-  }
 
   void _select(Category category) {
     if (category.uid == _selectedUid) return;
     setState(() => _selectedUid = category.uid);
-    if (_panelScroll.hasClients) _panelScroll.jumpTo(0);
   }
 
   @override
@@ -105,10 +97,10 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 ),
               ),
               Expanded(
+                // Keyed by the category, so each opens at the top of its own page.
                 child: _CategoryPanel(
                   key: ValueKey(selected.uid),
                   category: selected,
-                  controller: _panelScroll,
                 ),
               ),
             ],
@@ -313,14 +305,9 @@ class _RailItem extends StatelessWidget {
 /// What the rail's pick shows: the banner, the sub-category tiles and the
 /// category's top stores.
 class _CategoryPanel extends ConsumerWidget {
-  const _CategoryPanel({
-    super.key,
-    required this.category,
-    required this.controller,
-  });
+  const _CategoryPanel({super.key, required this.category});
 
   final Category category;
-  final ScrollController controller;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -366,7 +353,6 @@ class _CategoryPanel extends ConsumerWidget {
         : thumbnails[category.uid];
 
     return ListView(
-      controller: controller,
       padding: const EdgeInsetsDirectional.fromSTEB(14, 16, 16, 16),
       children: [
         _Banner(
