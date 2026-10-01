@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/not_found_state.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -83,13 +84,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
     if (state.isLoading && state.product == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (state.notFound) {
-      return EmptyState(
-        icon: HubIcons.link2Off,
-        title: l10n.linkNotFoundTitle,
-        body: l10n.linkNotFoundBody,
-      );
-    }
+    if (state.notFound) return const NotFoundState();
     final product = state.product;
     if (product == null) {
       final error = state.error;
