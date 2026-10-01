@@ -80,6 +80,18 @@ client-supplied artwork (traced to vectors in Figma, rendered to
 Display (display), as in the Figma; OFL licences in `assets/fonts/licenses/`,
 registered by `lib/app/font_licenses.dart`.
 
+Icons are **Lucide**, the set the Figma file draws (`assets/fonts/Lucide.ttf`, ISC licence in
+`assets/fonts/licenses/`, named in `lib/app/theme/hub_icons.dart` as `HubIcons.*`; a filled heart or star
+stays a Material glyph). Prices drop the decimals of a whole amount ("AED 425"; Arabic reads "425 د.إ", see
+`Money.arabic`); a discounted product's old price is always struck through.
+
+**The UI is held to the Figma frames.** `docs/ui-audit.md` is the working guide (how to compare a screen, the
+shared widgets `HubTopBar` / `HubChip` / `HubButton` / `HubIconButton` / `ProductCard` / `HubBottomNav`, the
+deliberate deviations, what still differs and why); `flutter test --dart-define=UI_AUDIT=true` renders every
+screen with the iPhone insets and `python tool/ui_audit/pairs.py en|ar` lays each next to its frame.
+The screens have no hamburger menu; a pushed page whose frame shows no tab bar passes `showTabBar: false` to
+`HubScaffold`.
+
 ## 5. Conventions (kept from the Zoonze base)
 
 Feature-first `data / domain / presentation`; Riverpod for state + DI; go_router;

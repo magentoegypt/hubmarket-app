@@ -5,6 +5,12 @@ approved design) and has every element the frame has, unless the backend cannot 
 team decided otherwise (see "Deliberate deviations"). This file is the working guide: how to compare,
 the shared pieces to build with, and the rules.
 
+**Status (1 Oct 2026):** the first full pass is done: all 59 English frames and their Arabic twins were
+compared screen by screen and fixed (section 6 lists what was decided on the way, section 7 what still
+differs and why). Re-run it after any design change: `flutter test --dart-define=UI_AUDIT=true`, then
+`python tool/ui_audit/pairs.py en` / `ar`, then `python tool/ui_audit/score.py en` to see which pair moved
+most.
+
 ## 0. First thing in a fresh worktree
 
 ```
@@ -62,14 +68,23 @@ bash tool/ui_audit/setup_worktree.sh     # pub get, l10n, GraphQL codegen, copie
 | Chips `HubChip` | `lib/core/widgets/hub_chip.dart` | Chip 6:321 |
 | App bar `HubTopBar`, `HubIconButton`, `HubBackButton`; `subpageAppBar` | `lib/core/widgets/` | App bar inside each frame |
 | Section header `HmSectionHeader` | `lib/features/home/presentation/widgets/hm_section_header.dart` | section-header/... |
-| Grouped lists `GroupCard`, `GroupLabel` | `lib/core/widgets/grouped_list.dart` | Account frames |
+| Grouped lists `GroupCard`, `GroupLabel`, `GroupRow` | `lib/core/widgets/grouped_list.dart` | Account frames |
+| `HubSwitch`, `HubCheckbox`, `HubRadioDot`, `HubFooterBar`, `HubBottomActionBar`, `StarGlyph` | `lib/core/widgets/` | Switch / checkbox / footer bars / rating star |
+| Screen chrome `HubScaffold` (`appBar:`, `showTabBar:`, `bottomBar:`) | `lib/app/shell/hub_scaffold.dart` | Tab bar 5:369 |
+| Status bar `StatusBar.onLight` / `onDark` | `lib/app/theme/status_bar.dart` | Status bar 5:28 |
 
 Icons are Lucide outlines. Where the frame shows a **filled** heart or star, use the Material glyph
 (`Icons.favorite`, `Icons.star_rounded`). Arrows and chevrons in `HubIcons` mirror in RTL by themselves:
 never flip them by hand.
 
 Prices: `Money.formatted()` drops the decimals of a whole amount ("AED 425"), as the frames do, and keeps
-them otherwise ("AED 12.50").
+them otherwise ("AED 12.50"); `formatted(exact: true)` (store credit, `CreditMoney.ledger`) always keeps them.
+In Arabic it reads "425 د.إ" (`Money.arabic`, set from the store view by the app root; a capture named
+`..._ar` sets it for the render).
+
+**Never type a backslash-u escape (for a code point such as a bidi mark) in a tool command or an edit**: the
+tool layer decodes it into the raw character, and invisible bidi marks end up in the source. Build such
+strings in a script with `chr(92)`, or write the raw character on purpose.
 
 ## 3. Rules
 
@@ -96,6 +111,9 @@ them otherwise ("AED 12.50").
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.
 - Anything the HubApp contract (`lib/core/graphql/hubapp.graphql`) cannot provide is hidden, not faked.
+- The old price of a discounted product is **struck through** everywhere (the frames draw it plain): the
+  storefront does it and a client QA note asked for exactly one line through it.
+- No hamburger menu / side drawer: no frame has one (language and sign out live on Account).
 - Test artefacts that are not bugs: tofu boxes for emoji and Arabic in test renders, missing network images,
   zero insets when `UI_AUDIT` is off.
 
@@ -132,3 +150,42 @@ Backend-managed content map (what the admin edits): G1 192:4451, admin screens G
 Components (page 2:2): Status bar 5:28 · Tab bar 5:369 · Button 5:400 · Product card 6:188 · Input 6:247 ·
 Store card 6:298 · Store tile 6:299 · Chip 6:321 · Color tokens 26:179 · Type ramp 26:354 · Top vendor card 39:235 ·
 Icons 4:2.
+
+
+## 6. Decisions taken during the audit
+
+- **Icons are Lucide** (the Figma icon set). `assets/fonts/Lucide.ttf` + `HubIcons`; filled glyphs stay Material.
+  The frames' `icon/package` is Lucide `box`, `icon/edit` is `pen`, `icon/shield` is `shield-check` (all in
+  `HubIcons`); a few frame glyphs (plain `trash`, `credit-card`, `store`) are not in the font, the nearest is used.
+- **Tab bar** (84 px: 1 + 55 + 28; an iPhone's 34 px inset gives 6 back). It is shown on tab roots and on the list
+  pages whose frames show it (deals, brands, stores, store, search, PLP, cart, orders, returns, wishlist...), and
+  hidden (`showTabBar: false`, or a plain `Scaffold`) on pushed pages whose frames have none (product page and
+  reviews, checkout, profile, privacy, credit, payment methods, my reviews, notifications, help, content pages, track
+  order, addresses, order detail).
+- **No side menu.** The leading-edge swipe goes back on every route (Home from another tab root).
+- **Status bar**: dark icons by default (root `AnnotatedRegion`); a dark header (Home, splash, photos) sets
+  `StatusBar.onDark`.
+- **Product card**: sized from its width (`ProductCardMetrics`), the grid delegate is shared; a card without rating
+  keeps the rating row, one without a seller line (Build 1) drops the line.
+- **Arabic**: tab label "الأقسام"; prices "425 د.إ"; the Home countdown writes "2d" in both languages as its frame
+  does while the Deals banner says "يومان".
+- **S4 Loading** draws the Home header as grey blocks; the app shows the real header (it is static, so it is never
+  "loading").
+
+## 7. Where the app still differs, and why
+
+Data or backend the app does not have, so the element is hidden (never faked): Tabby / Tamara (PDP, checkout,
+Home banner copy), Size guide, "Frequently bought together", delivery dates and per-store delivery fees, "Verified
+purchase", review photos / helpful / vendor replies, pros / cons in the review form, order arrival / estimate lines,
+"Download invoice" and the Documents card, a map or "use my location" in the address form, the "Return an item" guest
+tab, free-shipping progress (unless the store publishes a threshold), "Newest first" and the Availability and
+"In stock" filters, rating filter chips outside search, store follow / heart, social sign-in, per-store coupons.
+
+Where copy comes from the admin or the live store, the frame's sample wording differs by design (hero and promo
+texts, the Home "Sell on Hub Market" card, which stays hidden until its CMS block `hm_home_sell` exists).
+
+Small known gaps: Welcome's hero is a little shorter than the frame on a phone (the frame's content is taller than the
+screen); Forgot password keeps its Email | Mobile tabs (reset by WhatsApp exists); spec labels on the PDP are
+prettified attribute codes; Arabic glyphs render 2 to 4 px lower than the Arabic frames in the Windows test renders
+(Tajawal's metrics), which is probably not visible on a device; Home's active-order "Track" opens the restyled
+order tracking page rather than order detail.
