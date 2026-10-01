@@ -1,21 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/brand_logo.dart';
-import '../../../../core/widgets/hub_back_button.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
+import '../../../../app/theme/theme_x.dart';
+import '../../../../core/store/store_controller.dart';
+import '../../../../core/store/store_urls.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../cart/presentation/cart_controller.dart';
-import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../../catalog/presentation/product_navigation.dart';
+import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../domain/wishlist_entry.dart';
 import '../wishlist_controller.dart';
-import '../../../../app/theme/hub_icons.dart';
 
+/// Wishlist (Figma 25): the Wishlist tab with its own header — back and the
+/// title, a share action — then "6 saved items · 3 stores" and the saved
+/// products as two columns of product cards (the heart already filled).
+///
+/// Left out, with nothing behind them: the frame's "Notify on price drops"
+/// link and the "PRICE DROP" badge (the wishlist keeps no earlier price and the
+/// app has no price alerts). "Add all to bag", which the frame does not draw,
+/// takes the link's place at the end of the summary line.
 class WishlistScreen extends ConsumerStatefulWidget {
   const WishlistScreen({super.key});
 
@@ -42,6 +56,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
     final l10n = AppLocalizations.of(context);
     final auth = ref.watch(authControllerProvider);
     final state = ref.watch(wishlistControllerProvider);
+    final saved = auth.isAuthenticated && state.entries.isNotEmpty;
 
     final Widget body;
     if (!auth.isAuthenticated) {
@@ -54,60 +69,40 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
     } else if (state.isLoading && state.entries.isEmpty) {
       body = const Center(child: CircularProgressIndicator());
     } else if (state.entries.isEmpty) {
-      body = _Empty(
+      body = EmptyState(
+        icon: HubIcons.heart,
         title: l10n.wishlistEmptyTitle,
         body: l10n.wishlistEmptyBody,
       );
     } else {
-      body = ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.wishlistHeading,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  l10n.wishlistSavedCount(state.entries.length),
-                  style: const TextStyle(color: AppColors.inkMuted),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: state.isLoading
-                        ? null
-                        : () => _addAll(state.entries, l10n),
-                    icon: const Icon(HubIcons.shoppingBag, size: 18),
-                    label: Text(l10n.wishlistAddAll),
-                  ),
-                ),
-              ],
+      body = CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _Summary(
+              entries: state.entries,
+              busy: state.isLoading,
+              onAddAll: () => _addAll(state.entries, l10n),
             ),
           ),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            gridDelegate: productGridDelegate(context),
-            itemCount: state.entries.length,
-            itemBuilder: (context, index) {
-              final product = state.entries[index].product;
-              return ProductCard(
-                product: product,
-                onTap: () => openProduct(context, product),
-                // Added to the bag → drop it from the wishlist (QA).
-                onAddedToCart: () => ref
-                    .read(wishlistControllerProvider.notifier)
-                    .removeSkus([product.sku]),
-              );
-            },
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            sliver: SliverGrid(
+              gridDelegate: productGridDelegate(context),
+              delegate: SliverChildBuilderDelegate(
+                childCount: state.entries.length,
+                (context, index) {
+                  final product = state.entries[index].product;
+                  return ProductCard(
+                    product: product,
+                    onTap: () => openProduct(context, product),
+                    // Added to the bag → drop it from the wishlist (QA).
+                    onAddedToCart: () => ref
+                        .read(wishlistControllerProvider.notifier)
+                        .removeSkus([product.sku]),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       );
@@ -116,19 +111,39 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
     return HubScaffold(
       currentTab: AppTab.wishlist,
       showSearch: false,
-      // Decluttered header per Figma: back chevron + centered logo, no
-      // search/notification icons.
-      appBar: AppBar(
-        toolbarHeight: 60,
-        centerTitle: false,
-        titleSpacing: 4,
-        leading: HubBackButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppRoutes.home),
-        ),
-        title: const BrandLogo(height: 44),
+      // The frame's header: back, the title and share — no hamburger, search
+      // or notifications.
+      appBar: HubTopBar(
+        title: l10n.wishlistTitle,
+        showBack: true,
+        onBack: () =>
+            context.canPop() ? context.pop() : context.go(AppRoutes.home),
+        actions: [
+          if (saved)
+            HubIconButton(
+              icon: HubIcons.share2,
+              tooltip: l10n.actionShare,
+              onPressed: () => _share(state.entries, l10n),
+            ),
+        ],
       ),
-      body: body,
+      body: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor, child: body),
+    );
+  }
+
+  /// Shares the saved products: their names with the links to their pages on
+  /// the website.
+  Future<void> _share(List<WishlistEntry> entries, AppLocalizations l10n) {
+    final store = ref.read(storeControllerProvider);
+    final lines = <String>[];
+    for (final entry in entries) {
+      final url = productUrl(store, entry.product.urlKey);
+      lines.add(
+        [entry.product.name, if (url != null) url].join('\n'),
+      );
+    }
+    return SharePlus.instance.share(
+      ShareParams(text: '${l10n.wishlistShareTitle}\n\n${lines.join('\n\n')}'),
     );
   }
 
@@ -163,39 +178,81 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
   }
 }
 
-class _Empty extends StatelessWidget {
-  const _Empty({required this.title, required this.body});
-  final String title;
-  final String body;
+/// Figma 25 "meta": "6 saved items · 3 stores" (the stores part once the lists
+/// name every seller) and, at the end, the "Add all to bag" link in the frame's
+/// link style (12 Strong, accent-strong, 14 px icon).
+class _Summary extends StatelessWidget {
+  const _Summary({
+    required this.entries,
+    required this.busy,
+    required this.onAddAll,
+  });
+
+  final List<WishlistEntry> entries;
+  final bool busy;
+  final VoidCallback onAddAll;
+
+  /// How many stores the saved products come from; null while a product's
+  /// seller is not known (HubAppVendors off), where a count would be a guess.
+  int? get _stores {
+    final stores = <String>{};
+    for (final entry in entries) {
+      final p = entry.product;
+      if (!p.sellerKnown) return null;
+      final code = p.sellerCode?.trim() ?? '';
+      final name = p.sellerName?.trim() ?? '';
+      stores.add(code.isNotEmpty ? code : (name.isNotEmpty ? name : 'hub'));
+    }
+    return stores.length;
+  }
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    final stores = _stores;
+    final summary = [
+      l10n.wishlistSavedCount(entries.length),
+      if (stores != null) l10n.wishlistStoreCount(stores),
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const CircleAvatar(
-            radius: 48,
-            backgroundColor: AppColors.surfaceTint,
-            child: Icon(
-              HubIcons.heart,
-              size: 48,
-              color: AppColors.brandPrimary,
+          Flexible(
+            child: Text(
+              summary,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.caption.copyWith(color: context.scaffoldMuted),
             ),
           ),
-          const SizedBox(height: 20),
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.inkMuted),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: busy ? null : onAddAll,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  HubIcons.shoppingBag,
+                  size: 14,
+                  color: busy ? AppColors.disabled : AppColors.accentStrong,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  l10n.wishlistAddAll,
+                  style: t.captionStrong.copyWith(
+                    color: busy ? AppColors.disabled : AppColors.accentStrong,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Prompt extends StatelessWidget {
@@ -212,36 +269,13 @@ class _Prompt extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircleAvatar(
-            radius: 48,
-            backgroundColor: AppColors.surfaceTint,
-            child: Icon(
-              HubIcons.heart,
-              size: 48,
-              color: AppColors.brandPrimary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.inkMuted),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(onPressed: onTap, child: Text(cta)),
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => EmptyState(
+    icon: HubIcons.heart,
+    title: title,
+    body: body,
+    action: SizedBox(
+      width: double.infinity,
+      child: FilledButton(onPressed: onTap, child: Text(cta)),
     ),
   );
 }

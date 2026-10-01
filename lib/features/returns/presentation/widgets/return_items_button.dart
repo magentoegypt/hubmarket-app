@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
-import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/hub_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/domain/order.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -37,26 +37,14 @@ class ReturnItemsButton extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: OutlinedButton.icon(
-          onPressed: () => context.push(
-            AppRoutes.returnRequestFor(order.number),
-            extra: returnable,
-          ),
-          icon: const Icon(HubIcons.rotateCcw, size: 20),
-          label: Text(
-            l10n.returnsReturnItems,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.brandPrimary,
-            side: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+      child: HubButton(
+        label: l10n.returnsReturnItems,
+        icon: HubIcons.rotateCcw,
+        iconSize: 20,
+        style: HubButtonStyle.outline,
+        onPressed: () => context.push(
+          AppRoutes.returnRequestFor(order.number),
+          extra: returnable,
         ),
       ),
     );

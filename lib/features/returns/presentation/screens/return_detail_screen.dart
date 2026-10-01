@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
+import 'dart:math' as math;
+
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../domain/return_photo.dart';
@@ -238,19 +242,16 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
         ),
       );
     } else {
-      body = EmptyState(
-        icon: HubIcons.rotateCcw,
-        title: l10n.returnsNotFound,
-      );
+      body = EmptyState(icon: HubIcons.rotateCcw, title: l10n.returnsNotFound);
     }
 
     return Scaffold(
       backgroundColor: groupedPageColor(context),
-      appBar: subpageAppBar(
-        context,
-        detail != null
+      appBar: HubTopBar(
+        title: detail != null
             ? l10n.returnsTitle(returnNumberLabel(detail.number))
             : l10n.returnsMyReturns,
+        divider: true,
       ),
       body: body,
       bottomNavigationBar: available && detail != null && detail.canReply
@@ -304,11 +305,11 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
         ],
         if (!detail.canReply) ...[
           const _ClosedNote(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
         ],
         if (detail.canEscalate) ...[
           _EscalateCard(onTap: () => _escalate(config)),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
         ],
         if (detail.canCancel)
           Align(
@@ -404,6 +405,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final items = detail.items;
     final first = items.isEmpty ? null : items.first;
     final caption = [
@@ -437,10 +439,7 @@ class _SummaryCard extends StatelessWidget {
                         first.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          height: 20 / 14,
-                          fontWeight: FontWeight.w600,
+                        style: t.bodyStrong.copyWith(
                           color: AppColors.inkHeading,
                         ),
                       ),
@@ -448,16 +447,12 @@ class _SummaryCard extends StatelessWidget {
                       caption,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 16 / 12,
-                        color: AppColors.inkMuted,
-                      ),
+                      style: t.caption.copyWith(color: AppColors.inkMuted),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               ReturnStatusPill(tone: detail.tone, label: detail.statusLabel),
             ],
           ),
@@ -472,21 +467,13 @@ class _SummaryCard extends StatelessWidget {
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 20 / 14,
-                      color: AppColors.inkHeading,
-                    ),
+                    style: t.body.copyWith(color: AppColors.inkHeading),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   '×${item.quantity.toInt()}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.inkHeading,
-                  ),
+                  style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                 ),
               ],
             ),
@@ -536,41 +523,32 @@ class _FactRow extends StatelessWidget {
   final bool ltrValue;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Short fixed labels; the value takes the rest of the row.
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            height: 20 / 14,
-            color: returnsSubtleText,
-          ),
-        ),
-        const SizedBox(width: 12),
-        // On the end side in either direction, the text itself LTR when it
-        // is an amount or a code.
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: Text(
-              value,
-              textDirection: ltrValue ? TextDirection.ltr : null,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 20 / 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkHeading,
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Short fixed labels; the value takes the rest of the row.
+          Text(label, style: t.body.copyWith(color: returnsSubtleText)),
+          const SizedBox(width: 12),
+          // On the end side in either direction, the text itself LTR when it
+          // is an amount or a code.
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Text(
+                value,
+                textDirection: ltrValue ? TextDirection.ltr : null,
+                style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 /// A status change in the thread (Figma 65:3015).
@@ -580,34 +558,32 @@ class _EventPill extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(HubIcons.info, size: 12, color: AppColors.inkMuted),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 11,
-                height: 14 / 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.inkMuted,
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(HubIcons.info, size: 12, color: AppColors.inkMuted),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                text,
+                style: t.micro.copyWith(color: AppColors.inkMuted),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// A message (Figma 65:3021 / 65:3026): the customer's in navy on the end
@@ -625,6 +601,7 @@ class _Bubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     final message = this.message;
     final escalation = this.escalation;
@@ -677,12 +654,7 @@ class _Bubble extends StatelessWidget {
                     Flexible(
                       child: Text(
                         name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 16 / 12,
-                          fontWeight: FontWeight.w600,
-                          color: nameColor,
-                        ),
+                        style: t.captionStrong.copyWith(color: nameColor),
                       ),
                     ),
                   ],
@@ -691,9 +663,7 @@ class _Bubble extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   body,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 20 / 14,
+                  style: t.body.copyWith(
                     color: mine ? Colors.white : AppColors.inkHeading,
                   ),
                 ),
@@ -706,10 +676,7 @@ class _Bubble extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   time,
-                  style: TextStyle(
-                    fontSize: 11,
-                    height: 14 / 11,
-                    fontWeight: FontWeight.w700,
+                  style: t.micro.copyWith(
                     color: mine ? AppColors.borderStrong : AppColors.inkMuted,
                   ),
                 ),
@@ -729,6 +696,7 @@ class _ClosedNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -743,11 +711,7 @@ class _ClosedNote extends StatelessWidget {
           Expanded(
             child: Text(
               l10n.returnsClosedNote,
-              style: const TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                color: returnsSubtleText,
-              ),
+              style: t.caption.copyWith(color: returnsSubtleText),
             ),
           ),
         ],
@@ -765,6 +729,7 @@ class _EscalateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Semantics(
       button: true,
       child: Material(
@@ -777,32 +742,22 @@ class _EscalateCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            // 12 px inside the 1 px border, as the frame sizes it (44 high).
+            padding: const EdgeInsets.all(13),
             child: Row(
               children: [
-                const Icon(
-                  HubIcons.shield,
-                  size: 18,
-                  color: returnsSubtleText,
-                ),
+                const Icon(HubIcons.shield, size: 18, color: returnsSubtleText),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.returnsEscalatePrompt,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      height: 16 / 12,
-                      color: returnsSubtleText,
-                    ),
+                    style: t.caption.copyWith(color: returnsSubtleText),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   l10n.returnsEscalate,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 16 / 12,
-                    fontWeight: FontWeight.w600,
+                  style: t.captionStrong.copyWith(
                     color: AppColors.accentStrong,
                   ),
                 ),
@@ -887,15 +842,14 @@ class _EscalateSheetState extends ConsumerState<_EscalateSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final config = widget.config;
     const outline = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
       borderSide: BorderSide(color: AppColors.borderStrong),
     );
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -910,11 +864,7 @@ class _EscalateSheetState extends ConsumerState<_EscalateSheet> {
               const SizedBox(height: 6),
               Text(
                 l10n.returnsEscalateBody,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 18 / 13,
-                  color: returnsSubtleText,
-                ),
+                style: t.caption.copyWith(color: returnsSubtleText),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -926,16 +876,10 @@ class _EscalateSheetState extends ConsumerState<_EscalateSheet> {
                 onChanged: (_) {
                   if (_showError) setState(() => _showError = false);
                 },
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.inkHeading,
-                ),
+                style: t.body.copyWith(color: AppColors.inkHeading),
                 decoration: InputDecoration(
                   hintText: l10n.returnsEscalateHint,
-                  hintStyle: const TextStyle(
-                    color: AppColors.inkMuted,
-                    fontSize: 14,
-                  ),
+                  hintStyle: t.body.copyWith(color: AppColors.inkMuted),
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
@@ -977,13 +921,7 @@ class _EscalateSheetState extends ConsumerState<_EscalateSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(
-                        l10n.returnsEscalateSubmit,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    : Text(l10n.returnsEscalateSubmit),
               ),
             ],
           ),
@@ -1020,6 +958,7 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final canSend = controller.text.trim().isNotEmpty && !sending;
     const border = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(21)),
@@ -1031,11 +970,13 @@ class _Composer extends StatelessWidget {
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.borderSubtle)),
         ),
+        // 30 px under the bar in the frame; an iPhone's 34 px home-indicator
+        // zone is only 4 px taller (see HubBottomActionBar).
         padding: EdgeInsets.fromLTRB(
           12,
           10,
           12,
-          10 + MediaQuery.viewPaddingOf(context).bottom,
+          math.max(30, MediaQuery.viewPaddingOf(context).bottom - 4),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1058,7 +999,7 @@ class _Composer extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (maxPhotos > 0) ...[
                   SizedBox(
@@ -1087,13 +1028,10 @@ class _Composer extends StatelessWidget {
                     maxLength: 5000,
                     textInputAction: TextInputAction.newline,
                     keyboardType: TextInputType.multiline,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.inkHeading,
-                    ),
+                    style: t.body.copyWith(color: AppColors.inkHeading),
                     decoration: InputDecoration(
                       hintText: l10n.returnsWriteReply,
-                      hintStyle: const TextStyle(color: AppColors.inkMuted),
+                      hintStyle: t.body.copyWith(color: AppColors.inkMuted),
                       counterText: '',
                       isDense: true,
                       filled: true,

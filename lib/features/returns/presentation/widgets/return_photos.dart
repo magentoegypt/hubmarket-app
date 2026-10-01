@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
@@ -46,21 +47,16 @@ Future<List<ReturnPhoto>> pickReturnPhotos(
           children: [
             ReturnSheetTitle(l10n.returnsAddPhotos),
             ListTile(
-              leading: const Icon(
-                HubIcons.camera,
-                color: AppColors.inkHeading,
-              ),
+              leading: const Icon(HubIcons.camera, color: AppColors.inkHeading),
               title: Text(
                 l10n.returnsTakePhoto,
                 style: const TextStyle(color: AppColors.inkHeading),
               ),
-              onTap: () => Navigator.pop(sheetContext, ReturnPhotoSource.camera),
+              onTap: () =>
+                  Navigator.pop(sheetContext, ReturnPhotoSource.camera),
             ),
             ListTile(
-              leading: const Icon(
-                HubIcons.images,
-                color: AppColors.inkHeading,
-              ),
+              leading: const Icon(HubIcons.images, color: AppColors.inkHeading),
               title: Text(
                 l10n.returnsChoosePhotos,
                 style: const TextStyle(color: AppColors.inkHeading),
@@ -77,7 +73,9 @@ Future<List<ReturnPhoto>> pickReturnPhotos(
 
   final List<Uint8List> picked;
   try {
-    picked = await ref.read(returnPhotoPickerProvider).pick(source, limit: room);
+    picked = await ref
+        .read(returnPhotoPickerProvider)
+        .pick(source, limit: room);
   } on Object {
     messenger
       ..hideCurrentSnackBar()
@@ -120,7 +118,10 @@ Future<List<ReturnPhoto>> pickReturnPhotos(
 String returnMegabytes(int bytes) {
   final megabytes = bytes / (1024 * 1024);
   if (megabytes == megabytes.roundToDouble()) return '${megabytes.round()}';
-  return (math.max(0.1, (megabytes * 10).floorToDouble() / 10)).toStringAsFixed(1);
+  return (math.max(
+    0.1,
+    (megabytes * 10).floorToDouble() / 10,
+  )).toStringAsFixed(1);
 }
 
 /// "Photos (optional)": the photos picked so far, each with a remove button,
@@ -206,12 +207,9 @@ class ReturnAddPhotoTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     l10n.returnsAddPhoto,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 14 / 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.inkMuted,
-                    ),
+                    style: AppTextStyles.of(
+                      context,
+                    ).micro.copyWith(color: AppColors.inkMuted),
                   ),
                 ],
               ),
@@ -332,10 +330,11 @@ class ReturnAttachmentStrip extends ConsumerWidget {
                 color: onDark ? Colors.white : AppColors.inkHeading,
               ),
               label: Text(
-                attachment.name.isEmpty ? l10n.returnsAttachment : attachment.name,
+                attachment.name.isEmpty
+                    ? l10n.returnsAttachment
+                    : attachment.name,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
+                style: AppTextStyles.of(context).caption.copyWith(
                   color: onDark ? Colors.white : AppColors.inkHeading,
                 ),
               ),
@@ -367,7 +366,9 @@ Future<void> showReturnPhoto(BuildContext context, ReturnAttachment photo) {
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
             leading: IconButton(
-              tooltip: MaterialLocalizations.of(routeContext).closeButtonTooltip,
+              tooltip: MaterialLocalizations.of(
+                routeContext,
+              ).closeButtonTooltip,
               icon: const Icon(HubIcons.x),
               onPressed: () => Navigator.pop(routeContext),
             ),

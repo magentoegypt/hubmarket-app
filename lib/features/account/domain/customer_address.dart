@@ -53,6 +53,27 @@ class CustomerAddress {
 
   String get fullName => '$firstName $lastName'.trim();
 
+  /// This address as the customer's default shipping address — what choosing
+  /// it in the address book sends back (Magento then clears the flag on the
+  /// one that had it).
+  CustomerAddress asDefaultShipping() => CustomerAddress(
+    id: id,
+    firstName: firstName,
+    lastName: lastName,
+    telephone: telephone,
+    street: street,
+    city: city,
+    apartment: apartment,
+    postcode: postcode,
+    region: region,
+    regionId: regionId,
+    countryCode: countryCode,
+    defaultShipping: true,
+    defaultBilling: defaultBilling,
+    labelOptionId: labelOptionId,
+    labelText: labelText,
+  );
+
   /// Compact one-line address for cards (saved addresses, checkout selection).
   /// `city` is the app-derived emirate — a duplicate of `region`, sometimes in a
   /// different language ("Dubai" vs "دبي") — so the emirate is shown once via

@@ -33,6 +33,7 @@ fragment OrderFields on CustomerOrder {
     product_url_key
     quantity_ordered
     product_sale_price { value currency }
+    selected_options { label value }
     product { image { url } }
   }
   payment_methods { name type }

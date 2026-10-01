@@ -14,11 +14,16 @@ class OrderLine {
     this.urlKey,
     this.seller,
     this.uid,
+    this.options = const <String>[],
   });
 
   final String name;
   final double quantity;
   final Money? price;
+
+  /// The options the customer chose (`selected_options`), each as the cart
+  /// writes them — "Colour: Teal" — in the order the product lists them.
+  final List<String> options;
 
   /// Product thumbnail (order item's linked product), null when unavailable.
   final String? imageUrl;
@@ -172,20 +177,56 @@ class CustomerOrder {
   /// Distinct products in the order (matches the thumbnail count / "Items (N)").
   int get itemCount => lines.length;
 
-  bool get isDelivered {
+  /// What each package's Magento state says (`complete`, `canceled`, …), which
+  /// no language changes — null for an order the server did not split, or one
+  /// with a state this build does not know, where [status] is all there is.
+  List<OrderPackageStage>? get _packageStages {
+    if (packages.isEmpty) return null;
+    final stages = [for (final p in packages) p.stage];
+    return stages.contains(OrderPackageStage.unknown) ? null : stages;
+  }
+
+  /// [status] is the store view's own label — "Complete" in English, "مكتمل" in
+  /// Arabic — so it is matched on the words each language uses.
+  bool _statusHas(List<String> words) {
     final s = status.toLowerCase();
-    return s.contains('complet') || s.contains('deliver');
+    return words.any(s.contains);
+  }
+
+  bool get isDelivered {
+    final stages = _packageStages;
+    if (stages != null) {
+      return stages.every((s) => s == OrderPackageStage.complete);
+    }
+    return _statusHas(const [
+      'complet',
+      'deliver',
+      'مكتمل',
+      'تم التوصيل',
+      'تم التسليم',
+    ]);
   }
 
   bool get isCancelled {
-    final s = status.toLowerCase();
-    return s.contains('cancel') || s.contains('refund') || s.contains('closed');
+    final stages = _packageStages;
+    if (stages != null) {
+      return stages.every((s) => s == OrderPackageStage.canceled);
+    }
+    return _statusHas(const [
+      'cancel',
+      'refund',
+      'closed',
+      'ملغ',
+      'مغلق',
+      'مسترد',
+      'استرداد',
+    ]);
   }
 
   /// Magento's `holded` state — a pause, not a stage. The timeline stops where
   /// it genuinely got to and the status card says so, rather than implying the
   /// order is still moving.
-  bool get isOnHold => status.toLowerCase().contains('hold');
+  bool get isOnHold => _statusHas(const ['hold', 'معلق', 'معلّق']);
 
   /// Magento offers `CANCEL` for this order — cancellation is enabled for its
   /// store, it isn't complete/closed/cancelled/on hold and nothing shipped —

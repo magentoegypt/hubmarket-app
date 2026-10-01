@@ -55,6 +55,9 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
   /// A strip under the row (tabs, a search field, a divider).
   final PreferredSizeWidget? bottom;
   final double horizontalPadding;
+
+  /// A 1 px `--hm-subtle` rule along the bottom edge of the 56 px row, as the
+  /// frames with a white page under the bar draw it (the forms).
   final bool divider;
 
   static const double rowHeight = 56;

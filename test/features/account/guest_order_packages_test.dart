@@ -12,7 +12,7 @@ import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/guest_track_order_screen.dart';
-import 'package:hubmarket_app/features/account/presentation/screens/order_tracking_screen.dart';
+import 'package:hubmarket_app/features/account/presentation/screens/order_detail_screen.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
@@ -41,7 +41,8 @@ class _GuestRepo implements AccountRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// Track order (26): the form, and the order it finds.
+/// Track order (26): the form, the order it finds, and View order details,
+/// which opens that order's page (22).
 Future<void> _lookUp(WidgetTester tester, CustomerOrder order) async {
   // Wide, as the other Track order tests: the test font's square glyphs
   // overflow "Need help?" at phone width.
@@ -56,9 +57,9 @@ Future<void> _lookUp(WidgetTester tester, CustomerOrder order) async {
         builder: (_, __) => const GuestTrackOrderScreen(),
       ),
       GoRoute(
-        path: AppRoutes.orderTracking,
+        path: AppRoutes.orderDetail,
         builder: (_, state) =>
-            OrderTrackingScreen(order: state.extra! as CustomerOrder),
+            OrderDetailScreen(order: state.extra! as CustomerOrder),
       ),
       for (final p in [
         '/home',
@@ -100,11 +101,15 @@ Future<void> _lookUp(WidgetTester tester, CustomerOrder order) async {
   await tester.pumpAndSettle();
   final fields = find.byType(TextField);
   await tester.enterText(fields.at(0), order.number);
-  await tester.enterText(fields.at(1), 'sara.ahmed@gmail.com');
-  await tester.enterText(fields.at(2), 'Ahmed');
-  await tester.tap(find.text('Find my order'));
+  await tester.enterText(fields.at(1), 'Ahmed');
+  await tester.enterText(fields.at(2), 'sara.ahmed@gmail.com');
+  await tester.tap(find.text('Find order'));
   await tester.pumpAndSettle();
-  expect(find.byType(OrderTrackingScreen), findsOneWidget);
+  // The order shows under the form; its page opens from View order details.
+  expect(find.byType(OrderDetailScreen), findsNothing);
+  await tester.tap(find.text('View order details'));
+  await tester.pumpAndSettle();
+  expect(find.byType(OrderDetailScreen), findsOneWidget);
 }
 
 void main() {

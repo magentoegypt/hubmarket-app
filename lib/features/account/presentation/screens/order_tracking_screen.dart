@@ -7,9 +7,10 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/config/store_timezone.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
-import '../../../../core/widgets/hub_back_button.dart';
 import '../../domain/order.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
@@ -142,11 +143,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
       currentTab: AppTab.account,
       // Figma: a pushed page, no tab bar.
       showTabBar: false,
-      appBar: AppBar(
-        centerTitle: true,
-        leading: const HubBackButton(),
-        title: Text(l10n.trackOrderTitle),
-      ),
+      appBar: HubTopBar(title: l10n.trackOrderTitle),
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -310,18 +307,24 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
           // With HubApp, one package per store, as on the order detail (22).
           if (packages != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  for (var i = 0; i < packages.length; i++)
-                    OrderPackageCard(
-                      index: i + 1,
-                      view: packages[i],
-                      line: (line) =>
-                          _ItemRow(line: line, l10n: l10n, inset: false),
-                    ),
-                ],
+            // White cards on the page grey, as on the order detail (22).
+            ColoredBox(
+              color: groupedPageColor(context),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < packages.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 12),
+                      OrderPackageCard(
+                        index: i + 1,
+                        view: packages[i],
+                        order: order,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                  ],
+                ),
               ),
             )
           else
@@ -335,6 +338,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: OrderCancelSection(
               order: order,
+              bordered: true,
               onCancelled: (updated) => setState(() => _order = updated),
             ),
           ),
@@ -516,17 +520,14 @@ class _Dot extends StatelessWidget {
 }
 
 class _ItemRow extends StatelessWidget {
-  const _ItemRow({required this.line, required this.l10n, this.inset = true});
+  const _ItemRow({required this.line, required this.l10n});
   final OrderLine line;
   final AppLocalizations l10n;
-
-  /// The page's side margin; a package card brings its own.
-  final bool inset;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: inset ? 16 : 0, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

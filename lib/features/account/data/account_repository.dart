@@ -410,6 +410,16 @@ class AccountRepository {
             urlKey: l['product_url_key'] as String?,
             seller: HmSellerSummary.fromJson(l['hm_seller']),
             uid: l['id'] as String?,
+            options: [
+              for (final o
+                  in (l['selected_options'] as List<dynamic>? ?? const [])
+                      .whereType<Map<String, dynamic>>())
+                if (((o['value'] as String?) ?? '').trim().isNotEmpty)
+                  ((o['label'] as String?) ?? '').trim().isEmpty
+                      ? (o['value'] as String).trim()
+                      : '${(o['label'] as String).trim()}: '
+                            '${(o['value'] as String).trim()}',
+            ],
           ),
         )
         .toList();

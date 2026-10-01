@@ -914,6 +914,16 @@
   "cartAlsoLike": "You might also like",
   "cartCouponError": "That code didn't work.",
   "wishlistHeading": "My Wishlist",
+  "wishlistTitle": "Wishlist",
+  "wishlistShareTitle": "My Hub Market wishlist",
+  "wishlistStoreCount": "{count, plural, =1{1 store} other{{count} stores}}",
+  "@wishlistStoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "wishlistSavedCount": "{count, plural, =1{1 saved item} other{{count} saved items}}",
   "@wishlistSavedCount": {
     "placeholders": {
@@ -922,7 +932,7 @@
       }
     }
   },
-  "wishlistAddAll": "Add all to Bag",
+  "wishlistAddAll": "Add all to bag",
   "wishlistEmptyTitle": "Your wishlist is empty",
   "wishlistEmptyBody": "Tap the heart on any product to save it here.",
   "wishlistSignInPrompt": "Sign in to save items to your wishlist.",
@@ -933,6 +943,9 @@
   "ordersFilterToReceive": "To Receive",
   "ordersFilterDelivered": "Delivered",
   "ordersFilterCancelled": "Cancelled",
+  "ordersTitle": "My orders",
+  "ordersFilterInProgress": "In progress",
+  "ordersFilterReturns": "Returns",
   "orderNumber": "Order #{number}",
   "@orderNumber": {
     "placeholders": {
@@ -984,16 +997,80 @@
   "orderPackageTotal": "Package total",
   "orderTrackParcel": "Track parcel",
   "orderCopyTrackingNumber": "Copy tracking number",
+  "orderContactStore": "Contact store",
+  "orderStepConfirmed": "Order confirmed",
+  "orderStepPrepared": "Packed by store",
+  "orderStepPreparing": "Being prepared by store",
+  "orderStepShipped": "Shipped",
+  "orderStepDelivered": "Delivered",
+  "orderProgressConfirmed": "Confirmed",
+  "orderProgressPacked": "Packed",
+  "orderPaymentTitle": "Payment",
+  "orderDeliveryLabel": "Delivery",
+  "orderPlacedOn": "Placed {date}",
+  "@orderPlacedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "orderDeliveringTo": "Delivering to {name}",
+  "@orderDeliveringTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "orderSubtotalItems": "Subtotal ({count, plural, =1{1 item} other{{count} items}})",
+  "@orderSubtotalItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderPaidWith": "Paid with {method}",
+  "@orderPaidWith": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "orderCancelHintPackages": "You can cancel this order until the first package ships. Cancelling removes {count, plural, =2{both packages} other{all {count} packages}}.",
+  "@orderCancelHintPackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderTrackingSection": "Tracking",
   "orderShippingLabel": "Shipping",
   "orderNoTracking": "Tracking details appear here once your order ships.",
   "orderTrackingCopied": "Tracking number copied",
   "orderViewDetails": "View Details",
+  "orderViewOrder": "View order",
+  "orderBuyAgain": "Buy again",
+  "orderRateItems": "Rate items",
+  "orderRatePickTitle": "Rate an item",
+  "orderViewReturn": "View return",
+  "orderReturnInProgress": "Return in progress",
   "orderPaymentSection": "Payment Method",
   "orderTimelineSection": "Order Timeline",
   "orderBillingAddress": "Billing Address",
   "orderItemCount": "{count, plural, =1{1 item} other{{count} items}}",
   "@orderItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderPackagesCount": "{count, plural, =1{1 package} other{{count} packages}}",
+  "@orderPackagesCount": {
     "placeholders": {
       "count": {
         "type": "int"
@@ -1016,6 +1093,19 @@
     }
   },
   "orderCancelWholeOrder": "The whole order is cancelled — every item in it.",
+  "orderCancelWholePackages": "The whole order is cancelled — {count, plural, =2{both packages} other{all {count} packages}} ({stores}).",
+  "@orderCancelWholePackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "stores": {
+        "type": "String"
+      }
+    }
+  },
+  "listSeparator": ", ",
+  "listAnd": " and ",
   "orderCancelRefundNote": "Anything already paid is refunded.",
   "orderCancelGuestNote": "We'll email you a link to confirm the cancellation.",
   "orderCancelReasonTitle": "Why are you cancelling?",
@@ -1059,6 +1149,7 @@
     }
   },
   "returnsNewReply": "New reply",
+  "returnsRejectedPrompt": "Not happy with the store’s answer?",
   "returnsMoreItems": "+{count} more",
   "@returnsMoreItems": {
     "description": "After the first product's name on a return's card, when the return has more lines.",
@@ -1079,6 +1170,17 @@
   },
   "returnsOrderLabel": "Order",
   "returnsChooseOrder": "Choose an order",
+  "returnsOrderOption": "#{number} · {details}",
+  "@returnsOrderOption": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "details": {
+        "type": "String"
+      }
+    }
+  },
   "returnsMoreOrders": "Show more orders",
   "returnsNoOrdersTitle": "Nothing to return yet",
   "returnsNoOrdersBody": "Orders that are processing or delivered show up here once their items are invoiced.",
@@ -1091,6 +1193,7 @@
     }
   },
   "returnsSelectItems": "Select items",
+  "returnsSelectItem": "Select item",
   "returnsItemInReturn": "Already in return {numbers}",
   "@returnsItemInReturn": {
     "placeholders": {
@@ -1242,31 +1345,37 @@
     }
   },
   "ordersGuestRemove": "Remove",
-  "guestTrackTitle": "Track Your Order",
-  "guestTrackIntro": "Enter your order number and the email and last name you used at checkout.",
+  "guestTrackTitle": "Track order",
+  "guestTrackHeading": "Find your order",
+  "guestTrackIntro": "Checked out as a guest? Enter your order number and the email you used — no account needed.",
   "guestTrackOrderNumber": "Order number",
-  "guestTrackEmail": "Email",
-  "guestTrackLastname": "Last name",
-  "guestTrackSubmit": "Find my order",
+  "guestTrackEmail": "Email address",
+  "guestTrackLastname": "Billing last name",
+  "guestTrackSubmit": "Find order",
+  "guestTrackViewOrder": "View order details",
+  "guestTrackHaveAccount": "Have an account?",
+  "guestTrackSignIn": "Sign in",
   "guestTrackNotFound": "We couldn't find an order with those details.",
+  "addressesTitle": "Addresses",
   "addressesEmpty": "No saved addresses yet.",
-  "addressAdd": "Add Address",
-  "addressEdit": "Edit Address",
+  "addressAdd": "Add address",
+  "addressEdit": "Edit address",
   "actionSave": "Save",
   "defaultBadge": "Default",
-  "fieldPhone": "Phone Number",
-  "fieldStreet": "Street",
+  "fieldPhone": "Mobile number",
+  "fieldStreet": "Street & building",
   "fieldPostcode": "Postcode",
-  "fieldFullName": "Full Name",
-  "fieldEmirate": "State",
+  "fieldFullName": "Full name",
+  "fieldEmirate": "Emirate",
   "fieldCountryLabel": "Country",
-  "fieldApartment": "Apartment / Floor (optional)",
+  "fieldApartment": "Apartment / villa",
   "checkoutUseNewAddress": "Use a new address",
   "addressDefaultShipping": "Set as default address",
+  "addressDefaultHint": "Used first at checkout",
   "addressSaveAs": "Save as",
   "addressDefaultBadge": "Default",
-  "addressAddNew": "Add New Address",
-  "addressSave": "Save Address",
+  "addressAddNew": "Add new address",
+  "addressSave": "Save address",
   "addressHintName": "e.g. Hassan Ahmed",
   "addressHintStreet": "Street 9",
   "actionChange": "Change",
@@ -1423,6 +1532,15 @@
   "paymentFailedPayCod": "Pay cash on delivery",
   "paymentFailedBackToCart": "Back to cart",
   "countryUae": "United Arab Emirates",
+  "countryUaeShort": "UAE",
+  "emirateName": "{code, select, AZ{Abu Dhabi} AJ{Ajman} DU{Dubai} FU{Fujairah} RK{Ras Al Khaimah} SH{Sharjah} UQ{Umm Al Quwain} other{{code}}}",
+  "@emirateName": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
   "savedCardsTitle": "Payment methods",
   "savedCardsEmptyTitle": "No saved cards",
   "savedCardsEmptyBody": "Cards saved to your account appear here.",

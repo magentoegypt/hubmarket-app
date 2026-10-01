@@ -4,15 +4,50 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
+import '../../../../app/theme/theme_x.dart';
+import '../../../../core/validation/phone.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_bottom_action_bar.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_radio_dot.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/account_repository.dart';
 import '../../domain/customer_address.dart';
-import '../../../../app/theme/hub_icons.dart';
+import '../emirate_names.dart';
 
+/// Saved addresses (Figma 24): the customer's address book as radio cards —
+/// the default one chosen, navy-ringed and badged — with edit and delete on
+/// each and "Add new address" pinned under the list. Choosing another card
+/// makes it the default shipping address.
+///
+/// The frame's "Use my current location / Pin your building on the map" row is
+/// not here: the app has no map or location access to pin a building with.
 class AddressesScreen extends ConsumerWidget {
   const AddressesScreen({super.key});
+
+  Future<void> _makeDefault(
+    BuildContext context,
+    WidgetRef ref,
+    CustomerAddress address,
+  ) async {
+    final id = address.id;
+    if (id == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = AppLocalizations.of(context).errorGeneric;
+    try {
+      await ref
+          .read(accountRepositoryProvider)
+          .updateAddress(id, address.asDefaultShipping());
+      ref.invalidate(addressesProvider);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,226 +55,244 @@ class AddressesScreen extends ConsumerWidget {
     final addresses = ref.watch(addressesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.accountAddresses)),
+      backgroundColor: groupedPageColor(context),
+      appBar: HubTopBar(title: l10n.addressesTitle),
       body: AsyncValueView(
         value: addresses,
         onRetry: () => ref.invalidate(addressesProvider),
-        data: (list) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          children: [
-            if (list.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 56),
-                child: EmptyState(
-                  icon: HubIcons.mapPin,
-                  title: l10n.addressesEmpty,
-                ),
-              )
-            else
-              for (final address in list)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _AddressCard(
-                    address: address,
-                    onEdit: () =>
-                        context.push(AppRoutes.addressForm, extra: address),
-                    onDelete: () async {
-                      final id = address.id;
-                      if (id == null) return;
-                      await ref
-                          .read(accountRepositoryProvider)
-                          .deleteAddress(id);
-                      ref.invalidate(addressesProvider);
-                    },
-                  ),
-                ),
-            const SizedBox(height: 2),
-            _AddNewAddressButton(
-              onTap: () => context.push(AppRoutes.addressForm),
-            ),
-          ],
+        data: (list) => list.isEmpty
+            ? EmptyState(icon: HubIcons.mapPin, title: l10n.addressesEmpty)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                children: [
+                  for (final address in list) ...[
+                    _AddressCard(
+                      address: address,
+                      onSelect: () => _makeDefault(context, ref, address),
+                      onEdit: () =>
+                          context.push(AppRoutes.addressForm, extra: address),
+                      onDelete: () async {
+                        final id = address.id;
+                        if (id == null) return;
+                        await ref
+                            .read(accountRepositoryProvider)
+                            .deleteAddress(id);
+                        ref.invalidate(addressesProvider);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              ),
+      ),
+      bottomNavigationBar: HubBottomActionBar(
+        child: HubButton(
+          label: l10n.addressAddNew,
+          icon: HubIcons.plus,
+          iconSize: 20,
+          style: HubButtonStyle.outline,
+          onPressed: () => context.push(AppRoutes.addressForm),
         ),
       ),
     );
   }
 }
 
-/// Saved-address card (Figma 64:11): bordered (navy when default), a pin +
-/// recipient name + Default badge + edit/delete icons, then phone + address.
+/// One address as the cards show it: "Apt 1204, Marina Gate 2, Dubai Marina,
+/// Dubai, UAE". The area is Magento's `city`, left out when it only repeats the
+/// emirate (the app fills `city` from the emirate); the country is always shown
+/// in its short form.
+String _addressLine(AppLocalizations l10n, CustomerAddress a) {
+  final region = a.region.trim();
+  final city = a.city.trim();
+  final emirateName = region.isNotEmpty ? region : city;
+  final area = city.isNotEmpty && city.toLowerCase() != emirateName.toLowerCase()
+      ? city
+      : '';
+  final emirate = emirateLabel(l10n, emirateName);
+  final country = a.countryCode.toUpperCase() == 'AE'
+      ? l10n.countryUaeShort
+      : a.countryCode;
+  return [
+    a.apartment.trim(),
+    a.street.trim(),
+    area,
+    emirate,
+    country,
+  ].where((part) => part.isNotEmpty).join(l10n.listSeparator);
+}
+
+/// Saved-address card (Figma 24 "address/…"): radio, label, Default badge and
+/// the edit / delete icons on a row; the recipient and number; the address.
+/// Navy 1.5 px ring when it is the default, a 1 px `--hm-subtle` one otherwise.
 class _AddressCard extends StatelessWidget {
   const _AddressCard({
     required this.address,
+    required this.onSelect,
     required this.onEdit,
     required this.onDelete,
   });
 
   final CustomerAddress address;
+  final VoidCallback onSelect;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDefault = address.defaultShipping;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDefault ? AppColors.brandPrimary : AppColors.borderDefault,
-          width: isDefault ? 1.5 : 1,
+    final t = AppTextStyles.of(context);
+    final selected = address.defaultShipping;
+    final phone = address.telephone.trim();
+    final who = [
+      address.fullName,
+      // The number reads left to right inside Arabic text.
+      if (phone.isNotEmpty) '\u2066${Phone.display(phone)}\u2069',
+    ].where((part) => part.isNotEmpty).join(' · ');
+    final title = (address.labelText ?? '').trim().isNotEmpty
+        ? address.labelText!.trim()
+        : address.region.trim().isNotEmpty
+        ? emirateLabel(l10n, address.region)
+        : address.city.trim().isNotEmpty
+        ? emirateLabel(l10n, address.city)
+        : address.fullName;
+    // The icons carry 5 px of tap area beside them; the card gives it back so
+    // they sit where the frame draws them.
+    const iconSlack = 5.0;
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: groupCardColor(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected
+                ? AppColors.brandPrimary
+                : context.isDarkMode
+                ? Colors.white12
+                : AppColors.borderSubtle,
+            width: selected ? 1.5 : 1,
+          ),
         ),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                HubIcons.mapPin,
-                size: 20,
-                color: AppColors.brandPrimary,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Row(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: selected ? null : onSelect,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              14,
+              14,
+              14 - iconSlack,
+              14,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Flexible(
-                      child: Text(
-                        address.fullName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.inkHeading,
-                        ),
+                    HubRadioDot(selected: selected),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.title.copyWith(
+                                color: context.scaffoldHeading,
+                              ),
+                            ),
+                          ),
+                          if (selected) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentSubtle,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                l10n.defaultBadge.toUpperCase(),
+                                style: t.micro.copyWith(
+                                  color: AppColors.accentStrong,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (isDefault) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceTint,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          l10n.defaultBadge,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.brandPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                    // "Save as" label (Home / Office / Other), backend-scoped.
-                    if ((address.labelText ?? '').isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.brandPrimary,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          address.labelText!,
-                          style: const TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                    _IconAction(
+                      icon: HubIcons.pencil,
+                      tooltip: l10n.addressEdit,
+                      onTap: onEdit,
+                    ),
+                    _IconAction(
+                      icon: HubIcons.trash2,
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).deleteButtonTooltip,
+                      onTap: () => onDelete(),
+                    ),
                   ],
                 ),
-              ),
-              _IconAction(icon: HubIcons.pencil, onTap: onEdit),
-              _IconAction(icon: HubIcons.trash2, onTap: () => onDelete()),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 30),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (address.telephone.isNotEmpty)
-                  Text(
-                    address.telephone,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      height: 1.6,
-                      color: AppColors.inkMuted,
-                    ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: iconSlack),
+                  child: Text(
+                    who,
+                    style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
                   ),
-                Text(
-                  address.summary,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    height: 1.6,
-                    color: AppColors.inkMuted,
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: iconSlack),
+                  child: Text(
+                    _addressLine(l10n, address),
+                    style: t.body.copyWith(color: context.scaffoldMuted),
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Small tappable header icon (edit / delete).
-class _IconAction extends StatelessWidget {
-  const _IconAction({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkResponse(
-    onTap: onTap,
-    radius: 20,
-    child: Padding(
-      padding: const EdgeInsets.all(4),
-      child: Icon(icon, size: 18, color: AppColors.inkMuted),
-    ),
-  );
-}
-
-/// Navy outlined "Add New Address" button (Figma 64:39).
-class _AddNewAddressButton extends StatelessWidget {
-  const _AddNewAddressButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: const Icon(HubIcons.plus, size: 18),
-      label: Text(l10n.addressAddNew),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.brandPrimary,
-        side: const BorderSide(color: AppColors.brandPrimary, width: 1.4),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
+}
+
+/// An 18 px outline icon (edit / delete) in a 28 px tap box, so the icons sit
+/// 10 px apart as the frame draws them and still take a thumb.
+class _IconAction extends StatelessWidget {
+  const _IconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: tooltip,
+    excludeSemantics: true,
+    child: InkResponse(
+      onTap: onTap,
+      radius: 20,
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: Center(
+          child: Icon(icon, size: 18, color: context.scaffoldMuted),
+        ),
+      ),
+    ),
+  );
 }

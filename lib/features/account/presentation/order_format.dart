@@ -33,3 +33,38 @@ String orderFmtDateTime(String raw, [String? locale, String storeZone = '']) {
     return DateFormat('d MMM, h:mm a').format(dt);
   }
 }
+
+/// "28 Sep 2026, 10:42": when an order was placed (Figma 22), on the 24-hour
+/// clock, read in [storeZone] like [orderFmtDate].
+String orderFmtPlaced(String raw, [String? locale, String storeZone = '']) {
+  final dt = storeStampToLocal(raw, storeZone);
+  return dt == null
+      ? raw
+      : formatStamp(dt, 'd MMM yyyy${_comma(locale)} HH:mm', locale);
+}
+
+/// The comma between a date and its time: Arabic writes "،" (Figma 22 AR).
+String _comma(String? locale) =>
+    locale == 'ar' ? String.fromCharCode(0x060c) : ',';
+
+/// "28 Sep, 10:42": a step of a package's timeline (Figma 22), on the 24-hour
+/// clock, read in [storeZone] like [orderFmtDate].
+String orderFmtStep(String raw, [String? locale, String storeZone = '']) {
+  final dt = storeStampToLocal(raw, storeZone);
+  return dt == null ? raw : orderFmtStepAt(dt, locale);
+}
+
+/// [orderFmtStep] of a moment the server gave with its own offset (a shipment,
+/// a store's comment), shown in the device's zone.
+String orderFmtStepAt(DateTime dt, [String? locale]) =>
+    formatStamp(dt.toLocal(), 'd MMM${_comma(locale)} HH:mm', locale);
+
+/// [dt] by [pattern] in [locale]; the default locale when [locale]'s date
+/// symbols aren't loaded.
+String formatStamp(DateTime dt, String pattern, [String? locale]) {
+  try {
+    return DateFormat(pattern, locale).format(dt);
+  } catch (_) {
+    return DateFormat(pattern).format(dt);
+  }
+}
