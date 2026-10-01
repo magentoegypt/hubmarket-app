@@ -285,8 +285,9 @@ class StoreSearchField extends StatelessWidget {
       borderRadius: BorderRadius.all(Radius.circular(12)),
       borderSide: BorderSide.none,
     );
-    // The line is 20 px high; the rest of [height] is the padding around it.
-    final pad = (height - 20) / 2;
+    // The text line is 20 px high (22 in Arabic); the rest of [height] is the
+    // padding around it.
+    final pad = (height - t.body.fontSize! * t.body.height!) / 2;
     return TextField(
       controller: controller,
       focusNode: focusNode,

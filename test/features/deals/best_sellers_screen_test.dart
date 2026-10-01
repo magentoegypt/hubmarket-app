@@ -23,6 +23,7 @@ import 'package:hubmarket_app/features/home/presentation/hm_home_view.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 
 Product _product(int rank) => Product(
@@ -79,6 +80,8 @@ Future<List<String>> _pump(
   HubAppState hubApp = const HubAppState.available(kSampleHmAppConfig),
   List<Override> overrides = const [],
   double height = 1000,
+  String locale = 'en',
+  GlobalKey? boundary,
 }) async {
   tester.view.physicalSize = Size(390, height);
   tester.view.devicePixelRatio = 1;
@@ -107,11 +110,24 @@ Future<List<String>> _pump(
         GoRoute(path: p, builder: stub),
     ],
   );
+  final app = MaterialApp.router(
+    debugShowCheckedModeBanner: false,
+    routerConfig: router,
+    theme: AppTheme.light(locale),
+    locale: Locale(locale),
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         localCacheProvider.overrideWithValue(FakeLocalCache()),
-        localePrefsProvider.overrideWithValue(FakeLocalePrefs('en')),
+        localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
         secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
         graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
         publicGraphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
@@ -121,18 +137,9 @@ Future<List<String>> _pump(
         ),
         ...overrides,
       ],
-      child: MaterialApp.router(
-        routerConfig: router,
-        theme: AppTheme.light('en'),
-        locale: const Locale('en'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-      ),
+      child: boundary == null
+          ? app
+          : RepaintBoundary(key: boundary, child: app),
     ),
   );
   await tester.pumpAndSettle();
@@ -140,7 +147,27 @@ Future<List<String>> _pump(
 }
 
 void main() {
+  setUpAll(loadAppFonts);
+
   group('Best sellers page', () {
+    for (final locale in ['en', 'ar']) {
+      // Not a frame of its own: it is laid out as Today's Deals (Figma 10b).
+      testWidgets('renders like the other product lists ($locale)', (
+        tester,
+      ) async {
+        final key = GlobalKey();
+        await _pump(
+          tester,
+          const BestSellersScreen(),
+          height: 844,
+          locale: locale,
+          boundary: key,
+        );
+        await captureScreen(tester, key, 'best_sellers_$locale');
+        expect(tester.takeException(), isNull);
+      });
+    }
+
     testWidgets('ranks the products and reads the next page on scroll', (
       tester,
     ) async {

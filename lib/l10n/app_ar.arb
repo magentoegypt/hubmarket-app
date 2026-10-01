@@ -79,9 +79,9 @@
   "homeSeeAll": "عرض الكل",
   "brandsFilterAll": "الكل",
   "brandsEmpty": "لا توجد علامات تجارية",
-  "brandsScreenTitle": "العلامات التجارية",
-  "brandsSearchLabel": "ابحث عن علامة تجارية",
-  "brandsWithProducts": "{count, plural, =1{علامة تجارية واحدة لها منتجات} other{{count} علامات تجارية لها منتجات}}",
+  "brandsScreenTitle": "الماركات",
+  "brandsSearchLabel": "ابحث في الماركات",
+  "brandsWithProducts": "{count, plural, =1{ماركة واحدة لديها منتجات} =2{ماركتان لديهما منتجات} few{{count} ماركات لديها منتجات} other{{count} ماركة لديها منتجات}}",
   "@brandsWithProducts": {
     "placeholders": {
       "count": {
@@ -89,7 +89,7 @@
       }
     }
   },
-  "brandFromStores": "{count, plural, =1{من متجر واحد} other{من {count} متاجر}}",
+  "brandFromStores": "{count, plural, =1{من متجر واحد} =2{من متجرين} few{من {count} متاجر} many{من {count} متجرًا} other{من {count} متجر}}",
   "@brandFromStores": {
     "placeholders": {
       "count": {
@@ -128,7 +128,7 @@
   "storesEmpty": "لا توجد متاجر",
   "storesNoMatch": "لا يوجد متجر يطابق «{query}».",
   "storeVerified": "بائع موثّق",
-  "storeReviewCount": "{count, plural, =1{تقييم واحد} =2{تقييمان} few{{count} تقييمات} many{{count} تقييمًا} other{{count} تقييم}}",
+  "storeReviewCount": "{count, plural, =1{تقييم واحد} =2{تقييمان} few{{count} تقييمات} other{{count} تقييم}}",
   "storeNoReviews": "لا توجد تقييمات بعد",
   "storeStatProducts": "منتج",
   "storeStatSellingSince": "يبيع منذ",
@@ -155,10 +155,10 @@
   "storeContactVendor": "تواصل مع البائع",
   "storeCallVendor": "اتصل بـ{store}",
   "storeReviewsOtherLanguage": "كُتبت تقييمات هذا المتجر باللغة الأخرى.",
-  "filtersLabel": "تصفية",
+  "filtersLabel": "الفلاتر",
   "filterPriceLabel": "السعر",
   "filterPriceRangeLabel": "نطاق السعر",
-  "filterResetLabel": "إعادة تعيين",
+  "filterResetLabel": "إعادة ضبط",
   "filterClearAllLabel": "مسح الكل",
   "filterApplyLabel": "تطبيق الفلاتر",
   "filterAll": "الكل",
@@ -846,7 +846,7 @@
   "homeAllVendors": "كل البائعين",
   "homeViewAll": "عرض الكل",
   "homeCountdownRemaining": "متبقية",
-  "dealsCountdownDays": "{days} يوم",
+  "dealsCountdownDays": "{days, plural, =1{يوم} =2{يومان} few{{days} أيام} many{{days} يومًا} other{{days} يوم}}",
   "@dealsCountdownDays": {
     "placeholders": {
       "days": {
@@ -871,7 +871,7 @@
       }
     }
   },
-  "hmProductCount": "{count, plural, =1{منتج واحد} other{{count} منتجات}}",
+  "hmProductCount": "{count, plural, =1{منتج واحد} =2{منتجان} few{{count} منتجات} many{{count} منتجًا} other{{count} منتج}}",
   "@hmProductCount": {
     "placeholders": {
       "count": {
@@ -881,7 +881,7 @@
   },
   "dealsEndIn": "تنتهي العروض خلال",
   "dealsAllChip": "كل العروض",
-  "dealsCount": "{count, plural, =1{عرض واحد} other{{count} عروض}}",
+  "dealsCount": "{count, plural, =1{عرض واحد} =2{عرضان} few{{count} عروض} many{{count} عرضًا} other{{count} عرض}}",
   "@dealsCount": {
     "placeholders": {
       "count": {
@@ -899,7 +899,7 @@
   "bundlesTitle": "عروض الباقات",
   "bundlesHeroTitle": "باقات المنتجات",
   "bundlesHeroBody": "عدة منتجات تُباع معًا في باقة واحدة.",
-  "bundlesStatActive": "باقات متاحة",
+  "bundlesStatActive": "باقات نشطة",
   "bundlesStatMaxSaving": "أقصى توفير",
   "bundlesStatUpTo": "حتى {percent}%",
   "@bundlesStatUpTo": {
@@ -909,7 +909,7 @@
       }
     }
   },
-  "bundlesStatVendors": "بائعون",
+  "bundlesStatVendors": "بائعين",
   "bundlesAllChip": "كل الباقات",
   "bundlesEmpty": "لا توجد عروض باقات حاليًا.",
   "@bundleDiscountBadge": {
@@ -958,7 +958,7 @@
       }
     }
   },
-  "bundleListBadge": "باقة ‎-{percent}%",
+  "bundleListBadge": "‎-{percent}% باقة",
   "@bundleListBadge": {
     "placeholders": {
       "percent": {

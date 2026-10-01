@@ -378,6 +378,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       StoreTab.about: l10n.storeTabAbout,
       StoreTab.policies: l10n.storeTabPolicies,
     };
+    final labelStyle = AppTextStyles.of(context).body;
+    final tabLine =
+        MediaQuery.textScalerOf(context).scale(labelStyle.fontSize!) *
+        labelStyle.height!;
 
     if (tab != StoreTab.products) {
       // The inside pages (Figma 13b).
@@ -417,6 +421,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   selected: tab,
                   labels: labels,
                   onSelect: _selectTab,
+                  lineHeight: tabLine,
                   compact: true,
                 ),
               ),
@@ -483,6 +488,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               selected: tab,
               labels: labels,
               onSelect: _selectTab,
+              lineHeight: tabLine,
             ),
           ),
           ..._productSlivers(context, l10n, store, products),
@@ -1005,6 +1011,7 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
     required this.selected,
     required this.labels,
     required this.onSelect,
+    required this.lineHeight,
     this.compact = false,
   });
 
@@ -1012,10 +1019,15 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
   final StoreTab selected;
   final Map<StoreTab, String> labels;
   final ValueChanged<StoreTab> onSelect;
+
+  /// The label's line (Body: 20 px, 22 in Arabic, at 1x text).
+  final double lineHeight;
   final bool compact;
 
-  /// 45 px of tabs and the hairline (13); 46 and the hairline (13b).
-  double get _height => compact ? 47 : 46;
+  /// The line with 12 above and 10 below, the 3 px underline and the hairline
+  /// (13: 46 px); with 12 above and below, the 2 px underline and the hairline
+  /// (13b: 47 px).
+  double get _height => compact ? lineHeight + 27 : lineHeight + 26;
 
   @override
   double get minExtent => _height;
