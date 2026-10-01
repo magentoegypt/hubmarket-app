@@ -258,7 +258,7 @@ class OrderPackageCard extends ConsumerWidget {
               children: [
                 Text(
                   heading,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: t.title.copyWith(color: context.scaffoldHeading),
                 ),

@@ -28,6 +28,126 @@ import 'fakes.dart';
 import 'hubapp_fakes.dart';
 import 'returns_fakes.dart';
 
+/// What the store's settings say in the audit harness: cancellation, the
+/// newsletter and the contact form are on.
+const StoreFeatures _auditFeatures = StoreFeatures(
+  orderCancellationEnabled: true,
+  cancellationReasons: [
+    'Changed my mind',
+    'Found a better price',
+    'Ordered by mistake',
+    'Delivery takes too long',
+    'Other',
+  ],
+  newsletterEnabled: true,
+  contactEnabled: true,
+);
+
+/// The router [pumpAudit] mounts a screen in: [screen] at `/screen`, every tab
+/// route and the pages a screen leaves to are stubs. [pushed]: the screen sits on
+/// top of Home, as every page of the account area does, so its app bar shows
+/// the back button; false mounts it as the root (a tab).
+GoRouter auditRouter({required Widget screen, bool pushed = true}) => GoRouter(
+  initialLocation: pushed ? AppRoutes.home : '/screen',
+  routes: [
+    GoRoute(path: '/screen', builder: (_, __) => screen),
+    for (final path in [
+      AppRoutes.home,
+      AppRoutes.categories,
+      AppRoutes.cart,
+      AppRoutes.wishlist,
+      AppRoutes.account,
+      AppRoutes.help,
+      AppRoutes.signIn,
+      AppRoutes.orders,
+      AppRoutes.orderDetail,
+      AppRoutes.orderTracking,
+      AppRoutes.guestTrackOrder,
+      AppRoutes.returns,
+      AppRoutes.returnRequest,
+      AppRoutes.addresses,
+      AppRoutes.addressForm,
+      '${AppRoutes.returns}/:id',
+      '/review/:sku',
+      '/product/:urlKey',
+      '/store/:code',
+    ])
+      GoRoute(
+        path: path,
+        builder: (_, __) => const Scaffold(body: Text('STUB')),
+      ),
+  ],
+);
+
+/// The fakes of the audit harness, as provider overrides: signed in (or not),
+/// the sample stores and customer, empty cart / catalog / wishlist / account /
+/// returns unless [account], [returns] or [wishlist] are given, the Hub Market
+/// App available. [overrides] go last, so a screen's own fakes win.
+List<Override> auditOverrides({
+  String locale = 'en',
+  bool signedIn = true,
+  AccountRepository? account,
+  ReturnsRepository? returns,
+  WishlistRepository? wishlist,
+  StoreFeatures? features,
+  HubAppState? hubApp,
+  List<Override> overrides = const [],
+}) => [
+  localCacheProvider.overrideWithValue(FakeLocalCache()),
+  localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
+  secureTokenStoreProvider.overrideWithValue(
+    FakeSecureTokenStore(signedIn ? 'persisted' : null),
+  ),
+  storeRepositoryProvider.overrideWithValue(FakeStoreRepository(kSampleStores)),
+  authRepositoryProvider.overrideWithValue(
+    FakeAuthRepository(customer: kSampleCustomer),
+  ),
+  graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
+  cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
+  catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
+  wishlistRepositoryProvider.overrideWithValue(
+    wishlist ?? FakeWishlistRepository(),
+  ),
+  accountRepositoryProvider.overrideWithValue(
+    account ?? FakeAccountRepository(),
+  ),
+  returnsRepositoryProvider.overrideWithValue(
+    returns ?? FakeReturnsRepository(),
+  ),
+  storeFeaturesProvider.overrideWith((ref) async => features ?? _auditFeatures),
+  storeContactProvider.overrideWithValue(
+    const StoreContact(
+      website: 'https://hub-market.magento2.click',
+      whatsapp: 'https://wa.me/971501234567',
+    ),
+  ),
+  storeTimezoneProvider.overrideWith((ref) async => 'Asia/Dubai'),
+  appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
+  pushNotificationsAvailableProvider.overrideWithValue(false),
+  hubAppOverride(hubApp ?? const HubAppState.available(kSampleHmAppConfig)),
+  ...overrides,
+];
+
+/// The app shell around [router]: the app theme, the [locale] and its
+/// localisation delegates.
+Widget auditApp({
+  required GoRouter router,
+  String locale = 'en',
+  bool dark = false,
+}) => MaterialApp.router(
+  routerConfig: router,
+  debugShowCheckedModeBanner: false,
+  theme: dark ? AppTheme.dark(locale) : AppTheme.light(locale),
+  locale: Locale(locale),
+  supportedLocales: AppLocalizations.supportedLocales,
+  localizationsDelegates: const [
+    AppLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+);
+
 /// Mounts one screen of the orders / returns / addresses / wishlist area the
 /// way the app does — inside the router, with the app theme, the locale and
 /// the usual fakes — for the UI audit captures
@@ -43,18 +163,7 @@ Future<ProviderContainer> pumpAudit(
   AccountRepository? account,
   ReturnsRepository? returns,
   WishlistRepository? wishlist,
-  StoreFeatures features = const StoreFeatures(
-    orderCancellationEnabled: true,
-    cancellationReasons: [
-      'Changed my mind',
-      'Found a better price',
-      'Ordered by mistake',
-      'Delivery takes too long',
-      'Other',
-    ],
-    newsletterEnabled: true,
-    contactEnabled: true,
-  ),
+  StoreFeatures features = _auditFeatures,
   HubAppState hubApp = const HubAppState.available(kSampleHmAppConfig),
   GlobalKey? boundary,
   List<Override> overrides = const [],
@@ -70,92 +179,22 @@ Future<ProviderContainer> pumpAudit(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  final router = GoRouter(
-    initialLocation: pushed ? AppRoutes.home : '/screen',
-    routes: [
-      GoRoute(path: '/screen', builder: (_, __) => screen),
-      for (final path in [
-        AppRoutes.home,
-        AppRoutes.categories,
-        AppRoutes.cart,
-        AppRoutes.wishlist,
-        AppRoutes.account,
-        AppRoutes.help,
-        AppRoutes.signIn,
-        AppRoutes.orders,
-        AppRoutes.orderDetail,
-        AppRoutes.orderTracking,
-        AppRoutes.guestTrackOrder,
-        AppRoutes.returns,
-        AppRoutes.returnRequest,
-        AppRoutes.addresses,
-        AppRoutes.addressForm,
-        '${AppRoutes.returns}/:id',
-        '/review/:sku',
-        '/product/:urlKey',
-        '/store/:code',
-      ])
-        GoRoute(
-          path: path,
-          builder: (_, __) => const Scaffold(body: Text('STUB')),
-        ),
-    ],
-  );
-
+  final router = auditRouter(screen: screen, pushed: pushed);
   final container = ProviderContainer(
-    overrides: [
-      localCacheProvider.overrideWithValue(FakeLocalCache()),
-      localePrefsProvider.overrideWithValue(FakeLocalePrefs(locale)),
-      secureTokenStoreProvider.overrideWithValue(
-        FakeSecureTokenStore(signedIn ? 'persisted' : null),
-      ),
-      storeRepositoryProvider.overrideWithValue(
-        FakeStoreRepository(kSampleStores),
-      ),
-      authRepositoryProvider.overrideWithValue(
-        FakeAuthRepository(customer: kSampleCustomer),
-      ),
-      graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
-      cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
-      catalogRepositoryProvider.overrideWithValue(FakeCatalogRepository()),
-      wishlistRepositoryProvider.overrideWithValue(
-        wishlist ?? FakeWishlistRepository(),
-      ),
-      accountRepositoryProvider.overrideWithValue(
-        account ?? FakeAccountRepository(),
-      ),
-      returnsRepositoryProvider.overrideWithValue(
-        returns ?? FakeReturnsRepository(),
-      ),
-      storeFeaturesProvider.overrideWith((ref) async => features),
-      storeContactProvider.overrideWithValue(
-        const StoreContact(
-          website: 'https://hub-market.magento2.click',
-          whatsapp: 'https://wa.me/971501234567',
-        ),
-      ),
-      storeTimezoneProvider.overrideWith((ref) async => 'Asia/Dubai'),
-      appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
-      pushNotificationsAvailableProvider.overrideWithValue(false),
-      hubAppOverride(hubApp),
-      ...overrides,
-    ],
+    overrides: auditOverrides(
+      locale: locale,
+      signedIn: signedIn,
+      account: account,
+      returns: returns,
+      wishlist: wishlist,
+      features: features,
+      hubApp: hubApp,
+      overrides: overrides,
+    ),
   );
   addTearDown(container.dispose);
 
-  final app = MaterialApp.router(
-    routerConfig: router,
-    debugShowCheckedModeBanner: false,
-    theme: dark ? AppTheme.dark(locale) : AppTheme.light(locale),
-    locale: Locale(locale),
-    supportedLocales: AppLocalizations.supportedLocales,
-    localizationsDelegates: const [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-  );
+  final app = auditApp(router: router, locale: locale, dark: dark);
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,

@@ -62,9 +62,11 @@ class CartItemTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Two lines: 30 dp narrower than the frame, "Dining Chair with
+              // Gold Metal Legs" would end in "Metal …".
               Text(
                 item.name,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
               ),

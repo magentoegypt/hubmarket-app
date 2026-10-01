@@ -9,7 +9,10 @@ the shared pieces to build with, and the rules.
 compared screen by screen and fixed (section 6 lists what was decided on the way, section 7 what still
 differs and why). Re-run it after any design change: `flutter test --dart-define=UI_AUDIT=true`, then
 `python tool/ui_audit/pairs.py en` / `ar`, then `python tool/ui_audit/score.py en` to see which pair moved
-most.
+most. A second pass, at the size of a real phone (360 dp wide, 30 dp narrower than the frames), is in
+`docs/device-audit.md`: it found six places where 360 dp cut something the frame shows whole (the Account
+header's subtitle in Arabic, the store name in "Sold by", a price in the buy bar's label, cart line titles,
+the package heading and the Track parcel / Contact store buttons) and they are fixed.
 
 ## 0. First thing in a fresh worktree
 

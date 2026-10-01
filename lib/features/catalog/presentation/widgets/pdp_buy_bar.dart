@@ -86,10 +86,12 @@ class PdpBuyBar extends StatelessWidget {
                                 ),
                               )
                             : const Icon(HubIcons.shoppingCart, size: 20),
-                        label: Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        // The price is part of the label: on a 360 dp phone
+                        // "Add to cart · AED 28.50" shrinks a little instead of
+                        // ending in "AED 28.…".
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(label, maxLines: 1),
                         ),
                       ),
                     ),

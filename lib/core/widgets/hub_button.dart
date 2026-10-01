@@ -101,8 +101,14 @@ class HubButton extends StatelessWidget {
         else if (icon != null)
           Icon(icon, size: iconSize),
         if (loading || icon != null) const SizedBox(width: 8),
+        // A label shrinks a little before it is cut: two buttons side by side
+        // on a 360 dp phone ("Track parcel", "Contact store") have 6 dp less
+        // than the frame's 390.
         Flexible(
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, maxLines: 1),
+          ),
         ),
       ],
     );
