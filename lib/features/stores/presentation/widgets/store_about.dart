@@ -187,9 +187,7 @@ class StorePoliciesTab extends StatelessWidget {
 /// white).
 TextStyle storeBodyStyle(BuildContext context) =>
     AppTextStyles.of(context).body.copyWith(
-      color: context.isDarkMode
-          ? const Color(0xFFAEB6C2)
-          : AppColors.inkSubtle,
+      color: context.isDarkMode ? const Color(0xFFAEB6C2) : AppColors.inkSubtle,
     );
 
 /// A seller's HTML (About, a policy) drawn natively; its links open the

@@ -147,7 +147,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         _sellerCode != null &&
         notification.metrics.axis == Axis.vertical &&
         notification.metrics.extentAfter < 400) {
-      ref.read(storeReviewsControllerProvider(_sellerCode!).notifier).loadMore();
+      ref
+          .read(storeReviewsControllerProvider(_sellerCode!).notifier)
+          .loadMore();
     }
     return false;
   }
@@ -715,7 +717,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           }, childCount: state.products.length),
         ),
       ),
-      if (state.isLoadingMore) const SliverToBoxAdapter(child: ProductGridSkeleton(count: 2)),
+      if (state.isLoadingMore)
+        const SliverToBoxAdapter(child: ProductGridSkeleton(count: 2)),
     ];
   }
 }

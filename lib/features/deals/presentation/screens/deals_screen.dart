@@ -46,10 +46,7 @@ class DealsScreen extends ConsumerWidget {
     } else if (state.items.isEmpty &&
         !state.isLoading &&
         state.filters.isEmpty) {
-      body = EmptyState(
-        icon: HubIcons.tag,
-        title: l10n.dealsEmpty,
-      );
+      body = EmptyState(icon: HubIcons.tag, title: l10n.dealsEmpty);
     } else {
       body = _DealsList(state: state, controller: controller);
     }
@@ -75,7 +72,9 @@ class _DealsList extends StatelessWidget {
     final deals = state.items;
     final ends = state.countdownEndsAt;
     final filters = state.filters;
-    final chips = state.filtersSupported ? state.categories : const <DealCategory>[];
+    final chips = state.filtersSupported
+        ? state.categories
+        : const <DealCategory>[];
     return RefreshIndicator(
       color: AppColors.brandPrimary,
       onRefresh: controller.refresh,
@@ -154,15 +153,11 @@ class _DealsList extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      EmptyState(
-                        icon: HubIcons.tag,
-                        title: l10n.dealsNoMatch,
-                      ),
+                      EmptyState(icon: HubIcons.tag, title: l10n.dealsNoMatch),
                       const SizedBox(height: 12),
                       OutlinedButton(
-                        onPressed: () => controller.apply(
-                          DealsFilters(sort: filters.sort),
-                        ),
+                        onPressed: () =>
+                            controller.apply(DealsFilters(sort: filters.sort)),
                         child: Text(l10n.filterClearAllLabel),
                       ),
                     ],
@@ -327,8 +322,9 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
             HubChip(
               label: '${c.name} (${c.count})',
               selected: _filters.categoryId == c.id,
-              onTap: () =>
-                  setState(() => _filters = _filters.copyWith(categoryId: c.id)),
+              onTap: () => setState(
+                () => _filters = _filters.copyWith(categoryId: c.id),
+              ),
             ),
         ]),
     ];
