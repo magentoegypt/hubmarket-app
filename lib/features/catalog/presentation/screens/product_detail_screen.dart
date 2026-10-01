@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/not_found_state.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -14,7 +15,6 @@ import '../../../../core/store/store_controller.dart';
 import '../../../../core/store/store_urls.dart';
 import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/async_value_view.dart';
-import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/util/image_prefetch.dart';
 import '../../../../l10n/l10n.dart';
@@ -121,7 +121,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final detail = ref.watch(productDetailProvider(widget.urlKey));
     // HubApp's additions (P3): who sells it, and a bundle's options. Null —
     // today's page — without HubApp.
@@ -167,17 +166,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             return ProductDetailSkeleton(preview: widget.preview);
           }
           if (product == null) {
-            // A stale or rewritten link lands here — give it a way out
-            // rather than a bare string in the middle of the page.
-            return EmptyState(
-              icon: HubIcons.link2Off,
-              title: l10n.linkNotFoundTitle,
-              body: l10n.linkNotFoundBody,
-              action: FilledButton(
-                onPressed: () => context.go(AppRoutes.home),
-                child: Text(l10n.navHome),
-              ),
-            );
+            // A stale or rewritten link lands here — Figma S7, with a way
+            // out rather than a bare string in the middle of the page.
+            return const NotFoundState();
           }
           final offers = extras?.offers ?? const [];
           return _Content(

@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
@@ -133,7 +134,7 @@ void main() {
   for (final locale in ['en', 'ar']) {
     testWidgets('the Hero Banner slides as the photo carousel ($locale)', (
       tester,
-    ) async {
+    ) => withRealShadows(() async {
       await _phone(tester);
       final key = GlobalKey();
       await tester.pumpWidget(
@@ -170,7 +171,7 @@ void main() {
       expect(find.text(l10n.welcomeHeadline), findsOneWidget);
       expect(find.text(l10n.welcomeCreateAccount), findsOneWidget);
       expect(tester.takeException(), isNull);
-    });
+    }));
   }
 
   testWidgets('without slides: the logo panel (Build 1), no invented pill', (
@@ -188,9 +189,76 @@ void main() {
     expect(find.text('Continue as guest'), findsOneWidget);
   });
 
+  for (final (name, size, top, scale) in [
+    ('a small Android phone', const Size(360, 640), 24.0, 1.0),
+    ('an iPhone SE', const Size(375, 667), 20.0, 1.0),
+    ('the smallest supported phone', const Size(320, 568), 20.0, 1.0),
+    ('a phone at 130 % text', const Size(390, 844), 47.0, 1.3),
+  ]) {
+    testWidgets('fits $name without overflow, and the buttons stay in view', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = FakeViewPadding(top: top, bottom: 0);
+      tester.view.viewPadding = FakeViewPadding(top: top, bottom: 0);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(_harness(slides: const []));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final guest = tester.getRect(find.text('Continue as guest'));
+      expect(guest.bottom, lessThanOrEqualTo(size.height));
+      expect(guest.top, greaterThan(0));
+    });
+  }
+
+  testWidgets('Create account, Sign in and Continue as guest go where they '
+      'say', (tester) async {
+    await _phone(tester);
+    await tester.pumpWidget(_harness(slides: const []));
+    await tester.pumpAndSettle();
+    final router = GoRouter.of(tester.element(find.byType(WelcomeScreen)));
+    String where() =>
+        router.routerDelegate.currentConfiguration.last.matchedLocation;
+
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+    expect(where(), AppRoutes.signUp);
+    router.pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(where(), AppRoutes.signIn);
+    router.pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continue as guest'));
+    await tester.pumpAndSettle();
+    expect(where(), AppRoutes.home);
+  });
+
+  testWidgets('the language switch keeps English on the left in Arabic too '
+      '(Figma AR-02)', (tester) async {
+    await _phone(tester);
+    await tester.pumpWidget(_harness(slides: const [], locale: 'ar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getCenter(find.text('English')).dx,
+      lessThan(tester.getCenter(find.text('عربي')).dx),
+    );
+    // The pager and the buttons' labels follow the language, the switch does
+    // not move.
+    expect(find.text('إنشاء حساب'), findsOneWidget);
+  });
+
   for (final locale in ['en', 'ar']) {
     testWidgets('the logo panel pill is the store\'s delivery promise '
-        '($locale)', (tester) async {
+        '($locale)', (tester) => withRealShadows(() async {
       await _phone(tester);
       final key = GlobalKey();
       final promise = locale == 'ar'
@@ -217,6 +285,6 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
-    });
+    }));
   }
 }

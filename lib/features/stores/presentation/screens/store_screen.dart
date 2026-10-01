@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../app/not_found_state.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -297,8 +298,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     if (loaded.hasValue && loaded.value == null) {
       return _plain(
         context,
-        EmptyState(
-          icon: HubIcons.store,
+        NotFoundState(
           title: l10n.storeNotFoundTitle,
           body: l10n.storeNotFoundBody,
         ),

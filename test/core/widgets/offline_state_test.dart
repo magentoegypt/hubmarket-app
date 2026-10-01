@@ -113,8 +113,10 @@ class _OfflineCatalog extends FakeCatalogRepository {
   }) async => throw const Failure(FailureKind.network, detail: 'offline');
 }
 
+/// The product list is pushed over Home, as in the app, so it has the back
+/// arrow the frame shows; [_openPlp] does the pushing.
 GoRouter _plpRouter(String title) => GoRouter(
-  initialLocation: AppRoutes.category('cat-furniture'),
+  initialLocation: AppRoutes.home,
   routes: [
     GoRoute(
       path: '/category/:uid',
@@ -126,6 +128,9 @@ GoRouter _plpRouter(String title) => GoRouter(
     GoRoute(path: '/product/:urlKey', builder: (_, _) => const Scaffold()),
   ],
 );
+
+void _openPlp(GoRouter router) =>
+    unawaited(router.push(AppRoutes.category('cat-furniture')));
 
 void main() {
   group('S3 offline state (AsyncValueView)', () {
@@ -320,17 +325,22 @@ void main() {
           tester.view.viewPadding = const FakeViewPadding(top: 47, bottom: 34);
           addTearDown(tester.view.reset);
           final key = GlobalKey();
+          final router = _plpRouter(
+            locale == 'ar' ? 'أثاث منزلي' : 'Home Furniture',
+          );
           await tester.pumpWidget(
             _app(
               locale: locale,
               network: _Network(false),
-              router: _plpRouter(locale == 'ar' ? 'أثاث منزلي' : 'Home Furniture'),
+              router: router,
               overrides: [
                 catalogRepositoryProvider.overrideWithValue(_OfflineCatalog()),
               ],
               boundary: key,
             ),
           );
+          await tester.pumpAndSettle();
+          _openPlp(router);
           await tester.pumpAndSettle();
           await captureScreen(tester, key, 'S3_offline_$locale');
 

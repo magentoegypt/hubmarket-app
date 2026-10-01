@@ -4,15 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../core/store/store_controller.dart';
 import '../core/store/store_urls.dart';
-import '../core/widgets/empty_state.dart';
 import '../core/widgets/web_view_screen.dart';
 import '../features/catalog/data/catalog_repository.dart';
 import '../features/catalog/presentation/storefront_links.dart';
 import '../features/cms/domain/cms_links.dart';
 import '../l10n/l10n.dart';
+import 'not_found_state.dart';
 import 'routes.dart';
 import 'theme/app_colors.dart';
-import 'theme/hub_icons.dart';
 
 /// Landing point for any location the route table can't match — in practice an
 /// incoming Android App Link such as
@@ -32,8 +31,9 @@ import 'theme/hub_icons.dart';
 ///     page);
 ///  3. anything else on our own domain (`shopbrand`, the blog) opens in the
 ///     in-app [WebViewScreen] rather than dead-ending;
-///  4. only a foreign host or an unparseable URL falls through to a branded
-///     not-found. It deliberately does **not** hand the URL back to the browser:
+///  4. only a foreign host or an unparseable URL falls through to the "page
+///     isn't available" page (Figma S7, [NotFoundPage]). It deliberately does
+///     **not** hand the URL back to the browser:
 ///     the app claims the domain, so that can bounce straight back here.
 class DeepLinkResolverScreen extends ConsumerStatefulWidget {
   const DeepLinkResolverScreen({super.key, required this.uri});
@@ -165,7 +165,6 @@ class _DeepLinkResolverScreenState
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     if (!_failed) {
       return const Scaffold(
         body: Center(
@@ -173,17 +172,7 @@ class _DeepLinkResolverScreenState
         ),
       );
     }
-    return Scaffold(
-      appBar: AppBar(),
-      body: EmptyState(
-        icon: HubIcons.link2Off,
-        title: l10n.linkNotFoundTitle,
-        body: l10n.linkNotFoundBody,
-        action: FilledButton(
-          onPressed: () => context.go(AppRoutes.home),
-          child: Text(l10n.navHome),
-        ),
-      ),
-    );
+    // Figma S7: the page for a link that leads nowhere.
+    return const NotFoundPage();
   }
 }

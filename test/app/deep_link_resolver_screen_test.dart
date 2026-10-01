@@ -165,13 +165,13 @@ void main() {
       );
     });
 
-    testWidgets('shows the branded not-found for a foreign host', (
-      tester,
-    ) async {
+    testWidgets('shows the "page isn\'t available" page (S7) for a foreign '
+        'host', (tester) async {
       await _pump(tester, link: 'https://example.com/uae-en/whatever.html');
 
-      expect(find.text('Link not found'), findsOneWidget);
-      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('This page isn’t available'), findsOneWidget);
+      expect(find.text('Search Hub Market'), findsOneWidget);
+      expect(find.text('Go to Home'), findsOneWidget);
     });
 
     testWidgets('switches to Arabic for a /uae-ar/ link', (tester) async {

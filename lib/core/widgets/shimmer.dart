@@ -11,7 +11,7 @@ class Shimmer extends StatefulWidget {
   const Shimmer({
     super.key,
     required this.child,
-    this.base = AppColors.surfaceMuted,
+    this.base = AppColors.surfaceSubtle,
     this.highlight = Colors.white,
     this.period = const Duration(milliseconds: 1400),
   });
@@ -32,10 +32,24 @@ class Shimmer extends StatefulWidget {
 }
 
 class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
+  // Created up front, not on first use: under "reduce motion" nothing reads it
+  // while building, and creating it for the first time in dispose() asserts.
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.period,
-  )..repeat();
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Respect the platform "reduce motion" setting: no sweep, so no ticker.
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduceMotion) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
 
   @override
   void dispose() {
@@ -47,7 +61,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     // Respect the platform "reduce motion" setting: paint a flat base tint
     // (still a skeleton, just not animated) instead of running the ticker.
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (reduceMotion) {
       return ShaderMask(
         blendMode: BlendMode.srcATop,
@@ -100,13 +114,13 @@ class SkeletonBox extends StatelessWidget {
     this.width,
     this.height,
     this.borderRadius = 8,
-    this.color = AppColors.surfaceMuted,
+    this.color = AppColors.surfaceSubtle,
   }) : shape = BoxShape.rectangle;
 
   const SkeletonBox.circle({
     super.key,
     required double size,
-    this.color = AppColors.surfaceMuted,
+    this.color = AppColors.surfaceSubtle,
   }) : width = size,
        height = size,
        borderRadius = 0,

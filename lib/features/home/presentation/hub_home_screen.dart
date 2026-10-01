@@ -33,6 +33,7 @@ import 'hm_home_providers.dart';
 import 'hm_home_view.dart';
 import 'home_providers.dart';
 import 'widgets/home_active_order.dart';
+import 'widgets/home_skeleton.dart';
 import '../../../app/theme/hub_icons.dart';
 
 /// Carousel card width (Figma v2/v3): 152 pt so the next card peeks ~30%.
@@ -160,15 +161,15 @@ class _Build1Home extends ConsumerWidget {
   }
 }
 
-/// While the Home's source is being decided: the category and rail
-/// skeletons.
+/// While the Home's source is being decided: the frame's loading page (Figma
+/// S4).
 class _HomeLoading extends StatelessWidget {
   const _HomeLoading();
 
   @override
-  Widget build(BuildContext context) => ListView(
-    physics: const NeverScrollableScrollPhysics(),
-    children: const [_CategorySkeleton(), _RailSkeleton(), _RailSkeleton()],
+  Widget build(BuildContext context) => const SingleChildScrollView(
+    physics: NeverScrollableScrollPhysics(),
+    child: HomeSkeleton(),
   );
 }
 

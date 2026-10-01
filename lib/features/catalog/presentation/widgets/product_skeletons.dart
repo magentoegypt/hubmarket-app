@@ -7,60 +7,51 @@ import '../../domain/product_preview.dart';
 import '../product_navigation.dart';
 import 'product_card.dart';
 
-/// A loading placeholder shaped like [ProductCard]: a square image block, then
-/// the seller, name, rating and price + "+" rows as grey bars (the [Shimmer]
-/// runs over the whole card, which has no surface of its own).
+/// A loading placeholder for [ProductCard] (Figma S4 "card-skeleton"): a square
+/// image block, then four bars 8 px apart — the seller, the name on two lines
+/// and the price (the [Shimmer] runs over the whole card, which has no surface
+/// of its own).
 class ProductCardSkeleton extends StatelessWidget {
   const ProductCardSkeleton({super.key});
 
   @override
+  Widget build(BuildContext context) =>
+      const Shimmer(child: ProductCardSkeletonShape());
+}
+
+/// What [ProductCardSkeleton] draws, without a [Shimmer] of its own: for a
+/// skeleton page that runs one shimmer over everything. The bars are the
+/// frame's 60, 150, 110 and 70 px under a 171 px card, as shares of the width.
+class ProductCardSkeletonShape extends StatelessWidget {
+  const ProductCardSkeletonShape({super.key});
+
+  static Widget _bar(double share, double height) => FractionallySizedBox(
+    alignment: AlignmentDirectional.centerStart,
+    widthFactor: share,
+    child: SkeletonBox(height: height, borderRadius: 8),
+  );
+
+  @override
   Widget build(BuildContext context) {
-    return const Shimmer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: SkeletonBox(borderRadius: 12),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Flexible(
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: SkeletonBox(borderRadius: 12),
           ),
-          SizedBox(height: ProductCardMetrics.imageGap),
-          // Seller, name, rating.
-          FractionallySizedBox(
-            alignment: AlignmentDirectional.centerStart,
-            widthFactor: 0.35,
-            child: SkeletonBox(height: 12, borderRadius: 4),
-          ),
-          SizedBox(height: 8),
-          SkeletonBox(height: 14, borderRadius: 4),
-          SizedBox(height: 10),
-          FractionallySizedBox(
-            alignment: AlignmentDirectional.centerStart,
-            widthFactor: 0.4,
-            child: SkeletonBox(height: 12, borderRadius: 4),
-          ),
-          SizedBox(height: 10),
-          // Price and the round add button.
-          Row(
-            children: [
-              Expanded(
-                child: FractionallySizedBox(
-                  alignment: AlignmentDirectional.centerStart,
-                  widthFactor: 0.6,
-                  child: SkeletonBox(height: 16, borderRadius: 4),
-                ),
-              ),
-              SkeletonBox(
-                width: ProductCardMetrics.buttonSize,
-                height: ProductCardMetrics.buttonSize,
-                borderRadius: 18,
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        _bar(60 / 171, 10),
+        const SizedBox(height: 8),
+        _bar(150 / 171, 12),
+        const SizedBox(height: 8),
+        _bar(110 / 171, 12),
+        const SizedBox(height: 8),
+        _bar(70 / 171, 16),
+      ],
     );
   }
 }

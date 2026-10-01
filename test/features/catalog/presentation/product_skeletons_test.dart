@@ -25,8 +25,9 @@ void main() {
     await tester.pump();
 
     expect(find.byType(Shimmer), findsOneWidget);
-    // Image block, seller / name / rating / price bars and the round add button.
-    expect(find.byType(SkeletonBox), findsNWidgets(6));
+    // Figma S4: the image block, then the seller bar, the name's two bars and
+    // the price bar (no add button).
+    expect(find.byType(SkeletonBox), findsNWidgets(5));
   });
 
   testWidgets('ProductGridSkeleton builds the requested number of cards', (
