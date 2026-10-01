@@ -18,6 +18,7 @@ import '../order_actions.dart';
 import '../../../../core/widgets/hub_back_button.dart';
 import '../../domain/order.dart';
 import '../order_format.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -106,7 +107,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     }
     if (state.orders.isEmpty) {
       return EmptyState(
-        icon: Icons.receipt_long_outlined,
+        icon: HubIcons.receiptText,
         title: l10n.ordersEmpty,
       );
     }
@@ -126,7 +127,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           Padding(
             padding: const EdgeInsets.all(40),
             child: EmptyState(
-              icon: Icons.receipt_long_outlined,
+              icon: HubIcons.receiptText,
               title: l10n.ordersEmpty,
             ),
           )
@@ -161,7 +162,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 48, 24, 8),
             child: EmptyState(
-              icon: Icons.local_shipping_outlined,
+              icon: HubIcons.truck,
               title: l10n.ordersGuestTitle,
               body: l10n.ordersGuestBody,
             ),
@@ -191,7 +192,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => context.push(AppRoutes.guestTrackOrder),
-                  icon: const Icon(Icons.search, size: 18),
+                  icon: const Icon(HubIcons.search, size: 18),
                   label: Text(l10n.ordersTrackAnother),
                 ),
               ),
@@ -669,7 +670,7 @@ class _Thumb extends StatelessWidget {
           error: (_) => const ColoredBox(
             color: AppColors.surfaceTint,
             child: Icon(
-              Icons.image_outlined,
+              HubIcons.image,
               size: 18,
               color: AppColors.inkMuted,
             ),

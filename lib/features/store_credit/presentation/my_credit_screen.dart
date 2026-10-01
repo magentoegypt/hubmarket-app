@@ -14,6 +14,7 @@ import '../../account/presentation/order_format.dart';
 import '../domain/store_credit.dart';
 import 'buy_credit_card.dart';
 import 'store_credit_providers.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Figma `text/subtle` (#535D70): the transaction's second line.
 const Color _inkSubtle = Color(0xFF535D70);
@@ -132,7 +133,7 @@ class CreditBalanceCard extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.card_giftcard_outlined,
+                HubIcons.gift,
                 size: 18,
                 color: AppColors.accentOnDark,
               ),
@@ -339,22 +340,22 @@ class _KindIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final (IconData icon, Color color, Color fill) = switch (kind) {
       StoreCreditTransactionKind.refunded => (
-        Icons.replay_rounded,
+        HubIcons.rotateCcw,
         AppColors.successStrong,
         AppColors.successSubtle,
       ),
       StoreCreditTransactionKind.spent => (
-        Icons.shopping_cart_outlined,
+        HubIcons.shoppingCart,
         AppColors.info,
         AppColors.infoSubtle,
       ),
       StoreCreditTransactionKind.added => (
-        Icons.add_rounded,
+        HubIcons.plus,
         AppColors.warning,
         AppColors.warningSubtle,
       ),
       StoreCreditTransactionKind.deducted => (
-        Icons.remove_rounded,
+        HubIcons.minus,
         AppColors.inkMuted,
         AppColors.surfaceMuted,
       ),

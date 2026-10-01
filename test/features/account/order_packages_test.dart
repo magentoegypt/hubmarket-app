@@ -132,7 +132,7 @@ void main() {
     expect(loly.subtotal?.amount, 50);
     expect(loly.discount, isNull);
     expect(loly.shippingAmount, isNull);
-    expect(loly.grandTotal?.formatted(), 'AED 50.00');
+    expect(loly.grandTotal?.formatted(), 'AED 50');
     final shipment = loly.shipments.single;
     expect(shipment.number, '000000031');
     expect(shipment.createdAt, DateTime.utc(2026, 9, 29, 6, 10));

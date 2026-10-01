@@ -9,6 +9,7 @@ import 'package:hubmarket_app/features/store_credit/data/store_credit_repository
 import '../../support/fakes.dart';
 import '../../support/store_credit_fakes.dart';
 import 'checkout_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// The checkout cart whose total follows the credit on it, the way Magento
 /// recollects the quote once Vnecoms Credit has been applied.
@@ -95,7 +96,7 @@ void main() {
       await _toPayment(tester, credit: credit);
 
       expect(find.text('Use my credit'), findsOneWidget);
-      expect(find.textContaining('AED 120.00'), findsOneWidget);
+      expect(find.textContaining('AED 120'), findsOneWidget);
       expect(find.textContaining('available'), findsOneWidget);
       expect(tester.widget<Switch>(_switch).value, isFalse);
       // Read when the step opened: the shipping method is on the cart.
@@ -123,8 +124,8 @@ void main() {
         expect(find.textContaining('used on this order'), findsOneWidget);
         // The summary carries the credit and the total Magento now charges.
         expect(find.text('Store credit'), findsOneWidget);
-        expect(find.text('−AED 120.00'), findsOneWidget);
-        expect(find.text('AED 433.00'), findsOneWidget);
+        expect(find.text('−AED 120'), findsOneWidget);
+        expect(find.text('AED 433'), findsOneWidget);
         // Cash on delivery still pays for the rest: no method change.
         expect(checkout.calls.where((c) => c.startsWith('setPaymentMethod')), [
           'setPaymentMethod:cashondelivery',
@@ -133,7 +134,7 @@ void main() {
         // Review shows the same credit, and Place order quotes the new total.
         await tapText(tester, 'Review order');
         expect(find.text('Store credit'), findsOneWidget);
-        expect(find.text('Place order · AED 433.00'), findsOneWidget);
+        expect(find.text('Place order · AED 433'), findsOneWidget);
       },
     );
 
@@ -151,7 +152,7 @@ void main() {
       expect(credit.calls.last, 'remove:customer-1');
       expect(tester.widget<Switch>(_switch).value, isFalse);
       expect(find.text('Store credit'), findsNothing);
-      expect(find.text('AED 553.00'), findsOneWidget);
+      expect(find.text('AED 553'), findsOneWidget);
     });
 
     testWidgets(
@@ -194,7 +195,7 @@ void main() {
       );
       expect(tester.widget<Switch>(_switch).value, isFalse);
       expect(find.text('Store credit'), findsNothing);
-      expect(find.text('AED 553.00'), findsOneWidget);
+      expect(find.text('AED 553'), findsOneWidget);
     });
 
     testWidgets('reads the credit again each time the step opens', (
@@ -202,7 +203,7 @@ void main() {
     ) async {
       final credit = FakeStoreCreditRepository(cartCredit: sampleCartCredit());
       await _toPayment(tester, credit: credit);
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(HubIcons.arrowLeft));
       await tester.pumpAndSettle();
       await tapText(tester, 'Continue to payment');
       expect(credit.calls, [

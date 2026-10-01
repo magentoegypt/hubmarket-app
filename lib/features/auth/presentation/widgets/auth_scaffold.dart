@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The layout every auth screen shares (Figma 03 – 06, S6): a 56-px app bar
 /// with the back arrow (and, on Register, the title beside it), then a white
@@ -102,7 +103,7 @@ class AuthAppBar extends StatelessWidget implements PreferredSizeWidget {
                   child: IconButton(
                     padding: EdgeInsets.zero,
                     // `arrow_back` mirrors itself in RTL (matchTextDirection).
-                    icon: const Icon(Icons.arrow_back, size: 22),
+                    icon: const Icon(HubIcons.arrowLeft, size: 22),
                     color: AppColors.inkHeading,
                     tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                     onPressed: onBack ?? () => Navigator.maybePop(context),

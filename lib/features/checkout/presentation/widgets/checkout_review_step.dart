@@ -11,6 +11,7 @@ import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
 import 'payment_method_tile.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Step 3 cards (Figma 18b): what ships where and how, how it is paid, and
 /// the items.
@@ -37,7 +38,7 @@ class ReviewShippingCard extends StatelessWidget {
       title: l10n.checkoutStepShipping,
       trailing: CheckoutLink(
         label: l10n.actionEdit,
-        icon: Icons.edit_outlined,
+        icon: HubIcons.pencil,
         onTap: onEdit,
       ),
       children: [
@@ -46,7 +47,7 @@ class ReviewShippingCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Icon(
-                Icons.location_on_outlined,
+                HubIcons.mapPin,
                 size: 18,
                 color: AppColors.accentStrong,
               ),
@@ -70,7 +71,7 @@ class ReviewShippingCard extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.local_shipping_outlined,
+                HubIcons.truck,
                 size: 18,
                 color: AppColors.inkHeading,
               ),
@@ -110,7 +111,7 @@ class ReviewPaymentCard extends StatelessWidget {
       title: l10n.checkoutStepPayment,
       trailing: CheckoutLink(
         label: l10n.actionEdit,
-        icon: Icons.edit_outlined,
+        icon: HubIcons.pencil,
         onTap: onEdit,
       ),
       children: [

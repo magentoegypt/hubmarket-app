@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/widgets/network_image.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 const _url = 'https://hub-market.magento2.click/media/catalog/product/cache/abc/a/t/x.jpg';
 
@@ -22,7 +23,7 @@ void main() {
         );
         expect(find.byType(CachedNetworkImage), findsNothing);
         // Falls back to the "no image" state, not a blank hole.
-        expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+        expect(find.byIcon(HubIcons.image), findsOneWidget);
       }
     });
 

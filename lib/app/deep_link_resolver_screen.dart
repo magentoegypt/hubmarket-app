@@ -12,6 +12,7 @@ import '../features/cms/domain/cms_links.dart';
 import '../l10n/l10n.dart';
 import 'routes.dart';
 import 'theme/app_colors.dart';
+import 'theme/hub_icons.dart';
 
 /// Landing point for any location the route table can't match — in practice an
 /// incoming Android App Link such as
@@ -175,7 +176,7 @@ class _DeepLinkResolverScreenState
     return Scaffold(
       appBar: AppBar(),
       body: EmptyState(
-        icon: Icons.link_off,
+        icon: HubIcons.link2Off,
         title: l10n.linkNotFoundTitle,
         body: l10n.linkNotFoundBody,
         action: FilledButton(

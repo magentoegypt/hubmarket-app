@@ -6,6 +6,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../l10n/l10n.dart';
 import '../data/notification_inbox.dart';
 import '../domain/notification_item.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// App-bar bell that opens the notification feed, with the Figma unread dot
 /// (07 Home "icon-btn/bell"): an orange dot on its top corner while the local
@@ -16,7 +17,7 @@ class NotificationBell extends StatelessWidget {
   const NotificationBell({
     super.key,
     this.color,
-    this.icon = Icons.notifications_none,
+    this.icon = HubIcons.bell,
   });
 
   final Color? color;

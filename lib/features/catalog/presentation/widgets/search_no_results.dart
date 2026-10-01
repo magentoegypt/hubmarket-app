@@ -14,6 +14,7 @@ import '../product_navigation.dart';
 import '../search_providers.dart';
 import 'product_card.dart';
 import 'search_style.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// A search that found nothing (Figma S2): the search glyph in a grey disc,
 /// "No results for “…”" and a hint.
@@ -41,7 +42,6 @@ class SearchNoResults extends ConsumerWidget {
 
   /// The rail's card, as on Home.
   static const double _cardWidth = 152;
-  static const double _railHeight = 292;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,7 +74,7 @@ class SearchNoResults extends ConsumerWidget {
               color: SearchStyle.pillFill(context),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.search, size: 48, color: context.scaffoldMuted),
+            child: Icon(HubIcons.search, size: 48, color: context.scaffoldMuted),
           ),
         ),
         const SizedBox(height: 12),
@@ -109,7 +109,7 @@ class SearchNoResults extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: OutlinedButton.icon(
               onPressed: () => context.push(AppRoutes.stores),
-              icon: const Icon(Icons.storefront_outlined, size: 20),
+              icon: const Icon(HubIcons.store, size: 20),
               label: Text(l10n.searchBrowseStores),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
@@ -149,7 +149,7 @@ class SearchNoResults extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: _railHeight,
+            height: ProductCardMetrics.heightFor(context, _cardWidth),
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -246,7 +246,7 @@ class _ViewAll extends StatelessWidget {
             ),
             const SizedBox(width: 2),
             const Icon(
-              Icons.arrow_forward,
+              HubIcons.arrowRight,
               size: 16,
               color: AppColors.accentStrong,
             ),

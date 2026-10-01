@@ -9,6 +9,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/search_history.dart';
 import '../../domain/hm_home.dart';
 import 'hm_product_rail.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Picked For You (Figma 07 "Picked For You (AI)"): a tinted band — the
 /// admin's title and subtitle, Refresh, the customer's own recent searches as
@@ -85,7 +86,7 @@ class HmPickedForYou extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                Icons.refresh_rounded,
+                                HubIcons.refreshCw,
                                 size: 14,
                                 color: AppColors.inkHeading,
                               ),
@@ -156,7 +157,7 @@ class _SearchChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search, size: 12, color: AppColors.inkHeading),
+              const Icon(HubIcons.search, size: 12, color: AppColors.inkHeading),
               const SizedBox(width: 4),
               Text(
                 term,

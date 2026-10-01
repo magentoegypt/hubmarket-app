@@ -18,6 +18,7 @@ import 'package:hubmarket_app/features/cms/presentation/cms_page_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 final _privacy = CmsPage(
   identifier: 'privacy-policy-cookie-restriction-mode',
@@ -146,7 +147,7 @@ void main() {
     expect(find.text('This policy explains what we collect.'), findsOneWidget);
     expect(find.text('What we collect'), findsNWidgets(2)); // chip + heading
     expect(find.text('How we use it'), findsNWidgets(2));
-    expect(find.byIcon(Icons.share_outlined), findsOneWidget);
+    expect(find.byIcon(HubIcons.share2), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

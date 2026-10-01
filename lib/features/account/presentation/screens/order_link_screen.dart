@@ -15,6 +15,7 @@ import '../../data/account_repository.dart';
 import '../../data/guest_order_store.dart';
 import '../../domain/order.dart';
 import 'order_detail_screen.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The order [number] as this session may read it: the signed-in customer's
 /// own (`customer.orders` filtered by number), or a guest order this device
@@ -140,7 +141,7 @@ class _NotFound extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return EmptyState(
-      icon: Icons.receipt_long_outlined,
+      icon: HubIcons.receiptText,
       title: l10n.orderNotFoundTitle,
       body: l10n.orderNotFoundBody(number),
       action: OutlinedButton(
@@ -166,7 +167,7 @@ class _LoadError extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final failure = error;
     return EmptyState(
-      icon: Icons.cloud_off_outlined,
+      icon: HubIcons.cloudOff,
       title: failure is Failure
           ? failureMessage(context, failure)
           : l10n.errorGeneric,

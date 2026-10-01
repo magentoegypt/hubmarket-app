@@ -10,6 +10,7 @@ import '../../../../core/util/store_time.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/domain/order.dart';
 import '../active_order_providers.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The Home's active-order card, near the top of both Homes: shown to a
 /// signed-in customer whose recent order is still open
@@ -77,7 +78,7 @@ class ActiveOrderCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.local_shipping_outlined,
+                  HubIcons.truck,
                   size: 20,
                   color: AppColors.successStrong,
                 ),

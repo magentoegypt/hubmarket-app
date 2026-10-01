@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// A Home section header (Figma 07 "section-header/…"): an optional leading
 /// glyph, the admin's title (Heading 1) and subtitle (Caption), and the
@@ -84,7 +85,7 @@ class HmSectionHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 2),
                     const Icon(
-                      Icons.arrow_forward,
+                      HubIcons.arrowRight,
                       size: 16,
                       color: AppColors.accentStrong,
                     ),

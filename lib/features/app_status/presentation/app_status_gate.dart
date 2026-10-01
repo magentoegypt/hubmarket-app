@@ -8,6 +8,7 @@ import '../../../core/hubapp/hubapp.dart';
 import '../../../core/util/launch.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../../l10n/l10n.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// What the Hub Market App settings say about using the app right now.
 enum AppGate { open, maintenance, updateRequired }
@@ -76,7 +77,7 @@ class MaintenanceScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final minutes = maintenance.retryAfterMinutes;
     return _StatusPage(
-      icon: Icons.construction_rounded,
+      icon: HubIcons.construction,
       iconColor: AppColors.accentStrong,
       discColor: AppColors.accentSubtle,
       title: l10n.maintenanceTitle,
@@ -100,7 +101,7 @@ class UpdateRequiredScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final storeUrl = Uri.tryParse(policy?.storeUrl ?? '');
     return _StatusPage(
-      icon: Icons.system_update_rounded,
+      icon: HubIcons.download,
       iconColor: AppColors.brandPrimary,
       discColor: AppColors.surfaceTint,
       title: l10n.updateRequiredTitle,

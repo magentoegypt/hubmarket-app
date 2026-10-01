@@ -13,6 +13,7 @@ import '../../../cms/presentation/cms_navigation.dart';
 import '../../../cms/presentation/cms_providers.dart';
 import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../delete_account_action.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Privacy & data (Figma 20b): the store's policies and account deletion.
 ///
@@ -120,7 +121,7 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
           Row(
             children: [
               const Icon(
-                Icons.delete_outline,
+                HubIcons.trash2,
                 color: AppColors.danger,
                 size: 22,
               ),
@@ -147,7 +148,7 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
                   const Padding(
                     padding: EdgeInsets.only(top: 1),
                     child: Icon(
-                      Icons.warning_amber_rounded,
+                      HubIcons.triangleAlert,
                       size: 16,
                       color: AppColors.danger,
                     ),
@@ -176,7 +177,7 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(
-                  Icons.info_outline,
+                  HubIcons.info,
                   size: 18,
                   color: AppColors.accentStrong,
                 ),

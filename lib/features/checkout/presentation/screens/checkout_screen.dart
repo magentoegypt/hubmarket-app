@@ -30,6 +30,7 @@ import '../widgets/guest_verify_card.dart';
 import '../widgets/payment_method_tile.dart';
 import '../widgets/store_credit_row.dart';
 import 'order_success_screen.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Checkout in three steps (Figma 17 → 18 → 18b), ending on Order placed (19):
 ///
@@ -407,7 +408,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             titleSpacing: 0,
             scrolledUnderElevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, size: 22),
+              icon: const Icon(HubIcons.arrowLeft, size: 22),
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               onPressed: busy ? null : _onBack,
             ),
@@ -740,7 +741,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               onPressed: (busy || !state.paymentDone)
                   ? null
                   : _controller.continueToReview,
-              icon: const Icon(Icons.arrow_forward, size: 20),
+              icon: const Icon(HubIcons.arrowRight, size: 20),
               label: Text(l10n.checkoutReviewOrder),
             ),
           ],
@@ -756,7 +757,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       !state.canEnter(CheckoutStep.review))
                   ? null
                   : _placeOrder,
-              icon: const Icon(Icons.lock_outline, size: 20),
+              icon: const Icon(HubIcons.lock, size: 20),
               label: Text(
                 total == null
                     ? l10n.checkoutPlaceOrder

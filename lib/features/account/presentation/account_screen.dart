@@ -18,6 +18,7 @@ import '../../returns/presentation/returns_providers.dart';
 import '../../wishlist/presentation/wishlist_controller.dart';
 import '../data/account_repository.dart';
 import '../data/guest_order_store.dart';
+import '../../../app/theme/hub_icons.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -199,13 +200,13 @@ class _Authenticated extends ConsumerWidget {
         const _AccountBand(),
         // Account group (Figma 110:2 / 42:30 …).
         _AccountTile(
-          icon: Icons.person_outline,
+          icon: HubIcons.user,
           label: l10n.profileTitle,
           onTap: () => context.push(AppRoutes.editProfile),
         ),
         const _TileDivider(),
         _AccountTile(
-          icon: Icons.receipt_long_outlined,
+          icon: HubIcons.receiptText,
           label: l10n.accountOrders,
           onTap: () => context.push(AppRoutes.orders),
         ),
@@ -214,20 +215,20 @@ class _Authenticated extends ConsumerWidget {
         if (returnsAvailable) ...[
           const _TileDivider(),
           _AccountTile(
-            icon: Icons.replay,
+            icon: HubIcons.rotateCcw,
             label: l10n.returnsMyReturns,
             onTap: () => context.push(AppRoutes.returns),
           ),
         ],
         const _TileDivider(),
         _AccountTile(
-          icon: Icons.favorite_border,
+          icon: HubIcons.heart,
           label: l10n.wishlistHeading,
           onTap: () => context.go(AppRoutes.wishlist),
         ),
         const _TileDivider(),
         _AccountTile(
-          icon: Icons.location_on_outlined,
+          icon: HubIcons.mapPin,
           label: l10n.accountAddresses,
           onTap: () => context.push(AppRoutes.addresses),
         ),
@@ -237,7 +238,7 @@ class _Authenticated extends ConsumerWidget {
         if (hasSavedCards) ...[
           const _TileDivider(),
           _AccountTile(
-            icon: Icons.credit_card_outlined,
+            icon: HubIcons.creditCard,
             label: l10n.savedCardsTitle,
             onTap: () => context.push(AppRoutes.paymentMethods),
           ),
@@ -247,7 +248,7 @@ class _Authenticated extends ConsumerWidget {
         if (creditEnabled) ...[
           const _TileDivider(),
           _AccountTile(
-            icon: Icons.card_giftcard_outlined,
+            icon: HubIcons.gift,
             label: l10n.myCreditTitle,
             value: creditValue,
             valueColor: AppColors.successStrong,
@@ -266,7 +267,7 @@ class _Authenticated extends ConsumerWidget {
         if (pushAvailable) ...[
           const _TileDivider(),
           _AccountTile(
-            icon: Icons.notifications_none,
+            icon: HubIcons.bell,
             label: l10n.notificationsTitle,
             onTap: () => context.push(AppRoutes.notificationSettings),
           ),
@@ -274,7 +275,7 @@ class _Authenticated extends ConsumerWidget {
         if (newsletterEnabled) ...[
           const _TileDivider(),
           _AccountTile(
-            icon: Icons.mail_outline,
+            icon: HubIcons.mail,
             label: l10n.newsletterTitle,
             onTap: () => context.push(AppRoutes.notificationSettings),
           ),
@@ -282,7 +283,7 @@ class _Authenticated extends ConsumerWidget {
         const _AccountBand(),
         // Preferences group (Figma 43:3 …).
         _AccountTile(
-          icon: Icons.language_outlined,
+          icon: HubIcons.globe,
           label: l10n.languageToggleLabel,
           value: languageLabel,
           onTap: () => context.push(AppRoutes.settings),
@@ -295,20 +296,20 @@ class _Authenticated extends ConsumerWidget {
         // account" on this row, so a customer (or a reviewer) finds it here;
         // Privacy & data holds the action, and Settings keeps its copy too.
         _AccountTile(
-          icon: Icons.shield_outlined,
+          icon: HubIcons.shield,
           label: l10n.privacyDataTitle,
           value: l10n.deleteAccountTitle,
           onTap: () => context.push(AppRoutes.privacyData),
         ),
         const _AccountBand(),
         _AccountTile(
-          icon: Icons.help_outline,
+          icon: HubIcons.circleHelp,
           label: l10n.helpCentreTitle,
           onTap: () => context.push(AppRoutes.help),
         ),
         const _TileDivider(),
         _AccountTile(
-          icon: Icons.info_outline,
+          icon: HubIcons.info,
           label: l10n.accountAbout,
           onTap: () => context.push(AppRoutes.about),
         ),
@@ -321,7 +322,7 @@ class _Authenticated extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.logout, color: AppColors.accentSale, size: 20),
+                const Icon(HubIcons.logOut, color: AppColors.accentSale, size: 20),
                 const SizedBox(width: 10),
                 Text(
                   l10n.accountLogOut,
@@ -465,7 +466,7 @@ class _AccountTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-            Icon(Icons.chevron_right, color: context.scaffoldMuted, size: 18),
+            Icon(HubIcons.chevronRight, color: context.scaffoldMuted, size: 18),
           ],
         ),
       ),
@@ -495,7 +496,7 @@ class _Guest extends ConsumerWidget {
                 radius: 48,
                 backgroundColor: AppColors.surfaceTint,
                 child: Icon(
-                  Icons.person_outline,
+                  HubIcons.user,
                   size: 48,
                   color: AppColors.brandPrimary,
                 ),
@@ -534,14 +535,14 @@ class _Guest extends ConsumerWidget {
         const _AccountBand(),
         if (hasGuestOrders) ...[
           _AccountTile(
-            icon: Icons.receipt_long_outlined,
+            icon: HubIcons.receiptText,
             label: l10n.accountOrders,
             onTap: () => context.push(AppRoutes.orders),
           ),
           const _TileDivider(),
         ],
         _AccountTile(
-          icon: Icons.local_shipping_outlined,
+          icon: HubIcons.truck,
           label: l10n.accountTrackOrder,
           onTap: () => context.push(AppRoutes.guestTrackOrder),
         ),

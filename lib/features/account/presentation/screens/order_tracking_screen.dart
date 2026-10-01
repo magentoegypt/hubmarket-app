@@ -14,6 +14,7 @@ import '../../domain/order.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
 import '../widgets/order_packages.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// One timeline step: a label, an optional timestamp, and whether it's done.
 typedef _Step = ({String label, String time, bool done});
@@ -87,13 +88,13 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   IconData _statusIcon() {
-    if (order.isOnHold) return Icons.pause_circle_outline;
+    if (order.isOnHold) return HubIcons.circlePause;
     return switch (_stageIndex()) {
-      < 0 => Icons.cancel_outlined,
-      3 => Icons.check_circle_outline,
-      2 => Icons.local_shipping_outlined,
-      1 => Icons.receipt_long_outlined,
-      _ => Icons.shopping_bag_outlined,
+      < 0 => HubIcons.circleX,
+      3 => HubIcons.circleCheck,
+      2 => HubIcons.truck,
+      1 => HubIcons.receiptText,
+      _ => HubIcons.shoppingBag,
     };
   }
 
@@ -261,7 +262,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(
-                    Icons.location_on_outlined,
+                    HubIcons.mapPin,
                     color: AppColors.brandPrimary,
                     size: 22,
                   ),
@@ -345,7 +346,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
-                    Icons.headset_mic_outlined,
+                    HubIcons.headset,
                     size: 18,
                     color: AppColors.brandPrimary,
                   ),
@@ -394,7 +395,7 @@ class _TrackingRow extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 8, 0),
       leading: const Icon(
-        Icons.local_shipping_outlined,
+        HubIcons.truck,
         color: AppColors.brandPrimary,
       ),
       title: Text(label.isEmpty ? l10n.orderTrackingSection : label),
@@ -404,7 +405,7 @@ class _TrackingRow extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.copy_outlined),
+        icon: const Icon(HubIcons.copy),
         tooltip: l10n.orderTrackingSection,
         onPressed: () async {
           await Clipboard.setData(ClipboardData(text: tracking.number));
@@ -506,7 +507,7 @@ class _Dot extends StatelessWidget {
         ),
       ),
       child: done
-          ? const Icon(Icons.check, size: 13, color: Colors.white)
+          ? const Icon(HubIcons.check, size: 13, color: Colors.white)
           : null,
     );
   }
@@ -589,7 +590,7 @@ class _Thumb extends StatelessWidget {
           error: (_) => const ColoredBox(
             color: AppColors.surfaceTint,
             child: Icon(
-              Icons.image_outlined,
+              HubIcons.image,
               size: 18,
               color: AppColors.inkMuted,
             ),

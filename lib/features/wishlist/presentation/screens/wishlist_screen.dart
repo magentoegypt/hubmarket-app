@@ -14,6 +14,7 @@ import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../../catalog/presentation/product_navigation.dart';
 import '../../domain/wishlist_entry.dart';
 import '../wishlist_controller.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 class WishlistScreen extends ConsumerStatefulWidget {
   const WishlistScreen({super.key});
@@ -83,7 +84,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
                     onPressed: state.isLoading
                         ? null
                         : () => _addAll(state.entries, l10n),
-                    icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                    icon: const Icon(HubIcons.shoppingBag, size: 18),
                     label: Text(l10n.wishlistAddAll),
                   ),
                 ),
@@ -94,12 +95,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.58,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
+            gridDelegate: productGridDelegate(context),
             itemCount: state.entries.length,
             itemBuilder: (context, index) {
               final product = state.entries[index].product;
@@ -183,7 +179,7 @@ class _Empty extends StatelessWidget {
             radius: 48,
             backgroundColor: AppColors.surfaceTint,
             child: Icon(
-              Icons.favorite_border,
+              HubIcons.heart,
               size: 48,
               color: AppColors.brandPrimary,
             ),
@@ -226,7 +222,7 @@ class _Prompt extends StatelessWidget {
             radius: 48,
             backgroundColor: AppColors.surfaceTint,
             child: Icon(
-              Icons.favorite_border,
+              HubIcons.heart,
               size: 48,
               color: AppColors.brandPrimary,
             ),

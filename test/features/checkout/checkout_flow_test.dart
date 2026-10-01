@@ -8,6 +8,7 @@ import 'package:hubmarket_app/features/checkout/presentation/widgets/guest_verif
 
 import '../../support/fakes.dart';
 import 'checkout_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// The three-step checkout on screen (Figma 17 → 18 → 18b → 19), driven the
 /// way a shopper would, against fake repositories.
@@ -104,10 +105,10 @@ void main() {
     expect(find.text('Review your order'), findsOneWidget);
 
     // Back: Review → Payment → Shipping (Ship to, not the form again).
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(HubIcons.arrowLeft));
     await tester.pumpAndSettle();
     expect(find.text('Payment method'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(HubIcons.arrowLeft));
     await tester.pumpAndSettle();
     expect(find.text('Ship to'), findsOneWidget);
 
@@ -194,7 +195,7 @@ void main() {
 
     // Payment and back rebuild the card; it must not send another code.
     await tapText(tester, 'Continue to payment');
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(HubIcons.arrowLeft));
     await tester.pumpAndSettle();
     expect(find.text('Mobile number verified'), findsOneWidget);
     expect(sent(), 1);
@@ -210,7 +211,7 @@ void main() {
     expect(find.text('Shipping address'), findsOneWidget);
     expect(find.text('Continue to shipping method'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(HubIcons.arrowLeft));
     await tester.pumpAndSettle();
     expect(find.text('Ship to'), findsOneWidget);
   });
@@ -227,14 +228,14 @@ void main() {
     expect(find.text('Colour: Teal · Qty 1'), findsOneWidget);
     expect(find.text('Dining Chair with Gold Metal Legs'), findsOneWidget);
     expect(find.text('Qty 2'), findsOneWidget);
-    expect(find.text('AED 68.00'), findsOneWidget);
+    expect(find.text('AED 68'), findsOneWidget);
     expect(find.text('Floral Print Corset-Waist Tie Dress'), findsOneWidget);
     expect(find.text('Size: M · Qty 1'), findsOneWidget);
     // Address, method, payment and the total the order will be charged.
     expect(find.text('Standard delivery · 2–4 working days'), findsOneWidget);
     expect(find.text('Cash on delivery'), findsOneWidget);
     expect(find.text('Total (incl. VAT)'), findsOneWidget);
-    expect(find.text('Place order · AED 553.00'), findsOneWidget);
+    expect(find.text('Place order · AED 553'), findsOneWidget);
   });
 
   testWidgets('placing a cash-on-delivery order runs the checkout mutations '
@@ -244,7 +245,7 @@ void main() {
     await throughAddress(tester);
     await tapText(tester, 'Continue to payment');
     await tapText(tester, 'Review order');
-    await tapText(tester, 'Place order · AED 553.00');
+    await tapText(tester, 'Place order · AED 553');
 
     expect(repo.calls, [
       'hasAccount',
@@ -265,7 +266,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('Pay \u2066AED 553.00\u2069 in cash when your order arrives'),
+      find.text('Pay \u2066AED 553\u2069 in cash when your order arrives'),
       findsOneWidget,
     );
 

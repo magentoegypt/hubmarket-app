@@ -20,6 +20,7 @@ import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 const _testContact = StoreContact(
   company: 'Hub Market',
@@ -360,6 +361,6 @@ List<String> _doneLabels(WidgetTester tester) {
     'Packed & Shipped',
     'Delivered',
   ];
-  final done = find.byIcon(Icons.check).evaluate().length;
+  final done = find.byIcon(HubIcons.check).evaluate().length;
   return stages.take(done).toList();
 }

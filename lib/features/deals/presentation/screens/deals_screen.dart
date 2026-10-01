@@ -15,6 +15,7 @@ import '../widgets/deal_countdown.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Today's Deals (Figma 10b, `hmDeals`): the countdown banner, department
 /// chips, the count with the sort and the Filters sheet, and the deals in a
@@ -43,7 +44,7 @@ class DealsScreen extends ConsumerWidget {
         !state.isLoading &&
         state.filters.isEmpty) {
       body = EmptyState(
-        icon: Icons.local_offer_outlined,
+        icon: HubIcons.tag,
         title: l10n.dealsEmpty,
       );
     } else {
@@ -123,13 +124,13 @@ class _DealsList extends StatelessWidget {
                     ),
                     if (state.filtersSupported) ...[
                       HmPillButton(
-                        icon: Icons.swap_vert,
+                        icon: HubIcons.arrowUpDown,
                         label: dealsSortLabel(l10n, filters.sort),
                         onTap: () => _pickSort(context, filters.sort),
                       ),
                       const SizedBox(width: 8),
                       HmPillButton(
-                        icon: Icons.tune,
+                        icon: HubIcons.slidersHorizontal,
                         label: filters.isEmpty
                             ? l10n.filtersLabel
                             : '${l10n.filtersLabel} · ${_activeCount(filters)}',
@@ -151,7 +152,7 @@ class _DealsList extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       EmptyState(
-                        icon: Icons.local_offer_outlined,
+                        icon: HubIcons.tag,
                         title: l10n.dealsNoMatch,
                       ),
                       const SizedBox(height: 12),
@@ -169,12 +170,7 @@ class _DealsList extends StatelessWidget {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 sliver: SliverGrid.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 173 / 283,
-                  ),
+                  gridDelegate: productGridDelegate(context),
                   itemCount: deals.length,
                   itemBuilder: (context, i) => ProductCard(
                     product: deals[i],
@@ -213,7 +209,7 @@ class _DealsList extends StatelessWidget {
               ListTile(
                 title: Text(dealsSortLabel(l10n, sort)),
                 trailing: sort == current
-                    ? const Icon(Icons.check, color: AppColors.brandPrimary)
+                    ? const Icon(HubIcons.check, color: AppColors.brandPrimary)
                     : null,
                 onTap: () => Navigator.pop(context, sort),
               ),
@@ -410,7 +406,7 @@ class DealsEndBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.schedule_rounded, size: 22, color: Colors.white),
+            const Icon(HubIcons.clock, size: 22, color: Colors.white),
             const SizedBox(width: 10),
             // No "new deals every day at midnight" line: when deals refresh
             // is the store's business, not a promise the app makes (QA02).

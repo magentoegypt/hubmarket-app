@@ -13,6 +13,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/widgets/review_widgets.dart';
 import '../../domain/store_review.dart';
 import '../store_reviews_controller.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Figma 13's Reviews tab, as slivers of the store page: the seller's rating
 /// (the header's figures: every approved review of its products), then the
@@ -72,7 +73,7 @@ List<Widget> storeReviewsSlivers(
     if (state.items.isEmpty)
       SliverToBoxAdapter(
         child: EmptyState(
-          icon: Icons.rate_review_outlined,
+          icon: HubIcons.messageSquareText,
           title: l10n.storeNoReviews,
           // The seller's reviews exist, just not in this store view's language.
           body: state.reviewCount > 0 ? l10n.storeReviewsOtherLanguage : null,
@@ -230,7 +231,7 @@ class _ReviewedProduct extends StatelessWidget {
                 error: (_) => const ColoredBox(
                   color: AppColors.surfaceTint,
                   child: Icon(
-                    Icons.image_outlined,
+                    HubIcons.image,
                     size: 16,
                     color: AppColors.inkMuted,
                   ),
@@ -250,7 +251,7 @@ class _ReviewedProduct extends StatelessWidget {
           if (urlKey != null) ...[
             const SizedBox(width: 6),
             // chevron_right mirrors itself in RTL.
-            Icon(Icons.chevron_right, size: 18, color: context.scaffoldMuted),
+            Icon(HubIcons.chevronRight, size: 18, color: context.scaffoldMuted),
           ],
         ],
       ),

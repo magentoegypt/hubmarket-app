@@ -24,6 +24,7 @@ import '../../domain/money.dart';
 import '../../domain/product_detail.dart';
 import 'product_detail_screen.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Figma 14b — a bundle's own page (core `bundle`, or `new_bundle` with
 /// HubApp): the package's items, one per option, each swappable for the
@@ -504,7 +505,7 @@ class _PackageCard extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  Icons.inventory_2_outlined,
+                  HubIcons.package,
                   size: 14,
                   color: context.scaffoldMuted,
                 ),
@@ -560,8 +561,8 @@ class _PackageCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Icon(
                         expanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
+                            ? HubIcons.chevronUp
+                            : HubIcons.chevronDown,
                         size: 16,
                         color: AppColors.accentStrong,
                       ),
@@ -708,7 +709,7 @@ class _ItemRow extends StatelessWidget {
                   children: [
                     if (canSwap)
                       _Link(
-                        icon: Icons.sync,
+                        icon: HubIcons.refreshCw,
                         label: l10n.bundleSwap,
                         color: AppColors.accentStrong,
                         onTap: onSwap,
@@ -727,12 +728,12 @@ class _ItemRow extends StatelessWidget {
           const SizedBox(width: 12),
           issue == null
               ? const Icon(
-                  Icons.check,
+                  HubIcons.check,
                   size: 18,
                   color: AppColors.successStrong,
                 )
               : const Icon(
-                  Icons.error_outline,
+                  HubIcons.circleAlert,
                   size: 18,
                   color: AppColors.accentStrong,
                 ),
@@ -765,7 +766,7 @@ class _ChooseRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: context.hairline),
               ),
-              child: const Icon(Icons.add, color: AppColors.accentStrong),
+              child: const Icon(HubIcons.plus, color: AppColors.accentStrong),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -791,7 +792,7 @@ class _ChooseRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 18, color: context.scaffoldMuted),
+            Icon(HubIcons.chevronRight, size: 18, color: context.scaffoldMuted),
           ],
         ),
       ),
@@ -927,7 +928,7 @@ class _SmallStepper extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         button(
-          Icons.remove,
+          HubIcons.minus,
           quantity > 1 ? () => onChanged(quantity - 1) : null,
         ),
         Padding(
@@ -941,7 +942,7 @@ class _SmallStepper extends StatelessWidget {
             ),
           ),
         ),
-        button(Icons.add, () => onChanged(quantity + 1)),
+        button(HubIcons.plus, () => onChanged(quantity + 1)),
         if (price != null) ...[
           const SizedBox(width: 8),
           Text(
@@ -1162,7 +1163,7 @@ class _BuyBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   round(
-                    Icons.remove,
+                    HubIcons.minus,
                     filled: false,
                     onTap: quantity > 1 && !busy
                         ? () => onQuantity(quantity - 1)
@@ -1181,7 +1182,7 @@ class _BuyBar extends StatelessWidget {
                     ),
                   ),
                   round(
-                    Icons.add,
+                    HubIcons.plus,
                     filled: true,
                     onTap: busy ? null : () => onQuantity(quantity + 1),
                   ),
@@ -1203,7 +1204,7 @@ class _BuyBar extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.shopping_cart_outlined, size: 20),
+                      : const Icon(HubIcons.shoppingCart, size: 20),
                   label: Text(l10n.bundleAddToCart),
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
@@ -1362,7 +1363,7 @@ class _NoneRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: context.hairline),
             ),
-            child: Icon(Icons.block, color: context.scaffoldMuted),
+            child: Icon(HubIcons.ban, color: context.scaffoldMuted),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1450,7 +1451,7 @@ class _SwapRow extends StatelessWidget {
             const SizedBox(width: 12),
             Icon(
               many
-                  ? (chosen ? Icons.check_box : Icons.check_box_outline_blank)
+                  ? (chosen ? HubIcons.squareCheck : HubIcons.square)
                   : (chosen
                         ? Icons.radio_button_checked
                         : Icons.radio_button_unchecked),

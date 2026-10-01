@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/theme_x.dart';
-import 'hub_back_button.dart';
+import 'hub_top_bar.dart';
+import '../../app/theme/hub_icons.dart';
 
 /// The grouped-settings look of the account sub-pages (Figma 20b, 20h, 27):
 /// white rounded cards on a light grey page, each under a small uppercase
@@ -16,26 +17,13 @@ Color groupedPageColor(BuildContext context) =>
 Color groupCardColor(BuildContext context) =>
     context.isDarkMode ? const Color(0xFF243244) : Colors.white;
 
-/// App bar of a pushed sub-page: back chevron and a start-aligned bold title,
-/// as in the Figma sub-page headers.
-AppBar subpageAppBar(
+/// App bar of a pushed sub-page: the Figma "App bar" ([HubTopBar]) — back button
+/// and a start-aligned 18 Bold title.
+PreferredSizeWidget subpageAppBar(
   BuildContext context,
   String title, {
   List<Widget>? actions,
-}) => AppBar(
-  centerTitle: false,
-  titleSpacing: 0,
-  leading: const HubBackButton(),
-  title: Text(
-    title,
-    style: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w700,
-      color: context.scaffoldHeading,
-    ),
-  ),
-  actions: actions,
-);
+}) => HubTopBar(title: title, actions: actions ?? const <Widget>[]);
 
 /// Small uppercase label above a group ("POPULAR TOPICS").
 class GroupLabel extends StatelessWidget {
@@ -166,7 +154,7 @@ class GroupRow extends StatelessWidget {
             ],
             if (showChevron) ...[
               const SizedBox(width: 6),
-              Icon(Icons.chevron_right, size: 20, color: context.scaffoldMuted),
+              Icon(HubIcons.chevronRight, size: 20, color: context.scaffoldMuted),
             ],
           ],
         ),

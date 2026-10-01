@@ -16,6 +16,7 @@ import '../../../notifications/presentation/notification_settings_controller.dar
 import '../../data/account_repository.dart';
 import '../newsletter_controller.dart';
 import '../widgets/mobile_number_editor.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -184,14 +185,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   _ProfileField(
                     controller: _fullName,
                     label: l10n.fieldFullName,
-                    icon: Icons.person_outline,
+                    icon: HubIcons.user,
                     validator: (v) => Validators.required(context, v),
                   ),
                   const SizedBox(height: 12),
                   _ProfileField(
                     initialValue: customer?.email ?? '',
                     label: l10n.fieldEmail,
-                    icon: Icons.mail_outline,
+                    icon: HubIcons.mail,
                     enabled: false,
                   ),
                   const SizedBox(height: 12),
@@ -221,7 +222,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                       const SizedBox(width: 4),
                       Icon(
-                        Icons.chevron_right,
+                        HubIcons.chevronRight,
                         color: context.scaffoldMuted,
                         size: 20,
                       ),
@@ -253,7 +254,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   label: l10n.profilePasswordSection,
                   onTap: () => setState(() => _showPassword = !_showPassword),
                   trailing: Icon(
-                    _showPassword ? Icons.expand_less : Icons.chevron_right,
+                    _showPassword ? HubIcons.chevronUp : HubIcons.chevronRight,
                     color: context.scaffoldMuted,
                     size: 20,
                   ),
@@ -267,7 +268,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         _ProfileField(
                           controller: _currentPassword,
                           label: l10n.fieldCurrentPassword,
-                          icon: Icons.lock_outline,
+                          icon: HubIcons.lock,
                           obscureText: true,
                           validator: (v) => Validators.required(context, v),
                         ),
@@ -275,7 +276,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         _ProfileField(
                           controller: _newPassword,
                           label: l10n.fieldNewPassword,
-                          icon: Icons.lock_reset_outlined,
+                          icon: HubIcons.rotateCcwKey,
                           obscureText: true,
                           validator: (v) => Validators.password(context, v),
                         ),

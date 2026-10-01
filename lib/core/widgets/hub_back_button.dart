@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../../app/theme/app_colors.dart';
+import '../../app/theme/hub_icons.dart';
+import 'hub_icon_button.dart';
 
-/// Shared back button matching the Figma chevron — a thin `‹` in ink, not the
-/// stock Material arrow. Uses `arrow_back_ios_new`, whose `IconData` sets
-/// `matchTextDirection: true`, so it auto-mirrors to `›` in Arabic/RTL. Never
-/// wrap it in a manual `Transform`/direction flip — that double-mirrors it (see
-/// the rtl-arrow-double-flip lesson).
+/// Shared back button (Figma `icon-btn/arrow-left`): a 40 px round target with
+/// the 22 px `arrow-left` outline. The icon mirrors itself in Arabic/RTL
+/// (`HubIcons.arrowLeft` sets `matchTextDirection`); never wrap it in a manual
+/// `Transform`/direction flip — that double-mirrors it (see the
+/// rtl-arrow-double-flip lesson).
 class HubBackButton extends StatelessWidget {
   const HubBackButton({super.key, this.color, this.onPressed});
 
-  /// Icon colour. Defaults to [AppColors.inkHeading]; pass white for navy
-  /// surfaces.
+  /// Icon colour. Defaults to ink; pass white for navy surfaces.
   final Color? color;
 
   /// Overrides the default `Navigator.maybePop` behaviour when set.
@@ -19,9 +19,9 @@ class HubBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-      color: color ?? AppColors.inkHeading,
+    return HubIconButton(
+      icon: HubIcons.arrowLeft,
+      color: color,
       tooltip: MaterialLocalizations.of(context).backButtonTooltip,
       onPressed: onPressed ?? () => Navigator.maybePop(context),
     );

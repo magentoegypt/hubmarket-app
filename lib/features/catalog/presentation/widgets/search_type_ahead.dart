@@ -21,6 +21,7 @@ import '../search_controller.dart';
 import '../search_providers.dart';
 import 'search_no_results.dart';
 import 'search_style.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The type-ahead while a search is being typed (Figma 09), as the website's
 /// Algolia autocomplete draws it: a category scope, the top products with
@@ -244,7 +245,7 @@ class _ScopeChip extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    Icons.keyboard_arrow_down,
+                    HubIcons.chevronDown,
                     size: 14,
                     color: context.scaffoldHeading,
                   ),

@@ -57,8 +57,8 @@ void main() {
       expect(product.sku, 'sofabed123');
       expect(product.typeId, 'configurable');
       expect(product.requiresOptions, isTrue);
-      expect(product.finalPrice!.formatted(), 'AED 425.00');
-      expect(product.regularPrice!.formatted(), 'AED 500.00');
+      expect(product.finalPrice!.formatted(), 'AED 425');
+      expect(product.regularPrice!.formatted(), 'AED 500');
       expect(product.isOnSale, isTrue);
       expect(product.discountPercent, 15);
       expect(product.imageUrl, endsWith('/cache/big/sofabed123.jpg'));

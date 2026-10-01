@@ -6,7 +6,6 @@ import '../../../catalog/presentation/widgets/product_card.dart';
 
 /// Home carousel card width (Figma 07): 152 pt, so the next card peeks.
 const double kHmCardWidth = 152;
-const double kHmRailHeight = 292;
 
 /// A horizontal product rail of Home cards. [ranked] marks them #1, #2, …
 /// (Best sellers).
@@ -19,7 +18,7 @@ class HmProductRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: kHmRailHeight,
+      height: ProductCardMetrics.heightFor(context, kHmCardWidth),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),

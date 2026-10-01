@@ -4,6 +4,7 @@ import 'package:hubmarket_app/features/checkout/presentation/screens/checkout_sc
 import 'package:hubmarket_app/features/checkout/presentation/screens/order_success_screen.dart';
 
 import 'checkout_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// Renders each checkout step and Order placed, in English and Arabic, to
 /// build/test_screens/ for comparison with Figma 17a / 17 / 18 / 18b / 19. The
@@ -96,7 +97,7 @@ void main() {
       final key = await mount(tester, locale, height: 844, signedIn: true);
       await tapText(tester, en ? 'Continue to payment' : 'المتابعة للدفع');
       await tapText(tester, en ? 'Review order' : 'مراجعة الطلب');
-      await tester.tap(find.byIcon(Icons.lock_outline));
+      await tester.tap(find.byIcon(HubIcons.lock));
       await tester.pumpAndSettle();
       await capture(tester, key, 'checkout_19_order_placed_$locale');
       expectDirection(tester, OrderSuccessScreen, locale);

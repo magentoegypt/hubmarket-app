@@ -11,6 +11,7 @@ import '../../../../l10n/l10n.dart';
 import '../../domain/order.dart';
 import '../order_cancellation.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The foot of an order screen (Figma 22): a note and "Cancel order", shown
 /// only when [offersOrderCancel] allows it. Opens the 21b sheet; a customer's
@@ -47,7 +48,7 @@ class OrderCancelSection extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.info_outline, size: 18, color: context.scaffoldMuted),
+              Icon(HubIcons.info, size: 18, color: context.scaffoldMuted),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -224,7 +225,7 @@ class _CancelOrderSheetState extends ConsumerState<CancelOrderSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(
-                  Icons.inventory_2_outlined,
+                  HubIcons.package,
                   size: 18,
                   color: AppColors.accentStrong,
                 ),

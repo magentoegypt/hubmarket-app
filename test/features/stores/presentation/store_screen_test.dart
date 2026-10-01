@@ -12,6 +12,7 @@ import '../../../support/hubapp_fakes.dart';
 import '../../../support/search_fixtures.dart';
 import '../../../support/store_fixtures.dart';
 import '../stores_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 Finder _rich(String text) => find.textContaining(text, findRichText: true);
 
@@ -72,7 +73,7 @@ void main() {
     expect(products.variables['filter'], {
       'vendor_id': {'match': '12', 'match_type': 'FULL'},
     });
-    expect(find.byIcon(Icons.share_outlined), findsOneWidget);
+    expect(find.byIcon(HubIcons.share2), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -94,11 +95,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final back = find.byIcon(Icons.arrow_back);
+      final back = find.byIcon(HubIcons.arrowLeft);
       expect(back, findsOneWidget);
       expect(tester.getTopLeft(back).dy, greaterThanOrEqualTo(24));
       expect(
-        tester.getTopLeft(find.byIcon(Icons.search).first).dy,
+        tester.getTopLeft(find.byIcon(HubIcons.search).first).dy,
         greaterThanOrEqualTo(24),
       );
     },
@@ -210,7 +211,7 @@ void main() {
     expect(last['sort'], {'price': 'DESC'});
     expect(last['search'], 'sofa');
 
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(HubIcons.slidersHorizontal));
     await tester.pumpAndSettle();
     // The seller's own facet is not offered.
     expect(find.text('Vendor Id'), findsNothing);
@@ -274,7 +275,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.tap(find.byIcon(HubIcons.arrowLeft));
     await tester.pumpAndSettle();
     expect(find.text('/home'), findsOneWidget);
   });

@@ -14,6 +14,7 @@ import '../../support/hubapp_fakes.dart';
 import '../../support/marketplace_fakes.dart';
 import '../../support/store_credit_fakes.dart';
 import 'marketplace_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 final _en = lookupAppLocalizations(const Locale('en'));
 
@@ -244,7 +245,7 @@ void main() {
           .ancestor(of: find.text('Water Bottle'), matching: find.byType(Row))
           .first;
       await tester.tap(
-        find.descendant(of: bottleRow, matching: find.byIcon(Icons.add)),
+        find.descendant(of: bottleRow, matching: find.byIcon(HubIcons.plus)),
       );
       await tester.pumpAndSettle();
 
@@ -387,7 +388,7 @@ void main() {
 
       expect(credit.calls, contains(startsWith('fetchCartCredit:')));
       expect(find.text(_en.checkoutStoreCredit), findsOneWidget);
-      expect(find.text('−AED 50.00'), findsOneWidget);
+      expect(find.text('−AED 50'), findsOneWidget);
     });
 
     testWidgets('no line while no credit is used', (tester) async {

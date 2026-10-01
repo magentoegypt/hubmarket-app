@@ -14,6 +14,7 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../domain/returns.dart';
 import '../returns_providers.dart';
 import '../widgets/return_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// My returns (Figma 23b): the customer's returns, newest first, paged
 /// (`hmReturns`), each with its status — coloured by the store's status code,
@@ -60,13 +61,13 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
     final Widget body;
     if (!available) {
       body = EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsUnavailableTitle,
         body: l10n.returnsUnavailableBody,
       );
     } else if (!signedIn) {
       body = EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsMyReturns,
         body: l10n.returnsSignIn,
         action: FilledButton(
@@ -91,7 +92,7 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
     final error = state.error;
     if (error is HubAppMissing) {
       return EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsUnavailableTitle,
         body: l10n.returnsUnavailableBody,
       );
@@ -105,7 +106,7 @@ class _MyReturnsScreenState extends ConsumerState<MyReturnsScreen> {
     }
     if (state.items.isEmpty) {
       return EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsEmptyTitle,
         body: l10n.returnsEmptyBody,
         action: _NewRequestButton(onPressed: _newRequest),
@@ -295,7 +296,7 @@ class _ReturnCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   const Icon(
-                    Icons.chevron_right,
+                    HubIcons.chevronRight,
                     size: 18,
                     color: AppColors.inkMuted,
                   ),
@@ -323,7 +324,7 @@ class _NewRequestButton extends StatelessWidget {
       height: 52,
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: const Icon(Icons.add, size: 20),
+        icon: const Icon(HubIcons.plus, size: 20),
         // Styled on the Text so it keeps the theme's font (a button's
         // textStyle replaces it).
         label: Text(

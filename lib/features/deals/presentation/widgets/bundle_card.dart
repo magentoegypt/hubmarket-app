@@ -7,6 +7,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/deals.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Opens a bundle's product page, where its options are chosen and it goes
 /// into the cart (a bundle can't be added by SKU alone).
@@ -188,7 +189,7 @@ class _ItemCountPill extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(
-          Icons.inventory_2_outlined,
+          HubIcons.package,
           size: 12,
           color: Color(0xFF535D70),
         ),

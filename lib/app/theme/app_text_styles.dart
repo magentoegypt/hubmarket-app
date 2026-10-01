@@ -64,6 +64,15 @@ class AppTextStyles {
   TextStyle get button =>
       arabic ? _ar(15, 22, FontWeight.w700) : _en(15, 20, FontWeight.w700);
 
+  /// EN/Price — DM Sans Bold 15/20 · AR — Tajawal Bold 15/22.
+  TextStyle get price =>
+      arabic ? _ar(15, 22, FontWeight.w700) : _en(15, 20, FontWeight.w700);
+
+  /// EN/Price Large — DM Sans Bold 24/30 · AR — Tajawal Bold 24/32 (the product
+  /// page's price).
+  TextStyle get priceLarge =>
+      arabic ? _ar(24, 32, FontWeight.w700) : _en(24, 30, FontWeight.w700);
+
   static TextStyle _en(
     double size,
     double lineHeight,

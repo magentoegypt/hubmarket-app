@@ -32,6 +32,7 @@ import '../widgets/search_results_view.dart';
 import '../widgets/search_type_ahead.dart';
 import '../widgets/sort_sheet.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Which of the search designs is on screen.
 enum _SearchMode {
@@ -406,7 +407,7 @@ class _ResultsState extends ConsumerState<_Results> {
             onSort: () => _openSort(state),
             brand: widget.brand,
           ),
-          const ProductGridSkeleton(childAspectRatio: 0.58, count: 6),
+          const ProductGridSkeleton(count: 6),
         ],
       );
     }
@@ -447,7 +448,7 @@ class _ResultsState extends ConsumerState<_Results> {
         if (state.products.isEmpty)
           SliverToBoxAdapter(
             child: EmptyState(
-              icon: Icons.search_off_outlined,
+              icon: HubIcons.searchX,
               title: l10n.stateEmpty,
             ),
           )
@@ -455,12 +456,7 @@ class _ResultsState extends ConsumerState<_Results> {
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.58,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+              gridDelegate: productGridDelegate(context),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final product = state.products[index];
                 return ProductCard(
@@ -472,7 +468,7 @@ class _ResultsState extends ConsumerState<_Results> {
           ),
         if (state.isLoadingMore)
           const SliverToBoxAdapter(
-            child: ProductGridSkeleton(childAspectRatio: 0.58, count: 2),
+            child: ProductGridSkeleton(count: 2),
           ),
       ],
     );
@@ -536,13 +532,13 @@ class _Header extends StatelessWidget {
               ),
               const Spacer(),
               _PillButton(
-                icon: Icons.swap_vert,
+                icon: HubIcons.arrowUpDown,
                 label: l10n.sortLabel,
                 onTap: onSort,
               ),
               const SizedBox(width: 8),
               _PillButton(
-                icon: Icons.tune,
+                icon: HubIcons.slidersHorizontal,
                 label: filtersLabel,
                 onTap: onFilters,
               ),

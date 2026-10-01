@@ -12,6 +12,7 @@ import '../catalog_providers.dart';
 import '../search_history.dart';
 import '../search_providers.dart';
 import 'search_style.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The search landing, before anything is typed (Figma 09b): recent searches
 /// with a per-row remove, the numbered trending searches, and a carousel of
@@ -169,7 +170,7 @@ class _RecentRow extends StatelessWidget {
         padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 4),
         child: Row(
           children: [
-            Icon(Icons.schedule, size: 18, color: context.scaffoldMuted),
+            Icon(HubIcons.clock, size: 18, color: context.scaffoldMuted),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -193,7 +194,7 @@ class _RecentRow extends StatelessWidget {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               color: context.scaffoldMuted,
-              icon: const Icon(Icons.close),
+              icon: const Icon(HubIcons.x),
             ),
           ],
         ),
@@ -317,7 +318,7 @@ class _CategoryTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     const glyph = Center(
       child: Icon(
-        Icons.category_outlined,
+        HubIcons.layoutGrid,
         size: 28,
         color: AppColors.brandPrimary,
       ),

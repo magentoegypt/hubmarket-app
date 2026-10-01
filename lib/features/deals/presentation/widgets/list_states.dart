@@ -9,7 +9,9 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/offline_state.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../catalog/presentation/widgets/product_card.dart';
 import '../../../catalog/presentation/widgets/product_skeletons.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// What a Hub Market App list page shows when its load failed: offline, the
 /// store's own trouble with Retry — or, when the server has no such list
@@ -20,7 +22,7 @@ class HmListError extends ConsumerWidget {
     required this.error,
     required this.onRetry,
     required this.emptyTitle,
-    this.emptyIcon = Icons.local_offer_outlined,
+    this.emptyIcon = HubIcons.tag,
   });
 
   final Object error;
@@ -44,7 +46,7 @@ class HmListError extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.cloud_off_outlined,
+              HubIcons.cloudOff,
               size: 40,
               color: AppColors.inkMuted,
             ),
@@ -66,26 +68,16 @@ class HmListError extends ConsumerWidget {
 
 /// A two-column grid of card skeletons.
 class HmGridSkeleton extends StatelessWidget {
-  const HmGridSkeleton({
-    super.key,
-    this.count = 4,
-    this.aspectRatio = 173 / 283,
-  });
+  const HmGridSkeleton({super.key, this.count = 4});
 
   final int count;
-  final double aspectRatio;
 
   @override
   Widget build(BuildContext context) => GridView.builder(
     physics: const NeverScrollableScrollPhysics(),
     shrinkWrap: true,
     padding: const EdgeInsets.all(16),
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: aspectRatio,
-    ),
+    gridDelegate: productGridDelegate(context),
     itemCount: count,
     itemBuilder: (_, __) => const ProductCardSkeleton(),
   );

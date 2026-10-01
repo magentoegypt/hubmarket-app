@@ -107,6 +107,11 @@ flutter:
     - family: Playfair Display
       fonts:
         - asset: assets/fonts/PlayfairDisplay.ttf
+    # The icon set of the Figma file ("Icons · 24px · stroke 2") is Lucide; its
+    # glyphs are addressed by lib/app/theme/hub_icons.dart and tree-shaken at build.
+    - family: Lucide
+      fonts:
+        - asset: assets/fonts/Lucide.ttf
 
 # App launcher icons — the client-supplied Hub Market "Customer App" icon: white
 # H + orange cart on the logo navy (#02224D). Rendered from the traced logo

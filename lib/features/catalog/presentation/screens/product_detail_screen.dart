@@ -39,6 +39,7 @@ import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
 import '../widgets/review_widgets.dart';
 import 'bundle_product_screen.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   const ProductDetailScreen({super.key, required this.urlKey, this.preview});
@@ -169,7 +170,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             // A stale or rewritten link lands here — give it a way out
             // rather than a bare string in the middle of the page.
             return EmptyState(
-              icon: Icons.link_off,
+              icon: HubIcons.link2Off,
               title: l10n.linkNotFoundTitle,
               body: l10n.linkNotFoundBody,
               action: FilledButton(
@@ -333,7 +334,7 @@ class _RelatedProducts extends StatefulWidget {
 }
 
 class _RelatedProductsState extends State<_RelatedProducts> {
-  static const double _cardWidth = 150;
+  static const double _cardWidth = 152;
 
   @override
   void initState() {
@@ -370,7 +371,7 @@ class _RelatedProductsState extends State<_RelatedProducts> {
           ),
         ),
         SizedBox(
-          height: 240,
+          height: ProductCardMetrics.heightFor(context, _cardWidth),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -433,7 +434,7 @@ class _BrandLink extends ConsumerWidget {
                 ),
               ),
               const Icon(
-                Icons.chevron_right,
+                HubIcons.chevronRight,
                 size: 18,
                 color: AppColors.brandPrimary,
               ),
@@ -523,7 +524,7 @@ class _QuantityStepper extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
-                icon: const Icon(Icons.remove, size: 18),
+                icon: const Icon(HubIcons.minus, size: 18),
                 visualDensity: VisualDensity.compact,
               ),
               SizedBox(
@@ -536,7 +537,7 @@ class _QuantityStepper extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () => onChanged(quantity + 1),
-                icon: const Icon(Icons.add, size: 18),
+                icon: const Icon(HubIcons.plus, size: 18),
                 visualDensity: VisualDensity.compact,
               ),
             ],
@@ -709,7 +710,7 @@ class _GalleryState extends ConsumerState<ProductGallery> {
                           IconButton(
                             onPressed: () => _share(context),
                             icon: const Icon(
-                              Icons.ios_share,
+                              HubIcons.share2,
                               color: AppColors.inkHeading,
                             ),
                           ),
@@ -1194,7 +1195,7 @@ class _BundleOnWebsiteNote extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 16, color: AppColors.inkMuted),
+          const Icon(HubIcons.info, size: 16, color: AppColors.inkMuted),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -1205,7 +1206,7 @@ class _BundleOnWebsiteNote extends ConsumerWidget {
           const SizedBox(width: 8),
           TextButton.icon(
             onPressed: () => _open(context, ref),
-            icon: const Icon(Icons.open_in_new, size: 16),
+            icon: const Icon(HubIcons.externalLink, size: 16),
             label: Text(l10n.pdpBundleOpenWebsite),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.accentStrong,
@@ -1377,7 +1378,7 @@ class _TabContent extends StatelessWidget {
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () => context.push(AppRoutes.review(product.sku)),
-              icon: const Icon(Icons.rate_review_outlined),
+              icon: const Icon(HubIcons.messageSquareText),
               label: Text(l10n.reviewsWrite),
             ),
           ],

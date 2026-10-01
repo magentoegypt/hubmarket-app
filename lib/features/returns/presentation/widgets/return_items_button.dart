@@ -8,6 +8,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../account/domain/order.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../returns_providers.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Return items on the order detail (Figma 22): shown when returns are on,
 /// the order is the signed-in customer's, and the server says it has
@@ -44,7 +45,7 @@ class ReturnItemsButton extends ConsumerWidget {
             AppRoutes.returnRequestFor(order.number),
             extra: returnable,
           ),
-          icon: const Icon(Icons.replay, size: 20),
+          icon: const Icon(HubIcons.rotateCcw, size: 20),
           label: Text(
             l10n.returnsReturnItems,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),

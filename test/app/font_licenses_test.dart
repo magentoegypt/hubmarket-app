@@ -8,7 +8,7 @@ import 'package:hubmarket_app/app/theme/app_theme.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('every bundled font family carries its OFL text', () async {
+  test('every bundled font family carries its licence text', () async {
     final entries = await fontLicenseEntries().toList();
 
     expect(
@@ -17,11 +17,16 @@ void main() {
         AppTheme.latinFont,
         AppTheme.arabicFont,
         AppTheme.displayFont,
+        'Lucide',
       ]),
     );
     for (final entry in entries) {
       final text = entry.paragraphs.map((p) => p.text).join('\n');
-      expect(text, contains('SIL Open Font License'), reason: '${entry.packages}');
+      // The text faces are SIL OFL; the icon font is ISC.
+      final licence = entry.packages.contains('Lucide')
+          ? 'ISC License'
+          : 'SIL Open Font License';
+      expect(text, contains(licence), reason: '${entry.packages}');
     }
   });
 
@@ -42,6 +47,7 @@ void main() {
         AppTheme.latinFont,
         AppTheme.arabicFont,
         AppTheme.displayFont,
+        'Lucide',
       ]),
     );
   });

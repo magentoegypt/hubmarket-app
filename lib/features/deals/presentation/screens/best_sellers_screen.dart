@@ -12,6 +12,7 @@ import '../../../catalog/presentation/widgets/product_card.dart';
 import '../best_sellers_controller.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Best sellers (`hmBestSellers`): the store's products by units ordered,
 /// ranked #1, #2, … in a two-column grid, the next page loading as the list
@@ -21,7 +22,7 @@ import '../widgets/list_states.dart';
 class BestSellersScreen extends ConsumerWidget {
   const BestSellersScreen({super.key});
 
-  static const IconData _icon = Icons.emoji_events_outlined;
+  static const IconData _icon = HubIcons.trophy;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -93,12 +94,7 @@ class _BestSellersGrid extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               sliver: SliverGrid.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 173 / 283,
-                ),
+                gridDelegate: productGridDelegate(context),
                 itemCount: items.length,
                 itemBuilder: (context, i) => ProductCard(
                   product: items[i],

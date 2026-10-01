@@ -43,7 +43,7 @@ void main() {
 
       // AED 100 in the cart, free over AED 150.
       expect(
-        find.text(l10n.cartFreeDeliveryRemaining('AED 50.00')),
+        find.text(l10n.cartFreeDeliveryRemaining('AED 50')),
         findsOneWidget,
       );
       final bar = tester.widget<LinearProgressIndicator>(
@@ -73,7 +73,7 @@ void main() {
       await capture(tester, key, 'checkout_17_free_shipping_$locale');
 
       expect(
-        find.text(l10n.checkoutFreeShippingOver('AED 150.00')),
+        find.text(l10n.checkoutFreeShippingOver('AED 150')),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

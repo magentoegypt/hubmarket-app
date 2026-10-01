@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Rebuilds every second with the time left until [endsAt] — the deals
 /// countdown (Figma 07 "countdown", 10b banner). Stops at zero and then
@@ -129,7 +130,7 @@ class DealCountdownPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.schedule_rounded,
+              HubIcons.clock,
               size: 16,
               color: AppColors.accent,
             ),

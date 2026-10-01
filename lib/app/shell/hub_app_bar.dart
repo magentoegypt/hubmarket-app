@@ -5,6 +5,7 @@ import '../../core/widgets/brand_logo.dart';
 import '../../core/widgets/hub_back_button.dart';
 import '../../features/notifications/presentation/notification_bell.dart';
 import '../routes.dart';
+import '../theme/hub_icons.dart';
 
 /// Decluttered app bar per the design review: Z-mark + `HUB MARKET` logo lockup,
 /// no cart icon. Because [HubScaffold] always attaches a drawer, the
@@ -41,7 +42,7 @@ class HubAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         if (showSearch)
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(HubIcons.search),
             onPressed: () => context.push(AppRoutes.search),
           ),
         const NotificationBell(),

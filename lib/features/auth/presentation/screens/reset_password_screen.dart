@@ -13,6 +13,7 @@ import '../widgets/auth_field.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The new-password step of a reset, in the 06 layout. Reached two ways with
 /// the same kind of token: from "05 Verify WhatsApp code" (a
@@ -128,7 +129,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             AuthField(
               controller: _email,
               label: l10n.authEmailHint,
-              icon: Icons.mail_outline_rounded,
+              icon: HubIcons.mail,
               keyboardType: TextInputType.emailAddress,
               ltrInput: true,
               validator: (v) => Validators.email(context, v),
@@ -146,7 +147,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               AuthField(
                 controller: _password,
                 label: l10n.fieldNewPassword,
-                icon: Icons.lock_outline_rounded,
+                icon: HubIcons.lock,
                 obscureText: _obscure,
                 autofillHints: const [AutofillHints.newPassword],
                 trailing: PasswordVisibilityToggle(
@@ -167,7 +168,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           AuthField(
             controller: _confirm,
             label: l10n.fieldConfirmPassword,
-            icon: Icons.lock_outline_rounded,
+            icon: HubIcons.lock,
             obscureText: _obscure,
             textInputAction: TextInputAction.done,
             validator: (v) =>

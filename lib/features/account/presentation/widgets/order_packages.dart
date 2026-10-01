@@ -12,6 +12,7 @@ import '../../../catalog/domain/money.dart';
 import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/order.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// One store's part of an order as the order screens show it: its lines and
 /// store and — when the server split the order (`hm_packages`, HubAppOrders) —
@@ -252,7 +253,7 @@ class _ShipmentBlock extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.local_shipping_outlined,
+                HubIcons.truck,
                 size: 18,
                 color: _accent(context),
               ),
@@ -324,7 +325,7 @@ class PackageTrackRow extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.copy_outlined, size: 20),
+                icon: const Icon(HubIcons.copy, size: 20),
                 tooltip: l10n.orderCopyTrackingNumber,
                 onPressed: () async {
                   await Clipboard.setData(ClipboardData(text: track.number));
@@ -352,7 +353,7 @@ class PackageTrackRow extends ConsumerWidget {
                     );
                   }
                 },
-                icon: const Icon(Icons.local_shipping_outlined, size: 18),
+                icon: const Icon(HubIcons.truck, size: 18),
                 label: Text(l10n.orderTrackParcel),
               ),
             ),

@@ -5,6 +5,7 @@ import '../../../l10n/l10n.dart';
 import '../domain/product_offer.dart';
 import 'seller_widgets.dart';
 import '../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// What the customer chose in the other-sellers sheet.
 @immutable
@@ -47,7 +48,7 @@ class OtherSellersRow extends StatelessWidget {
           child: Row(
             children: [
               const Icon(
-                Icons.storefront_outlined,
+                HubIcons.store,
                 size: 20,
                 color: AppColors.brandPrimary,
               ),
@@ -75,7 +76,7 @@ class OtherSellersRow extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               const Icon(
-                Icons.chevron_right,
+                HubIcons.chevronRight,
                 size: 16,
                 color: AppColors.accentStrong,
               ),
@@ -248,7 +249,7 @@ class OfferTile extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(
-                                  Icons.schedule,
+                                  HubIcons.clock,
                                   size: 12,
                                   color: AppColors.inkMuted,
                                 ),
@@ -298,13 +299,13 @@ class OfferTile extends StatelessWidget {
             const SizedBox(width: 12),
             addable
                 ? _RoundButton(
-                    icon: Icons.add,
+                    icon: HubIcons.plus,
                     filled: true,
                     label: l10n.offerAddToCart(seller.name),
                     onPressed: onAdd,
                   )
                 : _RoundButton(
-                    icon: Icons.chevron_right,
+                    icon: HubIcons.chevronRight,
                     filled: false,
                     label: l10n.offerChooseOptions(seller.name),
                     onPressed: onOpen,

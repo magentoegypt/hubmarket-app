@@ -16,6 +16,7 @@ import '../widgets/auth_field.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// How the Verify screen was left, for the screen that opened it. A plain back
 /// or "Change number" pops with no result.
@@ -246,7 +247,7 @@ class _VerifyCodeScreenState extends State<VerifyCodeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.schedule_rounded,
+                  HubIcons.clock,
                   size: 16,
                   color: AppColors.inkMuted,
                 ),

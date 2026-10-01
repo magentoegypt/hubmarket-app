@@ -16,6 +16,7 @@ import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../../domain/checkout.dart';
 import '../widgets/checkout_parts.dart';
 import '../widgets/payment_method_tile.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// What the order-placed screen shows, handed over by checkout.
 class OrderPlacedArgs {
@@ -97,7 +98,7 @@ class OrderSuccessScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsetsDirectional.only(end: 12),
                     child: IconButton(
-                      icon: const Icon(Icons.close, size: 22),
+                      icon: const Icon(HubIcons.x, size: 22),
                       color: context.scaffoldHeading,
                       tooltip: MaterialLocalizations.of(
                         context,
@@ -210,7 +211,7 @@ class _SuccessTick extends StatelessWidget {
         color: AppColors.successStrong,
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.check, size: 36, color: Colors.white),
+      child: const Icon(HubIcons.check, size: 36, color: Colors.white),
     ),
   );
 }
@@ -240,7 +241,7 @@ class _StoreCreditRow extends ConsumerWidget {
         child: Row(
           children: [
             Icon(
-              Icons.card_giftcard_outlined,
+              HubIcons.gift,
               size: 20,
               color: context.isDarkMode
                   ? AppColors.success
@@ -336,7 +337,7 @@ class _PackagesCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.inventory_2_outlined,
+                HubIcons.package,
                 size: 20,
                 color: context.scaffoldHeading,
               ),
@@ -383,7 +384,7 @@ class _PackageRow extends StatelessWidget {
             SizedBox(
               width: 28,
               child: Icon(
-                Icons.inventory_2_outlined,
+                HubIcons.package,
                 size: 18,
                 color: context.scaffoldMuted,
               ),

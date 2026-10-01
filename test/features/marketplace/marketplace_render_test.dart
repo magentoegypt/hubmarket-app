@@ -13,6 +13,7 @@ import '../../support/marketplace_fakes.dart';
 import '../../support/store_credit_fakes.dart';
 import '../checkout/checkout_harness.dart' as checkout;
 import 'marketplace_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// Renders the P3 marketplace screens in English and Arabic to
 /// build/test_screens/ for comparison with Figma 14 (16:970 / 56:2527), 14b
@@ -251,7 +252,7 @@ void main() {
         height: 1400,
         locale: locale,
         before: () async {
-          await tester.tap(find.byIcon(Icons.keyboard_arrow_down));
+          await tester.tap(find.byIcon(HubIcons.chevronDown));
           await tester.pumpAndSettle();
         },
       );
@@ -303,8 +304,8 @@ void main() {
         locale: locale,
       );
       // The summary adds up: the delivery fee chosen at checkout is shown.
-      expect(find.text('AED 10.00'), findsOneWidget);
-      expect(find.text('AED 503.00'), findsOneWidget);
+      expect(find.text('AED 10'), findsOneWidget);
+      expect(find.text('AED 503'), findsOneWidget);
     });
 
     testWidgets('18b review by store ($locale)', (tester) async {

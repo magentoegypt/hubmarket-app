@@ -1,10 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/store/store_controller.dart';
-import '../../../../core/store/store_urls.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
@@ -13,19 +15,23 @@ import '../../../wishlist/presentation/widgets/wishlist_heart.dart';
 import '../../domain/product.dart';
 import 'price_view.dart';
 
-/// Product card per Figma: a bordered white card with a full-bleed image
-/// carrying NEW/BESTSELLER + discount badges (top-start) and stacked wishlist +
-/// share actions (top-end), then the seller (v3) above the name, the star
-/// rating (v3) when the product has reviews, and the stacked price. Image
-/// degrades to a neutral placeholder and the merchandising badge only shows
-/// when the catalogue actually flags it (no fabricated imagery, badges or
-/// ratings).
+/// Product card per Figma v3 ("Product card", node 6:188): no frame and no
+/// shadow, a square image with radius 12 carrying the badges (top-start) and a
+/// 36 px white wishlist circle (top-end), then 10 px below it the seller, the
+/// name on one line, the star rating and, on the price row, the stacked price
+/// and the 36 px navy "+" button.
 ///
 /// The seller line shows when the listing said who sells the product
 /// ([Product.sellerKnown]: `hm_seller`, asked only while the server lists
 /// HubAppVendors, or an Algolia record's `seller`). Like the website's card,
-/// it stays in place but empty for Hub Market's own products, so the cards of
-/// a row stay level.
+/// it stays in place but empty for Hub Market's own products, and the rating
+/// row keeps its height for a product nobody reviewed yet, so the cards of a
+/// row stay level. Nothing is made up: no seller, rating or badge is drawn
+/// unless the catalogue said so.
+///
+/// The card sizes itself from its width (image = width, then
+/// [ProductCardMetrics.infoHeight]); grids and rails take their cell height
+/// from [ProductCardMetrics.heightFor] / [ProductGridDelegate].
 class ProductCard extends ConsumerStatefulWidget {
   const ProductCard({
     super.key,
@@ -68,144 +74,88 @@ class _ProductCardState extends ConsumerState<ProductCard> {
     final badgeLabel = rank == null ? _badgeLabel(l10n) : null;
 
     return Material(
-      color: Colors.white,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: AppColors.borderDefault),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      type: MaterialType.transparency,
       child: InkWell(
         onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: HubImage(url: product.imageUrl),
-                  ),
-                  // Merchandising badge over the discount badge (top-start).
-                  PositionedDirectional(
-                    top: 8,
-                    start: 8,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (rank != null)
-                          _Badge(
-                            label: rank == 1
-                                ? l10n.homeBestSellerFirst
-                                : l10n.homeBestSellerRank(rank),
-                            color: rank == 1
-                                ? AppColors.accentGold
-                                : AppColors.brandPrimary,
-                            textColor: rank == 1
-                                ? AppColors.inkHeading
-                                : Colors.white,
-                          ),
-                        if (widget.dealBadge) ...[
-                          _Badge(
-                            label: l10n.homeDealBadge,
-                            color: AppColors.brandPrimary,
-                          ),
-                          if (badgeLabel != null || discount != null)
-                            const SizedBox(height: 4),
-                        ],
-                        if (badgeLabel != null)
-                          _Badge(
-                            label: badgeLabel,
-                            color: product.badge == ProductBadge.bestseller
-                                ? AppColors.accentGold
-                                : AppColors.brandPrimary,
-                          ),
-                        if (badgeLabel != null && discount != null)
-                          const SizedBox(height: 4),
-                        if (discount != null)
-                          _Badge(
-                            label: '-$discount%',
-                            color: AppColors.accentSale,
-                          ),
-                      ],
-                    ),
-                  ),
-                  // Wishlist heart with the share action stacked beneath it.
-                  PositionedDirectional(
-                    top: 8,
-                    end: 8,
-                    child: _CircleAction(
-                      child: WishlistHeart(sku: product.sku, compact: true),
-                    ),
-                  ),
-                  PositionedDirectional(
-                    top: 40,
-                    end: 8,
-                    child: _CircleAction(
-                      child: IconButton(
-                        iconSize: 15,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 26,
-                          height: 26,
+            // Square image; if the cell is a little short it shrinks, never
+            // overflows.
+            Flexible(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const ColoredBox(color: AppColors.surfaceSubtle),
+                      HubImage(url: product.imageUrl),
+                      // Merchandising badge over the discount badge (top-start).
+                      PositionedDirectional(
+                        top: 8,
+                        start: 8,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (rank != null)
+                              _Badge(
+                                label: rank == 1
+                                    ? l10n.homeBestSellerFirst
+                                    : l10n.homeBestSellerRank(rank),
+                                color: rank == 1
+                                    ? AppColors.accentGold
+                                    : AppColors.brandPrimary,
+                                textColor: rank == 1
+                                    ? AppColors.inkHeading
+                                    : Colors.white,
+                              ),
+                            if (widget.dealBadge) ...[
+                              _Badge(
+                                label: l10n.homeDealBadge,
+                                color: AppColors.brandPrimary,
+                              ),
+                              if (badgeLabel != null || discount != null)
+                                const SizedBox(height: 4),
+                            ],
+                            if (badgeLabel != null)
+                              _Badge(
+                                label: badgeLabel,
+                                color: product.badge == ProductBadge.bestseller
+                                    ? AppColors.accentGold
+                                    : AppColors.brandPrimary,
+                                textColor:
+                                    product.badge == ProductBadge.bestseller
+                                    ? AppColors.inkHeading
+                                    : Colors.white,
+                              ),
+                            if (badgeLabel != null && discount != null)
+                              const SizedBox(height: 4),
+                            if (discount != null)
+                              _Badge(
+                                label: '-$discount%',
+                                color: AppColors.accentSale,
+                              ),
+                          ],
                         ),
-                        tooltip: l10n.actionShare,
-                        icon: const Icon(
-                          Icons.ios_share,
-                          color: AppColors.inkHeading,
-                        ),
-                        onPressed: () => _share(l10n),
                       ),
-                    ),
+                      // Wishlist: a 36 px white circle with an 18 px heart, in a
+                      // 44 px tap area.
+                      PositionedDirectional(
+                        top: 4,
+                        end: 2,
+                        child: WishlistHeart(sku: product.sku, compact: true),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 10, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (product.sellerKnown) ...[
-                    _SellerLine(name: product.sellerName),
-                    const SizedBox(height: 2),
-                  ],
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
-                      height: 1.35,
-                      color: AppColors.inkHeading,
-                    ),
-                  ),
-                  if (product.starRating case final stars?) ...[
-                    const SizedBox(height: 4),
-                    _RatingLine(stars: stars, count: product.reviewCount),
-                  ],
-                  const SizedBox(height: 6),
-                  if (!product.inStock)
-                    Text(
-                      l10n.productOutOfStock,
-                      style: const TextStyle(
-                        color: AppColors.accentSale,
-                        fontSize: 12,
-                      ),
-                    )
-                  else
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(child: PriceView(product: product)),
-                        const SizedBox(width: 6),
-                        _AddToCartButton(busy: _adding, onTap: _add),
-                      ],
-                    ),
-                ],
-              ),
-            ),
+            const SizedBox(height: ProductCardMetrics.imageGap),
+            _Info(product: product, adding: _adding, onAdd: _add),
           ],
         ),
       ),
@@ -251,19 +201,152 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       if (mounted) setState(() => _adding = false);
     }
   }
+}
 
-  /// Shares the product via the OS share sheet, using the active store's
-  /// canonical web URL when available (falls back to a name-only message).
-  Future<void> _share(AppLocalizations l10n) async {
-    final message = l10n.shareProduct(product.name);
-    final url = productUrl(ref.read(storeControllerProvider), product.urlKey);
-    await SharePlus.instance.share(
-      ShareParams(text: url == null ? message : '$message\n$url'),
+/// The measurements of the card (Figma 6:188, 171 pt wide: 171 + 10 + 100 =
+/// 281 tall), so a grid or a rail can give each cell exactly the height the
+/// card needs — for the language's line heights and the user's text size.
+abstract final class ProductCardMetrics {
+  /// Between the image and the text block.
+  static const double imageGap = 10;
+
+  /// Between the rows of the text block.
+  static const double rowGap = 4;
+
+  /// The round buttons (wishlist, add).
+  static const double buttonSize = 36;
+
+  /// The text block under the image: seller 16, name 20, rating 16 and the
+  /// price row 36 (EN, at 1× text), 4 apart — 100.
+  static double infoHeight(BuildContext context) {
+    final arabic = Localizations.localeOf(context).languageCode == 'ar';
+    final scaler = MediaQuery.textScalerOf(context);
+    double line(double enHeight, double arHeight) =>
+        scaler.scale(arabic ? arHeight : enHeight);
+    final seller = line(16, 18);
+    final name = line(20, 22);
+    final rating = line(16, 18);
+    final price = line(20, 22) + line(16, 18);
+    return seller +
+        name +
+        rating +
+        math.max(buttonSize, price) +
+        3 * rowGap +
+        1; // sub-pixel slack
+  }
+
+  /// The card's height at [width].
+  static double heightFor(BuildContext context, double width) =>
+      width + imageGap + infoHeight(context);
+}
+
+/// Two product columns as Figma lays them out (16 px between the columns,
+/// 18 between the rows, cells as tall as [ProductCard] needs). Use through
+/// [productGridDelegate] to pick up the text size and language.
+class ProductGridDelegate extends SliverGridDelegate {
+  const ProductGridDelegate({
+    required this.infoHeight,
+    this.crossAxisCount = 2,
+    this.crossAxisSpacing = 16,
+    this.mainAxisSpacing = 18,
+  });
+
+  final double infoHeight;
+  final int crossAxisCount;
+  final double crossAxisSpacing;
+  final double mainAxisSpacing;
+
+  @override
+  SliverGridLayout getLayout(SliverConstraints constraints) {
+    final usable =
+        constraints.crossAxisExtent - crossAxisSpacing * (crossAxisCount - 1);
+    final width = usable / crossAxisCount;
+    final height = width + ProductCardMetrics.imageGap + infoHeight;
+    return SliverGridRegularTileLayout(
+      crossAxisCount: crossAxisCount,
+      mainAxisStride: height + mainAxisSpacing,
+      crossAxisStride: width + crossAxisSpacing,
+      childMainAxisExtent: height,
+      childCrossAxisExtent: width,
+      reverseCrossAxis: axisDirectionIsReversed(constraints.crossAxisDirection),
+    );
+  }
+
+  @override
+  bool shouldRelayout(ProductGridDelegate oldDelegate) =>
+      oldDelegate.infoHeight != infoHeight ||
+      oldDelegate.crossAxisCount != crossAxisCount ||
+      oldDelegate.crossAxisSpacing != crossAxisSpacing ||
+      oldDelegate.mainAxisSpacing != mainAxisSpacing;
+}
+
+/// The grid delegate for a screen of product cards.
+ProductGridDelegate productGridDelegate(
+  BuildContext context, {
+  int crossAxisCount = 2,
+}) => ProductGridDelegate(
+  infoHeight: ProductCardMetrics.infoHeight(context),
+  crossAxisCount: crossAxisCount,
+);
+
+/// The text block under the image.
+class _Info extends StatelessWidget {
+  const _Info({
+    required this.product,
+    required this.adding,
+    required this.onAdd,
+  });
+
+  final Product product;
+  final bool adding;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // The line (empty for Hub Market's own products) only when the listing
+        // asked who sells; Build 1 listings leave it out.
+        if (product.sellerKnown) ...[
+          _SellerLine(name: product.sellerName),
+          const SizedBox(height: ProductCardMetrics.rowGap),
+        ],
+        Text(
+          product.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: t.body.copyWith(color: AppColors.inkHeading),
+        ),
+        const SizedBox(height: ProductCardMetrics.rowGap),
+        _RatingLine(stars: product.starRating, count: product.reviewCount),
+        const SizedBox(height: ProductCardMetrics.rowGap),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: PriceView(product: product)),
+            const SizedBox(width: 6),
+            if (product.inStock)
+              _AddToCartButton(busy: adding, onTap: onAdd)
+            else
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  l10n.productOutOfStock,
+                  style: t.caption.copyWith(color: AppColors.danger),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-/// The seller above the name (Figma v3 card "vendor": semibold, link blue).
+/// The seller above the name (Figma v3 card "vendor": 12 semibold, link blue).
 /// Plain text, as on the website's card — the card itself opens the product.
 /// [name] null keeps the line's height with nothing in it (Hub Market's own
 /// products).
@@ -272,17 +355,14 @@ class _SellerLine extends StatelessWidget {
 
   final String? name;
 
-  static const TextStyle _style = TextStyle(
-    fontSize: 11,
-    height: 14 / 11,
-    fontWeight: FontWeight.w600,
-    color: AppColors.info,
-  );
-
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final style = t.captionStrong.copyWith(color: AppColors.info);
     final seller = name;
-    if (seller == null) return const SizedBox(height: 14);
+    if (seller == null) {
+      return SizedBox(height: style.fontSize! * style.height!);
+    }
     return Semantics(
       label: AppLocalizations.of(context).productCardSoldBy(seller),
       excludeSemantics: true,
@@ -290,50 +370,52 @@ class _SellerLine extends StatelessWidget {
         seller,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: _style,
+        style: style,
       ),
     );
   }
 }
 
-/// "★ 4.7 (3)" under the name (Figma v3 card): the average of the approved
-/// reviews and, when the source says, how many there are.
+/// "★ 4.5 (12)" under the name (Figma v3 card): the average of the approved
+/// reviews and, when the source says, how many there are. With no rating the
+/// row stays as an empty line, so the cards of a row line up.
 class _RatingLine extends StatelessWidget {
   const _RatingLine({required this.stars, this.count});
 
-  /// 0–5.
-  final double stars;
+  /// 0–5; null when the product has no reviews.
+  final double? stars;
 
   /// Null (or 0) when the source doesn't say — Algolia records.
   final int? count;
 
   @override
   Widget build(BuildContext context) {
-    final average = stars.toStringAsFixed(1);
+    final t = AppTextStyles.of(context);
+    final average = stars;
+    if (average == null) {
+      return SizedBox(height: t.caption.fontSize! * t.caption.height!);
+    }
     final reviews = count ?? 0;
-    const style = TextStyle(fontSize: 11, height: 1.3);
+    final value = average.toStringAsFixed(1);
     return Semantics(
-      label: AppLocalizations.of(context).productCardRating(average, reviews),
+      label: AppLocalizations.of(context).productCardRating(value, reviews),
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 14, color: AppColors.accentGold),
-          const SizedBox(width: 2),
+          const Icon(Icons.star_rounded, size: 12, color: AppColors.ratingStar),
+          const SizedBox(width: ProductCardMetrics.rowGap),
           Text(
-            average,
+            value,
             textDirection: TextDirection.ltr,
-            style: style.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.inkHeading,
-            ),
+            style: t.captionStrong.copyWith(color: AppColors.inkHeading),
           ),
           if (reviews > 0) ...[
-            const SizedBox(width: 3),
+            const SizedBox(width: ProductCardMetrics.rowGap),
             Text(
               '($reviews)',
               textDirection: TextDirection.ltr,
-              style: style.copyWith(color: AppColors.inkMuted),
+              style: t.caption.copyWith(color: AppColors.inkMuted),
             ),
           ],
         ],
@@ -342,8 +424,8 @@ class _RatingLine extends StatelessWidget {
   }
 }
 
-/// Compact navy add-to-cart button in the card footer (Figma / site grid
-/// card). Shows a spinner while the add is in flight.
+/// The navy 36 px "+" in the card's price row (Figma "add"). Shows a spinner
+/// while the add is in flight.
 class _AddToCartButton extends StatelessWidget {
   const _AddToCartButton({required this.busy, required this.onTap});
 
@@ -353,57 +435,34 @@ class _AddToCartButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Material(
-      color: AppColors.brandPrimary,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: busy ? null : onTap,
-        child: SizedBox(
-          width: 34,
-          height: 34,
-          child: busy
-              ? const Padding(
-                  padding: EdgeInsets.all(9),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Tooltip(
-                  message: l10n.productAddToCart,
-                  child: const Icon(
-                    Icons.add_shopping_cart,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
+    return Tooltip(
+      message: l10n.productAddToCart,
+      child: Material(
+        color: AppColors.brandPrimary,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: busy ? null : onTap,
+          child: SizedBox(
+            width: ProductCardMetrics.buttonSize,
+            height: ProductCardMetrics.buttonSize,
+            child: busy
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(HubIcons.plus, color: Colors.white, size: 18),
+          ),
         ),
       ),
     );
   }
 }
 
-class _CircleAction extends StatelessWidget {
-  const _CircleAction({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 26,
-    height: 26,
-    clipBehavior: Clip.antiAlias,
-    decoration: const BoxDecoration(
-      color: Colors.white,
-      shape: BoxShape.circle,
-      border: Border.fromBorderSide(
-        BorderSide(color: AppColors.borderDefault),
-      ),
-    ),
-    child: child,
-  );
-}
-
+/// A badge on the image (Figma "badge": radius 6, 7 × 3 padding, 11 Bold).
 class _Badge extends StatelessWidget {
   const _Badge({
     required this.label,
@@ -416,19 +475,14 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(6),
     ),
     child: Text(
       label,
-      style: TextStyle(
-        color: textColor,
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.1,
-      ),
+      style: AppTextStyles.of(context).micro.copyWith(color: textColor),
     ),
   );
 }

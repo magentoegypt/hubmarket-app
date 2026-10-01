@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The `Email | Mobile` segmented control on Sign in and Reset password
 /// (Figma 03 "method"): a pale track; the chosen segment is a raised white
@@ -34,7 +35,7 @@ class AuthMethodTabs extends StatelessWidget {
         children: [
           Expanded(
             child: _Segment(
-              icon: Icons.mail_outline_rounded,
+              icon: HubIcons.mail,
               label: emailLabel,
               selected: !phoneSelected,
               onTap: () => onChanged(false),
@@ -43,7 +44,7 @@ class AuthMethodTabs extends StatelessWidget {
           const SizedBox(width: 4),
           Expanded(
             child: _Segment(
-              icon: Icons.phone_outlined,
+              icon: HubIcons.phone,
               label: phoneLabel,
               selected: phoneSelected,
               onTap: () => onChanged(true),

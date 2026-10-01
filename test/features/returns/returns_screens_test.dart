@@ -9,6 +9,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/returns_fakes.dart';
 import 'returns_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 final en = lookupAppLocalizations(const Locale('en'));
 
@@ -138,7 +139,7 @@ void main() {
       );
       expect(find.text('Short Square-Neck T-Shirt'), findsOneWidget);
       expect(find.text('AWAITING STORE'), findsOneWidget);
-      expect(find.text('AED 43.00'), findsOneWidget);
+      expect(find.text('AED 43'), findsOneWidget);
       expect(
         find.text('${en.returnsEventSentTo('loly store')} · 24 Sep'),
         findsOneWidget,
@@ -274,8 +275,8 @@ void main() {
       await _tapVisible(tester, find.text('Corner Sofa Bed'));
       expect(find.text(en.returnsOtherSellerNote('MIA CO')), findsOneWidget);
       // The line prices come from the order.
-      expect(find.text('S · Green · AED 43.00'), findsOneWidget);
-      expect(find.text('AED 86.00'), findsOneWidget); // maximum refund
+      expect(find.text('S · Green · AED 43'), findsOneWidget);
+      expect(find.text('AED 86'), findsOneWidget); // maximum refund
     });
 
     testWidgets('quantity stays within 1 and the returnable quantity', (
@@ -285,14 +286,14 @@ void main() {
       await _pickOrder(tester, '000000150');
       await _tapVisible(tester, find.text('Short Square-Neck T-Shirt'));
 
-      final minus = find.widgetWithIcon(IconButton, Icons.remove);
-      final plus = find.widgetWithIcon(IconButton, Icons.add);
+      final minus = find.widgetWithIcon(IconButton, HubIcons.minus);
+      final plus = find.widgetWithIcon(IconButton, HubIcons.plus);
       expect(tester.widget<IconButton>(plus).onPressed, isNull); // at 2 of 2
       await _tapVisible(tester, minus);
-      expect(find.text('AED 43.00'), findsOneWidget); // 1 × 43
+      expect(find.text('AED 43'), findsOneWidget); // 1 × 43
       expect(tester.widget<IconButton>(minus).onPressed, isNull); // at 1
       await _tapVisible(tester, plus);
-      expect(find.text('AED 86.00'), findsOneWidget);
+      expect(find.text('AED 86'), findsOneWidget);
     });
 
     testWidgets('a lone returnable line starts ticked', (tester) async {
@@ -346,7 +347,7 @@ void main() {
         '90',
       );
       await _submit(tester);
-      expect(find.text(en.returnsErrorAmountCap('AED 86.00')), findsOneWidget);
+      expect(find.text(en.returnsErrorAmountCap('AED 86')), findsOneWidget);
       expect(repo.createInputs, isEmpty);
     });
 
@@ -360,7 +361,7 @@ void main() {
 
       await _pickOrder(tester, '000000150');
       await _tapVisible(tester, find.text('Short Square-Neck T-Shirt'));
-      await _tapVisible(tester, find.widgetWithIcon(IconButton, Icons.remove));
+      await _tapVisible(tester, find.widgetWithIcon(IconButton, HubIcons.minus));
       await _tapVisible(tester, find.text(en.returnsTypeReplace));
       await _tapVisible(tester, find.text(en.returnsChooseReason));
       await tester.tap(find.text('Arrived damaged'));

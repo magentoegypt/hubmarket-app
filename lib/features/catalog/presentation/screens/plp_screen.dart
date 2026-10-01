@@ -28,6 +28,7 @@ import '../widgets/product_card.dart';
 import '../widgets/product_skeletons.dart';
 import '../widgets/sort_sheet.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Product listing for a category: aggregation-driven filters, sort, and
 /// append-on-scroll pagination.
@@ -159,7 +160,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
             ),
           ),
           Divider(height: 1, thickness: 1, color: context.hairline),
-          const ProductGridSkeleton(childAspectRatio: 0.66, count: 6),
+          const ProductGridSkeleton(count: 6),
         ],
       );
     }
@@ -206,7 +207,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
         if (state.products.isEmpty)
           SliverToBoxAdapter(
             child: EmptyState(
-              icon: Icons.inventory_2_outlined,
+              icon: HubIcons.package,
               title: l10n.stateEmpty,
             ),
           )
@@ -214,13 +215,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                // Figma card ≈ 173×237–253 (image 158 + name/price panel).
-                childAspectRatio: 0.66,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+              gridDelegate: productGridDelegate(context),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final product = state.products[index];
                 return ProductCard(
@@ -232,7 +227,7 @@ class _PlpScreenState extends ConsumerState<PlpScreen> {
           ),
         if (state.isLoadingMore)
           const SliverToBoxAdapter(
-            child: ProductGridSkeleton(childAspectRatio: 0.66, count: 2),
+            child: ProductGridSkeleton(count: 2),
           ),
         const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
@@ -309,13 +304,13 @@ class _Header extends StatelessWidget {
               ),
               // Two separate controls — Sort and Filter (QA 86d3m97au).
               _PillButton(
-                icon: Icons.swap_vert,
+                icon: HubIcons.arrowUpDown,
                 label: l10n.sortLabel,
                 onTap: onSort,
               ),
               const SizedBox(width: 8),
               _PillButton(
-                icon: Icons.tune,
+                icon: HubIcons.slidersHorizontal,
                 label: filtersLabel,
                 onTap: onFilters,
               ),

@@ -7,6 +7,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Opens a seller's store page (`/store/:code`).
 void openStore(BuildContext context, HmStoreCard store) =>
@@ -80,7 +81,7 @@ class HmFeaturedStoreCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
-                      Icons.inventory_2_outlined,
+                      HubIcons.package,
                       size: 13,
                       color: Color(0xFF535D70),
                     ),
@@ -92,7 +93,7 @@ class HmFeaturedStoreCard extends StatelessWidget {
                     if (dispatch != null) ...[
                       const SizedBox(width: 6),
                       const Icon(
-                        Icons.schedule_rounded,
+                        HubIcons.clock,
                         size: 13,
                         color: Color(0xFF535D70),
                       ),
@@ -351,7 +352,7 @@ class HmNewStoresList extends StatelessWidget {
                         ),
                       ),
                       const Icon(
-                        Icons.chevron_right,
+                        HubIcons.chevronRight,
                         size: 18,
                         color: AppColors.inkMuted,
                       ),
@@ -380,7 +381,7 @@ class HmVerifiedPill extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.check, size: 11, color: AppColors.successStrong),
+        const Icon(HubIcons.check, size: 11, color: AppColors.successStrong),
         const SizedBox(width: 3),
         Text(
           AppLocalizations.of(context).homeVerified,
@@ -477,7 +478,7 @@ class _VerifiedAvatar extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
             ),
-            child: Icon(Icons.check, size: badge * 0.55, color: Colors.white),
+            child: Icon(HubIcons.check, size: badge * 0.55, color: Colors.white),
           ),
         ),
       ],

@@ -18,6 +18,7 @@ import '../widgets/auth_field.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_widgets.dart';
 import 'verify_code_screen.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Figma "04 Register": first / last name, e-mail, mobile (WhatsApp),
 /// password with its rule, the terms and newsletter boxes, Create account.
@@ -189,7 +190,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           AuthField(
             controller: _email,
             label: l10n.authEmailHint,
-            icon: Icons.mail_outline_rounded,
+            icon: HubIcons.mail,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
             ltrInput: true,
@@ -202,7 +203,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           AuthField(
             controller: _mobile,
             label: l10n.fieldMobileWhatsapp,
-            icon: Icons.phone_outlined,
+            icon: HubIcons.phone,
             hint: l10n.authPhonePlaceholder,
             keyboardType: TextInputType.phone,
             autofillHints: const [AutofillHints.telephoneNumber],
@@ -216,7 +217,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           AuthField(
             controller: _password,
             label: l10n.fieldPassword,
-            icon: Icons.lock_outline_rounded,
+            icon: HubIcons.lock,
             obscureText: _obscure,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.newPassword],

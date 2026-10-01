@@ -7,6 +7,7 @@ import '../../../account/domain/customer_address.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Step 1 cards (Figma 17 / 17a): the guest's contact card, the saved-address
 /// picker, "Ship to" and the shipping methods.
@@ -52,7 +53,7 @@ class ContactCard extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: l10n.authEmailHint,
                 prefixIcon: const Icon(
-                  Icons.mail_outline,
+                  HubIcons.mail,
                   size: 20,
                   color: AppColors.inkMuted,
                 ),
@@ -101,7 +102,7 @@ class _ExistingAccountNote extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, size: 18, color: AppColors.info),
+          const Icon(HubIcons.info, size: 18, color: AppColors.info),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -202,7 +203,7 @@ class SavedAddressPicker extends StatelessWidget {
               CheckoutRadio(selected: useNew),
               const SizedBox(width: 12),
               const Icon(
-                Icons.add_location_alt_outlined,
+                HubIcons.mapPinPlus,
                 size: 18,
                 color: AppColors.brandPrimary,
               ),
@@ -307,7 +308,7 @@ class ShipToCard extends StatelessWidget {
         Row(
           children: [
             const Icon(
-              Icons.location_on_outlined,
+              HubIcons.mapPin,
               size: 18,
               color: AppColors.accentStrong,
             ),
@@ -393,7 +394,7 @@ class ShippingMethodsCard extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.local_shipping_outlined,
+                HubIcons.truck,
                 size: 14,
                 color: AppColors.successStrong,
               ),

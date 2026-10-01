@@ -13,6 +13,7 @@ import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
 import '../reviews_controllers.dart';
 import '../widgets/review_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// All of a product's published reviews (Figma 15), reached from the product
 /// page's "See all". Pages through core `products { reviews }` 20 at a time
@@ -84,7 +85,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
     }
     if (state.notFound) {
       return EmptyState(
-        icon: Icons.link_off,
+        icon: HubIcons.link2Off,
         title: l10n.linkNotFoundTitle,
         body: l10n.linkNotFoundBody,
       );
@@ -120,7 +121,7 @@ class _ProductReviewsScreenState extends ConsumerState<ProductReviewsScreen> {
     }
     if (product.reviewCount == 0 && state.reviews.isEmpty) {
       return EmptyState(
-        icon: Icons.rate_review_outlined,
+        icon: HubIcons.messageSquareText,
         title: l10n.reviewsEmptyTitle,
         body: l10n.reviewsEmptyBody,
       );
@@ -259,7 +260,7 @@ class _WriteReviewBar extends StatelessWidget {
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: onTap,
-          icon: const Icon(Icons.edit_outlined, size: 20),
+          icon: const Icon(HubIcons.pencil, size: 20),
           label: Text(
             l10n.reviewsWrite,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),

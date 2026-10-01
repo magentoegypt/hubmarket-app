@@ -5,6 +5,7 @@ import '../../app/theme/app_colors.dart';
 import '../../l10n/l10n.dart';
 import '../util/launch.dart';
 import 'hub_back_button.dart';
+import '../../app/theme/hub_icons.dart';
 
 /// Arguments for [WebViewScreen] — the live-site [url] to load and the [title]
 /// shown in the app bar. Passed via `GoRouter` `state.extra`.
@@ -175,7 +176,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.open_in_new, size: 20),
+            icon: const Icon(HubIcons.externalLink, size: 20),
             tooltip: l10n.webviewOpenInBrowser,
             onPressed: _openExternally,
           ),
@@ -212,7 +213,7 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 44, color: AppColors.inkFaint),
+            const Icon(HubIcons.cloudOff, size: 44, color: AppColors.inkFaint),
             const SizedBox(height: 16),
             Text(
               l10n.errorNetwork,

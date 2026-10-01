@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The list pages' app bar (Figma 10b–10e): ← back, the title, and search /
 /// cart (or [actions]) on the end side.
@@ -30,7 +31,7 @@ class HmTitleAppBar extends StatelessWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       shape: const Border(bottom: BorderSide(color: AppColors.borderSubtle)),
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, size: 22),
+        icon: const Icon(HubIcons.arrowLeft, size: 22),
         color: AppColors.inkHeading,
         tooltip: MaterialLocalizations.of(context).backButtonTooltip,
         onPressed: () => Navigator.maybePop(context),
@@ -45,13 +46,13 @@ class HmTitleAppBar extends StatelessWidget implements PreferredSizeWidget {
           actions ??
           [
             IconButton(
-              icon: const Icon(Icons.search, size: 22),
+              icon: const Icon(HubIcons.search, size: 22),
               color: AppColors.inkHeading,
               tooltip: MaterialLocalizations.of(context).searchFieldLabel,
               onPressed: () => context.push(AppRoutes.search),
             ),
             IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined, size: 22),
+              icon: const Icon(HubIcons.shoppingCart, size: 22),
               color: AppColors.inkHeading,
               onPressed: () => context.go(AppRoutes.cart),
             ),

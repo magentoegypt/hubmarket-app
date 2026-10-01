@@ -6,6 +6,7 @@ import '../../app/theme/app_text_styles.dart';
 import '../../app/theme/theme_x.dart';
 import '../../l10n/l10n.dart';
 import '../network/connectivity.dart';
+import '../../app/theme/hub_icons.dart';
 
 /// Figma "S3 Offline", the page: an amber no-signal disc, "You're offline",
 /// a line about Wi-Fi / mobile data and "Try again". Shown where content
@@ -43,7 +44,7 @@ class _OfflineStateState extends ConsumerState<OfflineState> {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.wifi_off_rounded,
+                HubIcons.wifiOff,
                 size: 48,
                 color: AppColors.warning,
               ),
@@ -102,7 +103,7 @@ class OfflineBanner extends ConsumerWidget {
             child: Row(
               children: [
                 const Icon(
-                  Icons.wifi_off_rounded,
+                  HubIcons.wifiOff,
                   size: 18,
                   color: Colors.white,
                 ),

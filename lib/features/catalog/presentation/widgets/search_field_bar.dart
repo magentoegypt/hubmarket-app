@@ -4,6 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../l10n/l10n.dart';
 import 'search_style.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The search screens' header row (Figma 09 · 09b · 09c · S2): the field, with
 /// a back arrow before it on the results page and a Cancel action after it
@@ -74,7 +75,7 @@ class SearchFieldBar extends StatelessWidget {
                   color: context.scaffoldHeading,
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                   // arrow_back mirrors itself in RTL.
-                  icon: const Icon(Icons.arrow_back),
+                  icon: const Icon(HubIcons.arrowLeft),
                   onPressed: back,
                 ),
               ),
@@ -167,7 +168,7 @@ class _SearchInput extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.search, size: 20, color: context.scaffoldMuted),
+          Icon(HubIcons.search, size: 20, color: context.scaffoldMuted),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -234,7 +235,7 @@ class _ClearButton extends StatelessWidget {
                 color: SearchStyle.outline,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.close, size: 12, color: Colors.white),
+              child: const Icon(HubIcons.x, size: 12, color: Colors.white),
             ),
           ),
         ),

@@ -6,6 +6,7 @@ import 'package:hubmarket_app/features/stores/presentation/widgets/store_widgets
 import '../../../support/hubapp_fakes.dart';
 import '../../../support/store_fixtures.dart';
 import '../stores_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// The list requests (not the featured banner's).
 List<RecordedRequest> _lists(FakeStoresBackend backend) => [
@@ -45,7 +46,7 @@ void main() {
     expect(find.text('(88 reviews)'), findsOneWidget);
     // An unrated seller says so rather than showing a zero.
     expect(find.text('No reviews yet'), findsOneWidget);
-    expect(find.byIcon(Icons.verified_outlined), findsNWidgets(6));
+    expect(find.byIcon(HubIcons.badgeCheck), findsNWidgets(6));
 
     final list = _lists(backend).single;
     expect(list.document, contains('sort: TOP_RATED'));

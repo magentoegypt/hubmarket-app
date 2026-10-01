@@ -10,6 +10,7 @@ import '../../../core/widgets/network_image.dart';
 import '../../../core/widgets/web_view_screen.dart';
 import '../../../l10n/l10n.dart';
 import '../domain/seller_groups.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Figma `--hm-subtle` text: store names in the checkout review.
 const Color _inkSubtle = Color(0xFF535D70);
@@ -115,7 +116,7 @@ class SellerVerifiedIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     label: AppLocalizations.of(context).sellerVerified,
-    child: Icon(Icons.verified_outlined, size: size, color: AppColors.info),
+    child: Icon(HubIcons.badgeCheck, size: size, color: AppColors.info),
   );
 }
 
@@ -191,7 +192,7 @@ class SoldByRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 const Icon(
-                  Icons.chevron_right,
+                  HubIcons.chevronRight,
                   size: 14,
                   color: AppColors.info,
                 ),
@@ -325,7 +326,7 @@ class SplitPackagesNote extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.info),
+        const Icon(HubIcons.package, size: 18, color: AppColors.info),
         const SizedBox(width: 10),
         Expanded(
           child: Text(

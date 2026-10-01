@@ -14,6 +14,7 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../auth/presentation/auth_error_text.dart';
 import '../../../auth/presentation/screens/verify_code_screen.dart';
 import '../../data/account_repository.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Edit-Profile mobile-number editor. Shows the current mobile and, on
 /// "Change", sends a WhatsApp code to the NEW number (the registration send,
@@ -126,7 +127,7 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
       child: Row(
         children: [
           const Icon(
-            Icons.smartphone_outlined,
+            HubIcons.smartphone,
             size: 20,
             color: AppColors.inkMuted,
           ),
@@ -218,7 +219,7 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
                     ),
                     icon: _busy
                         ? const ButtonSpinner()
-                        : const Icon(Icons.chat_bubble_outline, size: 18),
+                        : const Icon(HubIcons.messageCircle, size: 18),
                     label: Text(l10n.authSendWhatsappCode),
                   ),
                 ),

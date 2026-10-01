@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// What `/stores` and `/store/…` show while the server has no seller API
 /// (Hub Market App not deployed, or not confirmed yet): the app offers no way
@@ -16,7 +17,7 @@ class StoresUnavailable extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return EmptyState(
-      icon: Icons.storefront_outlined,
+      icon: HubIcons.store,
       title: l10n.comingSoon,
       body: l10n.comingSoonBody,
       action: OutlinedButton(

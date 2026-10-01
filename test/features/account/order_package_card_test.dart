@@ -73,13 +73,13 @@ void main() {
     expect(_inCard(0, find.text('Packed and handed to DHL.')), findsOneWidget);
     expect(_inCard(0, find.text('Package total')), findsOneWidget);
     // The dress's price, the package subtotal and the package total.
-    expect(_inCard(0, find.text('AED 50.00')), findsNWidgets(3));
+    expect(_inCard(0, find.text('AED 50')), findsNWidgets(3));
 
     // MIA CO: nothing shipped yet, a discount, no delivery of its own.
     expect(_inCard(1, find.textContaining('Shipment')), findsNothing);
     expect(_inCard(1, find.text('Discount')), findsOneWidget);
-    expect(_inCard(1, find.text('−AED 25.00')), findsOneWidget);
-    expect(_inCard(1, find.text('AED 468.00')), findsOneWidget);
+    expect(_inCard(1, find.text('−AED 25')), findsOneWidget);
+    expect(_inCard(1, find.text('AED 468')), findsOneWidget);
     expect(_inCard(1, find.text('Shipping')), findsNothing);
 
     // Every number is in a card: no order-level Tracking list repeats them.
@@ -170,8 +170,8 @@ void main() {
 
     expect(_inCard(0, find.text('Vendor Table Rate')), findsOneWidget);
     expect(_inCard(0, find.text('Shipping')), findsOneWidget);
-    expect(_inCard(0, find.text('AED 10.00')), findsOneWidget);
-    expect(_inCard(0, find.text('AED 60.00')), findsOneWidget);
+    expect(_inCard(0, find.text('AED 10')), findsOneWidget);
+    expect(_inCard(0, find.text('AED 60')), findsOneWidget);
     expect(_inCard(1, find.text('Shipping')), findsNothing);
   });
 
@@ -247,7 +247,7 @@ void main() {
     expect(_inCard(0, find.text('PROCESSING')), findsOneWidget);
     expect(_inCard(1, find.text('PENDING')), findsOneWidget);
     expect(find.text('Track parcel'), findsOneWidget);
-    expect(_inCard(1, find.text('AED 468.00')), findsOneWidget);
+    expect(_inCard(1, find.text('AED 468')), findsOneWidget);
     // The numbers are in the cards; the Tracking list doesn't repeat them.
     expect(find.text(dhlNumber), findsOneWidget);
     expect(tester.takeException(), isNull);

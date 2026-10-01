@@ -4,16 +4,17 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// A representative icon per payment method — shared by the payment step, the
 /// review card and the order-placed screen.
 IconData paymentMethodIcon(PaymentMethodOption method) {
-  if (method.isFree) return Icons.card_giftcard;
-  if (method.isCashOnDelivery) return Icons.payments_outlined;
+  if (method.isFree) return HubIcons.gift;
+  if (method.isCashOnDelivery) return HubIcons.banknote;
   final c = method.code.toLowerCase();
-  if (c.contains('checkmo')) return Icons.request_quote_outlined;
-  if (c.contains('banktransfer')) return Icons.account_balance_outlined;
-  return Icons.account_balance_wallet_outlined;
+  if (c.contains('checkmo')) return HubIcons.receipt;
+  if (c.contains('banktransfer')) return HubIcons.landmark;
+  return HubIcons.wallet;
 }
 
 /// One selectable payment method (Figma 18): radio, icon tile, the backend's

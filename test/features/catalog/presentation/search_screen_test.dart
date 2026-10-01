@@ -30,6 +30,7 @@ import '../../../support/algolia_fakes.dart';
 import '../../../support/fakes.dart';
 import '../../../support/hubapp_fakes.dart';
 import '../../../support/search_fixtures.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 // ---------------------------------------------------------------- GraphQL
 
@@ -447,10 +448,10 @@ void main() {
       expect(find.text('in Living Room Sets'), findsNWidgets(2));
       expect(find.text('in Home Furniture'), findsNWidgets(2));
       // Price in AED, the original struck through when there is one.
-      expect(find.text('AED 425.00'), findsOneWidget);
-      expect(find.text('AED 500.00'), findsOneWidget);
-      expect(find.text('AED 180.00'), findsOneWidget);
-      final struck = tester.widget<Text>(find.text('AED 500.00'));
+      expect(find.text('AED 425'), findsOneWidget);
+      expect(find.text('AED 500'), findsOneWidget);
+      expect(find.text('AED 180'), findsOneWidget);
+      final struck = tester.widget<Text>(find.text('AED 500'));
       expect(struck.style?.decoration, TextDecoration.lineThrough);
     });
 
@@ -727,7 +728,7 @@ void main() {
       // AED 425 of 500, 255 of 300, 34 of 40.
       expect(find.text('-15%'), findsNWidgets(3));
       expect(find.text('Cancel'), findsNothing);
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(HubIcons.arrowLeft), findsOneWidget);
 
       await tester.tap(find.text('Categories (3)'));
       await tester.pumpAndSettle();

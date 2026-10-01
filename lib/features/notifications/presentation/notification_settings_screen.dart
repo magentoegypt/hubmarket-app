@@ -15,6 +15,7 @@ import '../../../l10n/l10n.dart';
 import '../../account/presentation/newsletter_controller.dart';
 import '../../auth/presentation/auth_controller.dart';
 import 'notification_settings_controller.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Notification settings (Figma 20h): push and the e-mail newsletter, saved
 /// together with Save.
@@ -150,7 +151,7 @@ class _NotificationSettingsScreenState
                 ],
               )
             : EmptyState(
-                icon: Icons.notifications_none,
+                icon: HubIcons.bell,
                 title: l10n.notificationSettingsTitle,
                 body: signedIn
                     ? l10n.notificationSettingsNone

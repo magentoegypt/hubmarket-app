@@ -12,6 +12,7 @@ import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../notifications/presentation/notification_settings_controller.dart';
 import '../delete_account_action.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// App settings: language toggle (EN/AR) + notification preferences, plus a
 /// shortcut to Help. The same language switch lives in the menu drawer; this
@@ -89,9 +90,9 @@ class SettingsScreen extends ConsumerWidget {
           ],
 
           ListTile(
-            leading: const Icon(Icons.help_outline),
+            leading: const Icon(HubIcons.circleHelp),
             title: Text(l10n.accountHelp),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(HubIcons.chevronRight),
             onTap: () => context.push(AppRoutes.help),
           ),
           // Live on-device connection probe (runs storeConfig against the active
@@ -100,10 +101,10 @@ class SettingsScreen extends ConsumerWidget {
           // tool (its screen is English only), so not in the customer build.
           if (developerTools)
             ListTile(
-              leading: const Icon(Icons.wifi_tethering),
+              leading: const Icon(HubIcons.wifi),
               title: Text(l10n.settingsConnectionTest),
               subtitle: Text(l10n.settingsConnectionTestSubtitle),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(HubIcons.chevronRight),
               onTap: () => context.push(AppRoutes.diagnostics),
             ),
           // Account deletion must be reachable from inside the app whenever an
@@ -159,7 +160,7 @@ class _DeleteAccountTileState extends ConsumerState<_DeleteAccountTile> {
 
     return ListTile(
       enabled: !_busy,
-      leading: Icon(Icons.delete_forever_outlined, color: error),
+      leading: Icon(HubIcons.trash2, color: error),
       title: Text(l10n.deleteAccountTitle, style: TextStyle(color: error)),
       subtitle: Text(l10n.deleteAccountSubtitle),
       trailing: _busy

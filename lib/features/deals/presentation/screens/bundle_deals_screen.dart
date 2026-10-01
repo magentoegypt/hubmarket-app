@@ -15,6 +15,7 @@ import '../bundle_deals_controller.dart';
 import '../widgets/bundle_card.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Bundle deals (Figma 10c, `hmBundleDeals`): the navy intro (the Home's
 /// bundles title and subtitle when the admin set them — see
@@ -38,7 +39,7 @@ class BundleDealsScreen extends ConsumerWidget {
         error: error,
         onRetry: controller.refresh,
         emptyTitle: l10n.bundlesEmpty,
-        emptyIcon: Icons.inventory_2_outlined,
+        emptyIcon: HubIcons.package,
       );
     } else {
       body = RefreshIndicator(
@@ -91,7 +92,7 @@ class BundleDealsScreen extends ConsumerWidget {
                 )
               else if (state.items.isEmpty)
                 EmptyState(
-                  icon: Icons.inventory_2_outlined,
+                  icon: HubIcons.package,
                   title: l10n.bundlesEmpty,
                 )
               else
@@ -342,7 +343,7 @@ class BundleListCard extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton.icon(
                       onPressed: () => openBundle(context, deal),
-                      icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+                      icon: const Icon(HubIcons.shoppingCart, size: 20),
                       label: Text(l10n.bundleAdd),
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.brandPrimary,

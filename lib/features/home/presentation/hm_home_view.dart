@@ -21,6 +21,7 @@ import 'widgets/hm_picked_for_you.dart';
 import 'widgets/hm_product_rail.dart';
 import 'widgets/hm_section_header.dart';
 import 'widgets/hm_store_cards.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// The admin-laid-out Home (Figma 07, `hmAppHome`): every section in the
 /// admin's order, drawn by its type. Sections are built lazily as they
@@ -233,7 +234,7 @@ class HmSectionView extends ConsumerWidget {
               HmProductRail(products: s.products),
             ],
           ),
-          leading: const HmHeaderGlyph(icon: Icons.sell_outlined),
+          leading: const HmHeaderGlyph(icon: HubIcons.tag),
           action: l10n.homeAllDeals,
           onAction: more(fallback: AppRoutes.deals),
         );

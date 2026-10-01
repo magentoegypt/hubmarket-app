@@ -10,6 +10,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/returns_fakes.dart';
 import 'returns_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 final en = lookupAppLocalizations(const Locale('en'));
 
@@ -210,7 +211,7 @@ void main() {
       expect(
         tester
             .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.arrow_forward),
+              find.widgetWithIcon(IconButton, HubIcons.arrowRight),
             )
             .onPressed,
         isNull,
@@ -310,7 +311,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('label.png'), findsOneWidget);
       expect(find.byType(InteractiveViewer), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.close).last);
+      await tester.tap(find.byIcon(HubIcons.x).last);
       await tester.pumpAndSettle();
       expect(find.byType(InteractiveViewer), findsNothing);
     });

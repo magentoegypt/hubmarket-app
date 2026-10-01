@@ -9,6 +9,7 @@ import '../../../../core/widgets/otp_code_field.dart';
 import '../../../../core/widgets/resend_countdown.dart';
 import '../../../../l10n/l10n.dart';
 import '../checkout_controller.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Guest-checkout "Verify Mobile Number" card, shown only when
 /// `BackendCapabilities.guestCheckoutOtp` is on: auto-requests a WhatsApp OTP
@@ -125,7 +126,7 @@ class _GuestVerifyCardState extends ConsumerState<GuestVerifyCard> {
 
   Widget _verifiedView(AppLocalizations l10n) => Row(
     children: [
-      const Icon(Icons.check_circle, color: AppColors.successStrong, size: 20),
+      const Icon(HubIcons.circleCheck, color: AppColors.successStrong, size: 20),
       const SizedBox(width: 10),
       Expanded(
         child: Text(

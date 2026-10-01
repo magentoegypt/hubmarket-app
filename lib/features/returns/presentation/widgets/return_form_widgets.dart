@@ -8,6 +8,7 @@ import '../../../catalog/domain/money.dart';
 import '../../domain/return_draft.dart';
 import '../../domain/returns.dart';
 import 'return_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The building blocks of the return form (Figma 23).
 
@@ -31,7 +32,7 @@ class ReturnStoreNote extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
-            Icons.storefront_outlined,
+            HubIcons.store,
             size: 18,
             color: returnsSubtleText,
           ),
@@ -102,7 +103,7 @@ class ReturnPickerField extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               const Icon(
-                Icons.keyboard_arrow_down,
+                HubIcons.chevronDown,
                 size: 20,
                 color: AppColors.inkMuted,
               ),
@@ -130,7 +131,7 @@ class ReturnSellerHeader extends StatelessWidget {
       child: Row(
         children: [
           const Icon(
-            Icons.storefront_outlined,
+            HubIcons.store,
             size: 14,
             color: returnsVendorColor,
           ),
@@ -327,7 +328,7 @@ class _TickBox extends StatelessWidget {
             ),
     ),
     child: selected
-        ? const Icon(Icons.check, size: 14, color: Colors.white)
+        ? const Icon(HubIcons.check, size: 14, color: Colors.white)
         : null,
   );
 }
@@ -371,7 +372,7 @@ class _Stepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          button(Icons.remove, value > min ? () => onChanged(value - 1) : null),
+          button(HubIcons.minus, value > min ? () => onChanged(value - 1) : null),
           SizedBox(
             width: 28,
             child: Text(
@@ -384,7 +385,7 @@ class _Stepper extends StatelessWidget {
               ),
             ),
           ),
-          button(Icons.add, value < max ? () => onChanged(value + 1) : null),
+          button(HubIcons.plus, value < max ? () => onChanged(value + 1) : null),
         ],
       ),
     );
@@ -639,7 +640,7 @@ class ReturnSheetOption extends StatelessWidget {
             style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
           ),
     trailing: selected
-        ? const Icon(Icons.check, color: AppColors.brandPrimary, size: 20)
+        ? const Icon(HubIcons.check, color: AppColors.brandPrimary, size: 20)
         : null,
   );
 }

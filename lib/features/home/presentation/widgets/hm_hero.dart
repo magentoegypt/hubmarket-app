@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../domain/hm_home.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The Hero Banner carousel (Figma 07 "Hero carousel"): a 220 pt slide per
 /// banner — the admin's image under its tone scrim, kicker pill, headline,
@@ -202,7 +203,7 @@ class HmHeroSlide extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             const Icon(
-                              Icons.arrow_forward,
+                              HubIcons.arrowRight,
                               size: 14,
                               color: Colors.white,
                             ),

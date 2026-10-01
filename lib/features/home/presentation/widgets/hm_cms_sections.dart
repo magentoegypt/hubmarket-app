@@ -12,6 +12,7 @@ import '../../../catalog/presentation/storefront_links.dart';
 import '../../../cms/domain/cms_document.dart';
 import '../../../cms/presentation/widgets/cms_html_view.dart';
 import '../../domain/home_content.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The delivery-promise strip under the header (Figma 07 "utility-strip"):
 /// the `hm_delivery_promise` block's line and "Track order ›".
@@ -34,7 +35,7 @@ class HmDeliveryStrip extends ConsumerWidget {
       child: Row(
         children: [
           const Icon(
-            Icons.local_shipping_outlined,
+            HubIcons.truck,
             size: 14,
             color: AppColors.accentStrong,
           ),
@@ -58,14 +59,14 @@ class HmDeliveryStrip extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.inventory_2_outlined,
+                    HubIcons.package,
                     size: 14,
                     color: AppColors.accentStrong,
                   ),
                   const SizedBox(width: 6),
                   Text(l10n.homeTrackOrder, style: style),
                   const Icon(
-                    Icons.chevron_right,
+                    HubIcons.chevronRight,
                     size: 14,
                     color: AppColors.accentStrong,
                   ),
@@ -174,7 +175,7 @@ class HmPromoBanners extends ConsumerWidget {
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.arrow_forward,
+                              HubIcons.arrowRight,
                               size: 18,
                               color: AppColors.inkHeading,
                             ),
@@ -201,21 +202,21 @@ class HmTrustGrid extends StatelessWidget {
   final List<TrustItem> items;
 
   static const List<IconData> _icons = <IconData>[
-    Icons.verified_user_outlined,
-    Icons.credit_card_outlined,
-    Icons.local_shipping_outlined,
-    Icons.replay_outlined,
-    Icons.chat_bubble_outline,
+    HubIcons.shieldCheck,
+    HubIcons.creditCard,
+    HubIcons.truck,
+    HubIcons.rotateCcw,
+    HubIcons.messageCircle,
   ];
 
   /// Words (English and Arabic) that pick an item's glyph; the position in
   /// the row is the fallback.
   static const List<(List<String>, IconData)> _byWord = [
-    (['whatsapp', 'support', 'help', 'واتساب', 'دعم', 'مساعدة'], Icons.chat_bubble_outline),
-    (['return', 'refund', 'إرجاع', 'استرجاع', 'استبدال'], Icons.replay_outlined),
-    (['deliver', 'shipping', 'توصيل', 'شحن'], Icons.local_shipping_outlined),
-    (['pay', 'card', 'دفع', 'بطاق'], Icons.credit_card_outlined),
-    (['seller', 'trust', 'verified', 'بائع', 'موثوق', 'موثّق'], Icons.verified_user_outlined),
+    (['whatsapp', 'support', 'help', 'واتساب', 'دعم', 'مساعدة'], HubIcons.messageCircle),
+    (['return', 'refund', 'إرجاع', 'استرجاع', 'استبدال'], HubIcons.rotateCcw),
+    (['deliver', 'shipping', 'توصيل', 'شحن'], HubIcons.truck),
+    (['pay', 'card', 'دفع', 'بطاق'], HubIcons.creditCard),
+    (['seller', 'trust', 'verified', 'بائع', 'موثوق', 'موثّق'], HubIcons.shieldCheck),
   ];
 
   static IconData iconFor(TrustItem item, int index) {

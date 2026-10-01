@@ -15,6 +15,7 @@ import '../../domain/returns.dart';
 import 'return_form_widgets.dart';
 import 'return_widgets.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Photos on a return (Figma 23 "Photos (optional)", 65:2855), its replies
 /// (23c's camera button) and its escalation, and the files the thread shows.
@@ -46,7 +47,7 @@ Future<List<ReturnPhoto>> pickReturnPhotos(
             ReturnSheetTitle(l10n.returnsAddPhotos),
             ListTile(
               leading: const Icon(
-                Icons.photo_camera_outlined,
+                HubIcons.camera,
                 color: AppColors.inkHeading,
               ),
               title: Text(
@@ -57,7 +58,7 @@ Future<List<ReturnPhoto>> pickReturnPhotos(
             ),
             ListTile(
               leading: const Icon(
-                Icons.photo_library_outlined,
+                HubIcons.images,
                 color: AppColors.inkHeading,
               ),
               title: Text(
@@ -198,7 +199,7 @@ class ReturnAddPhotoTile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
-                    Icons.photo_camera_outlined,
+                    HubIcons.camera,
                     size: 22,
                     color: AppColors.inkMuted,
                   ),
@@ -254,7 +255,7 @@ class ReturnPhotoTile extends StatelessWidget {
                   cacheWidth: (size * 3).round(),
                   gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(Icons.image_outlined, color: AppColors.inkMuted),
+                    child: Icon(HubIcons.image, color: AppColors.inkMuted),
                   ),
                 ),
               ),
@@ -273,7 +274,7 @@ class ReturnPhotoTile extends StatelessWidget {
                   message: l10n.returnsRemovePhoto,
                   child: const Padding(
                     padding: EdgeInsets.all(3),
-                    child: Icon(Icons.close, size: 14, color: Colors.white),
+                    child: Icon(HubIcons.x, size: 14, color: Colors.white),
                   ),
                 ),
               ),
@@ -319,14 +320,14 @@ class ReturnAttachmentStrip extends ConsumerWidget {
                   url: attachment.url,
                   size: 64,
                   radius: 8,
-                  icon: Icons.image_outlined,
+                  icon: HubIcons.image,
                 ),
               ),
             )
           else
             ActionChip(
               avatar: Icon(
-                Icons.insert_drive_file_outlined,
+                HubIcons.fileText,
                 size: 16,
                 color: onDark ? Colors.white : AppColors.inkHeading,
               ),
@@ -367,7 +368,7 @@ Future<void> showReturnPhoto(BuildContext context, ReturnAttachment photo) {
             foregroundColor: Colors.white,
             leading: IconButton(
               tooltip: MaterialLocalizations.of(routeContext).closeButtonTooltip,
-              icon: const Icon(Icons.close),
+              icon: const Icon(HubIcons.x),
               onPressed: () => Navigator.pop(routeContext),
             ),
             title: Text(
@@ -384,7 +385,7 @@ Future<void> showReturnPhoto(BuildContext context, ReturnAttachment photo) {
                 fit: BoxFit.contain,
                 placeholder: (_) => const SizedBox.shrink(),
                 error: (_) => const Icon(
-                  Icons.broken_image_outlined,
+                  HubIcons.imageOff,
                   color: Colors.white54,
                   size: 48,
                 ),

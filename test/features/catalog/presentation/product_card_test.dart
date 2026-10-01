@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/theme/app_colors.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
-import 'package:hubmarket_app/core/widgets/network_image.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
@@ -46,8 +45,8 @@ void main() {
       // Per Figma, the card shows the product name (brand folded in) with no
       // separate brand line, the stacked sale/struck price, and the discount.
       expect(find.text('Coco Mademoiselle EDP'), findsOneWidget);
-      expect(find.text('AED 199.00'), findsOneWidget);
-      expect(find.text('AED 250.00'), findsOneWidget);
+      expect(find.text('AED 199'), findsOneWidget);
+      expect(find.text('AED 250'), findsOneWidget);
       expect(find.text('-20%'), findsOneWidget);
     },
   );
@@ -56,7 +55,7 @@ void main() {
     await tester.pumpWidget(_wrap(ProductCard(product: kSampleProducts[1])));
     await tester.pump();
 
-    expect(find.text('AED 300.00'), findsOneWidget);
+    expect(find.text('AED 300'), findsOneWidget);
     expect(find.textContaining('%'), findsNothing);
   });
 
@@ -226,19 +225,19 @@ void main() {
       semantics.dispose();
     });
 
-    // The image takes what the text leaves, so its height says how tall the
-    // text block is.
-    Future<double> imageHeight(WidgetTester tester, Product product) async {
+    // The image is a square of the card's width and the text block sits under
+    // it, so the card's height says how tall the text block is.
+    Future<double> cardHeight(WidgetTester tester, Product product) async {
       await tester.pumpWidget(_wrap(ProductCard(product: product)));
       await tester.pump();
-      return tester.getSize(find.byType(HubImage)).height;
+      return tester.getSize(find.byType(ProductCard)).height;
     }
 
     testWidgets("Hub Market's own product keeps the line, empty, so rows stay level", (
       tester,
     ) async {
-      final withSeller = await imageHeight(tester, sold(seller: 'MIA CO'));
-      final own = await imageHeight(tester, sold());
+      final withSeller = await cardHeight(tester, sold(seller: 'MIA CO'));
+      final own = await cardHeight(tester, sold());
 
       expect(find.text('MIA CO'), findsNothing);
       expect(own, withSeller);
@@ -247,14 +246,14 @@ void main() {
     testWidgets('a listing that did not ask (Build 1) has no seller line', (
       tester,
     ) async {
-      final withLine = await imageHeight(tester, sold(seller: 'MIA CO'));
-      final build1 = await imageHeight(
+      final withLine = await cardHeight(tester, sold(seller: 'MIA CO'));
+      final build1 = await cardHeight(
         tester,
         sold(seller: 'MIA CO', known: false),
       );
 
       expect(find.text('MIA CO'), findsNothing);
-      expect(build1, greaterThan(withLine));
+      expect(build1, lessThan(withLine));
     });
   });
 

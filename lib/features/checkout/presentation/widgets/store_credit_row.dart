@@ -6,6 +6,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../l10n/l10n.dart';
 import '../checkout_credit_controller.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// "Use my credit" on the payment step (Figma 18): the gift disc, what can be
 /// used (or what this order uses), and the switch. Shown while the customer's
@@ -66,7 +67,7 @@ class CheckoutStoreCreditRow extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.card_giftcard_outlined,
+                    HubIcons.gift,
                     size: 18,
                     color: AppColors.successStrong,
                   ),

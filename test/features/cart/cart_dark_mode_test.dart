@@ -35,7 +35,7 @@ void main() {
       expect(bar.backgroundColor, Colors.white24);
       expect(bar.value, closeTo(100 / 150, 1e-9));
       final remaining = tester.widget<Text>(
-        find.text(l10n.cartFreeDeliveryRemaining('AED 50.00')),
+        find.text(l10n.cartFreeDeliveryRemaining('AED 50')),
       );
       expect(remaining.style?.color, Colors.white);
       // The summary's ink and navy would vanish on the dark page.

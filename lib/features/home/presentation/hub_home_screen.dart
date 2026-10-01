@@ -33,10 +33,10 @@ import 'hm_home_providers.dart';
 import 'hm_home_view.dart';
 import 'home_providers.dart';
 import 'widgets/home_active_order.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Carousel card width (Figma v2/v3): 152 pt so the next card peeks ~30%.
 const double _kCardWidth = 152;
-const double _kRailHeight = 292;
 
 /// Hub Market Home (Figma "07 Home", v3).
 ///
@@ -191,7 +191,7 @@ class _HomeUnavailable extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.inkMuted),
+            const Icon(HubIcons.cloudOff, size: 40, color: AppColors.inkMuted),
             const SizedBox(height: 12),
             Text(
               error is Failure
@@ -243,7 +243,7 @@ class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
                     // With the unread dot, as in the app bar.
                     const NotificationBell(
                       color: Colors.white,
-                      icon: Icons.notifications_none_rounded,
+                      icon: HubIcons.bell,
                     ),
                   ],
                 ),
@@ -266,7 +266,7 @@ class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.location_on_outlined,
+                        HubIcons.mapPin,
                         size: 16,
                         color: AppColors.accent,
                       ),
@@ -284,7 +284,7 @@ class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const Icon(Icons.expand_more, size: 16, color: Colors.white),
+                      const Icon(HubIcons.chevronDown, size: 16, color: Colors.white),
                     ],
                   ),
                 ),
@@ -337,7 +337,7 @@ class _SearchBox extends StatelessWidget {
                     end: Radius.circular(12),
                   ),
                 ),
-                child: const Icon(Icons.search, color: Colors.white),
+                child: const Icon(HubIcons.search, color: Colors.white),
               ),
             ],
           ),
@@ -361,7 +361,7 @@ class _PromiseStrip extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.local_shipping_outlined, size: 16, color: AppColors.accentStrong),
+          const Icon(HubIcons.truck, size: 16, color: AppColors.accentStrong),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -422,7 +422,7 @@ class _SectionHeader extends StatelessWidget {
                 children: [
                   Text(actionLabel!, style: const TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(width: 2),
-                  const Icon(Icons.arrow_forward, size: 16),
+                  const Icon(HubIcons.arrowRight, size: 16),
                 ],
               ),
             ),
@@ -501,7 +501,7 @@ class _CategoryTile extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: (imageUrl ?? '').isEmpty
-                  ? const Icon(Icons.category_outlined, color: AppColors.brandPrimary)
+                  ? const Icon(HubIcons.layoutGrid, color: AppColors.brandPrimary)
                   : HubImage(url: imageUrl, fit: BoxFit.cover, width: 74, height: 74),
             ),
             const SizedBox(height: 6),
@@ -566,7 +566,7 @@ class _ProductCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: _kRailHeight,
+      height: ProductCardMetrics.heightFor(context, _kCardWidth),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -676,7 +676,7 @@ class _PromoCard extends ConsumerWidget {
                 const CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.white24,
-                  child: Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                  child: Icon(HubIcons.arrowRight, color: Colors.white, size: 18),
                 ),
               ],
             ),
@@ -691,11 +691,11 @@ class _TrustRow extends ConsumerWidget {
   const _TrustRow();
 
   static const List<IconData> _icons = <IconData>[
-    Icons.verified_user_outlined,
-    Icons.lock_outline,
-    Icons.local_shipping_outlined,
-    Icons.assignment_return_outlined,
-    Icons.support_agent_outlined,
+    HubIcons.shieldCheck,
+    HubIcons.lock,
+    HubIcons.truck,
+    HubIcons.rotateCcw,
+    HubIcons.headset,
   ];
 
   @override
@@ -791,7 +791,7 @@ class _RailSkeleton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 24),
       child: SizedBox(
-        height: _kRailHeight,
+        height: ProductCardMetrics.heightFor(context, _kCardWidth),
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           physics: const NeverScrollableScrollPhysics(),

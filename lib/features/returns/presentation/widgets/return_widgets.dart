@@ -6,6 +6,7 @@ import '../../../../app/theme/theme_x.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/returns.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Pieces shared by the returns screens (Figma 23, 23b, 23c).
 
@@ -110,7 +111,7 @@ class ReturnThumb extends StatelessWidget {
     required this.url,
     this.size = 52,
     this.radius = 10,
-    this.icon = Icons.assignment_return_outlined,
+    this.icon = HubIcons.rotateCcw,
   });
 
   final String? url;

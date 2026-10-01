@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import 'auth_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Auth-screen heading (Figma 03 / 05 / 06): the Display title — Playfair
 /// Display in English, Tajawal ExtraBold in Arabic — over a muted Body line,
@@ -62,7 +63,7 @@ class AuthBadge extends StatelessWidget {
 
   /// 06 Reset password.
   const AuthBadge.lock({super.key})
-    : icon = const Icon(Icons.lock_outline_rounded),
+    : icon = const Icon(HubIcons.lock),
       background = AppColors.accentSubtle,
       foreground = AppColors.accentStrong;
 

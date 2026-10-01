@@ -10,6 +10,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/category.dart';
 import '../catalog_providers.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Categories tab — heading + search box + a grid of category image cards
 /// (photo, name, product count) per Figma.
@@ -60,7 +61,7 @@ class CategoriesScreen extends ConsumerWidget {
                       enabled: false,
                       decoration: InputDecoration(
                         hintText: l10n.searchHint,
-                        prefixIcon: const Icon(Icons.search),
+                        prefixIcon: const Icon(HubIcons.search),
                       ),
                     ),
                   ),
@@ -288,7 +289,7 @@ class _CategoryPlaceholder extends StatelessWidget {
     return const ColoredBox(
       color: AppColors.surfaceTint,
       child: Center(
-        child: Icon(Icons.category_outlined, color: AppColors.brandPrimary),
+        child: Icon(HubIcons.layoutGrid, color: AppColors.brandPrimary),
       ),
     );
   }

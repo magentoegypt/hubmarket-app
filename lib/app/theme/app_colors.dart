@@ -31,21 +31,35 @@ abstract final class AppColors {
   static const Color surfaceTint = Color(0xFFEEF2F8);
 
   /// Discount badges (e.g. `-24%`).
-  static const Color accentSale = Color(0xFFE5484D);
+  static const Color accentSale = Color(0xFFEF4444);
 
   /// Destructive actions — "Cancel order", "Delete account" — as text and
   /// icons; AA on white and on [dangerSurface].
   static const Color danger = Color(0xFFC0392B);
 
   /// Fill of a destructive button, and the tint of its card's border.
-  static const Color dangerSurface = Color(0xFFFCEBEA);
+  static const Color dangerSurface = Color(0xFFFBECEA);
 
   /// Orange notice box behind [accentStrong] text (cancellation and deletion
   /// notes).
   static const Color accentSurface = Color(0xFFFDF3E7);
 
-  /// Rank / "#1" badges and review stars.
+  /// Rank / "#1" badges.
   static const Color accentGold = Color(0xFFF5B700);
+
+  /// Figma `--hm-rating-star` / `--hm-rating-empty` — a lit and an unlit star.
+  static const Color ratingStar = Color(0xFFFBBF24);
+  static const Color ratingEmpty = Color(0xFFCBD3E2);
+
+  /// Figma `--hm-promo` — promo highlights (the "Bundle deals" tag).
+  static const Color promo = Color(0xFFFACC15);
+
+  /// Figma `--hm-subtle` as a text colour — secondary labels one step darker
+  /// than [inkMuted] needs to be.
+  static const Color inkSubtle = Color(0xFF535D70);
+
+  /// Figma `--hm-disabled` — a disabled control's label or icon.
+  static const Color disabled = Color(0xFF9AA5BB);
 
   /// Positive states — "FREE" delivery, in-stock, unlocked thresholds.
   static const Color success = Color(0xFF16A34A);

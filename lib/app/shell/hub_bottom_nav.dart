@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/cart/presentation/cart_controller.dart';
-import '../../features/wishlist/presentation/wishlist_controller.dart';
 import '../../l10n/l10n.dart';
 import '../routes.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
+import '../theme/hub_icons.dart';
 
-/// Persistent bottom navigation (Home · Categories · Cart · Wishlist · Account).
-/// Figma: a thin top divider, and the active tab marked by a navy top bar +
-/// navy icon/label (inactive tabs are muted grey). Live cart + wishlist
-/// count badges.
+/// Persistent bottom navigation (Home · Categories · Cart · Wishlist · Account),
+/// Figma component "Tab bar": white, a 1 px `border/subtle` rule on top, five
+/// equal tabs of a 24 px outline icon over a 12 px label. The active tab turns
+/// orange (icon `accent`, label `accent-strong`, label one weight up); the rest
+/// are muted grey. Only the cart carries a count badge (orange pill, white 11 px).
 class HubBottomNav extends ConsumerWidget {
   const HubBottomNav({super.key, required this.current});
 
@@ -23,56 +25,49 @@ class HubBottomNav extends ConsumerWidget {
     final cartCount = ref.watch(
       cartControllerProvider.select((s) => s.itemCount),
     );
-    final wishlistCount = ref.watch(
-      wishlistControllerProvider.select((s) => s.entries.length),
-    );
 
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+        border: Border(top: BorderSide(color: AppColors.borderSubtle)),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 62,
+          // Figma: 84 = 1 rule + 55 tabs + 28 home-indicator padding; the last
+          // part is the device's own bottom inset here.
+          height: 55,
           child: Row(
             children: [
               _NavItem(
                 tab: AppTab.home,
                 current: current,
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
+                icon: HubIcons.house,
                 label: l10n.navHome,
               ),
               _NavItem(
                 tab: AppTab.categories,
                 current: current,
-                icon: Icons.grid_view_outlined,
-                activeIcon: Icons.grid_view,
+                icon: HubIcons.layoutGrid,
                 label: l10n.navCategories,
               ),
               _NavItem(
                 tab: AppTab.cart,
                 current: current,
-                icon: Icons.shopping_cart_outlined,
-                activeIcon: Icons.shopping_cart,
+                icon: HubIcons.shoppingCart,
                 label: l10n.navCart,
                 badge: cartCount,
               ),
               _NavItem(
                 tab: AppTab.wishlist,
                 current: current,
-                icon: Icons.favorite_border,
-                activeIcon: Icons.favorite,
+                icon: HubIcons.heart,
                 label: l10n.navWishlist,
-                badge: wishlistCount,
               ),
               _NavItem(
                 tab: AppTab.account,
                 current: current,
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
+                icon: HubIcons.user,
                 label: l10n.navAccount,
               ),
             ],
@@ -88,7 +83,6 @@ class _NavItem extends StatelessWidget {
     required this.tab,
     required this.current,
     required this.icon,
-    required this.activeIcon,
     required this.label,
     this.badge,
   });
@@ -96,51 +90,86 @@ class _NavItem extends StatelessWidget {
   final AppTab tab;
   final AppTab current;
   final IconData icon;
-  final IconData activeIcon;
   final String label;
   final int? badge;
 
   @override
   Widget build(BuildContext context) {
     final selected = tab == current;
-    final color = selected ? AppColors.brandPrimary : AppColors.inkMuted;
+    final text = AppTextStyles.of(context);
+    final labelStyle = (selected ? text.captionStrong : text.caption).copyWith(
+      color: selected ? AppColors.accentStrong : AppColors.inkMuted,
+    );
+    final count = badge ?? 0;
     return Expanded(
-      child: InkWell(
-        // Always navigate to the tab root, even when re-tapping the active tab.
-        onTap: () => context.go(tab.route),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            // Top indicator bar (Figma) — navy when active.
-            Container(
-              width: 18,
-              height: 3,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.brandPrimary : Colors.transparent,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(2),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: InkWell(
+          // Always navigate to the tab root, even when re-tapping the active tab.
+          onTap: () => context.go(tab.route),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 24,
+                        color: selected
+                            ? AppColors.accent
+                            : AppColors.inkMuted,
+                      ),
+                      if (count > 0)
+                        PositionedDirectional(
+                          start: 14,
+                          top: -5,
+                          child: _CountBadge(count: count),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+              ],
             ),
-            const SizedBox(height: 9),
-            Badge(
-              isLabelVisible: (badge ?? 0) > 0,
-              label: Text('${badge ?? 0}'),
-              child: Icon(selected ? activeIcon : icon, color: color, size: 24),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// The cart's count: an orange pill (Figma `badge`: px 5, py 1, 11 px Bold).
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = AppTextStyles.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.accent,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        textDirection: TextDirection.ltr,
+        style: text.micro.copyWith(color: Colors.white),
       ),
     );
   }

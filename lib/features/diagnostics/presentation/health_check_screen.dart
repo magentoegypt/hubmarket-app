@@ -11,6 +11,7 @@ import '../../../core/store/store_controller.dart';
 import '../../../core/widgets/failure_message.dart';
 import '../../../l10n/l10n.dart';
 import '../data/store_config_repository.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Phase 0 diagnostics: shows live `storeConfig` for the active store view and a
 /// language toggle that proves the atomic store switch (header flip + cache
@@ -209,7 +210,7 @@ class _PushDiagnosticsState extends State<_PushDiagnostics> {
                 ),
                 IconButton(
                   tooltip: 'Refresh',
-                  icon: const Icon(Icons.refresh),
+                  icon: const Icon(HubIcons.refreshCw),
                   onPressed: _refresh,
                 ),
               ],
@@ -279,7 +280,7 @@ class _PushDiagnosticsState extends State<_PushDiagnostics> {
                         alignment: AlignmentDirectional.centerEnd,
                         child: OutlinedButton.icon(
                           onPressed: () => _copy(fcm),
-                          icon: const Icon(Icons.copy, size: 18),
+                          icon: const Icon(HubIcons.copy, size: 18),
                           label: Text(l10n.actionCopy),
                         ),
                       ),
@@ -381,7 +382,7 @@ class _TokenDiagnosticsState extends ConsumerState<_TokenDiagnostics> {
               alignment: AlignmentDirectional.centerStart,
               child: FilledButton.icon(
                 onPressed: _busy ? null : _clear,
-                icon: const Icon(Icons.logout, size: 18),
+                icon: const Icon(HubIcons.logOut, size: 18),
                 label: const Text('Clear token & retry as guest'),
               ),
             ),

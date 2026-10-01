@@ -10,6 +10,7 @@ import '../../../core/widgets/hub_back_button.dart';
 import '../../../l10n/l10n.dart';
 import '../data/notification_inbox.dart';
 import '../domain/notification_item.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Notification feed (Figma 65:53): a list of received pushes — unread rows are
 /// pale navy with a navy dot — plus "Mark all as read", backed by the local
@@ -209,7 +210,7 @@ class _EmptyNotifications extends StatelessWidget {
               radius: 48,
               backgroundColor: AppColors.surfaceTint,
               child: Icon(
-                Icons.notifications_none,
+                HubIcons.bell,
                 size: 48,
                 color: AppColors.brandPrimary,
               ),
@@ -233,12 +234,12 @@ class _EmptyNotifications extends StatelessWidget {
 }
 
 IconData _iconFor(NotificationKind kind) => switch (kind) {
-  NotificationKind.order => Icons.local_shipping_outlined,
-  NotificationKind.promo => Icons.local_offer_outlined,
-  NotificationKind.wishlist => Icons.favorite_border,
-  NotificationKind.delivered => Icons.check_circle_outline,
-  NotificationKind.welcome => Icons.celebration_outlined,
-  NotificationKind.general => Icons.notifications_none,
+  NotificationKind.order => HubIcons.truck,
+  NotificationKind.promo => HubIcons.tag,
+  NotificationKind.wishlist => HubIcons.heart,
+  NotificationKind.delivered => HubIcons.circleCheck,
+  NotificationKind.welcome => HubIcons.partyPopper,
+  NotificationKind.general => HubIcons.bell,
 };
 
 String _relativeTime(BuildContext context, DateTime time) {

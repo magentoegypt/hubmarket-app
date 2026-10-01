@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Figma "Input" (03 / 04 / 06; states Default · Focused · Error in S6): a
 /// label over a white 52-px field with a leading icon, and under it the helper
@@ -194,7 +195,7 @@ class AuthHelperLine extends StatelessWidget {
   });
 
   const AuthHelperLine.error(this.text, {super.key, this.centered = false})
-    : icon = Icons.warning_amber_rounded,
+    : icon = HubIcons.triangleAlert,
       color = AppColors.danger;
 
   /// A rule under a field — green once [met], red when the form was sent
@@ -204,7 +205,7 @@ class AuthHelperLine extends StatelessWidget {
     super.key,
     required bool met,
     bool failed = false,
-  }) : icon = failed && !met ? Icons.warning_amber_rounded : Icons.check,
+  }) : icon = failed && !met ? HubIcons.triangleAlert : HubIcons.check,
        color = met
            ? AppColors.successStrong
            : (failed ? AppColors.danger : AppColors.inkMuted),
@@ -261,7 +262,7 @@ class PasswordVisibilityToggle extends StatelessWidget {
       tooltip: obscured ? l10n.authShowPassword : l10n.authHidePassword,
       visualDensity: VisualDensity.compact,
       icon: Icon(
-        obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        obscured ? HubIcons.eye : HubIcons.eyeOff,
         size: 20,
         color: AppColors.inkMuted,
       ),

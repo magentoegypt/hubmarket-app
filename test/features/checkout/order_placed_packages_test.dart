@@ -51,7 +51,7 @@ void main() {
     await tester.pumpAndSettle();
     await tapText(tester, 'Continue to payment');
     await tapText(tester, 'Review order');
-    await tapText(tester, 'Place order · AED 553.00');
+    await tapText(tester, 'Place order · AED 553');
     expect(find.byType(OrderSuccessScreen), findsOneWidget);
   }
 

@@ -12,6 +12,7 @@ import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/widgets/auth_field.dart';
 import '../guest_orders_controller.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Look up any order without signing in, using the details on the confirmation
 /// e-mail (order number + billing e-mail + last name). Backed by Magento's
@@ -105,7 +106,7 @@ class _GuestTrackOrderScreenState extends ConsumerState<GuestTrackOrderScreen> {
                   const SizedBox(height: 20),
                   AuthField(
                     controller: _number,
-                    icon: Icons.receipt_long_outlined,
+                    icon: HubIcons.receiptText,
                     hint: l10n.guestTrackOrderNumber,
                     keyboardType: TextInputType.number,
                     validator: (v) => Validators.required(context, v),
@@ -113,7 +114,7 @@ class _GuestTrackOrderScreenState extends ConsumerState<GuestTrackOrderScreen> {
                   const SizedBox(height: 12),
                   AuthField(
                     controller: _email,
-                    icon: Icons.mail_outline,
+                    icon: HubIcons.mail,
                     hint: l10n.guestTrackEmail,
                     keyboardType: TextInputType.emailAddress,
                     validator: (v) => Validators.email(context, v),
@@ -121,7 +122,7 @@ class _GuestTrackOrderScreenState extends ConsumerState<GuestTrackOrderScreen> {
                   const SizedBox(height: 12),
                   AuthField(
                     controller: _lastname,
-                    icon: Icons.person_outline,
+                    icon: HubIcons.user,
                     hint: l10n.guestTrackLastname,
                     textInputAction: TextInputAction.done,
                     textCapitalization: TextCapitalization.words,

@@ -8,6 +8,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/account_repository.dart';
 import '../../domain/saved_card.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Account → Payment Methods: the cards Magento's vault holds for this
 /// customer, with a remove action.
@@ -36,7 +37,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 56),
                 child: EmptyState(
-                  icon: Icons.credit_card_outlined,
+                  icon: HubIcons.creditCard,
                   title: l10n.savedCardsEmptyTitle,
                   body: l10n.savedCardsEmptyBody,
                 ),
@@ -113,7 +114,7 @@ class _SavedCardTile extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.credit_card_outlined,
+            HubIcons.creditCard,
             size: 20,
             color: context.scaffoldMuted,
           ),
@@ -167,7 +168,7 @@ class _SavedCardTile extends StatelessWidget {
             onPressed: onDelete,
             tooltip: l10n.savedCardRemove,
             icon: const Icon(
-              Icons.delete_outline,
+              HubIcons.trash2,
               size: 20,
               color: AppColors.accentSale,
             ),

@@ -17,6 +17,7 @@ import '../widgets/auth_method_tabs.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_widgets.dart';
 import 'verify_code_screen.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Figma "03 Sign in" (+ "S6 Sign-in errors").
 ///
@@ -206,7 +207,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     AuthField(
       controller: _email,
       label: l10n.authEmailHint,
-      icon: Icons.mail_outline_rounded,
+      icon: HubIcons.mail,
       keyboardType: TextInputType.emailAddress,
       autofillHints: const [AutofillHints.email],
       ltrInput: true,
@@ -217,7 +218,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     AuthField(
       controller: _password,
       label: l10n.fieldPassword,
-      icon: Icons.lock_outline_rounded,
+      icon: HubIcons.lock,
       obscureText: _obscure,
       textInputAction: TextInputAction.done,
       autofillHints: const [AutofillHints.password],
@@ -256,7 +257,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     AuthField(
       controller: _mobile,
       label: l10n.fieldMobileWhatsapp,
-      icon: Icons.phone_outlined,
+      icon: HubIcons.phone,
       hint: l10n.authPhonePlaceholder,
       keyboardType: TextInputType.phone,
       textInputAction: TextInputAction.done,

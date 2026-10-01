@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../domain/category.dart';
 import '../catalog_providers.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The "Shop by Category" circle rail, reused for category navigation on the
 /// product listing (CL042-DEV14).
@@ -138,7 +139,7 @@ class _CategoryFallback extends StatelessWidget {
   Widget build(BuildContext context) => const ColoredBox(
     color: AppColors.surfaceTint,
     child: Center(
-      child: Icon(Icons.category_outlined, color: AppColors.brandPrimary),
+      child: Icon(HubIcons.layoutGrid, color: AppColors.brandPrimary),
     ),
   );
 }

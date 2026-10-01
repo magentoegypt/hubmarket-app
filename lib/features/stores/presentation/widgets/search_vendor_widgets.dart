@@ -7,6 +7,7 @@ import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../domain/store.dart';
 import '../search_vendors.dart';
 import 'store_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The line under a found seller's name: how many of the search's products
 /// they sell, or — for a name match the seller facet doesn't count — their
@@ -85,7 +86,7 @@ class SearchVendorCard extends StatelessWidget {
               const SizedBox(width: 4),
               // chevron_right mirrors itself in RTL.
               const Icon(
-                Icons.chevron_right,
+                HubIcons.chevronRight,
                 size: 16,
                 color: AppColors.accentStrong,
               ),

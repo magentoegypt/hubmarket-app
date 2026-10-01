@@ -25,6 +25,7 @@ import '../widgets/return_form_widgets.dart';
 import '../widgets/return_photos.dart';
 import '../widgets/return_widgets.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Request a return (Figma 23): pick an order the server lists as returnable
 /// (`hmReturnableOrders`), tick lines of one seller with their quantities,
@@ -163,7 +164,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
       body = _unavailable(l10n);
     } else if (!signedIn) {
       body = EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsRequestTitle,
         body: l10n.returnsSignIn,
         action: FilledButton(
@@ -201,7 +202,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         );
       } else if (draft == null && orders.items.isEmpty) {
         body = EmptyState(
-          icon: Icons.assignment_return_outlined,
+          icon: HubIcons.rotateCcw,
           title: l10n.returnsNoOrdersTitle,
           body: l10n.returnsNoOrdersBody,
         );
@@ -224,7 +225,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
   }
 
   Widget _unavailable(AppLocalizations l10n) => EmptyState(
-    icon: Icons.assignment_return_outlined,
+    icon: HubIcons.rotateCcw,
     title: l10n.returnsUnavailableTitle,
     body: l10n.returnsUnavailableBody,
   );
@@ -280,7 +281,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         ReturnFieldLabel(l10n.returnsOrderLabel),
         const SizedBox(height: 6),
         ReturnPickerField(
-          icon: Icons.inventory_2_outlined,
+          icon: HubIcons.package,
           text: draft == null
               ? null
               : [
@@ -405,7 +406,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
                   ],
                   decoration: _decoration(
                     hint: l10n.returnsTrackingHint,
-                    icon: Icons.local_shipping_outlined,
+                    icon: HubIcons.truck,
                   ),
                 ),
                 if (errors.contains(ReturnFormError.trackingTooLong))
@@ -419,7 +420,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
                 onPressed: () => _showPolicy(l10n, config.policyHtml!),
-                icon: const Icon(Icons.policy_outlined, size: 18),
+                icon: const Icon(HubIcons.scrollText, size: 18),
                 label: Text(l10n.returnsPolicy),
               ),
             ),
@@ -496,7 +497,7 @@ class _RequestReturnScreenState extends ConsumerState<RequestReturnScreen> {
         const SizedBox(height: 6),
         if (picker)
           ReturnPickerField(
-            icon: Icons.replay,
+            icon: HubIcons.rotateCcw,
             text: selectedLabel,
             placeholder: l10n.returnsChooseReason,
             onTap: () => _pickReason(l10n, config, draft),

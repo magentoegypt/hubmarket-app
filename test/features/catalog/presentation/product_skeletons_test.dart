@@ -25,15 +25,15 @@ void main() {
     await tester.pump();
 
     expect(find.byType(Shimmer), findsOneWidget);
-    // Image block + two name lines + a price line.
-    expect(find.byType(SkeletonBox), findsNWidgets(4));
+    // Image block, seller / name / rating / price bars and the round add button.
+    expect(find.byType(SkeletonBox), findsNWidgets(6));
   });
 
   testWidgets('ProductGridSkeleton builds the requested number of cards', (
     tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(const ProductGridSkeleton(childAspectRatio: 0.66, count: 6)),
+      _wrap(const ProductGridSkeleton(count: 6)),
     );
     await tester.pump();
 

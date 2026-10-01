@@ -21,6 +21,7 @@ import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/cart.dart';
 import '../cart_controller.dart';
 import '../cart_store_credit.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -108,7 +109,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               borderRadius: BorderRadius.circular(28),
                             ),
                             child: const Icon(
-                              Icons.shopping_cart_outlined,
+                              HubIcons.shoppingCart,
                               size: 30,
                               color: AppColors.brandPrimary,
                             ),
@@ -254,7 +255,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.lock_outline, size: 18),
+                    const Icon(HubIcons.lock, size: 18),
                     const SizedBox(width: 8),
                     Text(
                       cart.totals.grandTotal != null
@@ -387,7 +388,7 @@ class _CartItemTile extends StatelessWidget {
                 Row(
                   children: [
                     _QtyButton(
-                      icon: Icons.remove,
+                      icon: HubIcons.minus,
                       onTap: busy ? null : () => onChangeQty(item.quantity - 1),
                     ),
                     Padding(
@@ -395,7 +396,7 @@ class _CartItemTile extends StatelessWidget {
                       child: Text('${item.quantity}'),
                     ),
                     _QtyButton(
-                      icon: Icons.add,
+                      icon: HubIcons.plus,
                       onTap: busy ? null : () => onChangeQty(item.quantity + 1),
                     ),
                   ],
@@ -404,7 +405,7 @@ class _CartItemTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.inkMuted),
+            icon: const Icon(HubIcons.trash2, color: AppColors.inkMuted),
             onPressed: busy ? null : onRemove,
           ),
         ],
@@ -552,7 +553,7 @@ class _CopyCodeButton extends StatelessWidget {
             child: Tooltip(
               message: l10n.actionCopy,
               child: const Icon(
-                Icons.copy_outlined,
+                HubIcons.copy,
                 size: 17,
                 color: AppColors.brandPrimary,
               ),
@@ -608,7 +609,7 @@ class _CouponSection extends StatelessWidget {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.local_offer_outlined,
+                        HubIcons.tag,
                         size: 17,
                         color: AppColors.inkFaint,
                       ),
@@ -681,7 +682,7 @@ class _CouponSection extends StatelessWidget {
               child: Row(
                 children: [
                   const Icon(
-                    Icons.local_offer_outlined,
+                    HubIcons.tag,
                     size: 16,
                     color: AppColors.brandPrimary,
                   ),
@@ -712,7 +713,7 @@ class _CouponSection extends StatelessWidget {
                     onTap: busy ? null : onRemoveCoupon,
                     borderRadius: BorderRadius.circular(12),
                     child: const Icon(
-                      Icons.close,
+                      HubIcons.x,
                       size: 15,
                       color: AppColors.brandPrimary,
                     ),
@@ -889,7 +890,7 @@ class _FreeDeliveryBanner extends StatelessWidget {
           Row(
             children: [
               Icon(
-                unlocked ? Icons.check_circle : Icons.local_shipping_outlined,
+                unlocked ? HubIcons.circleCheck : HubIcons.truck,
                 size: 18,
                 color: unlocked ? AppColors.success : accent,
               ),

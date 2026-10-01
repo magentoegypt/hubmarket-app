@@ -71,7 +71,7 @@ void main() {
       final credit = _usedCredit();
       await _pump(tester, const OrderDetailScreen(order: _order), credit);
       expect(find.text('Store credit'), findsOneWidget);
-      expect(find.text('−AED 23.00'), findsOneWidget);
+      expect(find.text('−AED 23'), findsOneWidget);
       expect(credit.calls, ['fetchOrderCredit:000000248']);
     });
 
@@ -113,7 +113,7 @@ void main() {
       final credit = _usedCredit()..missing = true;
       await _pump(tester, const OrderDetailScreen(order: _order), credit);
       expect(find.text('Store credit'), findsNothing);
-      expect(find.text('AED 530.00'), findsOneWidget);
+      expect(find.text('AED 530'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -126,9 +126,9 @@ void main() {
         find.textContaining('paid with your store credit'),
         findsOneWidget,
       );
-      expect(find.textContaining('AED 23.00'), findsOneWidget);
+      expect(find.textContaining('AED 23'), findsOneWidget);
       // The rest is paid on delivery, as before.
-      expect(find.textContaining('AED 530.00'), findsOneWidget);
+      expect(find.textContaining('AED 530'), findsOneWidget);
     });
 
     testWidgets('no line when the order used none', (tester) async {

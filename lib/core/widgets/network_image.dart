@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../util/image_cache_config.dart';
 import 'shimmer.dart';
+import '../../app/theme/hub_icons.dart';
 
 /// The single entry point for every network image in the app.
 ///
@@ -143,7 +144,7 @@ class HubImage extends StatelessWidget {
     if (error != null) return error!(context);
     return const ColoredBox(
       color: AppColors.surfaceTint,
-      child: Center(child: Icon(Icons.image_outlined, color: AppColors.inkMuted)),
+      child: Center(child: Icon(HubIcons.image, color: AppColors.inkMuted)),
     );
   }
 

@@ -31,6 +31,7 @@ import '../../support/hubapp_fakes.dart';
 import '../../support/marketplace_fakes.dart';
 import 'marketplace_harness.dart' show aed, phoneView;
 import 'product_offers_test.dart' show offerJson;
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// The Joust Duffle Bag family of 30 Sep 2026: the main product sold by
 /// test_1 (AED 28.90 after a special price), and two other sellers.
@@ -265,9 +266,9 @@ void main() {
       expect(inSheet(l10n.pdpOtherSellers(2)), findsOneWidget);
       expect(inSheet('ENARA'), findsOneWidget);
       expect(inSheet('Hassan Store'), findsOneWidget);
-      expect(inSheet('AED 34.00'), findsOneWidget);
-      expect(inSheet('AED 40.00'), findsOneWidget);
-      expect(inSheet('AED 45.00'), findsOneWidget, reason: 'struck through');
+      expect(inSheet('AED 34'), findsOneWidget);
+      expect(inSheet('AED 40'), findsOneWidget);
+      expect(inSheet('AED 45'), findsOneWidget, reason: 'struck through');
       expect(inSheet('2-3 days'), findsOneWidget);
       expect(inSheet('Next business day'), findsOneWidget);
       expect(inSheet('4.4'), findsOneWidget);
@@ -292,7 +293,7 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     // Quantity 2 on the page.
-    await tester.tap(find.byIcon(Icons.add).first);
+    await tester.tap(find.byIcon(HubIcons.plus).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(OtherSellersRow));
     await tester.pumpAndSettle();

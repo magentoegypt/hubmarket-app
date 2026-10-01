@@ -20,6 +20,7 @@ import '../domain/cms_page.dart';
 import 'cms_navigation.dart';
 import 'cms_providers.dart';
 import 'widgets/cms_html_view.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// A storefront CMS page drawn natively (Figma 28 "Content page"): About,
 /// the policies, customer service — whatever an admin publishes under
@@ -96,7 +97,7 @@ class _CmsPageScreenState extends ConsumerState<CmsPageScreen> {
         actions: [
           if (loaded != null)
             IconButton(
-              icon: const Icon(Icons.share_outlined),
+              icon: const Icon(HubIcons.share2),
               tooltip: l10n.actionShare,
               onPressed: () => _share(loaded),
             ),
@@ -161,7 +162,7 @@ class _CmsPageScreenState extends ConsumerState<CmsPageScreen> {
         ? null
         : storeUrl(ref.read(storeControllerProvider), path);
     return EmptyState(
-      icon: Icons.link_off,
+      icon: HubIcons.link2Off,
       title: l10n.linkNotFoundTitle,
       body: l10n.linkNotFoundBody,
       action: web == null

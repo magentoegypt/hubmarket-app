@@ -17,6 +17,7 @@ import '../../features/wishlist/presentation/wishlist_controller.dart';
 import '../../l10n/l10n.dart';
 import '../routes.dart';
 import '../theme/app_colors.dart';
+import '../theme/hub_icons.dart';
 
 /// Side navigation drawer: brand header, customer profile header, SHOP
 /// categories (live), ACCOUNT links, a bottom language toggle, and Log Out.
@@ -54,7 +55,7 @@ class MenuDrawer extends ConsumerWidget {
                     end: 4,
                     child: IconButton(
                       icon: const Icon(
-                        Icons.close,
+                        HubIcons.x,
                         color: AppColors.inkHeading,
                       ),
                       onPressed: () => _close(context),
@@ -113,7 +114,7 @@ class MenuDrawer extends ConsumerWidget {
                   // The Hub Market App's own lists (Build 2).
                   if (hubApp) ...[
                     _DrawerTile(
-                      icon: Icons.sell_outlined,
+                      icon: HubIcons.tag,
                       label: l10n.homeTodaysDeals,
                       onTap: () {
                         _close(context);
@@ -121,7 +122,7 @@ class MenuDrawer extends ConsumerWidget {
                       },
                     ),
                     _DrawerTile(
-                      icon: Icons.inventory_2_outlined,
+                      icon: HubIcons.package,
                       label: l10n.bundlesTitle,
                       onTap: () {
                         _close(context);
@@ -129,7 +130,7 @@ class MenuDrawer extends ConsumerWidget {
                       },
                     ),
                     _DrawerTile(
-                      icon: Icons.verified_outlined,
+                      icon: HubIcons.badgeCheck,
                       label: l10n.brandsScreenTitle,
                       onTap: () {
                         _close(context);
@@ -138,7 +139,7 @@ class MenuDrawer extends ConsumerWidget {
                     ),
                     // Figma 12: every approved seller (`hmStores`).
                     _DrawerTile(
-                      icon: Icons.storefront_outlined,
+                      icon: HubIcons.store,
                       label: l10n.storesTitle,
                       onTap: () {
                         _close(context);
@@ -154,7 +155,7 @@ class MenuDrawer extends ConsumerWidget {
                   if (!auth.isAuthenticated) ...[
                     if (hasGuestOrders)
                       _DrawerTile(
-                        icon: Icons.receipt_long_outlined,
+                        icon: HubIcons.receiptText,
                         label: l10n.accountOrders,
                         onTap: () {
                           _close(context);
@@ -162,7 +163,7 @@ class MenuDrawer extends ConsumerWidget {
                         },
                       ),
                     _DrawerTile(
-                      icon: Icons.local_shipping_outlined,
+                      icon: HubIcons.truck,
                       label: l10n.accountTrackOrder,
                       onTap: () {
                         _close(context);
@@ -171,7 +172,7 @@ class MenuDrawer extends ConsumerWidget {
                     ),
                   ],
                   _DrawerTile(
-                    icon: Icons.location_on_outlined,
+                    icon: HubIcons.mapPin,
                     label: l10n.accountAddresses,
                     onTap: () {
                       _close(context);
@@ -179,7 +180,7 @@ class MenuDrawer extends ConsumerWidget {
                     },
                   ),
                   _DrawerTile(
-                    icon: Icons.notifications_none,
+                    icon: HubIcons.bell,
                     label: l10n.notificationsTitle,
                     onTap: () {
                       _close(context);
@@ -187,7 +188,7 @@ class MenuDrawer extends ConsumerWidget {
                     },
                   ),
                   _DrawerTile(
-                    icon: Icons.help_outline,
+                    icon: HubIcons.circleHelp,
                     label: l10n.accountHelp,
                     onTap: () {
                       _close(context);
@@ -222,7 +223,7 @@ class MenuDrawer extends ConsumerWidget {
             ),
             if (auth.isAuthenticated)
               ListTile(
-                leading: const Icon(Icons.logout, color: AppColors.brandPrimary),
+                leading: const Icon(HubIcons.logOut, color: AppColors.brandPrimary),
                 title: Text(
                   l10n.menuLogOut,
                   style: const TextStyle(
@@ -241,7 +242,7 @@ class MenuDrawer extends ConsumerWidget {
               )
             else
               ListTile(
-                leading: const Icon(Icons.login, color: AppColors.brandPrimary),
+                leading: const Icon(HubIcons.logIn, color: AppColors.brandPrimary),
                 title: Text(
                   l10n.welcomeSignIn,
                   style: const TextStyle(
@@ -313,7 +314,7 @@ class _ProfileHeader extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: const Icon(
-                      Icons.person_outline,
+                      HubIcons.user,
                       color: AppColors.brandPrimary,
                     ),
                   ),
@@ -347,7 +348,7 @@ class _ProfileHeader extends StatelessWidget {
                 ],
               ),
             ),
-            if (!isAuthed) const Icon(Icons.chevron_right),
+            if (!isAuthed) const Icon(HubIcons.chevronRight),
           ],
         ),
       ),
@@ -381,7 +382,7 @@ class _DrawerTile extends StatelessWidget {
     // The drawer panel is always white (even in dark mode), so pin the label to
     // ink — the dark theme's default light-on-surface text was invisible here.
     title: Text(label, style: const TextStyle(color: AppColors.inkHeading)),
-    trailing: const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+    trailing: const Icon(HubIcons.chevronRight, color: AppColors.inkMuted),
     onTap: onTap,
   );
 }
@@ -424,7 +425,7 @@ class _CategoryNode extends StatelessWidget {
         leading: leading,
         title: title,
         trailing: const Icon(
-          Icons.chevron_right,
+          HubIcons.chevronRight,
           color: AppColors.inkMuted,
           size: 20,
         ),
@@ -460,7 +461,7 @@ class _CategoryNode extends StatelessWidget {
             ),
           ),
           trailing: const Icon(
-            Icons.chevron_right,
+            HubIcons.chevronRight,
             color: AppColors.brandPrimary,
             size: 20,
           ),
@@ -516,7 +517,7 @@ class _QuickStats extends ConsumerWidget {
       child: Row(
         children: [
           _StatTile(
-            icon: Icons.shopping_bag_outlined,
+            icon: HubIcons.shoppingBag,
             count: orders,
             label: l10n.accountOrders,
             onTap: () {
@@ -526,7 +527,7 @@ class _QuickStats extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           _StatTile(
-            icon: Icons.favorite_border,
+            icon: HubIcons.heart,
             count: wishlist,
             label: l10n.navWishlist,
             onTap: () {

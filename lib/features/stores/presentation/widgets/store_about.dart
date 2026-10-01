@@ -14,6 +14,7 @@ import '../../../cms/presentation/widgets/cms_html_view.dart';
 import '../../domain/store.dart';
 import '../stores_providers.dart';
 import 'store_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// A seller's month and year of joining ("June 2023"), the month in the
 /// app's language and the year in Western digits, as prices are.
@@ -102,7 +103,7 @@ class StoreAboutTab extends ConsumerWidget {
               children: [
                 if (profile.shippingPolicyHtml case final html?)
                   _PolicySummary(
-                    icon: Icons.local_shipping_outlined,
+                    icon: HubIcons.truck,
                     title: l10n.storeShippingPolicy,
                     html: html,
                     onTap: onPolicies,
@@ -112,7 +113,7 @@ class StoreAboutTab extends ConsumerWidget {
                   Divider(height: 1, thickness: 1, color: context.hairline),
                 if (profile.refundPolicyHtml case final html?)
                   _PolicySummary(
-                    icon: Icons.replay,
+                    icon: HubIcons.rotateCcw,
                     title: l10n.storeRefundPolicy,
                     html: html,
                     onTap: onPolicies,
@@ -140,7 +141,7 @@ class StoreAboutTab extends ConsumerWidget {
             height: 48,
             child: OutlinedButton.icon(
               onPressed: call,
-              icon: const Icon(Icons.phone_outlined, size: 20),
+              icon: const Icon(HubIcons.phone, size: 20),
               label: Text(
                 l10n.storeCallVendor(store.name),
                 maxLines: 1,
@@ -167,13 +168,13 @@ class StorePoliciesTab extends StatelessWidget {
       children: [
         if (profile.shippingPolicyHtml case final html?)
           StoreSectionCard(
-            icon: Icons.local_shipping_outlined,
+            icon: HubIcons.truck,
             title: l10n.storeShippingPolicy,
             child: StoreHtml(html: html),
           ),
         if (profile.refundPolicyHtml case final html?)
           StoreSectionCard(
-            icon: Icons.replay,
+            icon: HubIcons.rotateCcw,
             title: l10n.storeRefundPolicy,
             child: StoreHtml(html: html),
           ),

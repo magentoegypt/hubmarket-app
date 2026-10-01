@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The Figma "Button" component as the auth screens use it: 52 px, radius 12,
 /// Button text (Bold 15). [AuthButton.primary] is the navy fill,
@@ -279,7 +280,7 @@ class AuthErrorBanner extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(
-              Icons.warning_amber_rounded,
+              HubIcons.triangleAlert,
               size: 20,
               color: AppColors.danger,
             ),
@@ -327,7 +328,7 @@ class AuthInfoNote extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 20, color: AppColors.info),
+          const Icon(HubIcons.info, size: 20, color: AppColors.info),
           const SizedBox(width: 10),
           Expanded(
             child: Text(text, style: t.body.copyWith(color: AppColors.info)),
@@ -395,7 +396,7 @@ class AuthCheckRow extends StatelessWidget {
                       ),
               ),
               child: value
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  ? const Icon(HubIcons.check, size: 14, color: Colors.white)
                   : null,
             ),
             const SizedBox(width: 10),

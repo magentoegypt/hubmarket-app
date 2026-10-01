@@ -39,6 +39,7 @@ import '../widgets/store_reviews.dart';
 import '../widgets/store_widgets.dart';
 import '../widgets/stores_unavailable.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The tabs of a store page, in order.
 enum StoreTab { products, reviews, about, policies }
@@ -297,7 +298,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       return _plain(
         context,
         EmptyState(
-          icon: Icons.storefront_outlined,
+          icon: HubIcons.store,
           title: l10n.storeNotFoundTitle,
           body: l10n.storeNotFoundBody,
         ),
@@ -481,7 +482,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       leadingWidth: 64,
       leading: Center(
         child: _CircleButton(
-          icon: Icons.arrow_back,
+          icon: HubIcons.arrowLeft,
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onTap: _back,
         ),
@@ -504,14 +505,14 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       ),
       actions: [
         _CircleButton(
-          icon: Icons.search,
+          icon: HubIcons.search,
           tooltip: l10n.storeSearchHint(store.name),
           onTap: _focusSearch,
         ),
         if (store.webUrl != null) ...[
           const SizedBox(width: 8),
           _CircleButton(
-            icon: Icons.share_outlined,
+            icon: HubIcons.share2,
             tooltip: l10n.actionShare,
             onTap: () => _share(store),
           ),
@@ -583,9 +584,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     if (state.isLoading && state.products.isEmpty) {
       return const [
         SliverToBoxAdapter(
-          child: ProductGridSkeleton(
-            childAspectRatio: 0.66,
-            count: 4,
+          child: ProductGridSkeleton(count: 4,
             padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
           ),
         ),
@@ -622,8 +621,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         SliverToBoxAdapter(
           child: EmptyState(
             icon: filtered
-                ? Icons.search_off_outlined
-                : Icons.inventory_2_outlined,
+                ? HubIcons.searchX
+                : HubIcons.package,
             title: filtered ? l10n.storeNoMatches : l10n.storeNoProducts,
           ),
         ),
@@ -633,12 +632,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       SliverPadding(
         padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
         sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.66,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
+          gridDelegate: productGridDelegate(context),
           delegate: SliverChildBuilderDelegate((context, index) {
             final product = state.products[index];
             return ProductCard(
@@ -650,7 +644,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       ),
       if (state.isLoadingMore)
         const SliverToBoxAdapter(
-          child: ProductGridSkeleton(childAspectRatio: 0.66, count: 2),
+          child: ProductGridSkeleton(count: 2),
         ),
     ];
   }
@@ -829,7 +823,7 @@ class _StoreInfo extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.location_on_outlined,
+                  HubIcons.mapPin,
                   size: 14,
                   color: context.scaffoldMuted,
                 ),
@@ -878,7 +872,7 @@ class _StoreInfo extends StatelessWidget {
               height: 48,
               child: FilledButton.icon(
                 onPressed: onContact,
-                icon: const Icon(Icons.phone_outlined, size: 20),
+                icon: const Icon(HubIcons.phone, size: 20),
                 label: Text(l10n.storeContactVendor),
               ),
             ),
@@ -1080,14 +1074,14 @@ class _StoreSearchField extends StatelessWidget {
         fillColor: SearchStyle.pillFill(context),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: 11),
-        prefixIcon: Icon(Icons.search, size: 18, color: muted),
+        prefixIcon: Icon(HubIcons.search, size: 18, color: muted),
         prefixIconConstraints: const BoxConstraints(minWidth: 42),
         suffixIcon: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (controller.text.isNotEmpty)
               IconButton(
-                icon: const Icon(Icons.close, size: 18),
+                icon: const Icon(HubIcons.x, size: 18),
                 color: muted,
                 tooltip: l10n.searchClearField,
                 onPressed: onClear,
@@ -1102,7 +1096,7 @@ class _StoreSearchField extends StatelessWidget {
                 smallSize: 8,
                 backgroundColor: AppColors.accent,
                 child: Icon(
-                  Icons.tune,
+                  HubIcons.slidersHorizontal,
                   size: 18,
                   color: context.scaffoldHeading,
                 ),
@@ -1155,7 +1149,7 @@ class _MetaRow extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.swap_vert, size: 16, color: color),
+                  Icon(HubIcons.arrowUpDown, size: 16, color: color),
                   const SizedBox(width: 4),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 160),

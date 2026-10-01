@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/hub_icons.dart';
 
 /// The phone-entry field for the WhatsApp-OTP flows (Figma: a combined
 /// `🇦🇪 +971 ⌄ | number` filled field). The country code is fixed to the UAE
@@ -85,7 +86,7 @@ class PhoneNumberField extends StatelessWidget {
             color: AppColors.inkHeading,
           ),
         ),
-        const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.inkFaint),
+        const Icon(HubIcons.chevronDown, size: 18, color: AppColors.inkFaint),
         const SizedBox(width: 8),
         Container(width: 1, height: 22, color: AppColors.borderDefault),
       ],

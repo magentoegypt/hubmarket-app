@@ -13,6 +13,7 @@ import '../../../catalog/domain/product_detail.dart';
 import '../../../catalog/domain/product_preview.dart';
 import '../cart_controller.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// What was just added, as the sheet shows it.
 class AddedItem {
@@ -146,7 +147,7 @@ class AddedToCartSheet extends ConsumerWidget {
                   color: AppColors.successStrong,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check, size: 16, color: Colors.white),
+                child: const Icon(HubIcons.check, size: 16, color: Colors.white),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -160,7 +161,7 @@ class AddedToCartSheet extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close, size: 22),
+                icon: const Icon(HubIcons.x, size: 22),
                 color: AppColors.inkHeading,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 onPressed: () => Navigator.of(context).pop(),
@@ -370,7 +371,7 @@ class _FreeShippingProgress extends StatelessWidget {
         Row(
           children: [
             const Icon(
-              Icons.local_shipping_outlined,
+              HubIcons.truck,
               size: 16,
               color: AppColors.successStrong,
             ),

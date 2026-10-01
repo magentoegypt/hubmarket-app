@@ -19,6 +19,7 @@ import '../../../returns/presentation/returns_providers.dart';
 import '../help_faq.dart';
 import '../widgets/contact_form_card.dart';
 import '../widgets/faq_tile.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Help centre (Figma 27): a search over the FAQ, the contact channels the
 /// store publishes, the FAQ topics, the contact form and the About & legal
@@ -74,7 +75,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
     final channels = <Widget>[
       if (contact.whatsapp != null)
         _ContactTile(
-          icon: Icons.chat_bubble_outline,
+          icon: HubIcons.messageCircle,
           tint: const Color(0xFFE8F7EE),
           color: const Color(0xFF15803D),
           label: l10n.helpWhatsApp,
@@ -85,7 +86,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
         ),
       if (contact.phone != null)
         _ContactTile(
-          icon: Icons.call_outlined,
+          icon: HubIcons.phone,
           tint: AppColors.surfaceTint,
           color: const Color(0xFF1D4ED8),
           label: l10n.helpCallUs,
@@ -94,7 +95,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
         ),
       if (contact.email != null)
         _ContactTile(
-          icon: Icons.mail_outline,
+          icon: HubIcons.mail,
           tint: const Color(0xFFFFF1E6),
           color: AppColors.accentStrong,
           label: l10n.helpEmailUs,
@@ -140,11 +141,11 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: l10n.helpSearchHint,
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(HubIcons.search),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(HubIcons.x),
                         tooltip: l10n.searchClearField,
                         onPressed: () {
                           _search.clear();
@@ -222,7 +223,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
             GroupCard(
               children: [
                 GroupRow(
-                  icon: Icons.info_outline,
+                  icon: HubIcons.info,
                   label: l10n.accountAbout,
                   onTap: () => context.push(AppRoutes.about),
                 ),

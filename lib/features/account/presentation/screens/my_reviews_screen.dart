@@ -15,6 +15,7 @@ import '../../../auth/presentation/auth_controller.dart';
 import '../../../catalog/domain/review_pages.dart';
 import '../../../catalog/presentation/reviews_controllers.dart';
 import '../../../catalog/presentation/widgets/review_widgets.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// My product reviews (Figma 20f): the reviews the signed-in customer wrote,
 /// with the product each is about (core `customer { reviews }`, paged).
@@ -66,7 +67,7 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
         child: signedIn
             ? _body(l10n, state)
             : EmptyState(
-                icon: Icons.rate_review_outlined,
+                icon: HubIcons.messageSquareText,
                 title: l10n.myReviewsTitle,
                 body: l10n.myReviewsSignIn,
                 action: FilledButton(
@@ -92,7 +93,7 @@ class _MyReviewsScreenState extends ConsumerState<MyReviewsScreen> {
     }
     if (state.items.isEmpty) {
       return EmptyState(
-        icon: Icons.rate_review_outlined,
+        icon: HubIcons.messageSquareText,
         title: l10n.reviewsEmptyTitle,
         body: l10n.myReviewsEmptyBody,
       );
@@ -165,7 +166,7 @@ class _MyReviewCard extends StatelessWidget {
                         error: (_) => const ColoredBox(
                           color: AppColors.surfaceTint,
                           child: Icon(
-                            Icons.image_outlined,
+                            HubIcons.image,
                             size: 18,
                             color: AppColors.inkMuted,
                           ),

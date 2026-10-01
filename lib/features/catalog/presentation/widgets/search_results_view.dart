@@ -25,6 +25,7 @@ import 'search_style.dart';
 import 'search_type_ahead.dart' show openSearchCategory;
 import 'sort_sheet.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Full results of a submitted search (Figma 09c): "Products (N)",
 /// "Vendors (V)" and "Categories (M)" tabs. Products carries the result
@@ -325,7 +326,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
       return ListView(
         children: [
           meta,
-          const ProductGridSkeleton(childAspectRatio: 0.58, count: 6),
+          const ProductGridSkeleton(count: 6),
         ],
       );
     }
@@ -368,7 +369,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
         if (state.products.isEmpty)
           SliverToBoxAdapter(
             child: EmptyState(
-              icon: Icons.search_off_outlined,
+              icon: HubIcons.searchX,
               title: l10n.stateEmpty,
             ),
           )
@@ -376,12 +377,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
           SliverPadding(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 16),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.58,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+              gridDelegate: productGridDelegate(context),
               delegate: SliverChildBuilderDelegate((context, index) {
                 final product = state.products[index];
                 // The card's "+" adds a simple product by SKU; for a
@@ -395,7 +391,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
           ),
         if (state.isLoadingMore)
           const SliverToBoxAdapter(
-            child: ProductGridSkeleton(childAspectRatio: 0.58, count: 2),
+            child: ProductGridSkeleton(count: 2),
           ),
       ],
     );
@@ -454,9 +450,9 @@ class _MetaRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _MetaAction(icon: Icons.swap_vert, label: sortLabel, onTap: onSort),
+          _MetaAction(icon: HubIcons.arrowUpDown, label: sortLabel, onTap: onSort),
           const SizedBox(width: 6),
-          _MetaAction(icon: Icons.tune, label: filterLabel, onTap: onFilter),
+          _MetaAction(icon: HubIcons.slidersHorizontal, label: filterLabel, onTap: onFilter),
         ],
       ),
     );
@@ -558,7 +554,7 @@ class _CategoriesTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    Icons.grid_view_outlined,
+                    HubIcons.layoutGrid,
                     size: 18,
                     color: context.isDarkMode
                         ? Colors.white
@@ -595,7 +591,7 @@ class _CategoriesTab extends StatelessWidget {
                 ),
                 // chevron_right mirrors itself in RTL.
                 Icon(
-                  Icons.chevron_right,
+                  HubIcons.chevronRight,
                   size: 20,
                   color: context.scaffoldMuted,
                 ),

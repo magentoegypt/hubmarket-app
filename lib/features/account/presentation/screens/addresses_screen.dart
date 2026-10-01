@@ -9,6 +9,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/account_repository.dart';
 import '../../domain/customer_address.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 class AddressesScreen extends ConsumerWidget {
   const AddressesScreen({super.key});
@@ -30,7 +31,7 @@ class AddressesScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 56),
                 child: EmptyState(
-                  icon: Icons.location_on_outlined,
+                  icon: HubIcons.mapPin,
                   title: l10n.addressesEmpty,
                 ),
               )
@@ -96,7 +97,7 @@ class _AddressCard extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.location_on_outlined,
+                HubIcons.mapPin,
                 size: 20,
                 color: AppColors.brandPrimary,
               ),
@@ -162,8 +163,8 @@ class _AddressCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _IconAction(icon: Icons.edit_outlined, onTap: onEdit),
-              _IconAction(icon: Icons.delete_outline, onTap: () => onDelete()),
+              _IconAction(icon: HubIcons.pencil, onTap: onEdit),
+              _IconAction(icon: HubIcons.trash2, onTap: () => onDelete()),
             ],
           ),
           const SizedBox(height: 8),
@@ -227,7 +228,7 @@ class _AddNewAddressButton extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return OutlinedButton.icon(
       onPressed: onTap,
-      icon: const Icon(Icons.add, size: 18),
+      icon: const Icon(HubIcons.plus, size: 18),
       label: Text(l10n.addressAddNew),
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.brandPrimary,

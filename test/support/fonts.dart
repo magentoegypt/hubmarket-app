@@ -7,8 +7,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
 
-/// Loads the app's bundled fonts (DM Sans, Tajawal, Playfair Display) and the
-/// Material icon font into the test engine, so golden-style captures render
+/// Loads the app's bundled fonts (DM Sans, Tajawal, Playfair Display, the Lucide
+/// icon font) and the Material icon font into the test engine, so golden-style captures render
 /// real glyphs instead of the test font's boxes. Call from `setUpAll`.
 Future<void> loadAppFonts() async {
   Future<void> load(String family, List<String> assets) async {
@@ -27,6 +27,8 @@ Future<void> loadAppFonts() async {
     'assets/fonts/Tajawal-ExtraBold.ttf',
   ]);
   await load(AppTheme.displayFont, ['assets/fonts/PlayfairDisplay.ttf']);
+  // The Figma icon set (lib/app/theme/hub_icons.dart).
+  await load('Lucide', ['assets/fonts/Lucide.ttf']);
 
   final icons = _materialIconsFont();
   if (icons != null) {

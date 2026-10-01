@@ -6,6 +6,7 @@ import '../../../app/routes.dart';
 import '../../../core/util/launch.dart';
 import '../../catalog/presentation/storefront_links.dart';
 import '../domain/cms_links.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// Follows a link tapped inside CMS content.
 ///
@@ -31,9 +32,9 @@ Future<void> openCmsHref(
 
 /// Icon for a footer legal link, picked by the page it opens (as in Figma 27).
 IconData legalLinkIcon(CmsLink link) => switch (legalPageOf(link)) {
-  LegalPage.privacy => Icons.shield_outlined,
-  LegalPage.cookies => Icons.language,
-  LegalPage.terms => Icons.edit_outlined,
+  LegalPage.privacy => HubIcons.shield,
+  LegalPage.cookies => HubIcons.globe,
+  LegalPage.terms => HubIcons.pencil,
 };
 
 /// Opens a link known to point at a storefront CMS page (the footer's legal

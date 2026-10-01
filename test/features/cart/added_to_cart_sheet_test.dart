@@ -178,9 +178,9 @@ void main() {
     expect(find.text('Added to cart'), findsOneWidget);
     expect(find.text('Floral Print Corset-Waist Tie Dress'), findsOneWidget);
     expect(find.text('Size: M · Colour: Beige floral · Qty 1'), findsOneWidget);
-    expect(find.text('AED 50.00'), findsOneWidget);
+    expect(find.text('AED 50'), findsOneWidget);
     expect(find.text('Cart subtotal (4 items)'), findsOneWidget);
-    expect(find.text('AED 543.00'), findsOneWidget);
+    expect(find.text('AED 543'), findsOneWidget);
     expect(find.text('You might also like'), findsOneWidget);
     expect(find.text('Polo Shirt'), findsOneWidget);
     // No threshold published → no free-shipping bar.
@@ -205,7 +205,7 @@ void main() {
     await tester.pumpAndSettle();
     await _open(tester);
 
-    expect(find.text('Add AED 57.00 more for free delivery'), findsOneWidget);
+    expect(find.text('Add AED 57 more for free delivery'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
@@ -243,7 +243,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapText(tester, 'Add to Cart · AED 50.00');
+    await tapText(tester, 'Add to Cart · AED 50');
 
     expect(find.text('Added to cart'), findsOneWidget);
     expect(find.text('Qty 1'), findsOneWidget);
@@ -268,7 +268,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.add_shopping_cart));
+    await tester.tap(find.byTooltip('Add to Cart'));
     await tester.pumpAndSettle();
 
     expect(find.text('Added to cart'), findsOneWidget);

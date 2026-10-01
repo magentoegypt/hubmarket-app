@@ -19,6 +19,7 @@ import '../widgets/return_form_widgets.dart';
 import '../widgets/return_photos.dart';
 import '../widgets/return_widgets.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// One return (Figma 23c, `hmReturn`): its lines, outcome and status, the
 /// status history, the messages and the customer's escalation as one thread,
@@ -193,13 +194,13 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
     final Widget body;
     if (!available || async.error is HubAppMissing) {
       body = EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsUnavailableTitle,
         body: l10n.returnsUnavailableBody,
       );
     } else if (!signedIn) {
       body = EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsMyReturns,
         body: l10n.returnsSignIn,
         action: FilledButton(
@@ -238,7 +239,7 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
       );
     } else {
       body = EmptyState(
-        icon: Icons.assignment_return_outlined,
+        icon: HubIcons.rotateCcw,
         title: l10n.returnsNotFound,
       );
     }
@@ -321,7 +322,7 @@ class _ReturnDetailScreenState extends ConsumerState<ReturnDetailScreen> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.close, size: 18),
+                  : const Icon(HubIcons.x, size: 18),
               label: Text(l10n.returnsCancelAction),
             ),
           ),
@@ -590,7 +591,7 @@ class _EventPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.info_outline, size: 12, color: AppColors.inkMuted),
+          const Icon(HubIcons.info, size: 12, color: AppColors.inkMuted),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -670,7 +671,7 @@ class _Bubble extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (escalation != null) ...[
-                      Icon(Icons.shield_outlined, size: 14, color: nameColor),
+                      Icon(HubIcons.shield, size: 14, color: nameColor),
                       const SizedBox(width: 4),
                     ],
                     Flexible(
@@ -737,7 +738,7 @@ class _ClosedNote extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_outline, size: 18, color: returnsSubtleText),
+          const Icon(HubIcons.lock, size: 18, color: returnsSubtleText),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -780,7 +781,7 @@ class _EscalateCard extends StatelessWidget {
             child: Row(
               children: [
                 const Icon(
-                  Icons.shield_outlined,
+                  HubIcons.shield,
                   size: 18,
                   color: returnsSubtleText,
                 ),
@@ -1073,7 +1074,7 @@ class _Composer extends StatelessWidget {
                         foregroundColor: AppColors.inkHeading,
                         disabledForegroundColor: AppColors.borderStrong,
                       ),
-                      icon: const Icon(Icons.photo_camera_outlined, size: 20),
+                      icon: const Icon(HubIcons.camera, size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1134,7 +1135,7 @@ class _Composer extends StatelessWidget {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.arrow_forward, size: 20),
+                        : const Icon(HubIcons.arrowRight, size: 20),
                   ),
                 ),
               ],

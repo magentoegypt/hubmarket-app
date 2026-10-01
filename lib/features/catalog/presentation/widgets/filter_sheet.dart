@@ -4,6 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/catalog_repository.dart';
 import '../../domain/aggregation.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Result of the filter sheet: the selected attribute facets, an optional price
 /// range (null bounds = unbounded on that side), and the Discount / Rating
@@ -504,7 +505,7 @@ class _CheckSquare extends StatelessWidget {
       ),
     ),
     child: selected
-        ? const Icon(Icons.check, size: 14, color: Colors.white)
+        ? const Icon(HubIcons.check, size: 14, color: Colors.white)
         : null,
   );
 }

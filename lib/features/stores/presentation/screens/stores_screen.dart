@@ -27,6 +27,7 @@ import '../stores_providers.dart';
 import '../widgets/store_widgets.dart';
 import '../widgets/stores_unavailable.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The sellers of Hub Market (Figma 12): a store search, top-level category
 /// chips, the featured seller's banner, then every approved seller with the
@@ -155,7 +156,7 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, size: 22),
+            icon: const Icon(HubIcons.search, size: 22),
             tooltip: l10n.navSearch,
             onPressed: () => context.push(AppRoutes.search),
           ),
@@ -316,7 +317,7 @@ class _StoresScreenState extends ConsumerState<StoresScreen> {
         SliverFillRemaining(
           hasScrollBody: false,
           child: EmptyState(
-            icon: Icons.storefront_outlined,
+            icon: HubIcons.store,
             title: l10n.storesEmpty,
             body: _name.isEmpty
                 ? null
@@ -399,12 +400,12 @@ class _SearchField extends StatelessWidget {
         fillColor: SearchStyle.pillFill(context),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        prefixIcon: Icon(Icons.search, size: 18, color: context.scaffoldMuted),
+        prefixIcon: Icon(HubIcons.search, size: 18, color: context.scaffoldMuted),
         prefixIconConstraints: const BoxConstraints(minWidth: 42),
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
-                icon: const Icon(Icons.close, size: 18),
+                icon: const Icon(HubIcons.x, size: 18),
                 color: context.scaffoldMuted,
                 tooltip: l10n.searchClearField,
                 onPressed: onClear,
@@ -498,7 +499,7 @@ class _ListHeading extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.swap_vert, size: 16, color: color),
+                Icon(HubIcons.arrowUpDown, size: 16, color: color),
                 const SizedBox(width: 4),
                 Text(
                   sortLabel,

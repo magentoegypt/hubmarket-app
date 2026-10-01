@@ -13,6 +13,7 @@ import '../../../deals/presentation/widgets/hm_list_widgets.dart';
 import '../../../deals/presentation/widgets/list_states.dart';
 import '../../data/brands_provider.dart';
 import '../../domain/brand.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// All brands (Figma 10d, `hmBrands`): search, A–Z initials, and every brand
 /// that has products, with how many — `hmBrands`' own `product_count`, the
@@ -57,7 +58,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
           error: error,
           onRetry: () => ref.invalidate(brandsProvider),
           emptyTitle: l10n.brandsEmpty,
-          emptyIcon: Icons.storefront_outlined,
+          emptyIcon: HubIcons.store,
         ),
         data: (all) => _content(context, l10n, all),
       ),
@@ -77,7 +78,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
         ? [for (final b in all) if ((b.productCount ?? 0) > 0) b]
         : all;
     if (listed.isEmpty) {
-      return EmptyState(icon: Icons.storefront_outlined, title: l10n.brandsEmpty);
+      return EmptyState(icon: HubIcons.store, title: l10n.brandsEmpty);
     }
 
     final initials = listed.map(initialOf).toSet().toList()..sort();
@@ -106,7 +107,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: t.body.copyWith(color: AppColors.inkMuted),
-            prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.inkMuted),
+            prefixIcon: const Icon(HubIcons.search, size: 20, color: AppColors.inkMuted),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -150,7 +151,7 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
         if (shown.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 32),
-            child: EmptyState(icon: Icons.search_off, title: l10n.brandsEmpty),
+            child: EmptyState(icon: HubIcons.searchX, title: l10n.brandsEmpty),
           )
         else
           GridView.builder(

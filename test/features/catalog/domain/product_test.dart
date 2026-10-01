@@ -7,7 +7,7 @@ void main() {
     test('formats AED with Western digits and two decimals', () {
       expect(
         const Money(amount: 199, currency: 'AED').formatted(),
-        'AED 199.00',
+        'AED 199',
       );
       expect(
         const Money(amount: 1250.5, currency: 'AED').formatted(),

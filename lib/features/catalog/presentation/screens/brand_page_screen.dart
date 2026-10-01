@@ -23,6 +23,7 @@ import '../widgets/filter_sheet.dart';
 import '../widgets/product_card.dart';
 import '../widgets/sort_sheet.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// The brand a page is for: [brand] when the caller had it, else looked up by
 /// its url_key among `hmBrands`; null when there is no such brand.
@@ -68,7 +69,7 @@ class BrandPageScreen extends ConsumerWidget {
           error: error,
           onRetry: () => ref.invalidate(brandsProvider),
           emptyTitle: l10n.brandsEmpty,
-          emptyIcon: Icons.storefront_outlined,
+          emptyIcon: HubIcons.store,
         ),
       ),
       data: (found) => found == null
@@ -76,7 +77,7 @@ class BrandPageScreen extends ConsumerWidget {
               currentTab: AppTab.home,
               appBar: HmTitleAppBar(title: '', actions: const <Widget>[]),
               body: EmptyState(
-                icon: Icons.storefront_outlined,
+                icon: HubIcons.store,
                 title: l10n.brandsEmpty,
               ),
             )
@@ -99,13 +100,13 @@ class _BrandPage extends ConsumerWidget {
     final optionId = brand.optionId;
     final actions = [
       IconButton(
-        icon: const Icon(Icons.search, size: 22),
+        icon: const Icon(HubIcons.search, size: 22),
         color: AppColors.inkHeading,
         onPressed: () => context.push(AppRoutes.search),
       ),
       if (brand.url.isNotEmpty)
         IconButton(
-          icon: const Icon(Icons.share_outlined, size: 22),
+          icon: const Icon(HubIcons.share2, size: 22),
           color: AppColors.inkHeading,
           tooltip: l10n.actionShare,
           onPressed: () =>
@@ -117,7 +118,7 @@ class _BrandPage extends ConsumerWidget {
       return HubScaffold(
         currentTab: AppTab.home,
         appBar: HmTitleAppBar(title: brand.title, actions: actions),
-        body: EmptyState(icon: Icons.storefront_outlined, title: l10n.brandsEmpty),
+        body: EmptyState(icon: HubIcons.store, title: l10n.brandsEmpty),
       );
     }
 
@@ -257,13 +258,13 @@ class _BrandPage extends ConsumerWidget {
                         ),
                       ),
                       HmPillButton(
-                        icon: Icons.swap_vert,
+                        icon: HubIcons.arrowUpDown,
                         label: _sortLabel(l10n, state.sort),
                         onTap: () => _openSort(context, controller, state),
                       ),
                       const SizedBox(width: 8),
                       HmPillButton(
-                        icon: Icons.tune,
+                        icon: HubIcons.slidersHorizontal,
                         label: l10n.filtersLabel,
                         onTap: () => _openFilters(context, ref, controller, state),
                       ),
@@ -286,7 +287,7 @@ class _BrandPage extends ConsumerWidget {
                 SliverFillRemaining(
                   hasScrollBody: false,
                   child: EmptyState(
-                    icon: Icons.search_off,
+                    icon: HubIcons.searchX,
                     title: l10n.brandsEmpty,
                   ),
                 )
@@ -294,12 +295,7 @@ class _BrandPage extends ConsumerWidget {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   sliver: SliverGrid.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 173 / 283,
-                    ),
+                    gridDelegate: productGridDelegate(context),
                     itemCount: state.products.length,
                     itemBuilder: (context, i) => ProductCard(
                       product: state.products[i],

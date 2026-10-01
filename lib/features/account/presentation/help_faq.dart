@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/l10n.dart';
 import '../../cms/domain/faq.dart';
+import '../../../app/theme/hub_icons.dart';
 
 /// The FAQ shipped with the app, used until the store publishes its own in
 /// the CMS block `hm_app_faq` (see `FaqDocument`).
@@ -62,11 +63,11 @@ List<FaqTopic> bundledHelpFaq(
 
 /// Icon for a FAQ topic's `data-icon` key; the generic help icon otherwise.
 IconData faqTopicIcon(String? key) => switch (key) {
-  'orders' => Icons.inventory_2_outlined,
-  'delivery' => Icons.local_shipping_outlined,
-  'returns' => Icons.replay,
-  'payments' => Icons.credit_card_outlined,
-  'account' => Icons.person_outline,
-  'selling' => Icons.storefront_outlined,
-  _ => Icons.help_outline,
+  'orders' => HubIcons.package,
+  'delivery' => HubIcons.truck,
+  'returns' => HubIcons.rotateCcw,
+  'payments' => HubIcons.creditCard,
+  'account' => HubIcons.user,
+  'selling' => HubIcons.store,
+  _ => HubIcons.circleHelp,
 };

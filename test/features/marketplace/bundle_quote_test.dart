@@ -13,6 +13,7 @@ import '../../support/bundle_fixtures.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 import 'marketplace_harness.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 final _en = lookupAppLocalizations(const Locale('en'));
 
@@ -166,8 +167,8 @@ void main() {
           containsAll(['s0', 's1', 's2', 's3']),
         );
         // The cart's figure, not price_range's 60.56.
-        expect(find.text('AED 61.00'), findsNWidgets(2)); // price + total
-        expect(find.text(l10n.bundleYouSave('AED 11.00')), findsOneWidget);
+        expect(find.text('AED 61'), findsNWidgets(2)); // price + total
+        expect(find.text(l10n.bundleYouSave('AED 11')), findsOneWidget);
         expect(find.text(l10n.bundleDiscountBadge(15)), findsOneWidget);
         expect(find.text(l10n.bundleEstimateNote), findsNothing);
         expect(tester.takeException(), isNull);
@@ -223,11 +224,11 @@ void main() {
           .first;
       answers['HmBundleQuote'] = _quote(price: 70.2, regular: 75);
       await tester.tap(
-        find.descendant(of: bottleRow, matching: find.byIcon(Icons.add)),
+        find.descendant(of: bottleRow, matching: find.byIcon(HubIcons.plus)),
       );
       await tester.pump(const Duration(milliseconds: 100));
       await tester.tap(
-        find.descendant(of: bottleRow, matching: find.byIcon(Icons.add)),
+        find.descendant(of: bottleRow, matching: find.byIcon(HubIcons.plus)),
       );
       await tester.pump(BundleProductScreen.quoteDelay);
       await tester.pumpAndSettle();
@@ -300,12 +301,12 @@ void main() {
       await tester.pumpAndSettle();
 
       answers['HmBundleQuote'] = _quote(price: 58, regular: 72);
-      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.tap(find.byIcon(HubIcons.plus).last);
       await tester.pump(BundleProductScreen.quoteDelay);
       await tester.pumpAndSettle();
 
       expect(_quotes(public).last.variables['quantity'], 2.0);
-      expect(find.text('AED 58.00'), findsNWidgets(2));
+      expect(find.text('AED 58'), findsNWidgets(2));
     });
   });
 }

@@ -7,6 +7,7 @@ import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
 import '../checkout_credit_controller.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Shared building blocks of the three checkout steps (Figma 17 / 18 / 18b):
 /// white cards on the muted page, the design's type scale, the step indicator,
@@ -350,7 +351,7 @@ class _StepItem extends StatelessWidget {
     if (done) {
       badge = const _Circle(
         color: AppColors.successStrong,
-        child: Icon(Icons.check, size: 14, color: Colors.white),
+        child: Icon(HubIcons.check, size: 14, color: Colors.white),
       );
     } else {
       badge = _Circle(

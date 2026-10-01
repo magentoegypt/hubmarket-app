@@ -24,6 +24,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 import '../../../support/fakes.dart';
 import '../../../support/fonts.dart';
 import '../../../support/hubapp_fakes.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// Serves one canned [ProductDetail] instead of the shared sample.
 class _DetailRepository extends FakeCatalogRepository {
@@ -171,12 +172,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Coco Mademoiselle EDP'), findsWidgets);
-    expect(find.text('AED 199.00'), findsWidgets);
+    expect(find.text('AED 199'), findsWidgets);
 
     await tester.tap(find.text('100ml'));
     await tester.pumpAndSettle();
 
-    expect(find.text('AED 299.00'), findsWidgets);
+    expect(find.text('AED 299'), findsWidgets);
   });
 
   testWidgets('reviews tab shows the empty state (store has zero reviews)', (
@@ -385,10 +386,10 @@ void main() {
             of: find.byType(PdpTrustRow),
             matching: find.byIcon(data),
           );
-          expect(icon(Icons.verified_user_outlined), findsOneWidget);
-          expect(icon(Icons.credit_card_outlined), findsOneWidget);
-          expect(icon(Icons.local_shipping_outlined), findsOneWidget);
-          expect(icon(Icons.replay_outlined), findsOneWidget);
+          expect(icon(HubIcons.shieldCheck), findsOneWidget);
+          expect(icon(HubIcons.creditCard), findsOneWidget);
+          expect(icon(HubIcons.truck), findsOneWidget);
+          expect(icon(HubIcons.rotateCcw), findsOneWidget);
         }
         expect(tester.takeException(), isNull);
       });

@@ -14,6 +14,7 @@ import '../order_actions.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
 import '../widgets/order_packages.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Full detail for a single placed order, navigated to with the [CustomerOrder]
 /// via go_router `extra` (the list already holds every field, so no extra
@@ -71,7 +72,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: () => reorderOrder(context, ref, order),
-              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+              icon: const Icon(HubIcons.shoppingCart, size: 18),
               label: Text(l10n.orderReorder),
             ),
           ),
@@ -177,7 +178,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
-                  Icons.local_shipping_outlined,
+                  HubIcons.truck,
                   color: AppColors.brandPrimary,
                 ),
                 title: Text(
@@ -185,7 +186,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
                 subtitle: Text(t.number, textDirection: TextDirection.ltr),
                 trailing: IconButton(
-                  icon: const Icon(Icons.copy_outlined),
+                  icon: const Icon(HubIcons.copy),
                   tooltip: l10n.orderTrackingSection,
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: t.number));
@@ -291,7 +292,7 @@ class _DetailThumb extends StatelessWidget {
         error: (_) => const ColoredBox(
           color: AppColors.surfaceTint,
           child: Icon(
-            Icons.image_outlined,
+            HubIcons.image,
             size: 16,
             color: AppColors.inkMuted,
           ),
@@ -344,7 +345,7 @@ class _AddressBlock extends StatelessWidget {
           child: Row(
             children: [
               const Icon(
-                Icons.phone_outlined,
+                HubIcons.phone,
                 size: 13,
                 color: AppColors.inkMuted,
               ),

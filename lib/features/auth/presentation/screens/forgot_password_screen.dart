@@ -16,6 +16,7 @@ import '../widgets/auth_method_tabs.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_widgets.dart';
 import 'verify_code_screen.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Figma "06 Forgot password": the orange lock badge, "Reset your password",
 /// the e-mail field and the link-expiry note, "Send reset link" / "Back to
@@ -139,7 +140,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               key: const ValueKey('forgot-mobile'),
               controller: _mobile,
               label: l10n.fieldMobileWhatsapp,
-              icon: Icons.phone_outlined,
+              icon: HubIcons.phone,
               hint: l10n.authPhonePlaceholder,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.done,
@@ -154,7 +155,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               key: const ValueKey('forgot-email'),
               controller: _email,
               label: l10n.authEmailHint,
-              icon: Icons.mail_outline_rounded,
+              icon: HubIcons.mail,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.email],
@@ -191,7 +192,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     gap: 20,
     content: [
       const AuthBadge(
-        icon: Icon(Icons.mark_email_read_outlined),
+        icon: Icon(HubIcons.mailCheck),
         background: AppColors.successSubtle,
         foreground: AppColors.successStrong,
       ),

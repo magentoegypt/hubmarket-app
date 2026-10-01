@@ -37,8 +37,8 @@ void main() {
         returns: repo,
       );
       await _tapVisible(tester, find.text('Short Square-Neck T-Shirt'));
-      expect(find.text('S · Green · AED 43.00'), findsOneWidget);
-      expect(find.text('AED 86.00'), findsOneWidget); // max_refund
+      expect(find.text('S · Green · AED 43'), findsOneWidget);
+      expect(find.text('AED 86'), findsOneWidget); // max_refund
       expect(repo.unitRefundLookups, isEmpty);
     });
 
@@ -53,8 +53,8 @@ void main() {
         returns: repo,
       );
       expect(repo.unitRefundLookups, ['000000140']);
-      expect(find.text('AED 55.00'), findsOneWidget); // the mug, per unit
-      expect(find.text('AED 165.00'), findsOneWidget); // 3 × 55
+      expect(find.text('AED 55'), findsOneWidget); // the mug, per unit
+      expect(find.text('AED 165'), findsOneWidget); // 3 × 55
 
       // The cap a custom refund must stay under comes from there too.
       await _tapVisible(tester, find.text(en.returnsCustomAmount));
@@ -63,7 +63,7 @@ void main() {
         '170',
       );
       await _tapVisible(tester, find.text(en.returnsSubmit));
-      expect(find.text(en.returnsErrorAmountCap('AED 165.00')), findsOneWidget);
+      expect(find.text(en.returnsErrorAmountCap('AED 165')), findsOneWidget);
       expect(repo.createInputs, isEmpty);
     });
   });
@@ -93,7 +93,7 @@ void main() {
       expect(
         find.text(
           '${en.returnsRequestedOn('24 Sep')} · '
-          '${en.returnsTypeRefund} \u2066AED 29.00\u2069',
+          '${en.returnsTypeRefund} \u2066AED 29\u2069',
         ),
         findsOneWidget,
       );

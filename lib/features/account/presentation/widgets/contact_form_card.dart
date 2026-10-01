@@ -10,6 +10,7 @@ import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../data/account_repository.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// "Send us a message" (Figma 27): Magento's own contact form (`contactUs`),
 /// which e-mails the store's contact address. Prefilled for a signed-in
@@ -111,21 +112,21 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
               _LabeledField(
                 label: l10n.helpMessageName,
                 controller: _name,
-                icon: Icons.person_outline,
+                icon: HubIcons.user,
                 textCapitalization: TextCapitalization.words,
                 validator: (v) => Validators.required(context, v),
               ),
               _LabeledField(
                 label: l10n.helpMessageEmail,
                 controller: _email,
-                icon: Icons.mail_outline,
+                icon: HubIcons.mail,
                 keyboardType: TextInputType.emailAddress,
                 validator: (v) => Validators.email(context, v),
               ),
               _LabeledField(
                 label: l10n.helpMessagePhone,
                 controller: _phone,
-                icon: Icons.phone_outlined,
+                icon: HubIcons.phone,
                 keyboardType: TextInputType.phone,
                 forceLtr: true,
               ),
@@ -143,7 +144,7 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.check_circle_outline,
+                        HubIcons.circleCheck,
                         size: 18,
                         color: AppColors.success,
                       ),

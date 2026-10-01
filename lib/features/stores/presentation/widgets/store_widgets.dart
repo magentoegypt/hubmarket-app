@@ -11,6 +11,7 @@ import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/widgets/search_style.dart';
 import '../../domain/store.dart';
+import '../../../../app/theme/hub_icons.dart';
 
 /// Opens [store]'s page, handing over the card so the header paints at once.
 void openStore(BuildContext context, HmStoreCard store) =>
@@ -113,7 +114,7 @@ class VerifiedMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Icon(
-    Icons.verified_outlined,
+    HubIcons.badgeCheck,
     size: size,
     color: color,
     semanticLabel: AppLocalizations.of(context).storeVerified,
@@ -374,7 +375,7 @@ class StoreListTile extends StatelessWidget {
               const SizedBox(width: 8),
               // chevron_right mirrors itself in RTL.
               const Icon(
-                Icons.chevron_right,
+                HubIcons.chevronRight,
                 size: 20,
                 color: AppColors.inkMuted,
               ),

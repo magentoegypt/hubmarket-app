@@ -129,11 +129,37 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
+      // Figma "Button": 52 px, radius 12, label EN/Button (15 Bold). Primary is
+      // the navy fill; Outline is a white button with a 1.5 px navy border.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.brandPrimary,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(52),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          textStyle: _buttonLabel(languageCode),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: brightness == Brightness.light
+              ? AppColors.brandPrimary
+              : Colors.white,
+          backgroundColor: brightness == Brightness.light
+              ? Colors.white
+              : Colors.transparent,
+          minimumSize: const Size.fromHeight(52),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          textStyle: _buttonLabel(languageCode),
+          side: BorderSide(
+            color: brightness == Brightness.light
+                ? AppColors.brandPrimary
+                : Colors.white70,
+            width: 1.5,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -144,34 +170,47 @@ abstract final class AppTheme {
         color: AppColors.surfaceTint,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      // Figma form fields: filled grey (surface/alt), rounded, no hard border,
-      // navy focus ring. Applies to every TextField/TextFormField app-wide.
+      // Figma "Input": a white 52 px field, 1 px `border/default` outline,
+      // radius 12; focused it is a 1.5 px navy ring, in error a 1.5 px red one.
+      // Applies to every TextField/TextFormField app-wide.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: brightness == Brightness.light
-            ? const Color(0xFFF3F4F6) // surface/alt
+            ? Colors.white
             : Colors.white10,
-        hintStyle: const TextStyle(color: Color(0xFF9CA3AF)), // text/muted
+        hintStyle: const TextStyle(color: AppColors.inkFaint), // text/muted
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.brandPrimary,
-            width: 1.5,
-          ),
-        ),
+        border: _fieldBorder(AppColors.borderStrong, 1),
+        enabledBorder: _fieldBorder(AppColors.borderStrong, 1),
+        disabledBorder: _fieldBorder(AppColors.borderSubtle, 1),
+        focusedBorder: _fieldBorder(AppColors.brandPrimary, 1.5),
+        errorBorder: _fieldBorder(AppColors.danger, 1.5),
+        focusedErrorBorder: _fieldBorder(AppColors.danger, 1.5),
       ),
+    );
+  }
+
+  static OutlineInputBorder _fieldBorder(Color color, double width) =>
+      OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: color, width: width),
+      );
+
+  /// EN/Button (DM Sans Bold 15/20) · AR/Button (Tajawal Bold 15/22). A button's
+  /// `textStyle` replaces the ambient style, so it must name the family itself.
+  static TextStyle _buttonLabel(String languageCode) {
+    final latin = languageCode != 'ar';
+    return TextStyle(
+      fontFamily: fontFor(languageCode),
+      fontSize: 15,
+      height: (latin ? 20 : 22) / 15,
+      leadingDistribution: TextLeadingDistribution.even,
+      letterSpacing: 0,
+      fontWeight: FontWeight.w700,
+      fontVariations: latin ? opticalSize(15) : null,
     );
   }
 }
