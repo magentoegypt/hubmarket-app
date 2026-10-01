@@ -1,13 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/routes.dart';
-import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_theme.dart';
-import '../../../../app/theme/theme_x.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/network_image.dart';
@@ -22,6 +20,7 @@ import '../../domain/bundle_choice.dart';
 import '../../domain/bundle_product.dart';
 import '../../domain/money.dart';
 import '../../domain/product_detail.dart';
+import '../widgets/pdp_buy_bar.dart';
 import '../widgets/product_gallery.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
 import '../../../../app/theme/hub_icons.dart';
@@ -220,6 +219,7 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -248,97 +248,102 @@ class _BundleProductScreenState extends ConsumerState<BundleProductScreen> {
     final percent = quote.savingPercent;
     final busy = ref.watch(cartControllerProvider.select((s) => s.isMutating));
     final seller = widget.seller;
-    final isEn = Localizations.localeOf(context).languageCode != 'ar';
+    final t = AppTextStyles.of(context);
     final description = product.shortDescription ?? product.description;
 
-    return HubScaffold(
-      currentTab: AppTab.home,
-      bottomBar: _BuyBar(
-        quantity: _quantity,
-        busy: busy,
-        onQuantity: _setQuantity,
-        onAdd: () => _addBundle(quote),
-      ),
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          ProductGallery(
-            images: product.gallery,
-            sku: product.sku,
-            urlKey: product.urlKey,
-            badge: product.badge,
-            bottomBadges: [
-              if (percent != null)
-                GalleryBadge(
-                  label: l10n.bundleDiscountBadge(percent),
-                  color: AppColors.accentSale,
-                  textDirection: null,
-                ),
-              if (saving != null)
-                GalleryBadge(
-                  label: l10n.bundleSaveBadge(saving.formatted()),
-                  color: AppColors.successStrong,
-                  textDirection: null,
-                ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (seller != null && !seller.isMarketplace) ...[
-                  _SoldByLine(seller: seller),
-                  const SizedBox(height: 6),
-                ],
-                Text(
-                  product.name,
-                  style: TextStyle(
-                    // Playfair Display has no Arabic glyphs.
-                    fontFamily: isEn ? AppTheme.displayFont : null,
-                    fontSize: 22,
-                    height: 28 / 22,
-                    fontWeight: FontWeight.w700,
-                    color: context.scaffoldHeading,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Dark status-bar icons over the light photo stage.
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        // Figma "Buy bar": quantity and "Add bundle to cart".
+        bottomNavigationBar: PdpBuyBar(
+          quantity: _quantity,
+          onQuantity: _setQuantity,
+          busy: busy,
+          label: l10n.bundleAddToCart,
+          onPressed: () => _addBundle(quote),
+        ),
+        body: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            ProductGallery(
+              images: product.gallery,
+              sku: product.sku,
+              urlKey: product.urlKey,
+              badge: product.badge,
+              height: ProductGallery.bundleHeight,
+              showCart: false,
+              bottomBadges: [
+                if (percent != null)
+                  GalleryBadge(
+                    label: l10n.bundleDiscountBadge(percent),
+                    color: AppColors.accentSale,
+                    textDirection: null,
                   ),
-                ),
-                if (description != null && description.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 20 / 14,
-                      color: context.scaffoldMuted,
-                    ),
+                if (saving != null)
+                  GalleryBadge(
+                    label: l10n.bundleSaveBadge(saving.formatted()),
+                    color: AppColors.successStrong,
+                    textDirection: null,
                   ),
-                ],
-                const SizedBox(height: 6),
-                _PriceLine(bundle: bundle, quote: quote),
-                const SizedBox(height: 16),
-                _PackageCard(
-                  bundle: bundle,
-                  choice: _choice,
-                  expanded: _expanded,
-                  onExpand: () => setState(() => _expanded = !_expanded),
-                  onChanged: _update,
-                  onSwap: _swap,
-                  onAddItemOnly: _addItemOnly,
-                ),
-                const SizedBox(height: 16),
-                _PackageSummary(bundle: bundle, quote: quote, refusal: refusal),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Figma "col": the seller, the title, the description and the
+                  // price, 6 px apart.
+                  if (seller != null && !seller.isMarketplace) ...[
+                    _SoldByLine(seller: seller),
+                    const SizedBox(height: 6),
+                  ],
+                  Text(
+                    product.name,
+                    style: t.heading1.copyWith(color: AppColors.inkHeading),
+                  ),
+                  if (description != null && description.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      description,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.body.copyWith(color: AppColors.inkMuted),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  _PriceLine(bundle: bundle, quote: quote),
+                  const SizedBox(height: 16),
+                  _PackageCard(
+                    bundle: bundle,
+                    choice: _choice,
+                    expanded: _expanded,
+                    onExpand: () => setState(() => _expanded = !_expanded),
+                    onChanged: _update,
+                    onSwap: _swap,
+                    onAddItemOnly: _addItemOnly,
+                  ),
+                  const SizedBox(height: 16),
+                  _PackageSummary(
+                    bundle: bundle,
+                    quote: quote,
+                    refusal: refusal,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// "Sold by Test 1 ✓" above the title (Figma 14b); opens the store.
+/// "Sold by Test 1 ✓" above the title (Figma 14b): Caption "Sold by", the name in
+/// Caption Strong and the vendor blue, the ✓ — 6 px apart, with no card. Opens
+/// the store.
 class _SoldByLine extends StatelessWidget {
   const _SoldByLine({required this.seller});
 
@@ -347,6 +352,7 @@ class _SoldByLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: InkWell(
@@ -359,7 +365,7 @@ class _SoldByLine extends StatelessWidget {
           children: [
             Text(
               l10n.pdpSoldBy,
-              style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+              style: t.caption.copyWith(color: AppColors.inkMuted),
             ),
             const SizedBox(width: 6),
             Flexible(
@@ -367,11 +373,7 @@ class _SoldByLine extends StatelessWidget {
                 seller.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.info,
-                ),
+                style: t.captionStrong.copyWith(color: AppColors.info),
               ),
             ),
             const SizedBox(width: 6),
@@ -383,8 +385,10 @@ class _SoldByLine extends StatelessWidget {
   }
 }
 
-/// AED 61  AED 72  You save AED 11 — or "From AED …" when the package can't
-/// be priced here.
+/// AED 61  AED 72  You save AED 11 (Figma 14b "row"): Price Large in the sale
+/// orange, the regular price in Body (muted, struck through as on the product
+/// card), "You save" in Caption Strong green — on one baseline, 8 px apart. Or
+/// "From AED …" when the package can't be priced here.
 class _PriceLine extends StatelessWidget {
   const _PriceLine({required this.bundle, required this.quote});
 
@@ -394,45 +398,42 @@ class _PriceLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final total = quote.total;
     final saving = quote.saving;
     final from = bundle.minFinal;
     if (total == null && from == null) return const SizedBox.shrink();
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 4,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
         Text(
           total != null
               ? total.formatted()
               : l10n.bundlePriceFrom(from!.formatted()),
-          style: const TextStyle(
-            fontSize: 24,
-            height: 30 / 24,
-            fontWeight: FontWeight.w700,
-            color: AppColors.accentStrong,
-          ),
+          style: t.priceLarge.copyWith(color: AppColors.accentStrong),
         ),
-        if (saving != null && quote.regular != null)
+        if (saving != null && quote.regular != null) ...[
+          const SizedBox(width: 8),
           Text(
             quote.regular!.formatted(),
             textDirection: TextDirection.ltr,
-            style: TextStyle(
-              fontSize: 14,
-              color: context.scaffoldMuted,
+            style: t.body.copyWith(
+              color: AppColors.inkMuted,
               decoration: TextDecoration.lineThrough,
             ),
           ),
-        if (saving != null)
-          Text(
-            l10n.bundleYouSave(saving.formatted()),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.successStrong,
+        ],
+        if (saving != null) ...[
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              l10n.bundleYouSave(saving.formatted()),
+              style: t.captionStrong.copyWith(color: AppColors.successStrong),
             ),
           ),
+        ],
       ],
     );
   }
@@ -480,11 +481,12 @@ class _PackageCard extends StatelessWidget {
         ? rows
         : rows.take(_collapsedRows).toList();
     final issues = choice.issues(bundle);
+    final t = AppTextStyles.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 4),
       decoration: BoxDecoration(
-        border: Border.all(color: context.hairline),
+        border: Border.all(color: AppColors.borderSubtle),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -497,26 +499,18 @@ class _PackageCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     l10n.bundleItemsTitle,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: context.scaffoldHeading,
-                    ),
+                    style: t.title.copyWith(color: AppColors.inkHeading),
                   ),
                 ),
-                Icon(
+                const Icon(
                   HubIcons.package,
                   size: 14,
-                  color: context.scaffoldMuted,
+                  color: AppColors.inkSubtle,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   l10n.bundleItemCount(itemCount),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: context.scaffoldMuted,
-                  ),
+                  style: t.captionStrong.copyWith(color: AppColors.inkSubtle),
                 ),
               ],
             ),
@@ -552,9 +546,7 @@ class _PackageCard extends StatelessWidget {
                         expanded
                             ? l10n.bundleShowFewer
                             : l10n.bundleMoreItems(hidden),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                        style: t.bodyStrong.copyWith(
                           color: AppColors.accentStrong,
                         ),
                       ),
@@ -577,16 +569,17 @@ class _PackageCard extends StatelessWidget {
   }
 }
 
-/// A hairline above each row of the package card.
+/// A hairline above each row of the package card (Figma "border-t": the line's
+/// 1 px adds to the row's height).
 class _Divided extends StatelessWidget {
   const _Divided({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      border: Border(top: BorderSide(color: context.hairline)),
+  Widget build(BuildContext context) => Container(
+    decoration: const BoxDecoration(
+      border: Border(top: BorderSide(color: AppColors.borderSubtle)),
     ),
     child: child,
   );
@@ -647,6 +640,7 @@ class _ItemRow extends StatelessWidget {
     // Only where there is something else to put in.
     final canSwap = option.selections.length > 1;
     final count = quantity.round();
+    final t = AppTextStyles.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -663,11 +657,7 @@ class _ItemRow extends StatelessWidget {
                   selection.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: context.scaffoldHeading,
-                  ),
+                  style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                 ),
                 const SizedBox(height: 4),
                 if (selection.canChangeQuantity)
@@ -682,10 +672,7 @@ class _ItemRow extends StatelessWidget {
                     line == null
                         ? l10n.bundleLineQty(count)
                         : l10n.bundleLineQtyPrice(count, line.formatted()),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.scaffoldMuted,
-                    ),
+                    style: t.caption.copyWith(color: AppColors.inkMuted),
                   ),
                 if (child != null && child.isConfigurable)
                   for (final attribute in child.options)
@@ -709,7 +696,7 @@ class _ItemRow extends StatelessWidget {
                   children: [
                     if (canSwap)
                       _Link(
-                        icon: HubIcons.refreshCw,
+                        icon: HubIcons.rotateCcw,
                         label: l10n.bundleSwap,
                         color: AppColors.accentStrong,
                         onTap: onSwap,
@@ -753,6 +740,7 @@ class _ChooseRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -764,7 +752,7 @@ class _ChooseRow extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: context.hairline),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: const Icon(HubIcons.plus, color: AppColors.accentStrong),
             ),
@@ -775,24 +763,21 @@ class _ChooseRow extends StatelessWidget {
                 children: [
                   Text(
                     l10n.bundleChoose(option.title),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.accentStrong,
-                    ),
+                    style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
                   ),
                   if (!option.required)
                     Text(
                       l10n.bundleOptional,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.scaffoldMuted,
-                      ),
+                      style: t.caption.copyWith(color: AppColors.inkMuted),
                     ),
                 ],
               ),
             ),
-            Icon(HubIcons.chevronRight, size: 18, color: context.scaffoldMuted),
+            const Icon(
+              HubIcons.chevronRight,
+              size: 18,
+              color: AppColors.inkMuted,
+            ),
           ],
         ),
       ),
@@ -818,8 +803,9 @@ class _Link extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
     borderRadius: BorderRadius.circular(6),
+    // 16 px high, as the frame's link row is: the item row keeps its 85 px.
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: EdgeInsets.zero,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -829,11 +815,7 @@ class _Link extends StatelessWidget {
           ],
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+            style: AppTextStyles.of(context).captionStrong.copyWith(color: color),
           ),
         ],
       ),
@@ -855,6 +837,7 @@ class _AttributePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final picked = attribute.values
         .where((v) => v.valueIndex == selected)
         .firstOrNull;
@@ -867,11 +850,7 @@ class _AttributePicker extends StatelessWidget {
             picked == null
                 ? attribute.label
                 : '${attribute.label}: ${picked.label}',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: context.scaffoldHeading,
-            ),
+            style: t.captionStrong.copyWith(color: AppColors.inkHeading),
           ),
           const SizedBox(height: 4),
           Wrap(
@@ -879,13 +858,10 @@ class _AttributePicker extends StatelessWidget {
             runSpacing: 6,
             children: [
               for (final value in attribute.values)
-                ChoiceChip(
-                  label: Text(value.label),
+                _MiniChip(
+                  label: value.label,
                   selected: value.valueIndex == selected,
-                  onSelected: (_) => onSelect(value.valueIndex),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  labelStyle: const TextStyle(fontSize: 12),
+                  onTap: () => onSelect(value.valueIndex),
                 ),
             ],
           ),
@@ -893,6 +869,53 @@ class _AttributePicker extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A compact option chip inside a package item: the product page's size chip
+/// at 32 px - white with a `border/strong` outline, navy once chosen.
+class _MiniChip extends StatelessWidget {
+  const _MiniChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: Material(
+      color: selected ? AppColors.brandPrimary : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: selected
+            ? BorderSide.none
+            : const BorderSide(color: AppColors.borderStrong),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              label,
+              style: AppTextStyles.of(context).captionStrong.copyWith(
+                color: selected ? Colors.white : AppColors.inkHeading,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// − N + with the line's price, for a selection whose quantity the shopper
@@ -910,6 +933,7 @@ class _SmallStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     Widget button(IconData icon, VoidCallback? onTap) => InkWell(
       onTap: onTap,
       customBorder: const CircleBorder(),
@@ -918,9 +942,7 @@ class _SmallStepper extends StatelessWidget {
         child: Icon(
           icon,
           size: 16,
-          color: onTap == null
-              ? context.scaffoldFaint
-              : context.scaffoldHeading,
+          color: onTap == null ? AppColors.disabled : AppColors.inkHeading,
         ),
       ),
     );
@@ -935,11 +957,7 @@ class _SmallStepper extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Text(
             '$quantity',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: context.scaffoldHeading,
-            ),
+            style: t.captionStrong.copyWith(color: AppColors.inkHeading),
           ),
         ),
         button(HubIcons.plus, () => onChanged(quantity + 1)),
@@ -948,7 +966,7 @@ class _SmallStepper extends StatelessWidget {
           Text(
             price!.formatted(),
             textDirection: TextDirection.ltr,
-            style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+            style: t.caption.copyWith(color: AppColors.inkMuted),
           ),
         ],
       ],
@@ -956,7 +974,10 @@ class _SmallStepper extends StatelessWidget {
   }
 }
 
-/// "Package summary" (Figma 14b 61:2776).
+/// "Package summary" (Figma 14b 61:2776): a `bg/muted` card, radius 14 — Title,
+/// then the regular price, the bundle saving, delivery and, under a hairline, the
+/// total (Title and Price) with "Taxes calculated at checkout". Labels are Body
+/// in `subtle`, figures Body Strong.
 class _PackageSummary extends StatelessWidget {
   const _PackageSummary({
     required this.bundle,
@@ -973,38 +994,32 @@ class _PackageSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final regular = quote.regular;
     final saving = quote.saving;
     final total = quote.total;
     final from = bundle.minFinal;
-    Widget row(String label, String value, {Color? color}) => Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 14, color: context.scaffoldMuted),
-            ),
+    Widget row(String label, String value, {Color? color}) => Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: t.body.copyWith(color: AppColors.inkSubtle),
           ),
-          const SizedBox(width: 12),
-          Text(
-            value,
-            textDirection: TextDirection.ltr,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: color ?? context.scaffoldHeading,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          value,
+          textDirection: TextDirection.ltr,
+          style: t.bodyStrong.copyWith(color: color ?? AppColors.inkHeading),
+        ),
+      ],
     );
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.fieldFill,
+        color: AppColors.surfaceSubtle,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1012,210 +1027,79 @@ class _PackageSummary extends StatelessWidget {
         children: [
           Text(
             l10n.bundleSummaryTitle,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: context.scaffoldHeading,
-            ),
+            style: t.title.copyWith(color: AppColors.inkHeading),
           ),
-          if (regular != null)
+          if (regular != null) ...[
+            const SizedBox(height: 8),
             row(l10n.bundleRegularPrice, regular.formatted()),
-          if (saving != null)
+          ],
+          if (saving != null) ...[
+            const SizedBox(height: 8),
             row(
               l10n.bundleSaving,
-              '− ${saving.formatted()}',
+              '\u2212 ${saving.formatted()}',
               color: AppColors.successStrong,
             ),
+          ],
           // The fee depends on the address, so checkout works it out (the
           // frame's "Free" isn't something the product page can know).
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.cartDelivery,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: context.scaffoldMuted,
-                    ),
-                  ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.cartDelivery,
+                  style: t.body.copyWith(color: AppColors.inkSubtle),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  l10n.cartDeliveryCalculated,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: context.scaffoldHeading,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                l10n.cartDeliveryCalculated,
+                style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Divider(height: 1, color: context.hairline),
-          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1, color: AppColors.borderSubtle),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: Text(
                   l10n.cartTotal,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: context.scaffoldHeading,
-                  ),
+                  style: t.title.copyWith(color: AppColors.inkHeading),
                 ),
               ),
               Text(
                 total != null
                     ? total.formatted()
                     : (from == null
-                          ? '—'
+                          ? '\u2014'
                           : l10n.bundlePriceFrom(from.formatted())),
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: context.scaffoldHeading,
-                ),
+                textDirection: TextDirection.ltr,
+                style: t.price.copyWith(color: AppColors.inkHeading),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             l10n.bundleTaxesNote,
-            style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+            style: t.caption.copyWith(color: AppColors.inkMuted),
           ),
           if (refusal != null) ...[
             const SizedBox(height: 2),
             Text(
               refusal!,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.accentStrong,
-              ),
+              style: t.caption.copyWith(color: AppColors.accentStrong),
             ),
           ] else if (!quote.exact && total != null) ...[
             const SizedBox(height: 2),
             Text(
               l10n.bundleEstimateNote,
-              style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
+              style: t.caption.copyWith(color: AppColors.inkMuted),
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// The pinned buy bar: quantity pill and "Add bundle to cart".
-class _BuyBar extends StatelessWidget {
-  const _BuyBar({
-    required this.quantity,
-    required this.busy,
-    required this.onQuantity,
-    required this.onAdd,
-  });
-
-  final int quantity;
-  final bool busy;
-  final ValueChanged<int> onQuantity;
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    Widget round(IconData icon, {required bool filled, VoidCallback? onTap}) =>
-        Material(
-          color: filled ? AppColors.brandPrimary : AppColors.surfaceSubtle,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: 26,
-              height: 26,
-              child: Icon(
-                icon,
-                size: 16,
-                color: filled ? Colors.white : AppColors.inkHeading,
-              ),
-            ),
-          ),
-        );
-    return Material(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      elevation: 8,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppColors.borderStrong),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  round(
-                    HubIcons.minus,
-                    filled: false,
-                    onTap: quantity > 1 && !busy
-                        ? () => onQuantity(quantity - 1)
-                        : null,
-                  ),
-                  SizedBox(
-                    width: 24,
-                    child: Text(
-                      '$quantity',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: context.scaffoldHeading,
-                      ),
-                    ),
-                  ),
-                  round(
-                    HubIcons.plus,
-                    filled: true,
-                    onTap: busy ? null : () => onQuantity(quantity + 1),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SizedBox(
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: busy ? null : onAdd,
-                  icon: busy
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(HubIcons.shoppingCart, size: 20),
-                  label: Text(l10n.bundleAddToCart),
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1256,6 +1140,7 @@ class _SwapSheetState extends State<_SwapSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final option = widget.option;
     final many = option.type.allowsMany;
     final current = _choice.chosenIn(option).firstOrNull?.child?.finalPrice;
@@ -1280,11 +1165,7 @@ class _SwapSheetState extends State<_SwapSheet> {
             _choice.chosenIn(option).isEmpty
                 ? l10n.bundleChoose(option.title)
                 : l10n.bundleSwapTitle(option.title),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: context.scaffoldHeading,
-            ),
+            style: t.heading2.copyWith(color: AppColors.inkHeading),
           ),
           const SizedBox(height: 8),
           Flexible(
@@ -1361,25 +1242,23 @@ class _NoneRow extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: context.hairline),
+              border: Border.all(color: AppColors.borderSubtle),
             ),
-            child: Icon(HubIcons.ban, color: context.scaffoldMuted),
+            child: const Icon(HubIcons.ban, color: AppColors.inkMuted),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               AppLocalizations.of(context).bundleNone,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.scaffoldHeading,
-              ),
+              style: AppTextStyles.of(
+                context,
+              ).bodyStrong.copyWith(color: AppColors.inkHeading),
             ),
           ),
           const SizedBox(width: 12),
           Icon(
             chosen ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-            color: chosen ? AppColors.brandPrimary : context.scaffoldMuted,
+            color: chosen ? AppColors.brandPrimary : AppColors.inkMuted,
           ),
         ],
       ),
@@ -1405,6 +1284,7 @@ class _SwapRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final child = selection.child;
     final price = child?.finalPrice;
     return InkWell(
@@ -1424,12 +1304,10 @@ class _SwapRow extends StatelessWidget {
                     selection.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                    style: t.bodyStrong.copyWith(
                       color: onTap == null
-                          ? context.scaffoldFaint
-                          : context.scaffoldHeading,
+                          ? AppColors.disabled
+                          : AppColors.inkHeading,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1440,10 +1318,7 @@ class _SwapRow extends StatelessWidget {
                             if (price != null) price.formatted(),
                             ?difference,
                           ].join('  ·  '),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: context.scaffoldMuted,
-                    ),
+                    style: t.caption.copyWith(color: AppColors.inkMuted),
                   ),
                 ],
               ),
@@ -1455,7 +1330,7 @@ class _SwapRow extends StatelessWidget {
                   : (chosen
                         ? Icons.radio_button_checked
                         : Icons.radio_button_unchecked),
-              color: chosen ? AppColors.brandPrimary : context.scaffoldMuted,
+              color: chosen ? AppColors.brandPrimary : AppColors.inkMuted,
             ),
           ],
         ),

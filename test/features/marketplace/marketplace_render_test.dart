@@ -241,8 +241,18 @@ void main() {
           },
         ),
         'p3_14b_bundle_$locale',
-        height: 1250,
+        height: locale == 'ar' ? 1180 : 1156,
         locale: locale,
+        before: () async {
+          // The frame's offsets (English): the title, the package card's
+          // heading and the summary's, top to bottom.
+          if (locale == 'en') {
+            double top(String text) => tester.getTopLeft(find.text(text)).dy;
+            expect(top('Home Fitness Starter Pack'), 338);
+            expect(top('Items in this package'), 497);
+            expect(top('Package summary'), 862);
+          }
+        },
       );
     });
 
