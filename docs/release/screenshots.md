@@ -66,13 +66,18 @@ screen on for the whole run**: a sleeping screen draws no frames and the test ju
 The captures show the app only: the system status bar is not part of them, so the top band of each
 shot is empty. A framed screenshot covers it with the headline.
 
-## Where it stands (30 Sep 2026)
+## Where it stands (1 Oct 2026)
 
-- **iOS:** both runs succeeded (`en` run 36723970951, `ar` run 36723984202): 16 distinct, correct
-  screenshots, fonts and right-to-left layout right, real content loaded. The run is also the first
-  simulator build with the new privacy manifest and App Transport Security at its defaults.
-- **Android:** not captured. The test phone's screen was locked, so the run could not draw and was
-  stopped. Unlock the phone and run the command above.
+Captured again on 1 Oct 2026, after the Figma UI audit changed almost every screen, so the earlier
+30 Sep set is out of date:
+
+- **iOS:** English run 36833714424 and Arabic run 36833719244 (`Screenshots · iOS`, both succeeded):
+  16 distinct screenshots, 1284×2778 (the 6.5-inch slot), alpha dropped with `--flatten-only`.
+- **Android:** captured on a Redmi 24116RNC1I (Android 16, **720×1640**), English and Arabic, 16 files.
+  The phone's native width is below Play's 1080 px featuring size, so `fit_play_screenshots.py`
+  scales each capture up onto a 1080×2160 canvas; for sharper Play images capture on a 1080p phone or
+  an emulator (`wm size` is not changed by the script).
+- Both sets show what the live server holds that day (test data, see below); nothing was edited.
 
 ## What is not store-ready
 
