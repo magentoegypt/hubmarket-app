@@ -71,6 +71,28 @@ const _related = <Product>[
   ),
 ];
 
+/// The same neighbours as the Arabic store view names them (Figma 14c, Arabic).
+const _relatedAr = <Product>[
+  Product(
+    sku: 'TOP',
+    name: 'تيشيرت قصير ياقة مربع',
+    urlKey: 'square-neck-t-shirt',
+    finalPrice: Money(amount: 43, currency: 'AED'),
+  ),
+  Product(
+    sku: 'SHORTS',
+    name: 'شورت قصير جيب جانبي',
+    urlKey: 'flap-pocket-shorts',
+    finalPrice: Money(amount: 13, currency: 'AED'),
+  ),
+  Product(
+    sku: 'POLO',
+    name: 'تيشيرت بولو',
+    urlKey: 'polo-shirt',
+    finalPrice: Money(amount: 13, currency: 'AED'),
+  ),
+];
+
 const _item = AddedItem(
   name: 'Floral Print Corset-Waist Tie Dress',
   quantity: 1,
@@ -356,18 +378,23 @@ void main() {
         _phone(tester);
         final key = GlobalKey();
         // The frame's add: size M, three left, the store counting down to its
-        // free-shipping line.
+        // free-shipping line — named as the store view of the language does.
+        final ar = locale == 'ar';
         await tester.pumpWidget(
           _harness(
             _opener(
-              recommendations: _related,
-              item: const AddedItem(
-                name: 'Floral Print Corset-Waist Tie Dress',
+              recommendations: ar ? _relatedAr : _related,
+              item: AddedItem(
+                name: ar
+                    ? 'فستان صدر طباعة الأزهار رباط مشد خصر'
+                    : 'Floral Print Corset-Waist Tie Dress',
                 quantity: 1,
-                unitPrice: Money(amount: 50, currency: 'AED'),
-                options: ['Size: M', 'Colour: Beige floral'],
+                unitPrice: const Money(amount: 50, currency: 'AED'),
+                options: ar
+                    ? ['المقاس: M', 'اللون: بيج مزهر']
+                    : ['Size: M', 'Colour: Beige floral'],
                 onlyLeft: 3,
-                onlyLeftOption: 'size M',
+                onlyLeftOption: ar ? 'مقاس M' : 'size M',
               ),
             ),
             locale: locale,

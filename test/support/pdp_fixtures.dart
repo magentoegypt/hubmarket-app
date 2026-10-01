@@ -77,13 +77,15 @@ const List<(int, String)> _sizes = [
 ];
 
 /// The dress. XL is sold out; three are left in M (the store's "Only X left"
-/// threshold). [gallery] gives the photo count the pager shows.
+/// threshold). [gallery] gives the photo count the pager shows; [withCategory]
+/// files it under a category, which is what shows "See all" on its rail.
 ProductDetail floralDressDetail({
   String locale = 'en',
   int gallery = 4,
   List<ProductReview>? reviews,
   int reviewCount = 27,
   bool withNeighbours = true,
+  bool withCategory = false,
 }) {
   final ar = locale == 'ar';
   String text(String en, String arabic) => ar ? arabic : en;
@@ -161,6 +163,16 @@ ProductDetail floralDressDetail({
     reviewCount: reviewCount,
     reviews: reviews ?? floralDressReviews(locale: locale),
     alsoLike: withNeighbours ? floralDressNeighbours(locale: locale) : const [],
+    // Filed under Dresses: "Looking similar" then has somewhere to send "See all".
+    categories: withCategory
+        ? [
+            ProductCategoryRef(
+              uid: 'dresses',
+              name: text('Dresses', 'فساتين'),
+              level: 3,
+            ),
+          ]
+        : const [],
   );
 }
 

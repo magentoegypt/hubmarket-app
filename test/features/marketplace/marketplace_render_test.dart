@@ -5,7 +5,6 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
-import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_buy_bar.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_sections.dart';
 import 'package:hubmarket_app/features/marketplace/presentation/other_sellers.dart';
 import 'package:hubmarket_app/features/marketplace/presentation/seller_widgets.dart';
@@ -164,7 +163,7 @@ void main() {
           location: AppRoutes.product('floral-dress'),
           boundary: key,
           catalogRepository: DetailRepository(
-            floralDressDetail(locale: locale),
+            floralDressDetail(locale: locale, withCategory: true),
           ),
           cmsBlocks: {
             'hm_home_trust': locale == 'ar' ? kTrustBlockAr : kTrustBlockEn,
