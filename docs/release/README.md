@@ -18,7 +18,7 @@ the code, not from memory. Nothing here publishes anything or creates an account
 
 | Area | State |
 |---|---|
-| Android build | Every push to `main` (except `[skip ci]`) runs the gate, builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist. The same push also builds the Play bundle and uploads it to **internal testing** once that is switched on (section 3b). `Release · Android` stays for a one-off bundle; its `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
+| Android build | Every push to `main` (except `[skip ci]`) runs the gate, builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist, with a debug key the runner makes anew on every run, so no build installs over an older one (the note under section 3). The same push also builds the Play bundle and uploads it to **internal testing** once that is switched on (section 3b). `Release · Android` stays for a one-off bundle; its `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
 | iOS build | Every push to `main` builds the signed App Store IPA and uploads it to **TestFlight** (the first one, 1.0.0 (1), went through on 30 Sep 2026), and, once `IOS_ADHOC_PROFILE_BASE64` exists, an ad-hoc IPA to Loadly (section 3b). **The Apple side is set up:** the App ID `com.hubmarket.app` (Push Notifications and Associated Domains on), an App Store profile and the App Store Connect app record "Hub Market". `Release · iOS` stays for one-off runs. |
 | Identity | Android `com.hubmarket.app` (`.dev` and `.staging` for the other flavors); iOS `com.hubmarket.app`; name "Hub Market"; version `1.0.0+1`; Android compile and target SDK 36; iOS 15 and up, iPhone only; portrait only (Android manifest, iOS Info.plist). |
 | Icon and launch screen | Client artwork, correct formats (1024×1024 icon with no alpha; adaptive Android icon; native launch screen). Not present: the Play **feature graphic** (1024×500). |
@@ -80,8 +80,14 @@ is public. Encode a file with `base64 -w0 <file>` (Linux, Git Bash) or `base64 -
 | `PLAY_SERVICE_ACCOUNT_JSON` | `Release · Android`, only when `play_track` is not `none` | A Google Cloud service-account key (JSON). In Play Console › Users and permissions, invite the service account's email and give it release rights on the app; create the key in Google Cloud › IAM › Service accounts. |
 | `LOADLY_API_KEY` | push builds, `Release · Android` (apk) | Already set; uploads the QA build. |
 
-**Setting the keystore secrets changes the signature of the Loadly build.** Testers who installed a
-debug-signed build must uninstall it once, or Android refuses the update.
+**Signatures and updates.** Until these secrets exist, every CI build is signed with a debug key the
+runner generates anew on each run (checked 1 Oct 2026: two consecutive deploys carry different
+certificates). Android refuses to update an app whose signature changed, so neither a tester, the
+Loadly page nor `adb install -r` can put a newer build over an older one: **uninstall the old build
+first** (its local data goes with it). Once the four `ANDROID_*` secrets are set, every build carries
+the same upload-key signature and updates install over each other; testers uninstall once more at
+that switch. With Play App Signing (section 4) Play delivers builds signed with Google's key, so a
+Play copy and a Loadly copy cannot update each other either: uninstall when changing channel.
 
 **iOS**
 
@@ -111,7 +117,9 @@ message to skip it) and deploys the same commit everywhere it can:
 **One Loadly link for both platforms.** The Android and iOS apps are *combined* in Loadly (Loadly ›
 the app › Combine; **Separate** undoes it), so the link https://loadly.io/7ino6c4V and its QR code
 install the right build for the phone that opens it, and the page also offers both downloads. New
-uploads from CI keep updating the same two apps, so the combination stays.
+uploads from CI keep updating the same two apps, so the combination stays. Until the keystore
+secrets exist, an Android tester must uninstall the old build before installing a new one (the note
+under section 3).
 
 A step whose secrets are missing is skipped with a notice that names them, so the file stays as it
 is while accounts arrive. To pause the TestFlight, iOS Loadly and Play uploads without editing
