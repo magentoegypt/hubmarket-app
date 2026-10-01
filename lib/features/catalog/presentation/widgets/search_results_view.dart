@@ -25,8 +25,8 @@ import 'product_skeletons.dart';
 import 'search_no_results.dart';
 import 'search_style.dart';
 import 'search_type_ahead.dart' show openSearchCategory;
+import 'sheet_chrome.dart';
 import 'sort_sheet.dart';
-import '../../../../core/widgets/hub_bottom_sheet.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// Full results of a submitted search (Figma 09c): "Products (N)",
@@ -142,9 +142,9 @@ String searchSortLabel(AppLocalizations l10n, SearchSortOption option) {
   final sort = option.sort;
   if (sort.isRelevance) return l10n.sortRelevance;
   return switch ((sort.attribute, sort.descending)) {
-    ('price', false) => l10n.sortPriceLowHigh,
-    ('price', true) => l10n.sortPriceHighLow,
-    ('created_at', true) => l10n.sortNewest,
+    ('price', false) => l10n.sortLowestPrice,
+    ('price', true) => l10n.sortHighestPrice,
+    ('created_at', true) => l10n.sortNewestFirst,
     ('name', false) => l10n.sortNameAz,
     _ => option.label.isNotEmpty ? option.label : sort.attribute,
   };
@@ -285,11 +285,14 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
     final l10n = AppLocalizations.of(context);
     final currency = ref.read(storeControllerProvider).currency;
     final filters = state.filters;
-    final result = await showHubBottomSheet<FilterResult>(
+    SearchFilters filtersOf(FilterResult selection) => SearchFilters(
+      attributes: selection.attributes,
+      priceFrom: selection.priceFrom,
+      priceTo: selection.priceTo,
+      minRating: state.ratingFilter ? selection.minRatingStars : null,
+    );
+    final result = await showCatalogSheet<FilterResult>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
       builder: (_) => FilterSheet(
         aggregations: _sheetFacets(l10n, state.facets),
         initial: filters.attributes,
@@ -299,34 +302,47 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
         initialMinRating: filters.minRating,
         showDiscount: false,
         showRating: state.ratingFilter,
+        sortChoices: _sortChoices(l10n, state),
+        initialSort: state.sort,
+        resultCount: state.totalCount,
+        countFor: (selection) => _notifier.countFor(filtersOf(selection)),
+        showHandle: true,
       ),
     );
     if (result == null || !mounted) return;
+    final sort = result.sort;
     _notifier.applyFilters(
-      SearchFilters(
-        attributes: result.attributes,
-        priceFrom: result.priceFrom,
-        priceTo: result.priceTo,
-        minRating: state.ratingFilter ? result.minRating : null,
-      ),
+      filtersOf(result),
+      sort: sort is SearchSort ? sort : null,
     );
+  }
+
+  /// The sorts the results can do — relevance, then the replicas — as the
+  /// Filters sheet's "Sort by" chips and the sort sheet name them.
+  List<SortChoice<Object>> _sortChoices(
+    AppLocalizations l10n,
+    SearchResultsState state,
+  ) {
+    final options = state.sorts.isNotEmpty
+        ? state.sorts
+        : const [SearchSortOption(SearchSort.relevance)];
+    return [
+      for (final option in options)
+        (value: option.sort, label: searchSortLabel(l10n, option)),
+    ];
   }
 
   Future<void> _openSort(SearchResultsState state) async {
     final l10n = AppLocalizations.of(context);
-    final options = state.sorts.isNotEmpty
-        ? state.sorts
-        : const [SearchSortOption(SearchSort.relevance)];
-    final selected = await showHubBottomSheet<SearchSort>(
+    final selected = await showCatalogSheet<SearchSort>(
       context: context,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
       builder: (_) => SortChoiceSheet<SearchSort>(
         current: state.sort,
         choices: [
-          for (final option in options)
-            (value: option.sort, label: searchSortLabel(l10n, option)),
+          for (final choice in _sortChoices(l10n, state))
+            (value: choice.value as SearchSort, label: choice.label),
         ],
+        showHandle: true,
       ),
     );
     if (selected != null && mounted) _notifier.setSort(selected);
@@ -349,12 +365,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
     );
 
     if (state.isLoading && state.products.isEmpty) {
-      return ListView(
-        children: [
-          meta,
-          const ProductGridSkeleton(count: 6),
-        ],
-      );
+      return ListView(children: [meta, const ProductGridSkeleton(count: 6)]);
     }
 
     final error = state.error;
@@ -400,10 +411,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
           ),
         if (state.products.isEmpty)
           SliverToBoxAdapter(
-            child: EmptyState(
-              icon: HubIcons.searchX,
-              title: l10n.stateEmpty,
-            ),
+            child: EmptyState(icon: HubIcons.searchX, title: l10n.stateEmpty),
           )
         else
           SliverPadding(
@@ -425,9 +433,7 @@ class _ProductsTabState extends ConsumerState<_ProductsTab>
             ),
           ),
         if (state.isLoadingMore)
-          const SliverToBoxAdapter(
-            child: ProductGridSkeleton(count: 2),
-          ),
+          const SliverToBoxAdapter(child: ProductGridSkeleton(count: 2)),
       ],
     );
   }
@@ -483,7 +489,11 @@ class _MetaRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          MetaAction(icon: HubIcons.arrowUpDown, label: sortLabel, onTap: onSort),
+          MetaAction(
+            icon: HubIcons.arrowUpDown,
+            label: sortLabel,
+            onTap: onSort,
+          ),
           const SizedBox(width: 6),
           MetaAction(
             icon: HubIcons.slidersHorizontal,

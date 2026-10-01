@@ -774,50 +774,49 @@ void main() {
 
       await tester.tap(find.text('Relevance'));
       await tester.pumpAndSettle();
-      expect(find.text('Price: Low to High'), findsOneWidget);
-      expect(find.text('Price: High to Low'), findsOneWidget);
-      expect(find.text('Newest First'), findsOneWidget);
+      expect(find.text('Lowest price'), findsOneWidget);
+      expect(find.text('Highest price'), findsOneWidget);
+      expect(find.text('Newest first'), findsOneWidget);
       // No replica sorts by name, so neither does the app on Algolia.
       expect(find.text('Name: A–Z'), findsNothing);
 
-      await tester.tap(find.text('Newest First'));
+      await tester.tap(find.text('Newest first'));
       await tester.pumpAndSettle();
       expect(
         _productSearches(algolia).last.indexName,
         'hubmarket_en_products_created_at_desc',
       );
-      expect(find.text('Newest First'), findsOneWidget);
+      expect(find.text('Newest first'), findsOneWidget);
       expect(find.text('Relevance'), findsNothing);
     });
 
     testWidgets('filters are the index\'s facets, with its labels', (
       tester,
     ) async {
-      await _phone(tester);
+      // A tall phone: the sheet lists its sections lazily, and there are more
+      // of them now (Sort by, Store, Customer rating) than a screen holds.
+      await tester.binding.setSurfaceSize(const Size(390, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final algolia = _algolia();
       await tester.pumpWidget(_harness(algolia: algolia, initialQuery: 'sofa'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Filter'));
       await tester.pumpAndSettle();
-      expect(find.text('Price Range'), findsOneWidget);
+      expect(find.text('Price (AED)'), findsOneWidget);
       expect(find.text('Categories'), findsWidgets);
       expect(find.text('Brand'), findsOneWidget);
-      expect(find.text('Seller'), findsOneWidget);
-      // rating_summary is a facet, so "N★ & above" is offered.
-      expect(find.text('Rating'), findsOneWidget);
+      // The seller facet is the sheet's Store section.
+      expect(find.text('Store'), findsOneWidget);
+      // rating_summary is a facet, so "N★ & up" is offered.
+      expect(find.text('Customer rating'), findsOneWidget);
+      // The results' sorts are chips of the sheet too.
+      expect(find.text('Sort by'), findsOneWidget);
 
-      await tester.scrollUntilVisible(
-        find.text('Grey'),
-        100,
-        scrollable: find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.byType(Scrollable),
-        ),
-      );
       await tester.tap(find.text('Grey'));
       await tester.pump();
-      await tester.tap(find.text('Apply Filters'));
+      // The button names how many results there are (12 for this search).
+      await tester.tap(find.text('Show 12 results'));
       await tester.pumpAndSettle();
 
       final main = _productSearches(algolia).last;
@@ -897,18 +896,18 @@ void main() {
 
       await tester.tap(find.text('Relevance'));
       await tester.pumpAndSettle();
-      expect(find.text('Price: Low to High'), findsOneWidget);
+      expect(find.text('Lowest price'), findsOneWidget);
       expect(find.text('Name: A–Z'), findsOneWidget);
-      expect(find.text('Newest First'), findsNothing);
-      await tester.tap(find.text('Price: Low to High'));
+      expect(find.text('Newest first'), findsNothing);
+      await tester.tap(find.text('Lowest price'));
       await tester.pumpAndSettle();
-      expect(find.text('Price: Low to High'), findsOneWidget);
+      expect(find.text('Lowest price'), findsOneWidget);
       expect(find.text('Relevance'), findsNothing);
 
       await tester.tap(find.text('Filter'));
       await tester.pumpAndSettle();
-      expect(find.text('Apply Filters'), findsOneWidget);
-      expect(find.text('Rating'), findsNothing);
+      expect(find.text('Show 3 results'), findsOneWidget);
+      expect(find.text('Customer rating'), findsNothing);
     });
   });
 

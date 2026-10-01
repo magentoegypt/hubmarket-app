@@ -245,9 +245,11 @@ class SearchResultsController
     }
   }
 
-  void applyFilters(SearchFilters filters) {
+  /// Takes [filters] and, when given, [sort] — one reload for both.
+  void applyFilters(SearchFilters filters, {SearchSort? sort}) {
     state = state.copyWith(
       filters: filters,
+      sort: sort,
       products: const <Product>[],
       currentPage: 0,
       totalPages: 0,
@@ -269,6 +271,28 @@ class SearchResultsController
   }
 
   Future<void> refresh() => _loadFirst();
+
+  /// How many results [filters] would give, for the Filters sheet's "Show N
+  /// results"; null when it can't be read (the sheet keeps its last number).
+  Future<int?> countFor(SearchFilters filters) async {
+    if (_query.isEmpty) return null;
+    try {
+      final page = await _search.results(
+        storeCode: _storeCode,
+        query: _query,
+        scopeUid: arg.categoryUid,
+        filters: filters,
+        sort: state.sort,
+        page: 1,
+        pageSize: 1,
+        engine: state.engine,
+        tree: await _tree(),
+      );
+      return page.totalCount;
+    } on Object {
+      return null;
+    }
+  }
 }
 
 final searchResultsProvider = NotifierProvider.autoDispose

@@ -146,6 +146,17 @@
       }
     }
   },
+  "categoryProductCountFrom": "{count, plural, =1{1 product from {store}} other{{count} products from {store}}}",
+  "@categoryProductCountFrom": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "store": {
+        "type": "String"
+      }
+    }
+  },
   "storesTitle": "Stores",
   "storesSearchHint": "Search stores",
   "storesFeaturedBadge": "FEATURED STORE",
@@ -236,6 +247,35 @@
   "filterResetLabel": "Reset",
   "filterClearAllLabel": "Clear All",
   "filterApplyLabel": "Apply Filters",
+  "filterSortByLabel": "Sort by",
+  "filterPriceCurrencyLabel": "Price ({currency})",
+  "@filterPriceCurrencyLabel": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMinLabel": "Min",
+  "filterMaxLabel": "Max",
+  "filterStoreLabel": "Store",
+  "filterAllStores": "All stores",
+  "filterShowResults": "{count, plural, =1{Show 1 result} other{Show {count} results}}",
+  "@filterShowResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filterRatingChip": "Rating {stars}+",
+  "@filterRatingChip": {
+    "placeholders": {
+      "stars": {
+        "type": "String"
+      }
+    }
+  },
   "filterAll": "All",
   "actionShare": "Share",
   "badgeNew": "NEW",
@@ -255,9 +295,12 @@
   "sortPriceHighLow": "Price: High to Low",
   "sortNameAz": "Name: A–Z",
   "sortNewest": "Newest First",
+  "sortLowestPrice": "Lowest price",
+  "sortHighestPrice": "Highest price",
+  "sortNewestFirst": "Newest first",
   "sortComingSoon": "Coming soon",
   "filterDiscountLabel": "Discount",
-  "filterRatingLabel": "Rating",
+  "filterRatingLabel": "Customer rating",
   "filterDiscountOption": "{percent}% or more",
   "@filterDiscountOption": {
     "placeholders": {
@@ -267,6 +310,7 @@
     }
   },
   "filterRatingAndAbove": "& above",
+  "filterRatingAndUp": "& up",
   "clearLabel": "Clear",
   "resultsCount": "{count} results",
   "@resultsCount": {

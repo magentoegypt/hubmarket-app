@@ -205,7 +205,7 @@ void main() {
 
     await tester.tap(find.text('Relevance'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Price: High to Low'));
+    await tester.tap(find.text('Highest price'));
     await tester.pumpAndSettle();
     last = backend.of('Products').last.variables;
     expect(last['sort'], {'price': 'DESC'});

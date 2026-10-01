@@ -236,7 +236,8 @@ AlgoliaResultsPlan resultsQueries(
     if (withPrice && filters.priceFrom != null) '$price>=${filters.priceFrom}',
     if (withPrice && filters.priceTo != null) '$price<=${filters.priceTo}',
     // rating_summary is a percentage: 4★ is 80.
-    if (filters.minRating != null) 'rating_summary>=${filters.minRating! * 20}',
+    if (filters.minRating != null)
+      'rating_summary>=${(filters.minRating! * 20).round()}',
   ];
 
   final index = sort.isRelevance

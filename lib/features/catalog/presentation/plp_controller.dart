@@ -220,6 +220,32 @@ class PlpController extends AutoDisposeFamilyNotifier<PlpState, String> {
   }
 
   Future<void> refresh() => _loadFirst();
+
+  /// How many products a selection would list, for the Filters sheet's "Show
+  /// N results"; null when it can't be read (the sheet keeps its last number).
+  Future<int?> countFor({
+    required Map<String, Set<String>> attributes,
+    double? priceFrom,
+    double? priceTo,
+    int? minDiscount,
+    int? minRating,
+  }) async {
+    try {
+      final page = await _repo.fetchProducts(
+        categoryUid: arg,
+        attributeFilters: attributes,
+        priceFrom: priceFrom,
+        priceTo: priceTo,
+        minDiscount: minDiscount,
+        minRating: minRating,
+        pageSize: 1,
+        currentPage: 1,
+      );
+      return page.totalCount;
+    } on Object {
+      return null;
+    }
+  }
 }
 
 final plpControllerProvider = NotifierProvider.autoDispose
