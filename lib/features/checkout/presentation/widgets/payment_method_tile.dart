@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// A representative icon per payment method — shared by the payment step, the
 /// review card and the order-placed screen.
@@ -17,8 +17,9 @@ IconData paymentMethodIcon(PaymentMethodOption method) {
   return HubIcons.wallet;
 }
 
-/// One selectable payment method (Figma 18): radio, icon tile, the backend's
-/// title and — for cash on delivery and a free order — a line on how it works.
+/// One selectable payment method (Figma 18): radio, a 36 px icon tile, the
+/// backend's title and — for cash on delivery and a free order — a line on how
+/// it works. Selected, the card gets the navy 1.5 px outline.
 class PaymentMethodTile extends StatelessWidget {
   const PaymentMethodTile({
     super.key,
@@ -34,6 +35,7 @@ class PaymentMethodTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     final subtitle = method.isFree
         ? l10n.checkoutFreeOrder
         : method.isCashOnDelivery
@@ -67,10 +69,10 @@ class PaymentMethodTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(method.title, style: CheckoutText.bodyStrong),
+                Text(method.title, style: t.bodyStrong),
                 if (subtitle != null) ...[
                   const SizedBox(height: 1),
-                  Text(subtitle, style: CheckoutText.caption),
+                  Text(subtitle, style: t.caption),
                 ],
               ],
             ),

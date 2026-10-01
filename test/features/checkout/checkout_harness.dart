@@ -32,6 +32,7 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 import '../../support/fakes.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
+import '../../support/marketplace_fakes.dart' show seller;
 
 /// Shared set-up for the checkout widget and render tests: a three-line cart,
 /// the two shipping methods of Figma 17, and the screen mounted in a router
@@ -80,6 +81,64 @@ class CheckoutCartRepository extends FakeCartRepository {
   Future<Cart> getCart(String cartId) async => checkoutCart(cartId);
 }
 
+/// [checkoutCart] as HubApp serves it: each line with its store, MIA CO selling
+/// the sofa and the chairs and loly store the dress (Figma 17 – 19), the names
+/// as the [locale]'s store view gives them.
+Cart checkoutSellerCart(String id, {String locale = 'en'}) {
+  final ar = locale == 'ar';
+  final mia = seller('mia', ar ? 'ميا كو' : 'MIA CO');
+  final loly = seller('loly', ar ? 'متجر لولي' : 'loly store');
+  return Cart(
+    id: id,
+    totalQuantity: 4,
+    items: [
+      CartItem(
+        uid: 'i-sofa',
+        sku: 'SOFA',
+        name: ar ? 'كنبة سرير ركنه' : 'Corner Sofa Bed',
+        quantity: 1,
+        unitPrice: aed(425),
+        rowTotal: aed(425),
+        seller: mia,
+      ),
+      CartItem(
+        uid: 'i-chair',
+        sku: 'CHAIR',
+        name: ar
+            ? 'كرسي طعام بارجل ذهبية معدنية'
+            : 'Dining Chair with Gold Metal Legs',
+        quantity: 2,
+        unitPrice: aed(34),
+        rowTotal: aed(68),
+        seller: mia,
+      ),
+      CartItem(
+        uid: 'i-dress',
+        sku: 'DRESS',
+        name: ar
+            ? 'فستان صدر طباعة الأزهار رباط مشد خصر'
+            : 'Floral Print Corset-Waist Tie Dress',
+        quantity: 1,
+        unitPrice: aed(50),
+        rowTotal: aed(50),
+        seller: loly,
+      ),
+    ],
+    totals: CartTotals(subtotal: aed(543), grandTotal: aed(553)),
+  );
+}
+
+/// Serves [checkoutSellerCart] until an order consumes it.
+class SellerCheckoutCartRepository extends FakeCartRepository {
+  SellerCheckoutCartRepository(this.locale);
+
+  final String locale;
+
+  @override
+  Future<Cart> getCart(String cartId) async =>
+      checkoutSellerCart(cartId, locale: locale);
+}
+
 const kShippingMethods = <ShippingMethodOption>[
   ShippingMethodOption(
     carrierCode: 'flatrate',
@@ -121,7 +180,7 @@ const kSavedAddress = CustomerAddress(
   telephone: '+971501234567',
   street: 'Marina Gate 2',
   apartment: 'Apt 1204',
-  city: 'Dubai',
+  city: 'Dubai Marina',
   region: 'Dubai',
   defaultShipping: true,
   labelText: 'Home',
@@ -212,9 +271,11 @@ Widget checkoutHarness({
   );
 }
 
-/// Types the guest's contact and address (Figma 17a) into the form.
+/// Types the guest's contact and address (Figma 17a) into the form: the email,
+/// full name, mobile number, then — after the emirate picker — area, street &
+/// building and apartment / villa.
 Future<void> fillGuestAddress(WidgetTester tester) async {
-  final fields = find.byType(TextFormField);
+  final fields = find.byType(TextField);
   Future<void> type(int index, String text) async {
     await tester.ensureVisible(fields.at(index));
     await tester.enterText(fields.at(index), text);
@@ -222,9 +283,10 @@ Future<void> fillGuestAddress(WidgetTester tester) async {
 
   await type(0, 'sara.ahmed@gmail.com');
   await type(1, 'Sara Ahmed');
-  await type(2, '501234567');
-  await type(3, 'Marina Gate 2');
-  await type(4, 'Apt 1204');
+  await type(2, '+971 50 123 4567');
+  await type(3, 'Dubai Marina');
+  await type(4, 'Marina Gate 2');
+  await type(5, '1204');
   final emirate = find.byType(DropdownButtonFormField<int>);
   await tester.ensureVisible(emirate);
   await tester.pumpAndSettle();

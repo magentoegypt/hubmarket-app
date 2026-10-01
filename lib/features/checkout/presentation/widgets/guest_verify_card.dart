@@ -10,6 +10,7 @@ import '../../../../core/widgets/resend_countdown.dart';
 import '../../../../l10n/l10n.dart';
 import '../checkout_controller.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'checkout_parts.dart';
 
 /// Guest-checkout "Verify Mobile Number" card, shown only when
 /// `BackendCapabilities.guestCheckoutOtp` is on: auto-requests a WhatsApp OTP
@@ -120,60 +121,61 @@ class _GuestVerifyCardState extends ConsumerState<GuestVerifyCard> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: verified ? _verifiedView(l10n) : _entryView(l10n),
+      child: verified
+          ? _verifiedView(context, l10n)
+          : _entryView(context, l10n),
     );
   }
 
-  Widget _verifiedView(AppLocalizations l10n) => Row(
+  Widget _verifiedView(BuildContext context, AppLocalizations l10n) => Row(
     children: [
-      const Icon(HubIcons.circleCheck, color: AppColors.successStrong, size: 20),
+      const Icon(
+        HubIcons.circleCheck,
+        color: AppColors.successStrong,
+        size: 20,
+      ),
       const SizedBox(width: 10),
       Expanded(
         child: Text(
           l10n.authMobileVerified,
-          style: const TextStyle(
-            color: AppColors.successStrong,
-            fontWeight: FontWeight.w700,
-          ),
+          style: CheckoutText.of(
+            context,
+          ).bodyStrong.copyWith(color: AppColors.successStrong),
         ),
       ),
     ],
   );
 
-  Widget _entryView(AppLocalizations l10n) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Text(
-        l10n.checkoutVerifyMobileTitle,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: AppColors.inkHeading,
+  Widget _entryView(BuildContext context, AppLocalizations l10n) {
+    final t = CheckoutText.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l10n.checkoutVerifyMobileTitle, style: t.title),
+        const SizedBox(height: 6),
+        Text(
+          l10n.checkoutVerifyMobileIntro(Phone.maskBidi(widget.phone)),
+          style: t.caption,
         ),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        l10n.checkoutVerifyMobileIntro(Phone.maskBidi(widget.phone)),
-        style: const TextStyle(color: AppColors.inkMuted, fontSize: 12.5),
-      ),
-      const SizedBox(height: 14),
-      OtpCodeField(
-        controller: _otp,
-        autofocus: false,
-        onCompleted: (_) => _verify(),
-      ),
-      const SizedBox(height: 14),
-      FilledButton(
-        onPressed: (_busy || _otp.text.length != 6) ? null : _verify,
-        child: _busy ? const ButtonSpinner() : Text(l10n.authVerify),
-      ),
-      Center(
-        child: ResendCountdown(
-          onResend: () => _request(),
-          resendLabel: l10n.authResendCode,
-          countingLabel: l10n.authResendIn,
+        const SizedBox(height: 14),
+        OtpCodeField(
+          controller: _otp,
+          autofocus: false,
+          onCompleted: (_) => _verify(),
         ),
-      ),
-    ],
-  );
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: (_busy || _otp.text.length != 6) ? null : _verify,
+          child: _busy ? const ButtonSpinner() : Text(l10n.authVerify),
+        ),
+        Center(
+          child: ResendCountdown(
+            onResend: () => _request(),
+            resendLabel: l10n.authResendCode,
+            countingLabel: l10n.authResendIn,
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -58,13 +58,66 @@ void main() {
       find.text('Sara Ahmed · \u2066+971 50 123 4567\u2069'),
       findsOneWidget,
     );
-    expect(find.text('Marina Gate 2, Apt 1204, Dubai'), findsOneWidget);
+    // The frame's order: apartment, street, area, emirate, country.
+    expect(
+      find.text('1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+      findsOneWidget,
+    );
     expect(find.text('Standard delivery'), findsOneWidget);
     expect(find.text('Express delivery'), findsOneWidget);
     expect(find.text('Contact'), findsNothing);
     expect(repo.guestEmail, 'sara.ahmed@gmail.com');
     expect(repo.selectedShippingMethod, 'flatrate|flatrate');
   });
+
+  testWidgets('an empty address form says what is missing and sends nothing', (
+    tester,
+  ) async {
+    final repo = checkoutRepository();
+    await mount(tester, repo);
+
+    await tapText(tester, 'Continue to shipping method');
+    // Email, name, mobile, emirate and street are required.
+    expect(find.text('Required'), findsNWidgets(5));
+    expect(repo.calls, isNot(contains('setShippingAddress')));
+    // Still on the form.
+    expect(find.text('Ship to'), findsNothing);
+  });
+
+  testWidgets('the typed area is the city of the address; without one the '
+      'emirate stands in', (tester) async {
+    final repo = checkoutRepository();
+    await mount(tester, repo);
+    await throughAddress(tester);
+    expect(repo.lastAddress?['address'], isNotNull);
+    expect((repo.lastAddress!['address'] as Map)['city'], 'Dubai Marina');
+
+    // Blank the area: Magento's required city falls back to the emirate.
+    final fresh = checkoutRepository();
+    await mount(tester, fresh);
+    await fillGuestAddress(tester);
+    await tester.enterText(find.byType(TextField).at(3), '');
+    await tapText(tester, 'Continue to shipping method');
+    expect((fresh.lastAddress!['address'] as Map)['city'], 'Dubai');
+  });
+
+  testWidgets(
+    'the saved address of a signed-in customer reads like the frame',
+    (tester) async {
+      await mount(tester, checkoutRepository(), signedIn: true);
+      // Ship to opens on the default address, in the frame's order…
+      expect(
+        find.text('Apt 1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+        findsOneWidget,
+      );
+      // …and so does the picker behind Change.
+      await tapText(tester, 'Change');
+      expect(
+        find.text('Apt 1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('a guest whose email has an account is offered sign-in', (
     tester,
@@ -290,5 +343,56 @@ void main() {
     await tapText(tester, 'Change');
     expect(find.text('Use a new address'), findsOneWidget);
     expect(find.text('Sara Ahmed'), findsOneWidget);
+  });
+
+  group('the pinned footer', () {
+    Future<EdgeInsets> footerPadding(
+      WidgetTester tester, {
+      required EdgeInsets padding,
+      EdgeInsets viewInsets = EdgeInsets.zero,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(padding: padding, viewInsets: viewInsets),
+            child: const Scaffold(
+              bottomNavigationBar: CheckoutFooter(children: [Text('x')]),
+            ),
+          ),
+        ),
+      );
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(CheckoutFooter),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      return box.padding! as EdgeInsets;
+    }
+
+    testWidgets('keeps the 30 px of the frame under the button, or the inset '
+        'of the home indicator when that is larger', (tester) async {
+      expect(
+        await footerPadding(tester, padding: EdgeInsets.zero),
+        const EdgeInsets.fromLTRB(16, 12, 16, 30),
+      );
+      expect(
+        await footerPadding(tester, padding: const EdgeInsets.only(bottom: 34)),
+        const EdgeInsets.fromLTRB(16, 12, 16, 34),
+      );
+    });
+
+    testWidgets('gives the room back while the keyboard is up', (tester) async {
+      expect(
+        await footerPadding(
+          tester,
+          padding: EdgeInsets.zero,
+          viewInsets: const EdgeInsets.only(bottom: 300),
+        ),
+        const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      );
+    });
   });
 }

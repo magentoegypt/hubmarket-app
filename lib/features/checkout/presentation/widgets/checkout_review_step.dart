@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/hub_icons.dart';
+import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/domain/cart.dart';
@@ -11,7 +13,6 @@ import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/checkout.dart';
 import 'checkout_parts.dart';
 import 'payment_method_tile.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Step 3 cards (Figma 18b): what ships where and how, how it is paid, and
 /// the items.
@@ -32,6 +33,7 @@ class ReviewShippingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     final to = shipTo;
     final m = method;
     return CheckoutCard(
@@ -58,10 +60,10 @@ class ReviewShippingCard extends StatelessWidget {
                   children: [
                     Text(
                       '${to.name} · ${displayPhone(to.telephone)}',
-                      style: CheckoutText.bodyStrong,
+                      style: t.bodyStrong,
                     ),
                     const SizedBox(height: 2),
-                    Text(to.address, style: CheckoutText.caption),
+                    Text(to.address, style: t.caption),
                   ],
                 ),
               ),
@@ -70,18 +72,14 @@ class ReviewShippingCard extends StatelessWidget {
         if (m != null)
           Row(
             children: [
-              const Icon(
-                HubIcons.truck,
-                size: 18,
-                color: AppColors.inkHeading,
-              ),
+              const Icon(HubIcons.truck, size: 18, color: AppColors.inkSubtle),
               const SizedBox(width: 10),
-              Expanded(child: Text(m.label, style: CheckoutText.body)),
-              const SizedBox(width: 12),
+              Expanded(child: Text(m.label, style: t.body)),
+              const SizedBox(width: 10),
               m.isFree
                   ? Text(
                       l10n.cartDeliveryFree,
-                      style: CheckoutText.bodyStrong.copyWith(
+                      style: t.bodyStrong.copyWith(
                         color: AppColors.successStrong,
                       ),
                     )
@@ -107,6 +105,7 @@ class ReviewPaymentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     return CheckoutCard(
       title: l10n.checkoutStepPayment,
       trailing: CheckoutLink(
@@ -123,7 +122,7 @@ class ReviewPaymentCard extends StatelessWidget {
               color: AppColors.inkHeading,
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(method.title, style: CheckoutText.body)),
+            Expanded(child: Text(method.title, style: t.body)),
           ],
         ),
       ],
@@ -140,11 +139,11 @@ class ReviewTermsNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LegalLinksText(
     AppLocalizations.of(context).checkoutTermsNote,
-    style: const TextStyle(fontSize: 12, color: AppColors.inkMuted),
+    style: CheckoutText.of(context).caption,
   );
 }
 
-/// "Items (N)" — every cart line: thumbnail, name, options and quantity, and
+/// "Items (N)" — every cart line: thumbnail, name, quantity and options, and
 /// the line total. With HubApp the lines come grouped by store, each under
 /// the store's name, a hairline between stores (Figma 18b).
 class ReviewItemsCard extends StatelessWidget {
@@ -156,30 +155,67 @@ class ReviewItemsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final groups = groupBySeller<CartItem>(cart.items, (item) => item.seller);
+    // The store's line and its items, 2 px apart (Figma "col").
+    Widget column(List<Widget> rows) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const SizedBox(height: 2),
+          rows[i],
+        ],
+      ],
+    );
+    Widget block(SellerGroup<CartItem> group) => column([
+      if (group.seller case final seller?) _StoreCaption(seller: seller),
+      for (final item in group.items) ReviewItemRow(item: item),
+    ]);
     return CheckoutCard(
       title: l10n.checkoutItemsCount(cart.itemCount),
-      spacing: 2,
       children: [
         if (groups == null)
-          for (final item in cart.items) ReviewItemRow(item: item)
+          column([for (final item in cart.items) ReviewItemRow(item: item)])
         else
           for (var i = 0; i < groups.length; i++) ...[
             if (i > 0)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: AppColors.borderSubtle,
-                ),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.borderSubtle,
               ),
-            if (groups[i].seller case final seller?)
-              SellerCaption(seller: seller),
-            for (final item in groups[i].items) ReviewItemRow(item: item),
+            block(groups[i]),
           ],
       ],
     );
   }
+}
+
+/// The store line above its items (Figma 18b): a 22 px logo and the name in
+/// Caption Strong, `--hm-subtle`.
+class _StoreCaption extends StatelessWidget {
+  const _StoreCaption({required this.seller});
+
+  final HmSellerSummary seller;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        SellerLogo(seller: seller, size: 22),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            seller.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: CheckoutText.of(
+              context,
+            ).captionStrong.copyWith(color: AppColors.inkSubtle),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class ReviewItemRow extends StatelessWidget {
@@ -190,6 +226,7 @@ class ReviewItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     final unit = item.unitPrice;
     final lineTotal =
         item.rowTotal ??
@@ -208,6 +245,8 @@ class ReviewItemRow extends StatelessWidget {
             width: 44,
             height: 44,
             borderRadius: BorderRadius.circular(8),
+            placeholder: (_) =>
+                const ColoredBox(color: AppColors.surfaceSubtle),
             error: (_) => const ColoredBox(color: AppColors.surfaceSubtle),
           ),
           const SizedBox(width: 10),
@@ -219,13 +258,15 @@ class ReviewItemRow extends StatelessWidget {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: CheckoutText.bodyStrong,
+                  style: t.bodyStrong,
                 ),
+                // The chosen options and the quantity: "Colour: Teal · Qty 1"
+                // (the frame's "Qty 1" for a line without options).
                 Text(
                   [...item.options, l10n.itemQty(item.quantity)].join(' · '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: CheckoutText.caption,
+                  style: t.caption,
                 ),
               ],
             ),

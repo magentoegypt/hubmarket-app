@@ -106,6 +106,29 @@ class ShipTo {
   }
 }
 
+/// The delivery address on one line, in the order the frames print it (Figma 17
+/// / 18b): apartment, street, area, emirate, country — "Apt 1204, Marina Gate 2,
+/// Dubai Marina, Dubai, UAE". Blank parts are left out, and so is a part that
+/// only repeats an earlier one (the area the app derived from the emirate).
+/// [separator] is the locale's comma: ", " or the Arabic "، ".
+String shipToAddressLine({
+  String apartment = '',
+  String street = '',
+  String area = '',
+  String emirate = '',
+  String country = '',
+  String separator = ', ',
+}) {
+  final parts = <String>[];
+  for (final part in [apartment, street, area, emirate, country]) {
+    final text = part.trim();
+    if (text.isEmpty) continue;
+    if (parts.any((p) => p.toLowerCase() == text.toLowerCase())) continue;
+    parts.add(text);
+  }
+  return parts.join(separator);
+}
+
 class PlaceOrderResult {
   const PlaceOrderResult({required this.orderNumber, this.orderToken});
 

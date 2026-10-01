@@ -6,13 +6,16 @@ import 'package:hubmarket_app/l10n/l10n.dart';
 import '../../support/fonts.dart';
 import 'cart_screen_harness.dart';
 
+/// The cart is a light page of white cards (Figma 16), in dark mode too — as
+/// checkout is — so its inks are the design's and never the dark theme's white,
+/// which would vanish on the white cards.
 void main() {
   setUpAll(loadAppFonts);
 
   for (final locale in const ['en', 'ar']) {
     final l10n = lookupAppLocalizations(Locale(locale));
 
-    testWidgets('dark mode: the free-delivery bar and totals follow the theme '
+    testWidgets('dark mode: the cart keeps the light frame\'s colours '
         '($locale)', (tester) async {
       phoneView(tester);
       final key = GlobalKey();
@@ -31,27 +34,24 @@ void main() {
       final bar = tester.widget<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
-      // Was a white track glaring on the dark page.
-      expect(bar.backgroundColor, Colors.white24);
+      // A white track under the orange fill, on the pale orange card.
+      expect(bar.backgroundColor, Colors.white);
+      expect(bar.valueColor!.value, AppColors.accent);
       expect(bar.value, closeTo(100 / 150, 1e-9));
       final remaining = tester.widget<Text>(
-        find.text(l10n.cartFreeDeliveryRemaining('AED 50')),
+        find.text(l10n.cartFreeShippingRemaining('AED 50')),
       );
-      expect(remaining.style?.color, Colors.white);
-      // The summary's ink and navy would vanish on the dark page.
+      expect(remaining.style?.color, AppColors.accentStrong);
+      // The summary's ink on its white card, not the dark theme's white.
       expect(
-        tester.widget<Text>(find.text(l10n.cartTotal)).style?.color,
-        Colors.white,
-      );
-      expect(
-        tester.widget<Text>(find.text(l10n.cartOrderSummary)).style?.color,
-        Colors.white,
+        tester.widget<Text>(find.text(l10n.checkoutTotalInclVat)).style?.color,
+        AppColors.inkHeading,
       );
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('light mode keeps the Figma colours', (tester) async {
+  testWidgets('light mode draws the same colours', (tester) async {
     phoneView(tester);
     await tester.pumpWidget(
       cartScreenApp(locale: 'en', cart: FilledCart(), freeShipping: 150),
@@ -62,9 +62,9 @@ void main() {
       find.byType(LinearProgressIndicator),
     );
     expect(bar.backgroundColor, Colors.white);
-    expect(bar.valueColor!.value, AppColors.brandPrimary);
+    expect(bar.valueColor!.value, AppColors.accent);
     expect(
-      tester.widget<Text>(find.text('Total')).style?.color,
+      tester.widget<Text>(find.text('Total (incl. VAT)')).style?.color,
       AppColors.inkHeading,
     );
   });

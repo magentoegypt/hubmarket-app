@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/free_shipping.dart';
-import '../../../../core/widgets/brand_logo.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/load_failure_view.dart';
-import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
-import '../../../../core/widgets/summary_row.dart';
-import '../../../../core/widgets/hub_back_button.dart';
 import '../../../../l10n/l10n.dart';
-import '../../../catalog/domain/money.dart';
 import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/cart.dart';
 import '../cart_controller.dart';
 import '../cart_store_credit.dart';
-import '../../../../app/theme/hub_icons.dart';
+import '../widgets/cart_bars.dart';
+import '../widgets/cart_coupon_card.dart';
+import '../widgets/cart_empty_view.dart';
+import '../widgets/cart_item_tile.dart';
+import '../widgets/cart_store_card.dart';
+import '../widgets/cart_summary_card.dart';
 
+/// The cart tab (Figma 16, S1): a compact header with the count and "Select",
+/// the lines in one card per store with a note that stores ship separately, the
+/// coupon, the summary and trust ticks, and a pinned Total / Checkout bar above
+/// the tab bar. With nothing in it, the empty state.
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
 
@@ -32,6 +38,11 @@ class CartScreen extends ConsumerStatefulWidget {
 
 class _CartScreenState extends ConsumerState<CartScreen> {
   final TextEditingController _coupon = TextEditingController();
+
+  /// "Select" was tapped: the lines show tick boxes and the bar below removes
+  /// the ticked ones.
+  bool _selecting = false;
+  final Set<String> _selected = <String>{};
 
   @override
   void initState() {
@@ -51,27 +62,111 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   CartController get _controller => ref.read(cartControllerProvider.notifier);
 
+  void _toggleSelecting() => setState(() {
+    _selecting = !_selecting;
+    _selected.clear();
+  });
+
+  void _toggleLine(String uid) => setState(() {
+    if (!_selected.remove(uid)) _selected.add(uid);
+  });
+
+  void _toggleAll(Cart cart) => setState(() {
+    if (_selected.length == cart.items.length) {
+      _selected.clear();
+    } else {
+      _selected
+        ..clear()
+        ..addAll(cart.items.map((i) => i.uid));
+    }
+  });
+
+  /// Removes every ticked line, one after the other (the cart answers each with
+  /// its new state), then leaves selection mode.
+  Future<void> _removeSelected() async {
+    final uids = _selected.toList();
+    for (final uid in uids) {
+      await _controller.removeItem(uid);
+    }
+    if (!mounted) return;
+    setState(() {
+      _selecting = false;
+      _selected.clear();
+    });
+  }
+
+  Future<void> _applyCoupon(AppLocalizations l10n) async {
+    if (_coupon.text.trim().isEmpty) return;
+    try {
+      await _controller.applyCoupon(_coupon.text.trim());
+      _coupon.clear();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.cartCouponError)));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(cartControllerProvider);
+    final cart = state.cart;
+    final filled =
+        !(state.isLoading && cart.isEmpty) &&
+        !(state.error != null && cart.isEmpty) &&
+        !cart.isEmpty;
+    // A line removed elsewhere is no longer ticked.
+    _selected.removeWhere((uid) => !cart.items.any((i) => i.uid == uid));
 
     return HubScaffold(
       currentTab: AppTab.cart,
       showSearch: false,
-      // Decluttered header per Figma: back chevron + centered logo, no
-      // search/notification icons.
-      appBar: AppBar(
-        toolbarHeight: 60,
-        centerTitle: false,
-        titleSpacing: 4,
-        leading: HubBackButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go(AppRoutes.home),
-        ),
-        title: const BrandLogo(height: 44),
-      ),
+      appBar: filled ? _header(l10n, cart) : HubTopBar(title: l10n.cartHeading),
+      bottomBar: filled ? _bottomBar(cart) : null,
       body: _body(l10n, state),
+    );
+  }
+
+  /// Figma 16 "App bar": "My cart" over "4 items · 2 stores", "Select" at the end
+  /// — no logo, no search. A cart reached from another page also gets a back
+  /// arrow; as a tab root it has none.
+  PreferredSizeWidget _header(AppLocalizations l10n, Cart cart) {
+    final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
+    final groups = groupBySeller<CartItem>(cart.items, (item) => item.seller);
+    final storeCount = groups?.where((g) => g.seller != null).length ?? 0;
+    final subtitle = _selecting
+        ? l10n.cartSelectedCount(_selected.length)
+        : storeCount > 0
+        ? '${l10n.cartItemCount(itemCount)} · ${l10n.cartStoreCount(storeCount)}'
+        : l10n.cartItemCount(itemCount);
+    return HubTopBar(
+      title: l10n.cartHeading,
+      subtitle: subtitle,
+      horizontalPadding: 16,
+      actions: [
+        _HeaderLink(
+          label: _selecting ? l10n.actionCancel : l10n.cartSelect,
+          onTap: _toggleSelecting,
+        ),
+      ],
+    );
+  }
+
+  Widget _bottomBar(Cart cart) {
+    if (_selecting) {
+      return CartSelectionBar(
+        count: _selected.length,
+        allSelected: _selected.length == cart.items.length,
+        onToggleAll: () => _toggleAll(cart),
+        onRemove: _removeSelected,
+      );
+    }
+    return CartCheckoutBar(
+      total: cart.totals.grandTotal ?? cart.totals.subtotal,
+      onCheckout: () => context.push(AppRoutes.checkout),
     );
   }
 
@@ -84,358 +179,97 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       return LoadFailureView(error: state.error, onRetry: _controller.refresh);
     }
     if (state.cart.isEmpty) {
-      // Empty state (Figma "Cart — Empty"): blush cart pill, copy, full-width
-      // "Start Shopping", then the marketing footer pinned to the bottom.
-      // SliverFillRemaining fills short content and scrolls when it overflows.
-      return CustomScrollView(
-        slivers: [
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Column(
-              children: [
-                Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 104,
-                            height: 56,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceTint,
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                            child: const Icon(
-                              HubIcons.shoppingCart,
-                              size: 30,
-                              color: AppColors.brandPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            l10n.cartEmptyTitle,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.cartEmptyBody,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.inkMuted),
-                          ),
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed: () => context.go(AppRoutes.home),
-                              child: Text(l10n.cartStartShopping),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      return CartEmptyView(
+        onStartShopping: () => context.go(AppRoutes.home),
+        onViewWishlist: () => context.go(AppRoutes.wishlist),
       );
     }
 
     final cart = state.cart;
-    final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
-    // Figma 16: lines grouped by store, one package each (HubApp's
-    // `hm_seller`); null keeps today's single list.
     final groups = groupBySeller<CartItem>(cart.items, (item) => item.seller);
-    final storeCount = groups?.where((g) => g.seller != null).length ?? 0;
-    Widget tile(CartItem item) => _CartItemTile(
-      item: item,
-      busy: state.isMutating,
-      onChangeQty: (q) => _controller.setQuantity(item.uid, q),
-      onRemove: () => _controller.removeItem(item.uid),
-    );
     // Free-shipping threshold comes from the backend (`hmAppConfig.shipping
     // .free_over`, the storefront's cart-rule figure) — never hardcoded. Null
     // while loading, in Build 1, or when the store publishes none, in which
-    // case the banner/summary hide the free-shipping story and the delivery
-    // line falls back to "at checkout".
-    final freeShipThreshold = ref
-        .watch(freeShippingThresholdProvider)
-        .valueOrNull;
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.cartHeading,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                storeCount > 0
-                    ? '${l10n.cartItemCount(itemCount)} · '
-                          '${l10n.cartStoreCount(storeCount)}'
-                    : l10n.cartItemCount(itemCount),
-                style: const TextStyle(color: AppColors.inkMuted),
-              ),
-            ],
-          ),
-        ),
-        if (cart.totals.subtotal != null && freeShipThreshold != null)
-          _FreeDeliveryBanner(
-            subtotal: cart.totals.subtotal!,
-            threshold: freeShipThreshold,
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (groups == null)
-                for (final item in cart.items) tile(item)
-              else ...[
-                if (groups.length > 1) ...[
-                  const SplitPackagesNote(),
-                  const SizedBox(height: 12),
-                ],
-                for (final group in groups) ...[
-                  _StoreGroup(group: group, tile: tile),
-                  const SizedBox(height: 12),
-                ],
-              ],
-            ],
-          ),
-        ),
-        // Thick grey band (Figma 39:2) — brackets the promo section.
-        const _SectionBand(),
-        _CouponSection(
-          controller: _coupon,
-          appliedCoupon: cart.totals.appliedCoupon,
-          discount: cart.totals.discount,
-          busy: state.isMutating,
-          onApply: () async {
-            if (_coupon.text.trim().isEmpty) return;
-            try {
-              await _controller.applyCoupon(_coupon.text.trim());
-              _coupon.clear();
-            } catch (_) {
-              if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(l10n.cartCouponError)));
-              }
-            }
-          },
-          onRemoveCoupon: _controller.removeCoupon,
-        ),
-        // Thick grey band (Figma 39:26) — closes the promo section.
-        const _SectionBand(),
-        // Order Summary (Figma 39:27).
-        _OrderSummary(
-          cart: cart,
-          freeDeliveryThreshold: freeShipThreshold,
-          storeCredit: ref.watch(cartStoreCreditProvider).valueOrNull,
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              FilledButton(
-                onPressed: () => context.push(AppRoutes.checkout),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(HubIcons.lock, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      cart.totals.grandTotal != null
-                          ? '${l10n.cartSecureCheckout} · ${cart.totals.grandTotal!.formatted()}'
-                          : l10n.cartSecureCheckout,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
+    // case the bar hides and the shipping line reads "calculated at checkout".
+    final threshold = ref.watch(freeShippingThresholdProvider).valueOrNull;
+    Widget tile(CartItem item) => CartItemTile(
+      item: item,
+      busy: state.isMutating,
+      onChangeQuantity: (q) => _controller.setQuantity(item.uid, q),
+      onRemove: () => _controller.removeItem(item.uid),
+      selecting: _selecting,
+      selected: _selected.contains(item.uid),
+      onToggleSelected: () => _toggleLine(item.uid),
     );
-  }
-}
-
-/// Figma 16 "store-group": one store's lines under its header, as one
-/// package. Outlined rather than filled, so the lines read the same in both
-/// themes.
-class _StoreGroup extends StatelessWidget {
-  const _StoreGroup({required this.group, required this.tile});
-
-  final SellerGroup<CartItem> group;
-  final Widget Function(CartItem item) tile;
-
-  @override
-  Widget build(BuildContext context) {
-    final seller = group.seller;
-    return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(14, 14, 6, 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: context.hairline),
-        borderRadius: BorderRadius.circular(16),
+    final sections = <Widget>[
+      if (cart.totals.subtotal != null && threshold != null)
+        CartFreeShippingBar(
+          subtotal: cart.totals.subtotal!,
+          threshold: threshold,
+        ),
+      if (groups != null && groups.length > 1) const SplitPackagesNote(),
+      ...cartStoreCards<CartItem>(cart.items, (item) => item.seller, tile),
+      CartCouponCard(
+        controller: _coupon,
+        appliedCoupon: cart.totals.appliedCoupon,
+        discount: cart.totals.discount,
+        busy: state.isMutating,
+        onApply: () => _applyCoupon(l10n),
+        onRemove: _controller.removeCoupon,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (seller != null)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8, bottom: 6),
-              child: SellerGroupHeader(seller: seller),
-            ),
-          for (var i = 0; i < group.items.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: context.hairline),
-            tile(group.items[i]),
+      CartSummaryCard(
+        cart: cart,
+        freeShippingThreshold: threshold,
+        storeCredit: ref.watch(cartStoreCreditProvider).valueOrNull,
+      ),
+      const CartTrustTicks(),
+    ];
+    // A light page of light cards, as the frame draws it, in dark mode too.
+    return Theme(
+      data: AppTheme.light(Localizations.localeOf(context).languageCode),
+      child: ColoredBox(
+        color: AppColors.surfaceSubtle,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          children: [
+            for (var i = 0; i < sections.length; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              sections[i],
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-class _CartItemTile extends StatelessWidget {
-  const _CartItemTile({
-    required this.item,
-    required this.busy,
-    required this.onChangeQty,
-    required this.onRemove,
-  });
+/// "Select" / "Cancel" at the end of the header: Body Strong in the accent.
+class _HeaderLink extends StatelessWidget {
+  const _HeaderLink({required this.label, required this.onTap});
 
-  final CartItem item;
-  final bool busy;
-  final ValueChanged<int> onChangeQty;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          HubImage(
-            url: item.imageUrl,
-            width: 72,
-            height: 72,
-            borderRadius: BorderRadius.circular(8),
-            error: (_) => const ColoredBox(color: AppColors.surfaceTint),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                for (final option in item.options)
-                  Text(
-                    option,
-                    style: const TextStyle(
-                      color: AppColors.inkMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                const SizedBox(height: 6),
-                if (item.unitPrice != null)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        item.unitPrice!.formatted(),
-                        textDirection: TextDirection.ltr,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: _cartAccent(context),
-                        ),
-                      ),
-                      if (item.isDiscounted) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          item.originalUnitPrice!.formatted(),
-                          textDirection: TextDirection.ltr,
-                          style: const TextStyle(
-                            color: AppColors.inkMuted,
-                            fontSize: 12,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _QtyButton(
-                      icon: HubIcons.minus,
-                      onTap: busy ? null : () => onChangeQty(item.quantity - 1),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('${item.quantity}'),
-                    ),
-                    _QtyButton(
-                      icon: HubIcons.plus,
-                      onTap: busy ? null : () => onChangeQty(item.quantity + 1),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(HubIcons.trash2, color: AppColors.inkMuted),
-            onPressed: busy ? null : onRemove,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QtyButton extends StatelessWidget {
-  const _QtyButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(6),
-    child: Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.inkMuted.withValues(alpha: 0.4)),
-        borderRadius: BorderRadius.circular(6),
+    borderRadius: BorderRadius.circular(8),
+    child: Padding(
+      // Tall enough for a tap target inside the 56 px bar; the text keeps its
+      // place at the bar's 16 px margin.
+      padding: const EdgeInsetsDirectional.only(start: 12, top: 14, bottom: 14),
+      child: Text(
+        label,
+        style: AppTextStyles.of(
+          context,
+        ).bodyStrong.copyWith(color: AppColors.accentStrong),
       ),
-      child: Icon(icon, size: 16),
     ),
   );
 }
 
 /// The cart's first load: the heading and three lines shaped like
-/// [_CartItemTile], shimmering, in place of a spinner. The lines sit on the
+/// [CartItemTile], shimmering, in place of a spinner. The lines sit on the
 /// scaffold, so the blocks follow the theme instead of glaring in dark mode.
 class _CartSkeleton extends StatelessWidget {
   const _CartSkeleton();
@@ -492,435 +326,6 @@ class _CartSkeleton extends StatelessWidget {
                 ],
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Full-bleed 8px grey band that separates cart sections (Figma 39:2 / 39:26).
-class _SectionBand extends StatelessWidget {
-  const _SectionBand();
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(height: 8, color: context.sectionBand);
-}
-
-/// The cart's navy accent (prices, totals, Apply) where it sits on the
-/// scaffold: navy on white, white in dark mode, where navy disappears.
-Color _cartAccent(BuildContext context) =>
-    context.isDarkMode ? Colors.white : AppColors.brandPrimary;
-
-/// Copy-to-clipboard affordance at the trailing edge of the promo-code field
-/// (CL042-DEV13). Copies whatever code is in play — what the shopper has typed,
-/// or the live coupon once one is applied — so a code seen in the announcement
-/// bar or on an offer card can be carried out of the app.
-///
-/// It listens to the field's own [TextEditingController] so it appears the
-/// moment there is something to copy, and takes no space when there isn't.
-class _CopyCodeButton extends StatelessWidget {
-  const _CopyCodeButton({
-    required this.controller,
-    required this.appliedCoupon,
-  });
-
-  final TextEditingController controller;
-  final String? appliedCoupon;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
-      builder: (context, value, _) {
-        final code = value.text.trim().isNotEmpty
-            ? value.text.trim()
-            : (appliedCoupon ?? '');
-        if (code.isEmpty) return const SizedBox.shrink();
-        return InkWell(
-          onTap: () async {
-            final messenger = ScaffoldMessenger.of(context);
-            await Clipboard.setData(ClipboardData(text: code));
-            messenger.showSnackBar(
-              SnackBar(content: Text(l10n.cartCouponCopied)),
-            );
-          },
-          borderRadius: BorderRadius.circular(6),
-          child: Padding(
-            // Keeps the 48px tap target without growing the field's height.
-            padding: const EdgeInsetsDirectional.fromSTEB(8, 4, 0, 4),
-            child: Tooltip(
-              message: l10n.actionCopy,
-              child: const Icon(
-                HubIcons.copy,
-                size: 17,
-                color: AppColors.brandPrimary,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Promo / gift-code entry (Figma "promo" 39:3): a filled grey field with a
-/// tag icon + muted placeholder, a navy outlined "Apply" pill, and — when a
-/// coupon is live — a blush chip showing the code, the saving, and a remove ×.
-class _CouponSection extends StatelessWidget {
-  const _CouponSection({
-    required this.controller,
-    required this.appliedCoupon,
-    required this.discount,
-    required this.busy,
-    required this.onApply,
-    required this.onRemoveCoupon,
-  });
-
-  final TextEditingController controller;
-  final String? appliedCoupon;
-  final Money? discount;
-  final bool busy;
-  final VoidCallback onApply;
-  final VoidCallback onRemoveCoupon;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              // Filled grey field with a tag icon prefix (Figma 39:5).
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceMuted,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        HubIcons.tag,
-                        size: 17,
-                        color: AppColors.inkFaint,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: controller,
-                          enabled: !busy,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.inkHeading,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: l10n.cartCouponHint,
-                            hintStyle: const TextStyle(
-                              color: AppColors.inkFaint,
-                              fontSize: 13,
-                            ),
-                            isCollapsed: true,
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onSubmitted: (_) => busy ? null : onApply(),
-                        ),
-                      ),
-                      _CopyCodeButton(
-                        controller: controller,
-                        appliedCoupon: appliedCoupon,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Navy outlined "Apply" pill (Figma 39:11).
-              OutlinedButton(
-                onPressed: busy ? null : onApply,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _cartAccent(context),
-                  side: BorderSide(color: _cartAccent(context), width: 1.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 13,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  // The theme's label style, so the brand font of the
-                  // language comes along (a bare TextStyle has no family).
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                child: Text(l10n.cartApply),
-              ),
-            ],
-          ),
-          // Applied-coupon chip (Figma 39:13).
-          if (appliedCoupon != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceTint,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    HubIcons.tag,
-                    size: 16,
-                    color: AppColors.brandPrimary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.cartCouponApplied(appliedCoupon!),
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.brandPrimary,
-                      ),
-                    ),
-                  ),
-                  if (discount != null) ...[
-                    Text(
-                      '−${discount!.formatted()}',
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.brandPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                  ],
-                  InkWell(
-                    onTap: busy ? null : onRemoveCoupon,
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Icon(
-                      HubIcons.x,
-                      size: 15,
-                      color: AppColors.brandPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Order Summary block (Figma 39:27): subtotal, optional promo line, the
-/// delivery line (FREE past the threshold, otherwise "calculated at
-/// checkout"), a divider, then the total in navy.
-class _OrderSummary extends StatelessWidget {
-  const _OrderSummary({
-    required this.cart,
-    this.freeDeliveryThreshold,
-    this.storeCredit,
-  });
-
-  final Cart cart;
-
-  /// Free-shipping threshold (AED) from store config; null when unconfigured/
-  /// still loading, in which case delivery falls back to "calculated at checkout".
-  final double? freeDeliveryThreshold;
-
-  /// Store credit used on the cart (HubApp), already off [cart]'s total;
-  /// null — no line — in Build 1 and when none is applied.
-  final Money? storeCredit;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final totals = cart.totals;
-    final itemCount = cart.items.fold<int>(0, (sum, i) => sum + i.quantity);
-    final subtotal = totals.subtotal;
-    final threshold = freeDeliveryThreshold;
-    final shipping = totals.shipping;
-    final freeDelivery = shipping != null
-        ? shipping.amount <= 0.0001
-        : subtotal != null && threshold != null && subtotal.amount >= threshold;
-    // On the scaffold: the Figma inks in light mode, legible ones in dark.
-    final ink = context.scaffoldHeading;
-    final accent = _cartAccent(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            l10n.cartOrderSummary,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: ink,
-            ),
-          ),
-          const SizedBox(height: 11),
-          SummaryRow(
-            label: l10n.cartSubtotalCount(itemCount),
-            value: subtotal?.formatted(),
-            valueColor: ink,
-          ),
-          if (totals.discount != null) ...[
-            const SizedBox(height: 11),
-            SummaryRow(
-              label: totals.appliedCoupon != null
-                  ? l10n.cartPromoCode(totals.appliedCoupon!)
-                  : l10n.cartDiscount,
-              value: '−${totals.discount!.formatted()}',
-              valueColor: accent,
-            ),
-          ],
-          // Delivery line always shows. Once a delivery method was chosen at
-          // checkout, its fee (the total below includes it); before that,
-          // FREE once the threshold is met, otherwise the fee is resolved at
-          // checkout (it depends on the emirate).
-          const SizedBox(height: 11),
-          SummaryRow(
-            label: l10n.cartDelivery,
-            value: freeDelivery
-                ? l10n.cartDeliveryFree
-                : shipping?.formatted() ?? l10n.cartDeliveryCalculated,
-            valueColor: freeDelivery ? accent : ink,
-            valueWeight: freeDelivery ? FontWeight.w700 : FontWeight.w500,
-          ),
-          // Credit used at checkout is already off the total below.
-          if (storeCredit != null) ...[
-            const SizedBox(height: 11),
-            SummaryRow(
-              label: l10n.checkoutStoreCredit,
-              value: '−${storeCredit!.formatted()}',
-              valueColor: accent,
-            ),
-          ],
-          const SizedBox(height: 11),
-          Divider(height: 1, thickness: 1, color: context.hairline),
-          const SizedBox(height: 11),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.cartTotal,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: ink,
-                ),
-              ),
-              Text(
-                totals.grandTotal?.formatted() ?? '—',
-                textDirection: TextDirection.ltr,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: accent,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Blush progress banner toward the free 3-hour delivery threshold (Figma).
-/// Shows remaining-to-go with a partial bar, or an unlocked state once met.
-/// It sits on the scaffold, so in dark mode its tint, text, icon and bar
-/// track follow the theme (a white track glared there).
-class _FreeDeliveryBanner extends StatelessWidget {
-  const _FreeDeliveryBanner({required this.subtotal, required this.threshold});
-
-  final Money subtotal;
-
-  /// Free-shipping threshold (AED) from store config (never hardcoded).
-  final double threshold;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final amount = subtotal.amount;
-    final unlocked = amount >= threshold;
-    final progress = (amount / threshold).clamp(0.0, 1.0);
-    final remaining = Money(
-      amount: (threshold - amount).clamp(0.0, threshold),
-      currency: subtotal.currency,
-    );
-    final dark = context.isDarkMode;
-    final accent = _cartAccent(context);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: dark
-            ? Colors.white.withValues(alpha: 0.06)
-            : AppColors.brandPrimary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: dark
-              ? context.hairline
-              : AppColors.brandPrimary.withValues(alpha: 0.12),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                unlocked ? HubIcons.circleCheck : HubIcons.truck,
-                size: 18,
-                color: unlocked ? AppColors.success : accent,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  unlocked
-                      ? l10n.cartFreeDeliveryUnlocked
-                      : l10n.cartFreeDeliveryRemaining(remaining.formatted()),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: context.scaffoldHeading,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: dark ? Colors.white24 : Colors.white,
-              valueColor: AlwaysStoppedAnimation(
-                unlocked ? AppColors.success : accent,
-              ),
-            ),
-          ),
         ],
       ),
     );

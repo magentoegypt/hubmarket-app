@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
+import 'package:hubmarket_app/core/widgets/network_image.dart';
 import 'package:hubmarket_app/features/cart/domain/cart.dart';
 import 'package:hubmarket_app/features/checkout/presentation/screens/order_success_screen.dart';
 
@@ -24,6 +25,8 @@ void main() {
       expect(packages.map((p) => p.seller?.name), ['MIA CO', 'loly store']);
       // The sofa and two chairs; the dress.
       expect(packages.map((p) => p.itemCount), [3, 1]);
+      // One photo per line: the sofa and the chair; the dress.
+      expect(packages.map((p) => p.imageUrls.length), [2, 1]);
     });
 
     test('none when no line names a seller (Build 1)', () {
@@ -66,9 +69,10 @@ void main() {
 
     expect(find.text('Arriving in 2 packages'), findsOneWidget);
     expect(find.text('MIA CO'), findsOneWidget);
-    expect(find.text('3 items'), findsOneWidget);
     expect(find.text('loly store'), findsOneWidget);
-    expect(find.text('1 item'), findsOneWidget);
+    // Figma 19: a thumbnail per line at the end of its store's row — three
+    // lines, with the two store logos.
+    expect(find.byType(HubImage), findsNWidgets(3 + 2));
 
     // Track order opens this order.
     await tapText(tester, 'Track order');
@@ -115,6 +119,5 @@ void main() {
 
     expect(find.text('Arriving in 3 packages'), findsOneWidget);
     expect(find.text('Package 3'), findsOneWidget);
-    expect(find.text('2 items'), findsOneWidget);
   });
 }

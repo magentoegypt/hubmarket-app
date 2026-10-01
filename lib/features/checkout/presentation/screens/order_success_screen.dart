@@ -1,12 +1,18 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_theme.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/hubapp/hubapp_models.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
+import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
@@ -14,9 +20,7 @@ import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../../domain/checkout.dart';
-import '../widgets/checkout_parts.dart';
 import '../widgets/payment_method_tile.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// What the order-placed screen shows, handed over by checkout.
 class OrderPlacedArgs {
@@ -44,13 +48,21 @@ class OrderPlacedArgs {
 
 /// One store's share of a placed order — a package of its own when it ships.
 class PlacedPackage {
-  const PlacedPackage({required this.seller, required this.itemCount});
+  const PlacedPackage({
+    required this.seller,
+    required this.itemCount,
+    this.imageUrls = const <String?>[],
+  });
 
   /// Null for lines the backend named no seller for.
   final HmSellerSummary? seller;
 
   /// Units of the store's lines.
   final int itemCount;
+
+  /// One photo per line of the store, in the cart's order (null for a line
+  /// without one) — the thumbnails at the end of the package's row.
+  final List<String?> imageUrls;
 }
 
 /// The stores [cart] ships from, read from its lines' `hm_seller` before
@@ -63,13 +75,15 @@ List<PlacedPackage> placedPackagesOf(Cart cart) => [
     PlacedPackage(
       seller: group.seller,
       itemCount: group.items.fold(0, (sum, item) => sum + item.quantity),
+      imageUrls: [for (final item in group.items) item.imageUrl],
     ),
 ];
 
-/// 19 Order placed: the tick, the order number, how it is paid, "Arriving in
-/// N packages" with the stores the order ships from (HubApp), then Track
-/// order (this order) / Continue shopping. The frame's per-package delivery
-/// estimates need data the backend doesn't provide yet.
+/// 19 Order placed: the tick, the order number, "Arriving in N packages" with
+/// the stores the order ships from and thumbnails of what they send (HubApp),
+/// how it is paid, then Track order (this order) / Continue shopping. The
+/// frame's per-package delivery estimates need data the backend doesn't
+/// provide yet, so a package row carries no arrival line.
 class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({super.key, required this.args});
 
@@ -78,8 +92,11 @@ class OrderSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isEn = Localizations.localeOf(context).languageCode != 'ar';
+    final t = AppTextStyles.of(context);
     final name = args.firstName?.trim() ?? '';
+    // Figma "Body": the buttons sit 30 px above the bottom edge — the device's
+    // home-indicator inset when that is larger.
+    final bottom = math.max(30.0, MediaQuery.paddingOf(context).bottom);
     // The order is placed and the cart gone, so there is nothing to go back
     // to: back (and the close button) leave for Home.
     return PopScope(
@@ -89,6 +106,7 @@ class OrderSuccessScreen extends StatelessWidget {
       },
       child: Scaffold(
         body: SafeArea(
+          bottom: false,
           child: Column(
             children: [
               SizedBox(
@@ -97,8 +115,8 @@ class OrderSuccessScreen extends StatelessWidget {
                   alignment: AlignmentDirectional.centerEnd,
                   child: Padding(
                     padding: const EdgeInsetsDirectional.only(end: 12),
-                    child: IconButton(
-                      icon: const Icon(HubIcons.x, size: 22),
+                    child: HubIconButton(
+                      icon: HubIcons.x,
                       color: context.scaffoldHeading,
                       tooltip: MaterialLocalizations.of(
                         context,
@@ -110,20 +128,16 @@ class OrderSuccessScreen extends StatelessWidget {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const _SuccessTick(),
+                      const Center(child: _SuccessTick()),
                       const SizedBox(height: 18),
                       Text(
                         l10n.orderSuccessTitle,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          // Playfair Display has no Arabic glyphs; Arabic keeps
-                          // the theme's face.
-                          fontFamily: isEn ? AppTheme.displayFont : null,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
+                        style: t.display.copyWith(
                           color: context.scaffoldHeading,
                         ),
                       ),
@@ -136,48 +150,39 @@ class OrderSuccessScreen extends StatelessWidget {
                                 args.orderNumber,
                               ),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.45,
-                          color: context.scaffoldMuted,
-                        ),
+                        style: t.body.copyWith(color: context.scaffoldMuted),
                       ),
+                      if (args.packages.isNotEmpty) ...[
+                        const SizedBox(height: 18),
+                        _PackagesBlock(packages: args.packages),
+                      ],
                       if (args.payment != null) ...[
                         const SizedBox(height: 18),
                         _PaymentRow(payment: args.payment!, total: args.total),
                       ],
                       // Store credit the order used (HubAppAccount).
                       _StoreCreditRow(orderNumber: args.orderNumber),
-                      if (args.packages.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        _PackagesCard(packages: args.packages),
-                      ],
+                      const SizedBox(height: 18),
                     ],
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, bottom),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // This order, with My Orders beneath it.
-                    FilledButton(
-                      style: checkoutButtonStyle(context),
-                      onPressed: () => context.go(
-                        AppRoutes.orderByNumber(args.orderNumber),
-                      ),
-                      child: Text(l10n.orderPlacedTrack),
+                    HubButton(
+                      label: l10n.orderPlacedTrack,
+                      onPressed: () =>
+                          context.go(AppRoutes.orderByNumber(args.orderNumber)),
                     ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.accentStrong,
-                        minimumSize: const Size.fromHeight(52),
-                        textStyle: checkoutButtonText(context),
-                      ),
+                    const SizedBox(height: 18),
+                    HubButton(
+                      label: l10n.cartContinueShopping,
+                      style: HubButtonStyle.ghost,
                       onPressed: () => context.go(AppRoutes.home),
-                      child: Text(l10n.cartContinueShopping),
                     ),
                   ],
                 ),
@@ -229,6 +234,7 @@ class _StoreCreditRow extends ConsumerWidget {
     final credit = ref.watch(orderStoreCreditProvider(orderNumber)).valueOrNull;
     if (credit == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Container(
@@ -254,7 +260,7 @@ class _StoreCreditRow extends ConsumerWidget {
                 l10n.orderPlacedPaidWithCredit(
                   '\u2066${credit.formatted()}\u2069',
                 ),
-                style: TextStyle(fontSize: 14, color: context.scaffoldHeading),
+                style: t.body.copyWith(color: context.scaffoldHeading),
               ),
             ),
           ],
@@ -264,8 +270,9 @@ class _StoreCreditRow extends ConsumerWidget {
   }
 }
 
-/// How the order is paid. Every method checkout offers settles on delivery or
-/// needs no payment, so there is no "Paid" state to show yet.
+/// How the order is paid (Figma "payment": a muted card, the method's icon and
+/// a sentence). Every method checkout offers settles on delivery or needs no
+/// payment, so there is no "Paid" badge to show yet.
 class _PaymentRow extends StatelessWidget {
   const _PaymentRow({required this.payment, required this.total});
 
@@ -275,6 +282,7 @@ class _PaymentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     // An isolate keeps "AED 553.00" in order inside an Arabic sentence.
     final amount = '\u2066${total?.formatted()}\u2069';
     final String text;
@@ -305,7 +313,7 @@ class _PaymentRow extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: TextStyle(fontSize: 14, color: context.scaffoldHeading),
+              style: t.body.copyWith(color: context.scaffoldHeading),
             ),
           ),
         ],
@@ -314,51 +322,53 @@ class _PaymentRow extends StatelessWidget {
   }
 }
 
-/// "Arriving in 2 packages": one row per store the order ships from — its
-/// logo, name and ✓, and how many items it sends.
-class _PackagesCard extends StatelessWidget {
-  const _PackagesCard({required this.packages});
+/// "Arriving in 2 packages" and the card under it: one row per store the order
+/// ships from — its logo, its name, and thumbnails of what it sends — with a
+/// hairline between stores.
+class _PackagesBlock extends StatelessWidget {
+  const _PackagesBlock({required this.packages});
 
   final List<PlacedPackage> packages;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-      decoration: BoxDecoration(
-        color: context.isDarkMode ? Colors.white10 : AppColors.surfaceSubtle,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    final t = AppTextStyles.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l10n.orderPlacedPackages(packages.length),
+          style: t.title.copyWith(color: context.scaffoldHeading),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: context.isDarkMode
+                  ? Colors.white24
+                  : AppColors.borderSubtle,
+            ),
+          ),
+          child: Column(
             children: [
-              Icon(
-                HubIcons.package,
-                size: 20,
-                color: context.scaffoldHeading,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.orderPlacedPackages(packages.length),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: context.scaffoldHeading,
+              for (var i = 0; i < packages.length; i++) ...[
+                if (i > 0)
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: context.isDarkMode
+                        ? Colors.white24
+                        : AppColors.borderSubtle,
                   ),
-                ),
-              ),
+                _PackageRow(index: i + 1, package: packages[i]),
+              ],
             ],
           ),
-          const SizedBox(height: 6),
-          for (var i = 0; i < packages.length; i++)
-            _PackageRow(index: i + 1, package: packages[i]),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -370,53 +380,62 @@ class _PackageRow extends StatelessWidget {
   final int index;
   final PlacedPackage package;
 
+  /// Thumbnails per package; a store with more lines shows "+N".
+  static const int maxThumbnails = 3;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final seller = package.seller;
+    final shown = package.imageUrls.take(maxThumbnails).toList();
+    final more = package.imageUrls.length - shown.length;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           if (seller != null)
-            SellerLogo(seller: seller)
+            SellerLogo(seller: seller, size: 36)
           else
             SizedBox(
-              width: 28,
+              width: 36,
               child: Icon(
                 HubIcons.package,
-                size: 18,
+                size: 20,
                 color: context.scaffoldMuted,
               ),
             ),
-          const SizedBox(width: 10),
-          // The name gives way (ellipsis) to the item count.
+          const SizedBox(width: 12),
+          // The name gives way (ellipsis) to the thumbnails.
           Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    seller?.name ?? l10n.orderPackageTitleNoStore(index),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: context.scaffoldHeading,
-                    ),
-                  ),
-                ),
-                if (seller != null && !seller.isMarketplace) ...[
-                  const SizedBox(width: 6),
-                  const SellerVerifiedIcon(),
-                ],
-              ],
+            child: Text(
+              seller?.name ?? l10n.orderPackageTitleNoStore(index),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            l10n.orderItemCount(package.itemCount),
-            style: TextStyle(fontSize: 12, color: context.scaffoldMuted),
-          ),
+          const SizedBox(width: 12),
+          for (var i = 0; i < shown.length; i++) ...[
+            if (i > 0) const SizedBox(width: 6),
+            HubImage(
+              url: shown[i],
+              width: 40,
+              height: 40,
+              borderRadius: BorderRadius.circular(8),
+              placeholder: (_) =>
+                  const ColoredBox(color: AppColors.surfaceSubtle),
+              error: (_) => const ColoredBox(color: AppColors.surfaceSubtle),
+            ),
+          ],
+          if (more > 0) ...[
+            const SizedBox(width: 6),
+            Text(
+              '+$more',
+              textDirection: TextDirection.ltr,
+              style: t.caption.copyWith(color: context.scaffoldMuted),
+            ),
+          ],
         ],
       ),
     );

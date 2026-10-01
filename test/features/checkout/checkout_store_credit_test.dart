@@ -82,7 +82,7 @@ Future<void> _toPayment(
 
 Finder get _switch => find.descendant(
   of: find.byType(CheckoutStoreCreditRow),
-  matching: find.byType(Switch),
+  matching: find.byType(CheckoutSwitch),
 );
 
 void main() {
@@ -98,7 +98,7 @@ void main() {
       expect(find.text('Use my credit'), findsOneWidget);
       expect(find.textContaining('AED 120'), findsOneWidget);
       expect(find.textContaining('available'), findsOneWidget);
-      expect(tester.widget<Switch>(_switch).value, isFalse);
+      expect(tester.widget<CheckoutSwitch>(_switch).value, isFalse);
       // Read when the step opened: the shipping method is on the cart.
       expect(credit.calls, ['fetchCartCredit:customer-1']);
       expect(find.text('Store credit'), findsNothing);
@@ -120,11 +120,11 @@ void main() {
           'fetchCartCredit:customer-1',
           'apply:customer-1:120.0',
         ]);
-        expect(tester.widget<Switch>(_switch).value, isTrue);
+        expect(tester.widget<CheckoutSwitch>(_switch).value, isTrue);
         expect(find.textContaining('used on this order'), findsOneWidget);
         // The summary carries the credit and the total Magento now charges.
         expect(find.text('Store credit'), findsOneWidget);
-        expect(find.text('−AED 120'), findsOneWidget);
+        expect(find.text('− AED 120'), findsOneWidget);
         expect(find.text('AED 433'), findsOneWidget);
         // Cash on delivery still pays for the rest: no method change.
         expect(checkout.calls.where((c) => c.startsWith('setPaymentMethod')), [
@@ -143,14 +143,14 @@ void main() {
         cartCredit: sampleCartCredit(applied: 120),
       );
       await _toPayment(tester, credit: credit);
-      expect(tester.widget<Switch>(_switch).value, isTrue);
+      expect(tester.widget<CheckoutSwitch>(_switch).value, isTrue);
       expect(find.text('Store credit'), findsOneWidget);
 
       await tester.tap(_switch);
       await tester.pumpAndSettle();
 
       expect(credit.calls.last, 'remove:customer-1');
-      expect(tester.widget<Switch>(_switch).value, isFalse);
+      expect(tester.widget<CheckoutSwitch>(_switch).value, isFalse);
       expect(find.text('Store credit'), findsNothing);
       expect(find.text('AED 553'), findsOneWidget);
     });
@@ -193,7 +193,7 @@ void main() {
         find.text('You can use at most AED 120.00 of store credit.'),
         findsOneWidget,
       );
-      expect(tester.widget<Switch>(_switch).value, isFalse);
+      expect(tester.widget<CheckoutSwitch>(_switch).value, isFalse);
       expect(find.text('Store credit'), findsNothing);
       expect(find.text('AED 553'), findsOneWidget);
     });

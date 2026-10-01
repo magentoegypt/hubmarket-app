@@ -1,71 +1,102 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../account/domain/customer_address.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
 import '../checkout_credit_controller.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Shared building blocks of the three checkout steps (Figma 17 / 18 / 18b):
 /// white cards on the muted page, the design's type scale, the step indicator,
 /// the pinned footer and the totals card.
 
-/// The checkout type scale (Figma "EN/…" text styles). Colours are the fixed
-/// tokens: every checkout surface is a light card, in dark mode too.
-abstract final class CheckoutText {
-  static const TextStyle title = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: AppColors.inkHeading,
-  );
-  static const TextStyle body = TextStyle(
-    fontSize: 14,
-    color: AppColors.inkHeading,
-  );
-  static const TextStyle bodyStrong = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: AppColors.inkHeading,
-  );
-  static const TextStyle bodyMuted = TextStyle(
-    fontSize: 14,
-    color: AppColors.inkMuted,
-  );
-  static const TextStyle caption = TextStyle(
-    fontSize: 12,
-    color: AppColors.inkMuted,
-  );
-  static const TextStyle captionStrong = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    color: AppColors.inkHeading,
-  );
-  static const TextStyle price = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w700,
-    color: AppColors.inkHeading,
-  );
+/// The Figma `--hm-subtle` fill (`#FAFBFD`) behind a selected shipping method
+/// and a saved card: a hair off white.
+const Color checkoutSelectedFill = Color(0xFFFAFBFD);
 
-  /// Orange text links: "Change", "Edit", "Forgot your password?".
-  static const TextStyle link = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: AppColors.accentStrong,
-  );
+/// The checkout's type: the Figma text styles ([AppTextStyles], so Arabic
+/// switches to Tajawal by itself) in the fixed inks. Every checkout surface is a
+/// light card, in dark mode too, so the inks are the tokens, not theme colours.
+///
+///     final t = CheckoutText.of(context);
+///     Text(title, style: t.title)
+class CheckoutText {
+  CheckoutText._(this._t);
+
+  factory CheckoutText.of(BuildContext context) =>
+      CheckoutText._(AppTextStyles.of(context));
+
+  final AppTextStyles _t;
+
+  /// Heading 1 — Playfair Display 22 (the review page's title).
+  TextStyle get heading1 => _t.heading1.copyWith(color: AppColors.inkHeading);
+
+  /// Heading 2 — DM Sans Bold 18 ("Payment method").
+  TextStyle get heading2 => _t.heading2.copyWith(color: AppColors.inkHeading);
+
+  /// Title — card titles, 16 semi-bold.
+  TextStyle get title => _t.title.copyWith(color: AppColors.inkHeading);
+
+  /// Body in ink.
+  TextStyle get body => _t.body.copyWith(color: AppColors.inkHeading);
+
+  /// Body in `--hm-subtle`: the label of an amount row.
+  TextStyle get bodySubtle => _t.body.copyWith(color: AppColors.inkSubtle);
+
+  /// Body in muted grey: an address line.
+  TextStyle get bodyMuted => _t.body.copyWith(color: AppColors.inkMuted);
+
+  /// Body Strong — names, amounts in a row.
+  TextStyle get bodyStrong =>
+      _t.bodyStrong.copyWith(color: AppColors.inkHeading);
+
+  /// Caption in muted grey.
+  TextStyle get caption => _t.caption.copyWith(color: AppColors.inkMuted);
+
+  /// Caption in `--hm-subtle`.
+  TextStyle get captionSubtle =>
+      _t.caption.copyWith(color: AppColors.inkSubtle);
+
+  /// Caption Strong — field labels.
+  TextStyle get captionStrong =>
+      _t.captionStrong.copyWith(color: AppColors.inkHeading);
+
+  /// Micro — the address label chip, card brand chips.
+  TextStyle get micro => _t.micro.copyWith(color: AppColors.inkSubtle);
+
+  /// Price — 15 bold.
+  TextStyle get price => _t.price.copyWith(color: AppColors.inkHeading);
+
+  /// Orange text links: "Change", "Forgot your password?".
+  TextStyle get link => _t.bodyStrong.copyWith(color: AppColors.accentStrong);
+
+  /// The small orange link ("Edit").
+  TextStyle get linkSmall =>
+      _t.captionStrong.copyWith(color: AppColors.accentStrong);
 }
 
-/// The footer buttons' label (Figma "EN/Button"). Derived from the theme's
-/// label style: a bare TextStyle would replace it and lose the locale's font.
-ButtonStyle checkoutButtonStyle(BuildContext context) =>
-    FilledButton.styleFrom(textStyle: checkoutButtonText(context));
+/// The comma that joins an address on one line: ", ", or the Arabic "، ".
+String addressSeparator(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar' ? '، ' : ', ';
 
-TextStyle? checkoutButtonText(BuildContext context, {double fontSize = 15}) =>
-    Theme.of(context).textTheme.labelLarge?.copyWith(
-      fontSize: fontSize,
-      fontWeight: FontWeight.w700,
+/// A saved address on one line, in the order the frames print it (see
+/// [shipToAddressLine]) and with the country: "Apt 1204, Marina Gate 2, Dubai
+/// Marina, Dubai, UAE".
+String savedAddressLine(BuildContext context, CustomerAddress a) =>
+    shipToAddressLine(
+      apartment: a.apartment,
+      street: a.street,
+      area: a.city,
+      emirate: a.region.isNotEmpty ? a.region : a.city,
+      country: AppLocalizations.of(context).checkoutAddressCountry,
+      separator: addressSeparator(context),
     );
 
 /// A phone number for display: `+971501234567` → `+971 50 123 4567`, in a
@@ -79,7 +110,8 @@ String displayPhone(String raw) {
   return '\u2066$text\u2069';
 }
 
-/// A white, rounded checkout card with an optional title row.
+/// A white, rounded checkout card (Figma: padding 14, radius 16) with an
+/// optional title row.
 class CheckoutCard extends StatelessWidget {
   const CheckoutCard({
     super.key,
@@ -100,6 +132,7 @@ class CheckoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = CheckoutText.of(context);
     final rows = <Widget>[
       if (title != null || trailing != null)
         Row(
@@ -107,35 +140,39 @@ class CheckoutCard extends StatelessWidget {
             Expanded(
               child: title == null
                   ? const SizedBox.shrink()
-                  : Text(title!, style: CheckoutText.title),
+                  : Text(title!, style: t.title),
             ),
             if (trailing != null) trailing!,
           ],
         ),
       ...children,
     ];
-    return Container(
+    // A Material, so the ripple of a link or an option inside shows on the
+    // white (it would paint under a plain coloured box).
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
+      child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) SizedBox(height: spacing),
-            rows[i],
-          ],
-        ],
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0) SizedBox(height: spacing),
+                rows[i],
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-/// The design's 22px radio: a thick navy ring when selected, a thin grey one
-/// otherwise.
+/// The design's 22 px radio: a thick navy ring (7 px, a white dot left in the
+/// middle) when selected, a thin `--hm-strong` one otherwise.
 class CheckoutRadio extends StatelessWidget {
   const CheckoutRadio({super.key, required this.selected});
 
@@ -150,15 +187,16 @@ class CheckoutRadio extends StatelessWidget {
       color: Colors.white,
       shape: BoxShape.circle,
       border: Border.all(
-        color: selected ? AppColors.brandPrimary : AppColors.inkFaint,
+        color: selected ? AppColors.brandPrimary : AppColors.borderControl,
         width: selected ? 7 : 1.5,
       ),
     ),
   );
 }
 
-/// A tappable option card (address, shipping method, payment method): navy
-/// outline when selected, a hairline otherwise.
+/// A tappable option card (address, shipping method, payment method): a navy
+/// 1.5 px outline when selected, a hairline otherwise. [padding] is the
+/// design's, measured inside the outline.
 class CheckoutOption extends StatelessWidget {
   const CheckoutOption({
     super.key,
@@ -167,13 +205,13 @@ class CheckoutOption extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(12),
     this.radius = 12,
-    this.selectedFill = AppColors.surfaceSubtle,
+    this.selectedFill = checkoutSelectedFill,
   });
 
   final bool selected;
   final VoidCallback? onTap;
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsets padding;
   final double radius;
 
   /// Background once selected — a faint tint for shipping methods (Figma 17),
@@ -182,11 +220,12 @@ class CheckoutOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final border = selected ? 1.5 : 1.0;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(radius),
       side: BorderSide(
-        color: selected ? AppColors.brandPrimary : AppColors.borderDefault,
-        width: selected ? 1.5 : 1,
+        color: selected ? AppColors.brandPrimary : AppColors.borderSubtle,
+        width: border,
       ),
     );
     return Semantics(
@@ -199,7 +238,10 @@ class CheckoutOption extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Padding(padding: padding, child: child),
+          child: Padding(
+            padding: padding + EdgeInsets.all(border),
+            child: child,
+          ),
         ),
       ),
     );
@@ -207,6 +249,7 @@ class CheckoutOption extends StatelessWidget {
 }
 
 /// An orange text action at the end of a card's title row: "Change", "Edit".
+/// With an [icon] it is the small variant (14 px glyph, 12 px label).
 class CheckoutLink extends StatelessWidget {
   const CheckoutLink({
     super.key,
@@ -221,12 +264,14 @@ class CheckoutLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final small = icon != null;
+    final t = CheckoutText.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        // The row keeps the card's own 22 px height and the text its place at
+        // the card's edge; the start side widens the tap target.
+        padding: const EdgeInsetsDirectional.only(start: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -234,12 +279,7 @@ class CheckoutLink extends StatelessWidget {
               Icon(icon, size: 14, color: AppColors.accentStrong),
               const SizedBox(width: 4),
             ],
-            Text(
-              label,
-              style: small
-                  ? CheckoutText.link.copyWith(fontSize: 12)
-                  : CheckoutText.link,
-            ),
+            Text(label, style: icon == null ? t.link : t.linkSmall),
           ],
         ),
       ),
@@ -247,28 +287,28 @@ class CheckoutLink extends StatelessWidget {
   }
 }
 
-/// A money amount, always laid out left to right ("AED 553.00") so the code
+/// A money amount, always laid out left to right ("AED 553") so the code
 /// stays in front of the figure in Arabic too.
 class MoneyText extends StatelessWidget {
-  const MoneyText(
-    this.money, {
-    super.key,
-    this.style = CheckoutText.bodyStrong,
-  });
+  const MoneyText(this.money, {super.key, this.style});
 
   final Money? money;
-  final TextStyle style;
+
+  /// Body Strong when null.
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) => Text(
     money?.formatted() ?? '—',
     textDirection: TextDirection.ltr,
-    style: style,
+    style: style ?? CheckoutText.of(context).bodyStrong,
   );
 }
 
-/// Shipping → Payment → Review, under the app bar. Completed steps turn green
-/// and can be tapped to go back to them.
+/// Shipping → Payment → Review, under the app bar (Figma "stepper": white, a
+/// hairline under it, 24 px circles joined by 28 px rules, spread across the
+/// width). A completed step is a green tick and can be tapped to go back to it;
+/// the current one is navy; the ones to come are outlined.
 class CheckoutStepIndicator extends StatelessWidget {
   const CheckoutStepIndicator({
     super.key,
@@ -308,7 +348,7 @@ class CheckoutStepIndicator extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppColors.borderDefault)),
+        border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
       ),
       // Spread across the width like the design; on a screen too narrow for
       // the three labels (or a large text scale) the row scales down instead
@@ -347,6 +387,7 @@ class _StepItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = CheckoutText.of(context);
     final Widget badge;
     if (done) {
       badge = const _Circle(
@@ -359,14 +400,16 @@ class _StepItem extends StatelessWidget {
         border: active ? null : AppColors.borderStrong,
         child: Text(
           '$number',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+          style: t.captionStrong.copyWith(
             color: active ? Colors.white : AppColors.inkMuted,
           ),
         ),
       );
     }
+    // Active: Body Strong in ink; completed: Body in ink; to come: Body muted.
+    final style = active
+        ? t.bodyStrong
+        : (done ? t.body : t.body.copyWith(color: AppColors.inkMuted));
     return Semantics(
       button: onTap != null,
       selected: active,
@@ -378,17 +421,7 @@ class _StepItem extends StatelessWidget {
           children: [
             badge,
             const SizedBox(width: 6),
-            Text(
-              label,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color: active || done
-                    ? AppColors.inkHeading
-                    : AppColors.inkMuted,
-              ),
-            ),
+            Text(label, maxLines: 1, style: style),
           ],
         ),
       ),
@@ -426,40 +459,70 @@ class _Connector extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 28,
     height: 1,
-    margin: const EdgeInsets.symmetric(horizontal: 6),
     color: done ? AppColors.successStrong : AppColors.borderStrong,
   );
 }
 
-/// The white bar pinned under each step: the step's primary action, with an
-/// optional line above it.
+/// The white bar pinned under each step (Figma "footer": a hairline on top, 12
+/// above the content and 30 below it): the step's primary action, with a line
+/// above it. The bottom is the home-indicator area — the device's own inset when
+/// it is larger than the design's 30.
 class CheckoutFooter extends StatelessWidget {
-  const CheckoutFooter({super.key, required this.children});
+  const CheckoutFooter({super.key, required this.children, this.spacing = 8});
 
   final List<Widget> children;
 
+  /// Gap between the children: 8 under a total row, 10 under a note.
+  final double spacing;
+
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      color: Colors.white,
-      border: Border(top: BorderSide(color: AppColors.borderDefault)),
-    ),
-    child: SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < children.length; i++) ...[
-              if (i > 0) const SizedBox(height: 8),
-              children[i],
-            ],
-          ],
-        ),
+  Widget build(BuildContext context) {
+    // With the keyboard up there is no home indicator to clear: the footer
+    // gives the room back to the form.
+    final bottom = MediaQuery.viewInsetsOf(context).bottom > 0
+        ? 12.0
+        : math.max(30.0, MediaQuery.paddingOf(context).bottom);
+    // A Container, so the hairline on top adds its own pixel to the height.
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.borderSubtle)),
       ),
-    ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) SizedBox(height: spacing),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The green shield line above a footer button: "Payments are encrypted by our
+/// payment partner" (18), "Your payment information is encrypted and secure"
+/// (18b).
+class CheckoutSecureNote extends StatelessWidget {
+  const CheckoutSecureNote(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const Icon(
+        HubIcons.shieldCheck,
+        size: 14,
+        color: AppColors.successStrong,
+      ),
+      const SizedBox(width: 6),
+      Flexible(child: Text(text, style: CheckoutText.of(context).caption)),
+    ],
   );
 }
 
@@ -476,46 +539,45 @@ class CheckoutAmountRow extends StatelessWidget {
 
   final String label;
 
-  /// Already formatted ("AED 10.00", "FREE", "−AED 5.00").
+  /// Already formatted ("AED 10", "FREE", "− AED 5").
   final String value;
   final Color? valueColor;
 
-  /// The total line: a stronger label and the price style.
+  /// The total line: a Title label and the Price style.
   final bool emphasis;
 
   /// Overrides the value's style — the footer's "Total incl. shipping".
   final TextStyle? valueStyle;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: Text(
-          label,
-          style: emphasis ? CheckoutText.title : CheckoutText.bodyMuted,
+  Widget build(BuildContext context) {
+    final t = CheckoutText.of(context);
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: emphasis ? t.title : t.bodySubtle)),
+        const SizedBox(width: 12),
+        Text(
+          value,
+          textDirection: TextDirection.ltr,
+          style: (valueStyle ?? (emphasis ? t.price : t.bodyStrong)).copyWith(
+            color: valueColor,
+          ),
         ),
-      ),
-      const SizedBox(width: 12),
-      Text(
-        value,
-        textDirection: TextDirection.ltr,
-        style:
-            (valueStyle ??
-                    (emphasis ? CheckoutText.price : CheckoutText.bodyStrong))
-                .copyWith(color: valueColor),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 /// Subtotal, shipping, any discount, store credit used and the total — "Order
-/// summary" on the payment step, "Order total" on the review step.
+/// summary" on the payment step (a 10 px rhythm, the item and package count
+/// beside the title), "Order total" on the review step (12 px).
 class CheckoutTotalsCard extends ConsumerWidget {
   const CheckoutTotalsCard({
     super.key,
     required this.title,
     required this.cart,
     this.trailing,
+    this.spacing = 12,
     this.shipping,
     this.grandTotal,
   });
@@ -525,6 +587,9 @@ class CheckoutTotalsCard extends ConsumerWidget {
 
   /// Next to the title — the item count on the payment step.
   final String? trailing;
+
+  /// The gap between the rows: 10 on the payment step, 12 on the review step.
+  final double spacing;
   final ShippingMethodOption? shipping;
 
   /// What Magento charges — the controller's total, read after the shipping and
@@ -534,6 +599,7 @@ class CheckoutTotalsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final t = CheckoutText.of(context);
     final totals = cart.totals;
     final discount = totals.discount;
     final shippingAmount = shipping?.amount;
@@ -541,10 +607,8 @@ class CheckoutTotalsCard extends ConsumerWidget {
     final credit = ref.watch(checkoutCreditProvider.select((s) => s.applied));
     return CheckoutCard(
       title: title,
-      spacing: 10,
-      trailing: trailing == null
-          ? null
-          : Text(trailing!, style: CheckoutText.caption),
+      spacing: spacing,
+      trailing: trailing == null ? null : Text(trailing!, style: t.caption),
       children: [
         CheckoutAmountRow(
           label: l10n.cartSubtotal,
@@ -563,16 +627,16 @@ class CheckoutTotalsCard extends ConsumerWidget {
             label: totals.appliedCoupon != null
                 ? l10n.cartPromoCode(totals.appliedCoupon!)
                 : l10n.cartDiscount,
-            value: '−${discount.formatted()}',
+            value: '− ${discount.formatted()}',
             valueColor: AppColors.successStrong,
           ),
         if (credit != null)
           CheckoutAmountRow(
             label: l10n.checkoutStoreCredit,
-            value: '−${credit.formatted()}',
+            value: '− ${credit.formatted()}',
             valueColor: AppColors.successStrong,
           ),
-        const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
+        const Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
         CheckoutAmountRow(
           label: l10n.checkoutTotalInclVat,
           value: (grandTotal ?? totals.grandTotal)?.formatted() ?? '—',
