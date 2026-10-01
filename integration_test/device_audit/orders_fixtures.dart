@@ -72,7 +72,8 @@ Future<void> tapVisible(
   expect(
     finder.hitTestable(),
     findsOneWidget,
-    reason: 'cannot tap ${finder.describeMatch(Plurality.one)}: it is off '
+    reason:
+        'cannot tap ${finder.describeMatch(Plurality.one)}: it is off '
         'screen or covered',
   );
   await tester.tap(finder);
@@ -166,7 +167,9 @@ CustomerOrder detailOrder(String locale, {bool cancel = true}) {
                 carrierCode: 'aramex',
                 carrierTitle: 'Aramex',
                 number: '3345 1182',
-                trackingUrl: Uri.parse('https://www.aramex.com/track/3345-1182'),
+                trackingUrl: Uri.parse(
+                  'https://www.aramex.com/track/3345-1182',
+                ),
               ),
             ],
           ),
