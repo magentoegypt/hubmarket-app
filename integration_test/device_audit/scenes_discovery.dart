@@ -52,7 +52,8 @@ List<AuditScene> scenes() => [
   // ---------------------------------------------------------------- B07 Home
   // Both Homes, signed in with an open order, an unread notification and recent
   // searches: everything the frame draws (test/features/home/home_audit_test.dart).
-  // The frame is 6313 px tall: four further screens of the scroll.
+  // The frame is 6313 px tall and a phone screen shows about 465 dp of it per scroll
+  // step under the pinned header: scroll to the end (the runner stops there).
   AuditScene(
     frame: 'B07_home',
     name: 'hubapp',
@@ -60,7 +61,7 @@ List<AuditScene> scenes() => [
         InboxScope(items: homeUnreadInbox(), child: const HubHomeScreen()),
     setup: (locale) => _homeSetup(locale, hubApp: true),
     pushed: false,
-    scrolls: 4,
+    scrolls: 14,
   ),
   AuditScene(
     frame: 'B07_home',
@@ -69,7 +70,7 @@ List<AuditScene> scenes() => [
         InboxScope(items: homeUnreadInbox(), child: const HubHomeScreen()),
     setup: (locale) => _homeSetup(locale, hubApp: false),
     pushed: false,
-    scrolls: 4,
+    scrolls: 14,
   ),
 
   // ---------------------------------------------------------- B08 Categories
