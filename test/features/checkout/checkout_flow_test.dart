@@ -344,4 +344,55 @@ void main() {
     expect(find.text('Use a new address'), findsOneWidget);
     expect(find.text('Sara Ahmed'), findsOneWidget);
   });
+
+  group('the pinned footer', () {
+    Future<EdgeInsets> footerPadding(
+      WidgetTester tester, {
+      required EdgeInsets padding,
+      EdgeInsets viewInsets = EdgeInsets.zero,
+    }) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(padding: padding, viewInsets: viewInsets),
+            child: const Scaffold(
+              bottomNavigationBar: CheckoutFooter(children: [Text('x')]),
+            ),
+          ),
+        ),
+      );
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(CheckoutFooter),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      return box.padding! as EdgeInsets;
+    }
+
+    testWidgets('keeps the 30 px of the frame under the button, or the inset '
+        'of the home indicator when that is larger', (tester) async {
+      expect(
+        await footerPadding(tester, padding: EdgeInsets.zero),
+        const EdgeInsets.fromLTRB(16, 12, 16, 30),
+      );
+      expect(
+        await footerPadding(tester, padding: const EdgeInsets.only(bottom: 34)),
+        const EdgeInsets.fromLTRB(16, 12, 16, 34),
+      );
+    });
+
+    testWidgets('gives the room back while the keyboard is up', (tester) async {
+      expect(
+        await footerPadding(
+          tester,
+          padding: EdgeInsets.zero,
+          viewInsets: const EdgeInsets.only(bottom: 300),
+        ),
+        const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      );
+    });
+  });
 }

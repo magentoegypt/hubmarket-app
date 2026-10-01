@@ -152,6 +152,25 @@ void main() {
     });
   });
 
+  testWidgets('the stepper keeps minus first and plus last in Arabic too', (
+    tester,
+  ) async {
+    phoneView(tester, height: 1500);
+    await tester.pumpWidget(
+      marketplaceHarness(
+        locale: 'ar',
+        location: AppRoutes.cart,
+        cartRepository: _LiveCart(twoStoreCart('guest-1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Figma AR-16: − 1 + as in English, not mirrored with the page.
+    final minus = tester.getCenter(find.byIcon(HubIcons.minus).first).dx;
+    final plus = tester.getCenter(find.byIcon(HubIcons.plus).first).dx;
+    expect(minus < plus, isTrue);
+  });
+
   group('Select', () {
     testWidgets('ticks lines and removes the ticked ones together', (
       tester,

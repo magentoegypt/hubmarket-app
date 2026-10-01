@@ -477,7 +477,11 @@ class CheckoutFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = math.max(30.0, MediaQuery.paddingOf(context).bottom);
+    // With the keyboard up there is no home indicator to clear: the footer
+    // gives the room back to the form.
+    final bottom = MediaQuery.viewInsetsOf(context).bottom > 0
+        ? 12.0
+        : math.max(30.0, MediaQuery.paddingOf(context).bottom);
     // A Container, so the hairline on top adds its own pixel to the height.
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
