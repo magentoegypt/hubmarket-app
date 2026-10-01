@@ -134,11 +134,19 @@ class _ProfileHeader extends ConsumerWidget implements PreferredSizeWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.caption.copyWith(color: AppColors.inkMuted),
+                        // The pill and the avatar leave a phone 360 dp wide about
+                        // 140 dp: the Arabic "7 orders · 5 wishlist items" needs
+                        // 157, so it shrinks a little rather than ending in "…".
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            subtitle,
+                            maxLines: 1,
+                            style: t.caption.copyWith(
+                              color: AppColors.inkMuted,
+                            ),
+                          ),
                         ),
                       ],
                     ),

@@ -153,21 +153,28 @@ class SoldByRow extends StatelessWidget {
                 style: t.caption.copyWith(color: AppColors.inkMuted),
               ),
               const SizedBox(width: 8),
-              // The name gives way (ellipsis) to a long name or a large text
-              // size; "Visit store ›" keeps its place at the end.
-              Flexible(
-                child: Text(
-                  seller.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: t.bodyStrong.copyWith(color: AppColors.info),
+              // The name and its ✓ take every dp that "Sold by" and "Visit store
+              // ›" leave; the name gives way (ellipsis) to a long name or a large
+              // text size. A Flexible name beside a Spacer would split the room
+              // in half and cut "loly store" to "loly st…" on a 360 dp phone.
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        seller.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.bodyStrong.copyWith(color: AppColors.info),
+                      ),
+                    ),
+                    if (!seller.isMarketplace) ...[
+                      const SizedBox(width: 8),
+                      const SellerVerifiedIcon(),
+                    ],
+                  ],
                 ),
               ),
-              if (!seller.isMarketplace) ...[
-                const SizedBox(width: 8),
-                const SellerVerifiedIcon(),
-              ],
-              const Spacer(),
               if (canVisit) ...[
                 const SizedBox(width: 8),
                 Text(
