@@ -57,6 +57,15 @@ abstract final class Phone {
         : e164.replaceAll('+', '');
   }
 
+  /// A UAE mobile spaced the way people write it, `+971 50 123 4567`, whatever
+  /// form it was saved in; any other number as it is.
+  static String display(String raw) {
+    final m = RegExp(
+      r'^\+971(\d{2})(\d{3})(\d{4})$',
+    ).firstMatch(normalizeUae(raw));
+    return m == null ? raw.trim() : '+971 ${m[1]} ${m[2]} ${m[3]}';
+  }
+
   /// Masks a number for the "Code sent to …" caption, e.g.
   /// `+971501234567` → `+971 50 ••• 4567`. Falls back to the normalized form
   /// when the shape is unexpected (non-UAE numbers stay readable).

@@ -18,6 +18,7 @@ import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../data/account_repository.dart';
 import '../../domain/customer_address.dart';
+import '../emirate_names.dart';
 
 /// Saved addresses (Figma 24): the customer's address book as radio cards —
 /// the default one chosen, navy-ringed and badged — with edit and delete on
@@ -97,14 +98,6 @@ class AddressesScreen extends ConsumerWidget {
   }
 }
 
-/// "+971 50 123 4567" for a UAE mobile, whatever form it was saved in; any
-/// other number as it is.
-String _displayPhone(String raw) {
-  final e164 = Phone.normalizeUae(raw);
-  final m = RegExp(r'^\+971(\d{2})(\d{3})(\d{4})$').firstMatch(e164);
-  return m == null ? raw.trim() : '+971 ${m[1]} ${m[2]} ${m[3]}';
-}
-
 /// One address as the cards show it: "Apt 1204, Marina Gate 2, Dubai Marina,
 /// Dubai, UAE". The area is Magento's `city`, left out when it only repeats the
 /// emirate (the app fills `city` from the emirate); the country is always shown
@@ -112,10 +105,11 @@ String _displayPhone(String raw) {
 String _addressLine(AppLocalizations l10n, CustomerAddress a) {
   final region = a.region.trim();
   final city = a.city.trim();
-  final emirate = region.isNotEmpty ? region : city;
-  final area = city.isNotEmpty && city.toLowerCase() != emirate.toLowerCase()
+  final emirateName = region.isNotEmpty ? region : city;
+  final area = city.isNotEmpty && city.toLowerCase() != emirateName.toLowerCase()
       ? city
       : '';
+  final emirate = emirateLabel(l10n, emirateName);
   final country = a.countryCode.toUpperCase() == 'AE'
       ? l10n.countryUaeShort
       : a.countryCode;
@@ -153,14 +147,14 @@ class _AddressCard extends StatelessWidget {
     final who = [
       address.fullName,
       // The number reads left to right inside Arabic text.
-      if (phone.isNotEmpty) '\u2066${_displayPhone(phone)}\u2069',
+      if (phone.isNotEmpty) '\u2066${Phone.display(phone)}\u2069',
     ].where((part) => part.isNotEmpty).join(' · ');
     final title = (address.labelText ?? '').trim().isNotEmpty
         ? address.labelText!.trim()
         : address.region.trim().isNotEmpty
-        ? address.region.trim()
+        ? emirateLabel(l10n, address.region)
         : address.city.trim().isNotEmpty
-        ? address.city.trim()
+        ? emirateLabel(l10n, address.city)
         : address.fullName;
     // The icons carry 5 px of tap area beside them; the card gives it back so
     // they sit where the frame draws them.

@@ -27,6 +27,7 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.foregroundColor,
     this.bottom,
     this.horizontalPadding = 12,
+    this.divider = false,
   });
 
   final String? title;
@@ -50,6 +51,10 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
   /// A strip under the row (tabs, a search field, a divider).
   final PreferredSizeWidget? bottom;
   final double horizontalPadding;
+
+  /// A 1 px `--hm-subtle` rule along the bottom edge of the 56 px row, as the
+  /// frames with a white page under the bar draw it (the forms).
+  final bool divider;
 
   static const double rowHeight = 56;
 
@@ -103,20 +108,37 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               SizedBox(
                 height: rowHeight,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: Row(
-                    children: [
-                      if (lead != null) ...[lead, const SizedBox(width: 4)],
-                      Expanded(
-                        child: Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: titleColumn,
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                      ),
+                      child: Row(
+                        children: [
+                          if (lead != null) ...[lead, const SizedBox(width: 4)],
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: titleColumn,
+                            ),
+                          ),
+                          ...actions,
+                        ],
+                      ),
+                    ),
+                    if (divider)
+                      const Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: AppColors.borderSubtle,
                         ),
                       ),
-                      ...actions,
-                    ],
-                  ),
+                  ],
                 ),
               ),
               if (bottom != null) bottom!,

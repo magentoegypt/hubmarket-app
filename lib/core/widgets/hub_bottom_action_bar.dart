@@ -15,12 +15,19 @@ import 'grouped_list.dart';
 /// the thin indicator never reaches, so the system inset is only given way to
 /// when it is larger than that (a 3-button navigation bar).
 class HubBottomActionBar extends StatelessWidget {
-  const HubBottomActionBar({super.key, required this.child});
+  const HubBottomActionBar({
+    super.key,
+    required this.child,
+    this.bottomSpace = defaultBottomSpace,
+  });
 
   final Widget child;
 
-  /// What the frames keep under the button.
-  static const double bottomSpace = 30;
+  /// What the frame keeps under the button: 30 px on most, 28 on the address
+  /// form.
+  final double bottomSpace;
+
+  static const double defaultBottomSpace = 30;
 
   @override
   Widget build(BuildContext context) {
