@@ -340,16 +340,21 @@ class RuledTopBar extends StatelessWidget implements PreferredSizeWidget {
 
 /// The footer of Figma 15 and 15b: a white bar with a 1 px `border/subtle` rule on
 /// top, 12 px above its [child] and, below, the home-indicator zone — the device's
-/// own bottom inset less 4 (the frame leaves 30 under the button). The offline
-/// banner docks above it.
+/// own bottom inset less [indicatorGap] (the Reviews frame leaves 30 under the
+/// button in its 34 px zone, the form's 28: 4 and 6). The offline banner docks
+/// above it.
 class ScreenFooter extends StatelessWidget {
-  const ScreenFooter({super.key, required this.child});
+  const ScreenFooter({super.key, required this.child, this.indicatorGap = 4});
 
   final Widget child;
+  final double indicatorGap;
 
   @override
   Widget build(BuildContext context) {
-    final bottom = math.max(MediaQuery.paddingOf(context).bottom - 4, 12.0);
+    final bottom = math.max(
+      MediaQuery.paddingOf(context).bottom - indicatorGap,
+      12.0,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

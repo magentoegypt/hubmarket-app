@@ -131,7 +131,10 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (widget.subject != null) ...[
-                        _SubjectCard(subject: widget.subject!),
+                        _SubjectCard(
+                          key: const ValueKey('review-subject'),
+                          subject: widget.subject!,
+                        ),
                         const SizedBox(height: 18),
                       ],
                       _RatingInput(
@@ -156,6 +159,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
                       ),
                       const SizedBox(height: 18),
                       _ReviewTextArea(
+                        key: const ValueKey('review-text'),
                         controller: _text,
                         label: l10n.reviewText,
                         validator: (v) => Validators.required(context, v),
@@ -167,6 +171,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
             ),
             // Pinned under the form, and lifted above the keyboard with it.
             ScreenFooter(
+              indicatorGap: 6,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,7 +204,7 @@ class _WriteReviewScreenState extends ConsumerState<WriteReviewScreen> {
 /// Beige floral" is what the customer bought; the page that opened the form
 /// only knows what it was showing.)
 class _SubjectCard extends StatelessWidget {
-  const _SubjectCard({required this.subject});
+  const _SubjectCard({super.key, required this.subject});
 
   final ReviewSubject subject;
 
@@ -314,10 +319,16 @@ class _RatingInput extends StatelessWidget {
 }
 
 /// Figma 15b "textarea": the label in Caption Strong, 6 px above a white box with a
-/// 1 px `border/strong` outline, radius 12, 14 × 12 padding and at least 96 px
-/// high — the field of the review text, which grows with what is typed.
-class _ReviewTextArea extends StatelessWidget {
+/// 1 px `border/strong` outline, radius 12, the text 14 px in from the edge and
+/// 12 px below the top, at least 96 px high — the field of the review text, which
+/// grows with what is typed. Drawn here rather than by Material's decorator,
+/// which cannot hold a minimum height under its outline, and which adds 4 px
+/// beside the text of an outlined field. Focus and an error recolour the outline
+/// (1.5 px, as [AuthField] does) without moving the text; the error reads as
+/// [AuthField]'s does, under the box.
+class _ReviewTextArea extends StatefulWidget {
   const _ReviewTextArea({
+    super.key,
     required this.controller,
     required this.label,
     this.validator,
@@ -325,53 +336,108 @@ class _ReviewTextArea extends StatelessWidget {
 
   final TextEditingController controller;
   final String label;
-  final String? Function(String? value)? validator;
+  final String? Function(String value)? validator;
 
-  static OutlineInputBorder _outline(Color color, double width) =>
-      OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: color, width: width),
-      );
+  @override
+  State<_ReviewTextArea> createState() => _ReviewTextAreaState();
+}
+
+class _ReviewTextAreaState extends State<_ReviewTextArea> {
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  void _onFocus() => setState(() {});
+
+  @override
+  void dispose() {
+    _focus
+      ..removeListener(_onFocus)
+      ..dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppTextStyles.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          label,
-          style: t.captionStrong.copyWith(color: AppColors.inkHeading),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          validator: validator,
-          minLines: 3,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          textCapitalization: TextCapitalization.sentences,
-          textAlignVertical: TextAlignVertical.top,
-          style: t.body.copyWith(color: AppColors.inkHeading),
-          cursorColor: AppColors.brandPrimary,
-          decoration: InputDecoration(
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
+    return FormField<String>(
+      initialValue: widget.controller.text,
+      validator: widget.validator == null
+          ? null
+          : (_) => widget.validator!(widget.controller.text),
+      builder: (field) {
+        final error = field.errorText;
+        final red = error != null;
+        final lit = red || _focus.hasFocus;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.label,
+              style: t.captionStrong.copyWith(color: AppColors.inkHeading),
             ),
-            constraints: const BoxConstraints(minHeight: 96),
-            errorStyle: t.caption.copyWith(color: AppColors.danger),
-            border: _outline(AppColors.borderStrong, 1),
-            enabledBorder: _outline(AppColors.borderStrong, 1),
-            focusedBorder: _outline(AppColors.brandPrimary, 1.5),
-            errorBorder: _outline(AppColors.danger, 1.5),
-            focusedErrorBorder: _outline(AppColors.danger, 1.5),
-          ),
-        ),
-      ],
+            const SizedBox(height: 6),
+            // A tap anywhere in the box, also under the text, starts typing.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _focus.requestFocus,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 96),
+                // The outline's 1 px and the frame's 14 × 12 padding.
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 13,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundDecoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: red
+                        ? AppColors.danger
+                        : (lit ? AppColors.brandPrimary : AppColors.borderStrong),
+                    width: lit ? 1.5 : 1,
+                  ),
+                ),
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: _focus,
+                  minLines: 3,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: t.body.copyWith(color: AppColors.inkHeading),
+                  cursorColor: AppColors.brandPrimary,
+                  onChanged: field.didChange,
+                  // Bare: the box above is the field. (The theme's borders
+                  // would otherwise draw a second outline inside it.)
+                  decoration: const InputDecoration(
+                    isCollapsed: true,
+                    filled: false,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+            if (error != null && error.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              AuthHelperLine.error(error),
+            ],
+          ],
+        );
+      },
     );
   }
 }

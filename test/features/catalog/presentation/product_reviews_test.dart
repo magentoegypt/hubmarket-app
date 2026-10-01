@@ -102,6 +102,97 @@ void main() {
     });
   });
 
+  group('reviewerInitials', () {
+    test('two Latin initials, first and last, in capitals', () {
+      expect(reviewerInitials('Nour A.'), 'NA');
+      expect(reviewerInitials('  reem   khaled al marri '), 'RM');
+      expect(reviewerInitials('sara'), 'S');
+    });
+
+    test('an Arabic name is its first letter alone, as in the frame', () {
+      expect(reviewerInitials('نور أ.'), 'ن');
+      expect(reviewerInitials('ريم كمال'), 'ر');
+    });
+
+    test('a nickname with nothing in it is a question mark', () {
+      expect(reviewerInitials(''), '?');
+      expect(reviewerInitials('   '), '?');
+    });
+  });
+
+  group('ScreenFooter', () {
+    Widget host(Widget child, {double bottomInset = 0}) => ProviderScope(
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: MediaQuery(
+          data: MediaQueryData(padding: EdgeInsets.only(bottom: bottomInset)),
+          child: Scaffold(body: child),
+        ),
+      ),
+    );
+
+    testWidgets('the footer keeps the home-indicator zone less its gap', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ScreenFooter(child: SizedBox(height: 52, key: ValueKey('a'))),
+                ScreenFooter(
+                  indicatorGap: 6,
+                  child: SizedBox(height: 52, key: ValueKey('b')),
+                ),
+              ],
+            ),
+          ),
+          bottomInset: 34,
+        ),
+      );
+      Size sizeOf(String key) => tester.getSize(
+        find.ancestor(
+          of: find.byKey(ValueKey(key)),
+          matching: find.byType(Container),
+        ).first,
+      );
+      // 1 (rule) + 12 + 52 + (34 - gap): the Reviews frame's 95 and the form's
+      // 93 — before the form's note.
+      expect(sizeOf('a').height, 95);
+      expect(sizeOf('b').height, 93);
+    });
+
+    testWidgets('a short inset still leaves 12 px under the button', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: ScreenFooter(child: SizedBox(height: 52, key: ValueKey('a'))),
+          ),
+        ),
+      );
+      expect(
+        tester
+            .getSize(
+              find.ancestor(
+                of: find.byKey(const ValueKey('a')),
+                matching: find.byType(Container),
+              ).first,
+            )
+            .height,
+        1 + 12 + 52 + 12,
+      );
+    });
+  });
+
   group('ProductReviewsScreen', () {
     Future<void> pump(
       WidgetTester tester,
