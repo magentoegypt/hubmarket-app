@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/util/media.dart';
 import '../../../../core/widgets/network_image.dart';
@@ -13,6 +14,12 @@ import '../../domain/cms_document.dart';
 /// decides where they go (in-page anchor, an app screen, the browser).
 /// [blockKeys] attaches a key to top-level blocks by index so a screen can
 /// scroll to a heading.
+///
+/// [page] is the type of Figma 28's content page: the text in EN/Body, the
+/// paragraphs before the first heading in ink and the rest in `text/subtle`,
+/// headings in EN/Title with 6 px under them and 16 between sections. Without
+/// it the content keeps the compact look the Home, the store pages and the
+/// return form give it.
 class CmsHtmlView extends StatefulWidget {
   const CmsHtmlView({
     super.key,
@@ -21,6 +28,7 @@ class CmsHtmlView extends StatefulWidget {
     this.blockKeys = const <int, GlobalKey>{},
     this.mediaBase = '',
     this.compact = false,
+    this.page = false,
   });
 
   final List<CmsBlock> blocks;
@@ -32,6 +40,9 @@ class CmsHtmlView extends StatefulWidget {
 
   /// Tighter type and spacing, for FAQ answers inside an accordion.
   final bool compact;
+
+  /// The content page's type and rhythm (see the class doc).
+  final bool page;
 
   @override
   State<CmsHtmlView> createState() => _CmsHtmlViewState();
@@ -56,16 +67,26 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
 
   double get _bodySize => widget.compact ? 14 : 15;
 
-  TextStyle _body(BuildContext context) => TextStyle(
-    fontSize: _bodySize,
-    height: 1.5,
-    color: context.scaffoldMuted,
-  );
+  TextStyle _body(BuildContext context) => widget.page
+      ? AppTextStyles.of(context).body.copyWith(
+          color: context.isDarkMode
+              ? context.scaffoldMuted
+              : AppColors.inkSubtle,
+        )
+      : TextStyle(
+          fontSize: _bodySize,
+          height: 1.5,
+          color: context.scaffoldMuted,
+        );
+
+  /// The index of the first heading among the top-level blocks, or -1.
+  int _firstHeading = -1;
 
   @override
   Widget build(BuildContext context) {
     _disposeRecognizers();
     final blocks = widget.blocks;
+    _firstHeading = blocks.indexWhere((b) => b is CmsHeading);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -74,23 +95,36 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
             key: widget.blockKeys[i],
             child: Padding(
               padding: EdgeInsets.only(
-                top: blocks[i] is CmsHeading && i > 0 ? 8 : 0,
-                bottom: i == blocks.length - 1 ? 0 : _gapAfter(blocks[i]),
+                top: !widget.page && blocks[i] is CmsHeading && i > 0 ? 8 : 0,
+                bottom: i == blocks.length - 1 ? 0 : _gapAfter(blocks, i),
               ),
-              child: _block(context, blocks[i], depth: 0),
+              child: _block(context, blocks[i], depth: 0, index: i),
             ),
           ),
       ],
     );
   }
 
-  double _gapAfter(CmsBlock block) => switch (block) {
-    CmsHeading() => widget.compact ? 4 : 8,
-    CmsTable() => 16,
-    _ => widget.compact ? 8 : 12,
-  };
+  double _gapAfter(List<CmsBlock> blocks, int i) {
+    final block = blocks[i];
+    if (widget.page) {
+      // Figma 28: a heading sits 6 above its text, sections 16 apart.
+      if (block is CmsHeading) return 6;
+      return blocks[i + 1] is CmsHeading ? 16 : 12;
+    }
+    return switch (block) {
+      CmsHeading() => widget.compact ? 4 : 8,
+      CmsTable() => 16,
+      _ => widget.compact ? 8 : 12,
+    };
+  }
 
-  Widget _block(BuildContext context, CmsBlock block, {required int depth}) {
+  Widget _block(
+    BuildContext context,
+    CmsBlock block, {
+    required int depth,
+    int? index,
+  }) {
     switch (block) {
       case CmsHeading():
         return Semantics(
@@ -99,17 +133,33 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
             _span(
               context,
               block.inlines,
-              TextStyle(
-                fontSize: _headingSize(block.level),
-                height: 1.3,
-                fontWeight: FontWeight.w700,
-                color: context.scaffoldHeading,
-              ),
+              widget.page
+                  ? _pageHeading(context, block.level)
+                  : TextStyle(
+                      fontSize: _headingSize(block.level),
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                      color: context.scaffoldHeading,
+                    ),
             ),
           ),
         );
       case CmsParagraph():
-        return Text.rich(_span(context, block.inlines, _body(context)));
+        // The page's opening lines, before its first heading, are ink.
+        final lead =
+            widget.page &&
+            depth == 0 &&
+            index != null &&
+            (_firstHeading == -1 || index < _firstHeading);
+        return Text.rich(
+          _span(
+            context,
+            block.inlines,
+            lead
+                ? _body(context).copyWith(color: context.scaffoldHeading)
+                : _body(context),
+          ),
+        );
       case CmsList():
         return _list(context, block, depth: depth);
       case CmsImage():
@@ -129,6 +179,18 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
       case CmsRule():
         return Divider(height: 1, thickness: 1, color: context.hairline);
     }
+  }
+
+  /// EN/Heading 2 for a top heading, EN/Title for the sections (h2, h3),
+  /// EN/Body Strong below.
+  TextStyle _pageHeading(BuildContext context, int level) {
+    final t = AppTextStyles.of(context);
+    final base = switch (level) {
+      1 => t.heading2,
+      2 || 3 => t.title,
+      _ => t.bodyStrong,
+    };
+    return base.copyWith(color: context.scaffoldHeading);
   }
 
   double _headingSize(int level) {

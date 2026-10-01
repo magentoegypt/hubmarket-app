@@ -17,6 +17,8 @@ import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
 import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
+import 'package:hubmarket_app/features/cms/domain/cms_page.dart';
+import 'package:hubmarket_app/features/cms/presentation/cms_page_screen.dart';
 import 'package:hubmarket_app/features/notifications/data/notification_inbox.dart';
 import 'package:hubmarket_app/features/notifications/domain/notification_item.dart';
 import 'package:hubmarket_app/features/notifications/presentation/notification_settings_screen.dart';
@@ -47,6 +49,25 @@ Override _legalLinks(String locale) => cmsRepositoryProvider.overrideWithValue(
                 .replaceAll('>Cookies<', '>Cookie policy<'),
     },
   ),
+);
+
+/// The privacy policy of Figma 28, as the CMS would hold it (the Arabic
+/// frame's wording for `ar`).
+CmsPage _policy(bool ar) => CmsPage(
+  identifier: 'privacy-policy-cookie-restriction-mode',
+  title: ar ? 'سياسة الخصوصية' : 'Privacy policy',
+  urlKey: 'privacy-policy-cookie-restriction-mode',
+  content: ar
+      ? '<p>توضح هذه السياسة ما يجمعه هب ماركت عند تسوقك معنا، ولماذا، والخيارات المتاحة لك.</p>'
+            '<h2 id="a">ما نجمعه</h2><p>اسمك وبيانات التواصل وعناوين التوصيل؛ وطلباتك ومرتجعاتك وتقييماتك؛ ومعلومات الجهاز التي نستخدمها لحماية حسابك.</p>'
+            '<h2 id="b">كيف نستخدمه</h2><p>لتوصيل طلباتك، ومشاركة بيانات التوصيل التي يحتاجها كل متجر، وتحصيل الدفع عبر شركائنا (البطاقة، تابي، تمارا)، وإرسال العروض — فقط بموافقتك.</p>'
+            '<h2 id="c">خياراتك</h2><p>نزّل بياناتك أو احذف حسابك في أي وقت من حسابي ‹ الخصوصية والبيانات. ويمكنك إيقاف الرسائل التسويقية من الإشعارات.</p>'
+            '<h2 id="d">ملفات الارتباط</h2><p>يحفظ التطبيق قدرًا بسيطًا من البيانات على جهازك لإبقائك مسجّلًا وتذكّر سلتك.</p>'
+      : '<p>This policy explains what Hub Market collects when you shop with us, why, and the choices you have.</p>'
+            '<h2 id="a">What we collect</h2><p>Your name, contact details and delivery addresses; your orders, returns and reviews; and device information we use to keep your account secure.</p>'
+            '<h2 id="b">How we use it</h2><p>To deliver your orders, share the delivery details each store needs, take payment through our payment partners (card, Tabby, Tamara) and — only if you agree — send you offers.</p>'
+            '<h2 id="c">Your choices</h2><p>Download your data or delete your account at any time from Account › Privacy &amp; data. You can switch marketing messages off in Notifications.</p>'
+            '<h2 id="d">Cookies</h2><p>The app stores a small amount of data on your device to keep you signed in and remember your cart.</p>',
 );
 
 /// The three reviews of Figma 20f (the Arabic frame's wording for `ar`).
@@ -223,6 +244,26 @@ void main() {
         ],
       );
       await captureAudit(tester, boundary, '20f_my_reviews', locale);
+    });
+
+    testWidgets('28 Content page ($locale)', (tester) async {
+      final boundary = await pumpAuditScreen(
+        tester,
+        screen: const CmsPageScreen(
+          url: 'privacy-policy-cookie-restriction-mode',
+        ),
+        locale: locale,
+        overrides: [
+          cmsRepositoryProvider.overrideWithValue(
+            FakeCmsRepository(
+              pagesByUrl: {
+                'privacy-policy-cookie-restriction-mode': _policy(locale == 'ar'),
+              },
+            ),
+          ),
+        ],
+      );
+      await captureAudit(tester, boundary, '28_content_page', locale);
     });
 
     testWidgets('27 Help centre ($locale)', (tester) async {
