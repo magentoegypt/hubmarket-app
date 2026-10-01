@@ -22,7 +22,7 @@ enum HubButtonStyle {
 }
 
 /// Figma "Button": 52 px high, radius 12, 24 px of side padding, an optional
-/// 18 px icon before the EN/Button label (15 Bold; AR Tajawal Bold). Full width
+/// 20 px icon before the EN/Button label (15 Bold; AR Tajawal Bold). Full width
 /// unless [expand] is false. [loading] swaps the icon for a spinner and ignores
 /// taps; a null [onPressed] shows it disabled.
 ///
@@ -88,7 +88,7 @@ class HubButton extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2, color: ink),
           )
         else if (icon != null)
-          Icon(icon, size: 18),
+          Icon(icon, size: 20),
         if (loading || icon != null) const SizedBox(width: 8),
         Flexible(
           child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),

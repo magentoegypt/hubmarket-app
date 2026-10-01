@@ -99,7 +99,12 @@ class CartItemTile extends StatelessWidget {
                       Text(
                         item.originalUnitPrice!.formatted(),
                         textDirection: TextDirection.ltr,
-                        style: t.caption.copyWith(color: AppColors.inkMuted),
+                        // The storefront (and QA) want exactly one line through
+                        // the price before the discount.
+                        style: t.caption.copyWith(
+                          color: AppColors.inkMuted,
+                          decoration: TextDecoration.lineThrough,
+                        ),
                       ),
                     ],
                   ],

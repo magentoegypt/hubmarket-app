@@ -258,8 +258,8 @@ void main() {
         ),
       );
       final infoHeight = ProductCardMetrics.infoHeight(captured);
-      // Figma: 100 for the text block at 1x (+1 px of slack).
-      expect(infoHeight, closeTo(101, 0.01));
+      // Figma: 100 for the text block at 1x.
+      expect(infoHeight, closeTo(100, 0.01));
 
       final delegate = productGridDelegate(captured);
       final layout = delegate.getLayout(

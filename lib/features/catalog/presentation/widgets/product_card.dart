@@ -146,7 +146,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
                       // 44 px tap area.
                       PositionedDirectional(
                         top: 4,
-                        end: 2,
+                        // Figma: the disc is 4 px from the edge in EN, 8 in AR.
+                        end: Directionality.of(context) == TextDirection.rtl
+                            ? 4
+                            : 0,
                         child: WishlistHeart(sku: product.sku, compact: true),
                       ),
                     ],
@@ -231,8 +234,7 @@ abstract final class ProductCardMetrics {
         name +
         rating +
         math.max(buttonSize, price) +
-        3 * rowGap +
-        1; // sub-pixel slack
+        3 * rowGap;
   }
 
   /// The card's height at [width].
@@ -482,6 +484,8 @@ class _Badge extends StatelessWidget {
     ),
     child: Text(
       label,
+      // "-15%" must not turn into "15%-" inside a right-to-left paragraph.
+      textDirection: TextDirection.ltr,
       style: AppTextStyles.of(context).micro.copyWith(color: textColor),
     ),
   );

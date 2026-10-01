@@ -293,7 +293,7 @@ class BundlePriceRow extends StatelessWidget {
             deal.regularTotal!.formatted(),
             style: t.caption.copyWith(
               color: AppColors.inkMuted,
-              decoration: compactSaving ? null : TextDecoration.lineThrough,
+              decoration: TextDecoration.lineThrough,
             ),
           ),
         ],

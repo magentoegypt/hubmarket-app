@@ -33,44 +33,48 @@ class HubBottomNav extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          // Figma: 84 = 1 rule + 55 tabs + 28 home-indicator padding; the last
-          // part is the device's own bottom inset here.
-          height: 55,
-          child: Row(
-            children: [
-              _NavItem(
-                tab: AppTab.home,
-                current: current,
-                icon: HubIcons.house,
-                label: l10n.navHome,
-              ),
-              _NavItem(
-                tab: AppTab.categories,
-                current: current,
-                icon: HubIcons.layoutGrid,
-                label: l10n.navCategories,
-              ),
-              _NavItem(
-                tab: AppTab.cart,
-                current: current,
-                icon: HubIcons.shoppingCart,
-                label: l10n.navCart,
-                badge: cartCount,
-              ),
-              _NavItem(
-                tab: AppTab.wishlist,
-                current: current,
-                icon: HubIcons.heart,
-                label: l10n.navWishlist,
-              ),
-              _NavItem(
-                tab: AppTab.account,
-                current: current,
-                icon: HubIcons.user,
-                label: l10n.navAccount,
-              ),
-            ],
+        // Figma: 84 = 1 rule + 55 tabs + 28 home-indicator padding; the last
+        // part is the device's own bottom inset here. The tabs grow with the
+        // user's text size instead of overflowing.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 55),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _NavItem(
+                  tab: AppTab.home,
+                  current: current,
+                  icon: HubIcons.house,
+                  label: l10n.navHome,
+                ),
+                _NavItem(
+                  tab: AppTab.categories,
+                  current: current,
+                  icon: HubIcons.layoutGrid,
+                  label: l10n.navCategories,
+                ),
+                _NavItem(
+                  tab: AppTab.cart,
+                  current: current,
+                  icon: HubIcons.shoppingCart,
+                  label: l10n.navCart,
+                  badge: cartCount,
+                ),
+                _NavItem(
+                  tab: AppTab.wishlist,
+                  current: current,
+                  icon: HubIcons.heart,
+                  label: l10n.navWishlist,
+                ),
+                _NavItem(
+                  tab: AppTab.account,
+                  current: current,
+                  icon: HubIcons.user,
+                  label: l10n.navAccount,
+                ),
+              ],
+            ),
           ),
         ),
       ),
