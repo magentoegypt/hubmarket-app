@@ -111,7 +111,8 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
             hintText: hint,
             hintStyle: t.body.copyWith(color: AppColors.inkMuted),
             prefixIcon: const Padding(
-              padding: EdgeInsetsDirectional.only(start: 16, end: 10),
+              // 10 before the text, less the 4 px Material 3 puts after an icon.
+              padding: EdgeInsetsDirectional.only(start: 16, end: 6),
               child: Icon(
                 HubIcons.search,
                 size: 20,

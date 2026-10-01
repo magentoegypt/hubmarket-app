@@ -309,7 +309,8 @@ class StoreSearchField extends StatelessWidget {
         focusedBorder: none,
         contentPadding: EdgeInsetsDirectional.fromSTEB(0, pad, 14, pad),
         prefixIcon: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
+          // 10 before the text, less the 4 px Material 3 puts after an icon.
+          padding: const EdgeInsetsDirectional.only(start: 14, end: 6),
           child: Icon(HubIcons.search, size: 18, color: muted),
         ),
         prefixIconConstraints: const BoxConstraints(),
