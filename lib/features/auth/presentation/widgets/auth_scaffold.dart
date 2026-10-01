@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../app/theme/hub_icons.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 
 /// The layout every auth screen shares (Figma 03 – 06, S6): a 56-px app bar
 /// with the back arrow (and, on Register, the title beside it), then a white
@@ -74,8 +72,10 @@ class AuthScaffold extends StatelessWidget {
   ];
 }
 
-/// The auth app bar: a round 40-px back arrow at the start edge (it mirrors in
-/// Arabic) and an optional Heading 2 title next to it.
+/// The auth app bar: the shared Figma "App bar" ([HubTopBar]) — a 40 px back
+/// arrow at the start edge (it mirrors in Arabic) and an optional Heading 2
+/// title next to it. The arrow always shows: these screens are entered from a
+/// button, and a pop that has nowhere to go is a no-op.
 class AuthAppBar extends StatelessWidget implements PreferredSizeWidget {
   const AuthAppBar({super.key, this.title, this.onBack});
 
@@ -83,47 +83,9 @@ class AuthAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBack;
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(HubTopBar.rowHeight);
 
   @override
-  Widget build(BuildContext context) {
-    final t = AppTextStyles.of(context);
-    return Material(
-      color: Colors.white,
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: 56,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                SizedBox.square(
-                  dimension: 40,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    // `arrow_back` mirrors itself in RTL (matchTextDirection).
-                    icon: const Icon(HubIcons.arrowLeft, size: 22),
-                    color: AppColors.inkHeading,
-                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                    onPressed: onBack ?? () => Navigator.maybePop(context),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                if (title != null)
-                  Expanded(
-                    child: Text(
-                      title!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: t.heading2.copyWith(color: AppColors.inkHeading),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      HubTopBar(title: title, onBack: onBack, showBack: true);
 }

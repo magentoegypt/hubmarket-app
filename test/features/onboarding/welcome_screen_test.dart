@@ -189,6 +189,32 @@ void main() {
     expect(find.text('Continue as guest'), findsOneWidget);
   });
 
+  for (final (name, size, top, scale) in [
+    ('a small Android phone', const Size(360, 640), 24.0, 1.0),
+    ('an iPhone SE', const Size(375, 667), 20.0, 1.0),
+    ('the smallest supported phone', const Size(320, 568), 20.0, 1.0),
+    ('a phone at 130 % text', const Size(390, 844), 47.0, 1.3),
+  ]) {
+    testWidgets('fits $name without overflow, and the buttons stay in view', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = FakeViewPadding(top: top, bottom: 0);
+      tester.view.viewPadding = FakeViewPadding(top: top, bottom: 0);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(_harness(slides: const []));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final guest = tester.getRect(find.text('Continue as guest'));
+      expect(guest.bottom, lessThanOrEqualTo(size.height));
+      expect(guest.top, greaterThan(0));
+    });
+  }
+
   testWidgets('Create account, Sign in and Continue as guest go where they '
       'say', (tester) async {
     await _phone(tester);
