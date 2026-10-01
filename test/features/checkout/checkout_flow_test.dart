@@ -70,6 +70,55 @@ void main() {
     expect(repo.selectedShippingMethod, 'flatrate|flatrate');
   });
 
+  testWidgets('an empty address form says what is missing and sends nothing', (
+    tester,
+  ) async {
+    final repo = checkoutRepository();
+    await mount(tester, repo);
+
+    await tapText(tester, 'Continue to shipping method');
+    // Email, name, mobile, emirate and street are required.
+    expect(find.text('Required'), findsNWidgets(5));
+    expect(repo.calls, isNot(contains('setShippingAddress')));
+    // Still on the form.
+    expect(find.text('Ship to'), findsNothing);
+  });
+
+  testWidgets('the typed area is the city of the address; without one the '
+      'emirate stands in', (tester) async {
+    final repo = checkoutRepository();
+    await mount(tester, repo);
+    await throughAddress(tester);
+    expect(repo.lastAddress?['address'], isNotNull);
+    expect((repo.lastAddress!['address'] as Map)['city'], 'Dubai Marina');
+
+    // Blank the area: Magento's required city falls back to the emirate.
+    final fresh = checkoutRepository();
+    await mount(tester, fresh);
+    await fillGuestAddress(tester);
+    await tester.enterText(find.byType(TextField).at(3), '');
+    await tapText(tester, 'Continue to shipping method');
+    expect((fresh.lastAddress!['address'] as Map)['city'], 'Dubai');
+  });
+
+  testWidgets(
+    'the saved address of a signed-in customer reads like the frame',
+    (tester) async {
+      await mount(tester, checkoutRepository(), signedIn: true);
+      // Ship to opens on the default address, in the frame's order…
+      expect(
+        find.text('Apt 1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+        findsOneWidget,
+      );
+      // …and so does the picker behind Change.
+      await tapText(tester, 'Change');
+      expect(
+        find.text('Apt 1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('a guest whose email has an account is offered sign-in', (
     tester,
   ) async {

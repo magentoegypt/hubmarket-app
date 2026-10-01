@@ -124,10 +124,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   bool get _isGuest => !ref.read(authControllerProvider).isAuthenticated;
 
-  /// The locale's comma, for the address on one line.
-  String get _comma =>
-      Localizations.localeOf(context).languageCode == 'ar' ? '، ' : ', ';
-
   /// Leaving the email field asks the store whether the address already has an
   /// account (17a's sign-in prompt).
   void _onEmailFocusChange(bool hasFocus) {
@@ -179,20 +175,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       area: _address.area.text,
       emirate: emirate,
       country: l10n.checkoutAddressCountry,
-      separator: _comma,
+      separator: addressSeparator(context),
     );
   }
-
-  /// A saved address on one line, in the same order.
-  String _savedAddressLine(CustomerAddress a, AppLocalizations l10n) =>
-      shipToAddressLine(
-        apartment: a.apartment,
-        street: a.street,
-        area: a.city,
-        emirate: a.region.isNotEmpty ? a.region : a.city,
-        country: l10n.checkoutAddressCountry,
-        separator: _comma,
-      );
 
   /// The new-address form: the shared fields plus, when the store requires
   /// one for the UAE, a postcode.
@@ -249,7 +234,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     shipTo: ShipTo(
       name: a.fullName,
       telephone: a.telephone,
-      address: _savedAddressLine(a, AppLocalizations.of(context)),
+      address: savedAddressLine(context, a),
       label: a.labelText,
     ),
   );

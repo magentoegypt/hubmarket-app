@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../account/domain/customer_address.dart';
 import '../../../cart/domain/cart.dart';
 import '../../../catalog/domain/money.dart';
 import '../../domain/checkout.dart';
@@ -80,6 +81,23 @@ class CheckoutText {
   TextStyle get linkSmall =>
       _t.captionStrong.copyWith(color: AppColors.accentStrong);
 }
+
+/// The comma that joins an address on one line: ", ", or the Arabic "، ".
+String addressSeparator(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'ar' ? '، ' : ', ';
+
+/// A saved address on one line, in the order the frames print it (see
+/// [shipToAddressLine]) and with the country: "Apt 1204, Marina Gate 2, Dubai
+/// Marina, Dubai, UAE".
+String savedAddressLine(BuildContext context, CustomerAddress a) =>
+    shipToAddressLine(
+      apartment: a.apartment,
+      street: a.street,
+      area: a.city,
+      emirate: a.region.isNotEmpty ? a.region : a.city,
+      country: AppLocalizations.of(context).checkoutAddressCountry,
+      separator: addressSeparator(context),
+    );
 
 /// A phone number for display: `+971501234567` → `+971 50 123 4567`, in a
 /// left-to-right isolate so it keeps its order inside an Arabic line.

@@ -259,7 +259,7 @@ class _AddressSummary extends StatelessWidget {
           Text(displayPhone(address.telephone), style: t.caption),
         ],
         const SizedBox(height: 2),
-        Text(address.summary, style: t.caption),
+        Text(savedAddressLine(context, address), style: t.caption),
       ],
     );
   }

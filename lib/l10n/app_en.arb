@@ -675,6 +675,8 @@
     }
   },
   "cartRemove": "Remove",
+  "cartQuantityIncrease": "Increase quantity",
+  "cartQuantityDecrease": "Decrease quantity",
   "cartItemCount": "{count, plural, =0{No items} =1{1 item} other{{count} items}}",
   "@cartItemCount": {
     "placeholders": {

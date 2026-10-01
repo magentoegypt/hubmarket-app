@@ -82,10 +82,7 @@ void main() {
         ),
         isNull,
       );
-      expect(
-        paymentRefusalReason(const Failure(FailureKind.network)),
-        isNull,
-      );
+      expect(paymentRefusalReason(const Failure(FailureKind.network)), isNull);
       expect(
         paymentRefusalReason(
           const Failure(FailureKind.unknown, detail: 'card declined'),
@@ -101,34 +98,37 @@ void main() {
     });
   });
 
-  Widget sheetApp(String locale, GlobalKey key, void Function(BuildContext) go) =>
-      RepaintBoundary(
-        key: key,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(locale),
-          locale: Locale(locale),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          // Figma S5: the page under the scrim is a blank white one.
-          home: Builder(
-            builder: (context) => Scaffold(
-              backgroundColor: Colors.white,
-              body: Center(
-                child: TextButton(
-                  onPressed: () => go(context),
-                  child: const Text('open'),
-                ),
-              ),
+  Widget sheetApp(
+    String locale,
+    GlobalKey key,
+    void Function(BuildContext) go,
+  ) => RepaintBoundary(
+    key: key,
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(locale),
+      locale: Locale(locale),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      // Figma S5: the page under the scrim is a blank white one.
+      home: Builder(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: TextButton(
+              onPressed: () => go(context),
+              child: const Text('open'),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Future<void> open(
     WidgetTester tester,
@@ -257,10 +257,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(
-        find.text('Reason: ${_declined.detail}'),
-        findsOneWidget,
-      );
+      expect(find.text('Reason: ${_declined.detail}'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
       // Cash on delivery is the method that failed and the only one: nothing
       // to switch to, only the way back.
@@ -321,7 +318,10 @@ void main() {
       await tapText(tester, 'Place order · AED 553');
 
       expect(find.text('Payment declined'), findsNothing);
-      expect(find.text('Some of the products are out of stock.'), findsOneWidget);
+      expect(
+        find.text('Some of the products are out of stock.'),
+        findsOneWidget,
+      );
       expect(find.byType(SnackBar), findsOneWidget);
     });
   });

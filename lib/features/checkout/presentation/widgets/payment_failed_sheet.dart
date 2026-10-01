@@ -83,9 +83,8 @@ class PaymentFailedSheet extends StatelessWidget {
     final bottom = math.max(34.0, MediaQuery.paddingOf(context).bottom);
     final reasonText = reason?.trim() ?? '';
     void pop(PaymentFailedAction action) => Navigator.of(context).pop(action);
-    return SafeArea(
-      top: false,
-      bottom: false,
+    // Scrolls rather than overflows on a short window or a large text size.
+    return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.fromLTRB(24, 12, 24, bottom),
         child: Column(

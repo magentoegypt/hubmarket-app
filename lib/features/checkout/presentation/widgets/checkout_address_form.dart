@@ -132,45 +132,63 @@ class _EmirateField extends StatelessWidget {
     final t = AppTextStyles.of(context);
     final label = l10n.checkoutFieldEmirate;
     return regions.when(
-      data: (list) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            label,
-            style: t.captionStrong.copyWith(color: AppColors.inkHeading),
-          ),
-          const SizedBox(height: 6),
-          ValueListenableBuilder<int?>(
-            valueListenable: controller.regionId,
-            builder: (context, value, _) => DropdownButtonFormField<int>(
-              initialValue: value,
-              isExpanded: true,
-              // Not dense: the button keeps the 48 px a menu item has, which
-              // with the decoration's 2 px above and below makes the 52 px
-              // field of the design.
-              isDense: false,
-              icon: const Icon(
-                HubIcons.chevronDown,
-                size: 20,
-                color: AppColors.inkMuted,
-              ),
-              style: t.body.copyWith(color: AppColors.inkHeading),
-              dropdownColor: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              decoration: _fieldDecoration(context, icon: HubIcons.mapPin),
-              hint: Text(
-                label,
-                style: t.body.copyWith(color: AppColors.inkFaint),
-              ),
-              items: [
-                for (final r in list)
-                  DropdownMenuItem<int>(value: r.id, child: Text(r.name)),
-              ],
-              onChanged: (v) => controller.regionId.value = v,
-              validator: (v) => v == null ? l10n.validationRequired : null,
+      data: (list) => FormField<int>(
+        initialValue: controller.regionId.value,
+        // The picker is drawn by the dropdown below; this field owns the form's
+        // check and the message, so a missing emirate reads like the other
+        // fields' errors (an alert and a red outline).
+        validator: (_) =>
+            controller.regionId.value == null ? l10n.validationRequired : null,
+        builder: (state) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              label,
+              style: t.captionStrong.copyWith(color: AppColors.inkHeading),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            ValueListenableBuilder<int?>(
+              valueListenable: controller.regionId,
+              builder: (context, value, _) => DropdownButtonFormField<int>(
+                initialValue: value,
+                isExpanded: true,
+                // Not dense: the button keeps the 48 px a menu item has, which
+                // with the decoration's 2 px above and below makes the 52 px
+                // field of the design.
+                isDense: false,
+                icon: const Icon(
+                  HubIcons.chevronDown,
+                  size: 20,
+                  color: AppColors.inkMuted,
+                ),
+                style: t.body.copyWith(color: AppColors.inkHeading),
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                decoration: _fieldDecoration(
+                  context,
+                  icon: HubIcons.mapPin,
+                  error: state.hasError,
+                ),
+                hint: Text(
+                  label,
+                  style: t.body.copyWith(color: AppColors.inkFaint),
+                ),
+                items: [
+                  for (final r in list)
+                    DropdownMenuItem<int>(value: r.id, child: Text(r.name)),
+                ],
+                onChanged: (v) {
+                  controller.regionId.value = v;
+                  state.didChange(v);
+                },
+              ),
+            ),
+            if (state.hasError) ...[
+              const SizedBox(height: 6),
+              AuthHelperLine.error(state.errorText!),
+            ],
+          ],
+        ),
       ),
       loading: () => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -208,8 +226,11 @@ class _EmirateField extends StatelessWidget {
   /// Mirrors `AuthField`'s box: white, 12 px radius, a `border/strong` hairline
   /// that turns navy (1.5 px) when focused. Vertical padding of 2 around the
   /// dropdown's 48 px content makes the 52 px of the design.
-  InputDecoration _fieldDecoration(BuildContext context, {IconData? icon}) {
-    final t = AppTextStyles.of(context);
+  InputDecoration _fieldDecoration(
+    BuildContext context, {
+    IconData? icon,
+    bool error = false,
+  }) {
     OutlineInputBorder outline(Color color, double width) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: color, width: width),
@@ -231,13 +252,14 @@ class _EmirateField extends StatelessWidget {
               child: Icon(icon, size: 20, color: AppColors.inkMuted),
             ),
       prefixIconConstraints: const BoxConstraints(),
-      errorStyle: t.caption.copyWith(color: AppColors.danger),
-      border: outline(AppColors.borderStrong, 1),
-      enabledBorder: outline(AppColors.borderStrong, 1),
+      border: outline(error ? AppColors.danger : AppColors.borderStrong, 1),
+      enabledBorder: error
+          ? outline(AppColors.danger, 1.5)
+          : outline(AppColors.borderStrong, 1),
       disabledBorder: outline(AppColors.borderStrong, 1),
-      focusedBorder: outline(AppColors.brandPrimary, 1.5),
-      errorBorder: outline(AppColors.danger, 1.5),
-      focusedErrorBorder: outline(AppColors.danger, 1.5),
+      focusedBorder: error
+          ? outline(AppColors.danger, 1.5)
+          : outline(AppColors.brandPrimary, 1.5),
     );
   }
 }

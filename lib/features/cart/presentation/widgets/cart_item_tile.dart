@@ -178,6 +178,7 @@ class CartQuantityStepper extends StatelessWidget {
           children: [
             _Disc(
               icon: HubIcons.minus,
+              label: AppLocalizations.of(context).cartQuantityDecrease,
               fill: AppColors.surfaceSubtle,
               ink: AppColors.inkHeading,
               onTap: onChanged == null ? null : () => onChanged!(quantity - 1),
@@ -190,6 +191,7 @@ class CartQuantityStepper extends StatelessWidget {
             const SizedBox(width: 6),
             _Disc(
               icon: HubIcons.plus,
+              label: AppLocalizations.of(context).cartQuantityIncrease,
               fill: AppColors.brandPrimary,
               ink: Colors.white,
               onTap: onChanged == null ? null : () => onChanged!(quantity + 1),
@@ -204,27 +206,36 @@ class CartQuantityStepper extends StatelessWidget {
 class _Disc extends StatelessWidget {
   const _Disc({
     required this.icon,
+    required this.label,
     required this.fill,
     required this.ink,
     required this.onTap,
   });
 
   final IconData icon;
+
+  /// What a screen reader says for the button.
+  final String label;
   final Color fill;
   final Color ink;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: fill,
-    shape: const CircleBorder(),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        width: 26,
-        height: 26,
-        child: Icon(icon, size: 16, color: ink),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    excludeSemantics: true,
+    child: Material(
+      color: fill,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 26,
+          height: 26,
+          child: Icon(icon, size: 16, color: ink),
+        ),
       ),
     ),
   );
