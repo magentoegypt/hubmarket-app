@@ -27,6 +27,9 @@ abstract final class AppColors {
   /// Accent on navy (`--hm-accent-on-dark`) — actions on the offline banner.
   static const Color accentOnDark = Color(0xFFFB923C);
 
+  /// Muted text on navy (`--hm-on-inverse-muted`) — the splash tagline.
+  static const Color onInverseMuted = Color(0xFFCBD3E2);
+
   /// Light navy tint — section backgrounds, icon chips, empty-state circles.
   static const Color surfaceTint = Color(0xFFEEF2F8);
 
