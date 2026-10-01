@@ -6,6 +6,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/store_features.dart';
+import '../../../../core/widgets/grouped_list.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/hub_bottom_sheet.dart';
 import '../../../../core/widgets/hub_button.dart';
@@ -22,10 +23,14 @@ class OrderCancelSection extends ConsumerWidget {
     super.key,
     required this.order,
     required this.onCancelled,
+    this.bordered = false,
   });
 
   final CustomerOrder order;
   final ValueChanged<CustomerOrder> onCancelled;
+
+  /// A hairline round the card, for a page whose ground is white too.
+  final bool bordered;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,13 +41,21 @@ class OrderCancelSection extends ConsumerWidget {
     if (!offersOrderCancel(features, order)) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final t = AppTextStyles.of(context);
+    // An order split by store names its packages: "until the first package
+    // ships. Cancelling removes both packages."
+    final hint = order.packages.length >= 2
+        ? l10n.orderCancelHintPackages(order.packages.length)
+        : l10n.orderCancelHint;
+    final ink = context.isDarkMode
+        ? context.scaffoldMuted
+        : AppColors.inkSubtle;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: context.isDarkMode ? Colors.white10 : Colors.white,
+        color: groupCardColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.hairline),
+        border: bordered ? Border.all(color: context.hairline) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -50,17 +63,14 @@ class OrderCancelSection extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(HubIcons.info, size: 18, color: context.scaffoldMuted),
+              Icon(HubIcons.info, size: 18, color: ink),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  l10n.orderCancelHint,
-                  style: t.caption.copyWith(color: context.scaffoldMuted),
-                ),
+                child: Text(hint, style: t.caption.copyWith(color: ink)),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           DangerButton(
             label: l10n.orderCancelAction,
             onPressed: () => startOrderCancel(

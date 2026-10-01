@@ -14,11 +14,16 @@ class OrderLine {
     this.urlKey,
     this.seller,
     this.uid,
+    this.options = const <String>[],
   });
 
   final String name;
   final double quantity;
   final Money? price;
+
+  /// The options the customer chose (`selected_options`), each as the cart
+  /// writes them — "Colour: Teal" — in the order the product lists them.
+  final List<String> options;
 
   /// Product thumbnail (order item's linked product), null when unavailable.
   final String? imageUrl;

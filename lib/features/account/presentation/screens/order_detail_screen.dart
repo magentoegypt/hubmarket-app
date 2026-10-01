@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
+import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/store_timezone.dart';
-import '../../../../core/widgets/network_image.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/domain/money.dart';
 import '../../../returns/presentation/widgets/return_items_button.dart';
@@ -14,12 +22,17 @@ import '../order_actions.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
 import '../widgets/order_packages.dart';
-import '../../../../app/theme/hub_icons.dart';
+import '../widgets/order_status_pill.dart';
 
 /// Full detail for a single placed order, navigated to with the [CustomerOrder]
 /// via go_router `extra` (the list already holds every field, so no extra
-/// query). Shows items, totals, shipping method and shipment tracking, and
-/// "Cancel order" when the store and the order allow it (Figma 22 / 21b).
+/// query): when it was placed, one card per store with its own timeline, items
+/// and actions, where it goes, what it cost and how it was paid, and "Cancel
+/// order" when the store and the order allow it (Figma 22 / 21b).
+///
+/// Not drawn, because the backend has nothing behind them: the invoice and
+/// shipment documents of the frame's "Documents" card (and "Download invoice"
+/// beside the date), "Print order", and the delivery estimate of each package.
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
 
@@ -37,6 +50,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Widget build(BuildContext context) {
     final order = _order;
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final locale = Localizations.localeOf(context).languageCode;
     // Magento stamps order times in the store's zone — see orderFmtDate.
     final storeZone = ref.watch(storeTimezoneProvider).valueOrNull ?? '';
@@ -46,424 +60,448 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     // Numbers a package card shows are not listed again below.
     final packaged = packagedTrackingNumbers(packages);
     final looseTrackings = [
-      for (final t in order.trackings)
-        if (!packaged.contains(t.number)) t,
+      for (final tracking in order.trackings)
+        if (!packaged.contains(tracking.number)) tracking,
     ];
+    // Before a package ships its timeline says so; an order the server did not
+    // split keeps the note where the numbers will appear.
     final showTracking =
-        looseTrackings.isNotEmpty || !anyPackageShipped(packages);
+        looseTrackings.isNotEmpty || (packages == null && !order.hasShipment);
+    final reorderable = order.lines.any((l) => (l.sku ?? '').isNotEmpty);
+    final billingDiffers =
+        (order.billingAddress ?? '').isNotEmpty &&
+        (order.billingAddress != order.shippingAddress ||
+            order.billingName != order.shippingName);
+
+    final sections = <Widget>[
+      Text(
+        l10n.orderPlacedOn(orderFmtPlaced(order.date, locale, storeZone)),
+        style: t.caption.copyWith(color: context.scaffoldMuted),
+      ),
+      if (packages != null)
+        for (var i = 0; i < packages.length; i++)
+          OrderPackageCard(index: i + 1, view: packages[i], order: order)
+      else
+        OrderPackageCard(
+          index: 1,
+          order: order,
+          view: OrderPackageView(lines: order.lines),
+          title: l10n.orderItemsSection,
+          statusPill: OrderStatusPill(order: order),
+        ),
+      if (showTracking) _TrackingCard(trackings: looseTrackings),
+      if ((order.shippingAddress ?? '').isNotEmpty)
+        _AddressCard(
+          title: (order.shippingName ?? '').isNotEmpty
+              ? l10n.orderDeliveringTo(order.shippingName!)
+              : l10n.orderDeliveryAddress,
+          address: order.shippingAddress!,
+          icon: HubIcons.mapPin,
+        ),
+      if (billingDiffers)
+        _AddressCard(
+          title: l10n.orderBillingAddress,
+          subtitle: order.billingName,
+          address: order.billingAddress!,
+          icon: HubIcons.creditCard,
+        ),
+      _PaymentCard(order: order),
+      if (packages == null && order.comments.isNotEmpty)
+        _TimelineCard(order: order, locale: locale, storeZone: storeZone),
+      // Their own spacing: either may be out (nothing returnable, not
+      // cancellable) and leave no gap.
+      _NoGap(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Re-adds every line to the cart (QA request for this page).
+            if ((order.isDelivered || order.isCancelled) && reorderable)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: HubButton(
+                  label: l10n.orderBuyAgain,
+                  style: HubButtonStyle.outline,
+                  onPressed: () => reorderOrder(context, ref, order),
+                ),
+              ),
+            // Return items (Figma 22), when the order has something returnable.
+            ReturnItemsButton(order: order),
+          ],
+        ),
+      ),
+      _NoGap(
+        OrderCancelSection(
+          order: order,
+          onCancelled: (updated) => setState(() => _order = updated),
+        ),
+      ),
+    ];
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.orderDetailsTitle)),
+      backgroundColor: groupedPageColor(context),
+      appBar: HubTopBar(
+        title: l10n.orderNumber(order.number),
+        actions: [
+          HubIconButton(
+            icon: HubIcons.circleHelp,
+            tooltip: l10n.accountHelp,
+            onPressed: () => context.push(AppRoutes.help),
+          ),
+        ],
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
-          Text(
-            l10n.orderNumber(order.number),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${orderFmtDate(order.date, locale, storeZone)} · ${order.status}',
-            style: const TextStyle(color: AppColors.inkMuted),
-          ),
-          const SizedBox(height: 16),
-
-          // Reorder — re-adds every line to the cart (QA request for this page).
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => reorderOrder(context, ref, order),
-              icon: const Icon(HubIcons.shoppingCart, size: 18),
-              label: Text(l10n.orderReorder),
-            ),
-          ),
-          // Return items (Figma 22), when the order has something returnable.
-          ReturnItemsButton(order: order),
-          const SizedBox(height: 24),
-
-          _SectionTitle(l10n.orderItemsSection),
-          if (packages != null)
-            for (var i = 0; i < packages.length; i++)
-              OrderPackageCard(
-                index: i + 1,
-                view: packages[i],
-                line: (line) => _OrderLineRow(line: line),
-              )
-          else
-            for (final line in order.lines) _OrderLineRow(line: line),
-
-          const Divider(height: 32),
-          if (order.subtotal != null)
-            _TotalRow(label: l10n.cartSubtotal, amount: order.subtotal!),
-          if (order.discount != null)
-            _TotalRow(
-              label:
-                  order.discountLabel != null && order.discountLabel!.isNotEmpty
-                  ? '${l10n.cartDiscount} (${order.discountLabel})'
-                  : l10n.cartDiscount,
-              amount: order.discount!,
-              negative: true,
-            ),
-          if (order.shippingAmount != null)
-            _TotalRow(label: l10n.orderShippingLabel, amount: order.shippingAmount!),
-          // Store credit the order used (HubAppAccount); customers only.
-          if (!order.placedAsGuest)
-            _StoreCreditTotalRow(orderNumber: order.number),
-          if (order.total != null)
-            _TotalRow(label: l10n.cartTotal, amount: order.total!, emphasize: true),
-
-          if (order.paymentMethodName != null &&
-              order.paymentMethodName!.isNotEmpty) ...[
-            const Divider(height: 32),
-            _SectionTitle(l10n.orderPaymentSection),
-            Text(order.paymentMethodName!),
+          for (var i = 0; i < sections.length; i++) ...[
+            if (i > 0 && sections[i] is! _NoGap) const SizedBox(height: 12),
+            sections[i],
           ],
-
-          if (order.shippingAddress != null &&
-              order.shippingAddress!.isNotEmpty) ...[
-            const Divider(height: 32),
-            _SectionTitle(l10n.orderDeliveryAddress),
-            _AddressBlock(
-              name: order.shippingName,
-              address: order.shippingAddress!,
-              country: _countryName(l10n, order.shippingCountryCode),
-              phone: order.shippingPhone,
-            ),
-          ],
-
-          if (order.billingAddress != null &&
-              order.billingAddress!.isNotEmpty) ...[
-            const Divider(height: 32),
-            _SectionTitle(l10n.orderBillingAddress),
-            _AddressBlock(
-              name: order.billingName,
-              address: order.billingAddress!,
-              country: _countryName(l10n, order.billingCountryCode),
-              phone: order.billingPhone,
-            ),
-          ],
-
-          if (order.shippingMethod != null &&
-              order.shippingMethod!.isNotEmpty) ...[
-            const Divider(height: 32),
-            _SectionTitle(l10n.checkoutShippingMethod),
-            Text(
-              [order.carrier, order.shippingMethod]
-                  .where((s) => s != null && s.isNotEmpty)
-                  .join(' · '),
-            ),
-          ],
-
-          if (order.comments.isNotEmpty) ...[
-            const Divider(height: 32),
-            _SectionTitle(l10n.orderTimelineSection),
-            for (final c in order.comments.reversed)
-              _TimelineRow(
-                message: c.message,
-                timestamp: orderFmtDateTime(c.timestamp, locale, storeZone),
-              ),
-          ],
-
-          // A package card shows its own tracking numbers.
-          if (showTracking) ...[
-            const Divider(height: 32),
-            _SectionTitle(l10n.orderTrackingSection),
-          ],
-          if (showTracking && looseTrackings.isEmpty)
-            Text(
-              l10n.orderNoTracking,
-              style: const TextStyle(color: AppColors.inkMuted),
-            )
-          else if (showTracking)
-            for (final t in looseTrackings)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(
-                  HubIcons.truck,
-                  color: AppColors.brandPrimary,
-                ),
-                title: Text(
-                  [t.carrier, t.title].where((s) => s.isNotEmpty).join(' · '),
-                ),
-                subtitle: Text(t.number, textDirection: TextDirection.ltr),
-                trailing: IconButton(
-                  icon: const Icon(HubIcons.copy),
-                  tooltip: l10n.orderTrackingSection,
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: t.number));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.orderTrackingCopied)),
-                      );
-                    }
-                  },
-                ),
-              ),
-
-          OrderCancelSection(
-            order: order,
-            onCancelled: (updated) => setState(() => _order = updated),
-          ),
         ],
       ),
     );
   }
 }
 
-/// An order line: thumbnail, name, SKU, quantity and price.
-class _OrderLineRow extends StatelessWidget {
-  const _OrderLineRow({required this.line});
+/// A section that brings its own spacing (or none), so the page's 12 px
+/// gap is not added above it.
+class _NoGap extends StatelessWidget {
+  const _NoGap(this.child);
 
-  final OrderLine line;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+/// A white card of the page: radius 16 and 14 px inside.
+class _Card extends StatelessWidget {
+  const _Card({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: groupCardColor(context),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: child,
+  );
+}
+
+/// Figma 22 "address": a pin, "Delivering to Sara Ahmed" and the address
+/// under it.
+class _AddressCard extends StatelessWidget {
+  const _AddressCard({
+    required this.title,
+    required this.address,
+    required this.icon,
+    this.subtitle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final String address;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    final t = AppTextStyles.of(context);
+    return _Card(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _DetailThumb(url: line.imageUrl),
-          const SizedBox(width: 12),
+          Icon(icon, size: 20, color: AppColors.accentStrong),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(line.name),
+                Text(
+                  title,
+                  style: t.bodyStrong.copyWith(color: context.scaffoldHeading),
+                ),
                 const SizedBox(height: 2),
-                if (line.sku != null && line.sku!.isNotEmpty)
+                if ((subtitle ?? '').isNotEmpty)
                   Text(
-                    '${l10n.specSku}: ${line.sku}',
-                    style: const TextStyle(
-                      color: AppColors.inkMuted,
-                      fontSize: 12,
-                    ),
+                    subtitle!,
+                    style: t.caption.copyWith(color: context.scaffoldMuted),
                   ),
                 Text(
-                  l10n.orderQty(line.quantity.toInt()),
-                  style: const TextStyle(
-                    color: AppColors.inkMuted,
-                    fontSize: 12,
-                  ),
+                  address,
+                  style: t.caption.copyWith(color: context.scaffoldMuted),
                 ),
               ],
             ),
           ),
-          if (line.price != null) ...[
-            const SizedBox(width: 8),
-            Text(
-              line.price!.formatted(),
-              textDirection: TextDirection.ltr,
-              style: const TextStyle(color: AppColors.inkMuted),
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
+/// Figma 22 "payment-summary": Payment, the subtotal, discount and delivery,
+/// store credit, and how it was paid beside the total.
+class _PaymentCard extends ConsumerWidget {
+  const _PaymentCard({required this.order});
 
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-  );
-}
-
-/// 48×48 product thumbnail for an order-detail item row.
-class _DetailThumb extends StatelessWidget {
-  const _DetailThumb({required this.url});
-  final String? url;
-
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    child: SizedBox(
-      width: 48,
-      height: 48,
-      child: HubImage(
-        url: url,
-        decodeWidth: 48,
-        placeholder: (_) => const ColoredBox(color: AppColors.surfaceTint),
-        error: (_) => const ColoredBox(
-          color: AppColors.surfaceTint,
-          child: Icon(
-            HubIcons.image,
-            size: 16,
-            color: AppColors.inkMuted,
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// Localized country name for an order address ISO code — `AE` →
-/// "United Arab Emirates" / "الإمارات العربية المتحدة". Null/empty when unset;
-/// an unknown code falls back to the code itself.
-String? _countryName(AppLocalizations l10n, String? code) {
-  if (code == null || code.trim().isEmpty) return null;
-  return code.trim().toUpperCase() == 'AE' ? l10n.countryUae : code.trim();
-}
-
-/// Recipient name (bold) + a single-line address, the country on its own line,
-/// then the phone number.
-class _AddressBlock extends StatelessWidget {
-  const _AddressBlock({
-    required this.name,
-    required this.address,
-    this.country,
-    this.phone,
-  });
-  final String? name;
-  final String address;
-  final String? country;
-  final String? phone;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      if (name != null && name!.isNotEmpty)
-        Text(name!, style: const TextStyle(fontWeight: FontWeight.w600)),
-      Text(
-        address,
-        style: const TextStyle(color: AppColors.inkMuted, height: 1.35),
-      ),
-      if (country != null && country!.isNotEmpty)
-        Text(
-          country!,
-          style: const TextStyle(color: AppColors.inkMuted, height: 1.35),
-        ),
-      if (phone != null && phone!.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 3),
-          child: Row(
-            children: [
-              const Icon(
-                HubIcons.phone,
-                size: 13,
-                color: AppColors.inkMuted,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                phone!,
-                textDirection: TextDirection.ltr,
-                style: const TextStyle(color: AppColors.inkMuted, fontSize: 12.5),
-              ),
-            ],
-          ),
-        ),
-    ],
-  );
-}
-
-/// One status-history entry: a navy dot, the message, and its time.
-class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({required this.message, required this.timestamp});
-  final String message;
-  final String timestamp;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsetsDirectional.only(top: 5, end: 10),
-          width: 8,
-          height: 8,
-          decoration: const BoxDecoration(
-            color: AppColors.brandPrimary,
-            shape: BoxShape.circle,
-          ),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (message.isNotEmpty) Text(message),
-              if (timestamp.isNotEmpty)
-                Text(
-                  timestamp,
-                  style: const TextStyle(
-                    color: AppColors.inkMuted,
-                    fontSize: 12,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-/// "Store credit −AED 23.00" (`OrderTotal.hm_store_credit`); nothing while
-/// store credit is off or the order used none.
-class _StoreCreditTotalRow extends ConsumerWidget {
-  const _StoreCreditTotalRow({required this.orderNumber});
-
-  final String orderNumber;
+  final CustomerOrder order;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final credit = ref.watch(orderStoreCreditProvider(orderNumber)).valueOrNull;
-    if (credit == null) return const SizedBox.shrink();
-    return _TotalRow(
-      label: AppLocalizations.of(context).checkoutStoreCredit,
-      amount: credit,
-      negative: true,
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    final quantity = order.lines.fold<int>(
+      0,
+      (sum, line) => sum + line.quantity.toInt(),
+    );
+    final method = order.paymentMethodName?.trim() ?? '';
+    // Store credit the order used (HubAppAccount); customers only.
+    final credit = order.placedAsGuest
+        ? null
+        : ref.watch(orderStoreCreditProvider(order.number)).valueOrNull;
+    final discountLabel = (order.discountLabel ?? '').isNotEmpty
+        ? '${l10n.cartDiscount} (${order.discountLabel})'
+        : l10n.cartDiscount;
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.orderPaymentTitle,
+            style: t.title.copyWith(color: context.scaffoldHeading),
+          ),
+          if (order.subtotal != null)
+            _PayRow(
+              label: l10n.orderSubtotalItems(quantity),
+              amount: order.subtotal!,
+            ),
+          if (order.discount != null)
+            _PayRow(label: discountLabel, amount: order.discount!, minus: true),
+          if (order.shippingAmount != null)
+            _PayRow(
+              label: l10n.orderDeliveryLabel,
+              amount: order.shippingAmount!,
+            ),
+          if (credit != null)
+            _PayRow(
+              label: l10n.checkoutStoreCredit,
+              amount: credit,
+              minus: true,
+            ),
+          if (order.total != null)
+            _PayRow(
+              label: method.isEmpty
+                  ? l10n.cartTotal
+                  : (order.hasInvoice ? l10n.orderPaidWith(method) : method),
+              amount: order.total!,
+              strong: true,
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _TotalRow extends StatelessWidget {
-  const _TotalRow({
+/// A line of the payment card: the label in subtle ink, the amount in Body
+/// Strong — the last row's label Body Strong and its amount Price.
+class _PayRow extends StatelessWidget {
+  const _PayRow({
     required this.label,
     required this.amount,
-    this.emphasize = false,
-    this.negative = false,
+    this.minus = false,
+    this.strong = false,
   });
 
   final String label;
   final Money amount;
-  final bool emphasize;
 
-  /// Renders the amount as a reduction: `−AED x.xx` in the brand colour (used
-  /// for the discount line, matching the cart summary).
-  final bool negative;
+  /// The amount is a reduction: `−AED 25`.
+  final bool minus;
+  final bool strong;
 
   @override
   Widget build(BuildContext context) {
-    final style = emphasize
-        ? const TextStyle(fontWeight: FontWeight.w700)
-        : const TextStyle(color: AppColors.inkMuted);
-    final valueStyle = emphasize
-        ? const TextStyle(
-            fontWeight: FontWeight.w700,
-            color: AppColors.brandPrimary,
-          )
-        : negative
-        ? const TextStyle(color: AppColors.brandPrimary)
-        : style;
+    final t = AppTextStyles.of(context);
+    final ink = context.scaffoldHeading;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.only(top: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(label, style: style)),
+          Expanded(
+            child: Text(
+              label,
+              style: strong
+                  ? t.bodyStrong.copyWith(color: ink)
+                  : t.body.copyWith(color: context.isDarkMode
+                        ? context.scaffoldMuted
+                        : AppColors.inkSubtle),
+            ),
+          ),
           const SizedBox(width: 12),
           Text(
-            negative ? '−${amount.formatted()}' : amount.formatted(),
+            minus ? '−${amount.formatted()}' : amount.formatted(),
             textDirection: TextDirection.ltr,
-            style: valueStyle,
+            style: (strong ? t.price : t.bodyStrong).copyWith(color: ink),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shipments of an order the server did not split by store (and the numbers no
+/// package shows): the carrier and number with a copy action, or the note
+/// that they appear once the order ships.
+class _TrackingCard extends StatelessWidget {
+  const _TrackingCard({required this.trackings});
+
+  final List<OrderTracking> trackings;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.orderTrackingSection,
+            style: t.title.copyWith(color: context.scaffoldHeading),
+          ),
+          if (trackings.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                l10n.orderNoTracking,
+                style: t.body.copyWith(color: context.scaffoldMuted),
+              ),
+            )
+          else
+            for (final tracking in trackings)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  children: [
+                    const Icon(
+                      HubIcons.truck,
+                      size: 20,
+                      color: AppColors.brandPrimary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            [tracking.carrier, tracking.title]
+                                .where((s) => s.isNotEmpty)
+                                .join(' · '),
+                            style: t.caption.copyWith(
+                              color: context.scaffoldMuted,
+                            ),
+                          ),
+                          Text(
+                            tracking.number,
+                            textDirection: TextDirection.ltr,
+                            style: t.bodyStrong.copyWith(
+                              color: context.scaffoldHeading,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(HubIcons.copy, size: 20),
+                      tooltip: l10n.orderCopyTrackingNumber,
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final copied = l10n.orderTrackingCopied;
+                        await Clipboard.setData(
+                          ClipboardData(text: tracking.number),
+                        );
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(copied)),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The order's status history (an order the server did not split), newest
+/// first: a dot, the message, and its time.
+class _TimelineCard extends StatelessWidget {
+  const _TimelineCard({
+    required this.order,
+    required this.locale,
+    required this.storeZone,
+  });
+
+  final CustomerOrder order;
+  final String locale;
+  final String storeZone;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.orderTimelineSection,
+            style: t.title.copyWith(color: context.scaffoldHeading),
+          ),
+          for (final c in order.comments.reversed)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsetsDirectional.only(top: 6, end: 10),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: context.isDarkMode
+                          ? Colors.white
+                          : AppColors.brandPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (c.message.isNotEmpty)
+                          Text(
+                            c.message,
+                            style: t.body.copyWith(
+                              color: context.scaffoldHeading,
+                            ),
+                          ),
+                        if (c.timestamp.isNotEmpty)
+                          Text(
+                            orderFmtStep(c.timestamp, locale, storeZone),
+                            style: t.caption.copyWith(
+                              color: context.scaffoldMuted,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

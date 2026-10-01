@@ -40,6 +40,7 @@ class HubButton extends StatelessWidget {
     this.expand = true,
     this.height = 52,
     this.iconSize = 18,
+    this.horizontalPadding = 24,
   });
 
   final String label;
@@ -53,6 +54,11 @@ class HubButton extends StatelessWidget {
   /// The leading icon's size: 18 px, the 20 px "lead" slot of the footer
   /// buttons (Add new address, New return request) where a frame draws it.
   final double iconSize;
+
+  /// The side padding: 24 px, less for two buttons side by side whose labels
+  /// would otherwise be cut (the package card's Track parcel / Contact store,
+  /// where the frame lets the content run into the padding).
+  final double horizontalPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -74,8 +80,8 @@ class HubButton extends StatelessWidget {
       maximumSize: WidgetStatePropertyAll(
         expand ? Size.fromHeight(height) : Size(double.infinity, height),
       ),
-      padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 24),
+      padding: WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: horizontalPadding),
       ),
       shape: WidgetStatePropertyAll(shape),
       textStyle: WidgetStatePropertyAll(t.button),

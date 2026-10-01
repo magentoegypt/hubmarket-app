@@ -5,14 +5,14 @@ import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/order_tracking_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/widgets/order_packages.dart';
-import 'package:hubmarket_app/features/catalog/domain/money.dart';
 
 import '../../support/order_package_fixtures.dart';
 import '../../support/order_screens_harness.dart';
 
 /// Figma 22 order detail and 26 Track order with the server's packages: each
-/// store's status, shipments with "Track parcel" or the number to copy, what
-/// the store said, and the package's totals.
+/// store's status and timeline, its shipments with "Track parcel" or the number
+/// to copy, what the store said, and its items. The order's totals are the
+/// Payment card's (the frame has no per-store totals).
 
 /// The URIs "Track parcel" asked to open.
 final List<Uri> _opened = <Uri>[];
@@ -42,12 +42,10 @@ Finder _inCard(int index, Finder finder) => find.descendant(
   matching: finder,
 );
 
-Money _aed(double amount) => Money(amount: amount, currency: 'AED');
-
 void main() {
   setUp(_opened.clear);
 
-  testWidgets('22: each package has its status, shipments and totals', (
+  testWidgets('22: each package has its status, timeline and shipments', (
     tester,
   ) async {
     _tallView(tester);
@@ -61,30 +59,56 @@ void main() {
     expect(_inCard(0, find.text('PROCESSING')), findsOneWidget);
     expect(_inCard(1, find.text('PENDING')), findsOneWidget);
 
-    // loly store shipped: the shipment, both numbers, one page to open.
-    expect(_inCard(0, find.text('Shipment #000000031')), findsOneWidget);
-    expect(_inCard(0, find.text('DHL')), findsOneWidget);
-    expect(_inCard(0, find.text(dhlNumber)), findsOneWidget);
-    expect(_inCard(0, find.text('Aramex')), findsOneWidget);
-    expect(_inCard(0, find.text(aramexNumber)), findsOneWidget);
+    // loly store shipped: confirmed, packed and shipped are behind it, with
+    // both numbers under Shipped and one page to open.
+    expect(_inCard(0, find.text('Order confirmed')), findsOneWidget);
+    expect(_inCard(0, find.text('Packed by store')), findsOneWidget);
+    expect(_inCard(0, find.text('Shipped')), findsOneWidget);
+    expect(_inCard(0, find.text('Delivered')), findsOneWidget);
+    expect(_inCard(0, find.textContaining('· DHL')), findsOneWidget);
+    expect(_inCard(0, find.textContaining(dhlNumber)), findsOneWidget);
+    expect(_inCard(0, find.textContaining('Aramex')), findsOneWidget);
+    expect(_inCard(0, find.textContaining(aramexNumber)), findsOneWidget);
     expect(find.text('Track parcel'), findsOneWidget);
-    expect(find.byTooltip('Copy tracking number'), findsNWidgets(2));
+    // The DHL number is on its page; the typed Aramex one is copied.
+    expect(find.byTooltip('Copy tracking number'), findsOneWidget);
     expect(_inCard(0, find.text('Updates from the store')), findsOneWidget);
     expect(_inCard(0, find.text('Packed and handed to DHL.')), findsOneWidget);
-    expect(_inCard(0, find.text('Package total')), findsOneWidget);
-    // The dress's price, the package subtotal and the package total.
-    expect(_inCard(0, find.text('AED 50')), findsNWidgets(3));
+    // The dress, its options-free caption and the line's total.
+    expect(_inCard(0, find.text('Qty 1')), findsOneWidget);
+    expect(_inCard(0, find.text('AED 50')), findsOneWidget);
 
-    // MIA CO: nothing shipped yet, a discount, no delivery of its own.
-    expect(_inCard(1, find.textContaining('Shipment')), findsNothing);
-    expect(_inCard(1, find.text('Discount')), findsOneWidget);
-    expect(_inCard(1, find.text('−AED 25')), findsOneWidget);
-    expect(_inCard(1, find.text('AED 468')), findsOneWidget);
-    expect(_inCard(1, find.text('Shipping')), findsNothing);
+    // MIA CO: still being prepared, nothing shipped, nothing to track.
+    expect(_inCard(1, find.text('Being prepared by store')), findsOneWidget);
+    expect(_inCard(1, find.text('Shipped')), findsOneWidget);
+    expect(_inCard(1, find.textContaining('DHL')), findsNothing);
+    // The chair is two at 34.
+    expect(_inCard(1, find.text('AED 68')), findsOneWidget);
 
     // Every number is in a card: no order-level Tracking list repeats them.
     expect(find.text('Tracking'), findsNothing);
-    expect(find.text(dhlNumber), findsOneWidget);
+    expect(find.textContaining(dhlNumber), findsOneWidget);
+  });
+
+  testWidgets('22: the Payment card is the order\'s, not each store\'s', (
+    tester,
+  ) async {
+    _tallView(tester);
+    await tester.pumpWidget(_app(packagedOrder()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payment'), findsOneWidget);
+    expect(find.text('Subtotal (4 items)'), findsOneWidget);
+    expect(find.text('AED 543'), findsOneWidget);
+    expect(find.text('Discount'), findsOneWidget);
+    expect(find.text('−AED 25'), findsOneWidget);
+    expect(find.text('Delivery'), findsOneWidget);
+    expect(find.text('AED 10'), findsOneWidget);
+    // Not invoiced yet (no invoice on the order): the method's own name.
+    expect(find.text('Cash on delivery'), findsOneWidget);
+    expect(find.text('AED 528'), findsOneWidget);
+    // The stores' own totals have no place in the frame.
+    expect(find.text('Package total'), findsNothing);
   });
 
   testWidgets('Track parcel opens the carrier page', (tester) async {
@@ -132,7 +156,7 @@ void main() {
     await tester.pumpWidget(_app(packagedOrder()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Copy tracking number').last);
+    await tester.tap(find.byTooltip('Copy tracking number'));
     await tester.pump();
 
     expect(copied, [aramexNumber]);
@@ -158,24 +182,10 @@ void main() {
     expect(find.text('Tracking'), findsOneWidget);
     expect(find.text('1Z999'), findsOneWidget);
     // Shown in its card only.
-    expect(find.text(dhlNumber), findsOneWidget);
+    expect(find.textContaining(dhlNumber), findsOneWidget);
   });
 
-  testWidgets('a store that charged its own delivery shows it', (
-    tester,
-  ) async {
-    _tallView(tester);
-    await tester.pumpWidget(_app(packagedOrder(lolyDelivery: _aed(10))));
-    await tester.pumpAndSettle();
-
-    expect(_inCard(0, find.text('Vendor Table Rate')), findsOneWidget);
-    expect(_inCard(0, find.text('Shipping')), findsOneWidget);
-    expect(_inCard(0, find.text('AED 10')), findsOneWidget);
-    expect(_inCard(0, find.text('AED 60')), findsOneWidget);
-    expect(_inCard(1, find.text('Shipping')), findsNothing);
-  });
-
-  testWidgets('before any shipment the order Tracking note stays', (
+  testWidgets('before any shipment each timeline says it is being prepared', (
     tester,
   ) async {
     _tallView(tester);
@@ -201,12 +211,11 @@ void main() {
     await tester.pumpWidget(_app(unshipped));
     await tester.pumpAndSettle();
 
-    expect(find.text('Tracking'), findsOneWidget);
-    expect(
-      find.text('Tracking details appear here once your order ships.'),
-      findsOneWidget,
-    );
+    // Nothing is shipped: no Tracking card, no parcel, both stores preparing.
+    expect(find.text('Tracking'), findsNothing);
     expect(find.text('Track parcel'), findsNothing);
+    expect(find.text('Being prepared by store'), findsNWidgets(2));
+    expect(find.text('Packed by store'), findsNothing);
   });
 
   testWidgets('without packages the cards are the sellers\', as before', (
@@ -228,7 +237,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Package 1 · loly store'), findsOneWidget);
+    // No store status without the server's split, and no timeline to draw.
     expect(find.text('PROCESSING'), findsNothing);
+    expect(find.text('Order confirmed'), findsNothing);
     expect(find.text('Track parcel'), findsNothing);
     // The numbers are in the order's Tracking list, as today.
     expect(find.text('Tracking'), findsOneWidget);
@@ -246,10 +257,10 @@ void main() {
     expect(find.text('Package 1 · loly store'), findsOneWidget);
     expect(_inCard(0, find.text('PROCESSING')), findsOneWidget);
     expect(_inCard(1, find.text('PENDING')), findsOneWidget);
+    expect(_inCard(1, find.text('Being prepared by store')), findsOneWidget);
     expect(find.text('Track parcel'), findsOneWidget);
-    expect(_inCard(1, find.text('AED 468')), findsOneWidget);
     // The numbers are in the cards; the Tracking list doesn't repeat them.
-    expect(find.text(dhlNumber), findsOneWidget);
+    expect(find.textContaining(dhlNumber), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -262,10 +273,15 @@ void main() {
 
     expect(find.text('الطرد 1 · متجر لولي'), findsOneWidget);
     expect(_inCard(0, find.text('قيد التنفيذ')), findsOneWidget);
-    expect(find.text('تتبّع الطرد'), findsOneWidget);
-    expect(find.text('إجمالي الطرد'), findsNWidgets(2));
-    final number = tester.widget<Text>(_inCard(0, find.text(dhlNumber)));
-    expect(number.textDirection, TextDirection.ltr);
+    expect(_inCard(0, find.text('جهّزه المتجر')), findsOneWidget);
+    expect(find.text('تتبع الشحنة'), findsOneWidget);
+    // The number sits in a left-to-right isolate inside the Arabic line.
+    final lri = String.fromCharCode(0x2066);
+    final pdi = String.fromCharCode(0x2069);
+    expect(
+      _inCard(0, find.textContaining('$lri$dhlNumber$pdi')),
+      findsOneWidget,
+    );
     expect(
       Directionality.of(tester.element(find.byType(OrderPackageCard).first)),
       TextDirection.rtl,

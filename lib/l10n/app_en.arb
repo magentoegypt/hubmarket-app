@@ -825,6 +825,54 @@
   "orderPackageTotal": "Package total",
   "orderTrackParcel": "Track parcel",
   "orderCopyTrackingNumber": "Copy tracking number",
+  "orderContactStore": "Contact store",
+  "orderStepConfirmed": "Order confirmed",
+  "orderStepPrepared": "Packed by store",
+  "orderStepPreparing": "Being prepared by store",
+  "orderStepShipped": "Shipped",
+  "orderStepDelivered": "Delivered",
+  "orderPaymentTitle": "Payment",
+  "orderDeliveryLabel": "Delivery",
+  "orderPlacedOn": "Placed {date}",
+  "@orderPlacedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "orderDeliveringTo": "Delivering to {name}",
+  "@orderDeliveringTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "orderSubtotalItems": "Subtotal ({count, plural, =1{1 item} other{{count} items}})",
+  "@orderSubtotalItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderPaidWith": "Paid with {method}",
+  "@orderPaidWith": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "orderCancelHintPackages": "You can cancel this order until the first package ships. Cancelling removes {count, plural, =2{both packages} other{all {count} packages}}.",
+  "@orderCancelHintPackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "orderTrackingSection": "Tracking",
   "orderShippingLabel": "Shipping",
   "orderNoTracking": "Tracking details appear here once your order ships.",

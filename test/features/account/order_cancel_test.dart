@@ -204,8 +204,9 @@ void main() {
       ]);
       expect(find.byType(BottomSheet), findsNothing);
       expect(find.text(en.orderCancelDone), findsOneWidget);
-      // Magento's updated order replaces the shown one: no CANCEL any more.
-      expect(find.textContaining('Canceled'), findsOneWidget);
+      // Magento's updated order replaces the shown one: its status pill (in
+      // capitals, Figma 22) says so and no CANCEL is offered any more.
+      expect(find.text('CANCELED'), findsOneWidget);
       expect(find.text(en.orderCancelAction), findsNothing);
     });
 
