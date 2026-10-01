@@ -111,7 +111,10 @@ class PlpController extends AutoDisposeFamilyNotifier<PlpState, String> {
   /// own order (relevance).
   Future<ProductSortField> _defaultSortFor() async {
     try {
-      final category = await ref.read(categoryByUidProvider(arg).future);
+      // The menu tree only: a category outside it would cost a request of its
+      // own before the first page of products is asked for (it is told apart
+      // by its url key, which only those two special categories matter for).
+      final category = await ref.read(categoryInTreeProvider(arg).future);
       final key = category?.urlKey.toLowerCase() ?? '';
       if (key.contains('new-arriv') ||
           key.contains('new_arriv') ||

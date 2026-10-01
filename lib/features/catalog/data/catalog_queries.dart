@@ -2,8 +2,8 @@
 /// `product_mapper.dart` / `CatalogRepository`.
 ///
 /// The browse ops also live as standalone codegen sources in
-/// `lib/features/catalog/data/graphql/` (`category_tree`, `products`,
-/// `search_products`, `product_detail` — keep them identical to the strings
+/// `lib/features/catalog/data/graphql/` (`category_tree`, `category_by_uid`,
+/// `products`, `search_products`, `product_detail` — keep them identical to the strings
 /// below). They are
 /// checked against Hub Market's introspected `schema.graphql`
 /// (`tool/validate_ops.py`, `dart run build_runner build`); moving the
@@ -56,6 +56,41 @@ query CategoryTree {
     name
     url_key
     children {
+      uid
+      name
+      url_key
+      image
+      include_in_menu
+      product_count
+      children {
+        uid
+        name
+        url_key
+        image
+        include_in_menu
+        product_count
+        children {
+          uid
+          name
+          url_key
+          image
+          include_in_menu
+          product_count
+        }
+      }
+    }
+  }
+}
+''';
+
+  /// One category by its uid, with the two levels below it — wherever it sits,
+  /// also a category the admin keeps out of the menu (`include_in_menu` 0: on
+  /// Hub Market Shoes, Bags, Mobile & Tablet ...), which [categoryTree] leaves
+  /// out. Backs the title and the sub-category rail of a listing opened by uid.
+  static const String categoryByUid = r'''
+query CategoryByUid($uid: String!) {
+  categories(filters: {category_uid: {eq: $uid}}) {
+    items {
       uid
       name
       url_key

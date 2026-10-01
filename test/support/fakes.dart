@@ -579,6 +579,7 @@ class FakeCatalogRepository implements CatalogRepository {
     this.products = kSampleProducts,
     this.aggregations = kSampleAggregations,
     this.categoryThumbnails = const <String, String>{},
+    this.categoriesByUid = const <String, Category>{},
     this.resolved,
   });
 
@@ -592,11 +593,24 @@ class FakeCatalogRepository implements CatalogRepository {
   /// Canned `urlResolver` answer for [resolveUrl]; null means unresolvable.
   final ({String type, String uid, String? urlKey})? resolved;
 
+  /// Categories [fetchCategoryByUid] knows that the menu tree [categories] does
+  /// not hold (the admin keeps them out of the menu).
+  final Map<String, Category> categoriesByUid;
+
+  /// The uids [fetchCategoryByUid] was asked for, in order.
+  final List<String> categoryByUidCalls = [];
+
   /// The last URL [resolveUrl] was asked about.
   String? resolvedUrl;
 
   @override
   Future<List<Category>> fetchCategoryTree() async => categories;
+
+  @override
+  Future<Category?> fetchCategoryByUid(String uid) async {
+    categoryByUidCalls.add(uid);
+    return categoriesByUid[uid];
+  }
 
   @override
   Future<Map<String, String>> fetchCategoryThumbnails(

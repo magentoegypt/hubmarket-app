@@ -1,0 +1,33 @@
+# One category by its uid with the two levels below it (the listing's title and
+# sub-category rail for a category the menu tree does not hold: include_in_menu
+# 0 — Shoes, Bags ...). Checked on Hub Market (2026-10-01): `categories(filters:
+# {category_uid: {eq: ...}})` answers a hidden category like any other.
+# Codegen mirror of CatalogQueries.categoryByUid.
+query CategoryByUid($uid: String!) {
+  categories(filters: {category_uid: {eq: $uid}}) {
+    items {
+      uid
+      name
+      url_key
+      image
+      include_in_menu
+      product_count
+      children {
+        uid
+        name
+        url_key
+        image
+        include_in_menu
+        product_count
+        children {
+          uid
+          name
+          url_key
+          image
+          include_in_menu
+          product_count
+        }
+      }
+    }
+  }
+}

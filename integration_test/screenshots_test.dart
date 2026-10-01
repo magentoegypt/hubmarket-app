@@ -121,9 +121,9 @@ void main() {
     // docs/release/screenshots.md): the Men's Clothing category (uid MTQy,
     // "ملابس رجالية" in Arabic), one in-stock product with three gallery
     // images ("Square-Neck Dress with Lapel"), the store "loly" and a search
-    // for "samsung". The category must be one of the menu tree's: the listing
-    // takes its title and sub-categories from it, so a category outside the
-    // menu (Shoes, Bags) is captured with the generic title "Categories". The
+    // for "samsung". (A category outside the menu, Shoes or Bags, now shows its
+    // own title and rail too: the app fetches it by its uid. Before that it was
+    // captured titled "Categories", which is why Men's Clothing was picked.) The
     // category, product and search shots wait longer: the live server's own
     // answers are slow there. Point them at other content once the client's
     // catalogue is in.

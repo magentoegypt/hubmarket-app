@@ -75,6 +75,9 @@ class _PagingRepo implements CatalogRepository {
   Future<List<Category>> fetchCategoryTree() async => kSampleCategories;
 
   @override
+  Future<Category?> fetchCategoryByUid(String uid) async => null;
+
+  @override
   Future<Map<String, String>> fetchCategoryThumbnails(
     List<String> categoryUids,
   ) async => const <String, String>{};

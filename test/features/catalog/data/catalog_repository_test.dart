@@ -53,6 +53,56 @@ const Map<String, dynamic> _unresolved = {
   'urlResolver': null,
 };
 
+
+Map<String, dynamic> _node(
+  String uid,
+  String name,
+  String key, {
+  required int menu,
+  required int products,
+  List<Map<String, dynamic>>? children,
+}) => {
+  '__typename': 'CategoryTree',
+  'uid': uid,
+  'name': name,
+  'url_key': key,
+  'image': null,
+  'include_in_menu': menu,
+  'product_count': products,
+  'children': ?children,
+};
+
+/// What Hub Market answers for Shoes (live, 1 Oct 2026): a category the admin
+/// keeps out of the menu (include_in_menu 0) whose two children are in it, here
+/// with a hidden one added.
+Map<String, dynamic> _shoesAnswer() => {
+  '__typename': 'Query',
+  'categories': {
+    '__typename': 'CategoryResult',
+    'items': [
+      _node(
+        'NTM=',
+        'Shoes',
+        'shoes',
+        menu: 0,
+        products: 12,
+        children: [
+          _node('NTU=', 'Women', 'women', menu: 1, products: 6, children: []),
+          _node('NTQ=', 'Men', 'men', menu: 1, products: 6, children: []),
+          _node(
+            'OTk=',
+            'Archive',
+            'archive',
+            menu: 0,
+            products: 0,
+            children: [],
+          ),
+        ],
+      ),
+    ],
+  },
+};
+
 void main() {
   group('CatalogRepository.fetchProducts on Hub Market', () {
     test('the brand landing filters on the mgs_brand attribute', () async {
@@ -215,6 +265,70 @@ void main() {
         ),
         'abominable-hoodie.html',
       );
+    });
+  });
+
+  group('CatalogRepository.fetchCategoryByUid', () {
+    test(
+      'asks for the one uid and maps a category the menu leaves out',
+      () async {
+        final recorder = _RecordingClient(_shoesAnswer());
+        final shoes = await CatalogRepository(
+          recorder.client,
+        ).fetchCategoryByUid('NTM=');
+
+        expect(recorder.operations, ['CategoryByUid']);
+        expect(recorder.variables.single, {'uid': 'NTM='});
+        expect(shoes, isNotNull);
+        expect(shoes!.uid, 'NTM=');
+        expect(shoes.name, 'Shoes');
+        expect(shoes.urlKey, 'shoes');
+        expect(shoes.productCount, 12);
+        // include_in_menu comes back as the Int 0: why it is fetched here.
+        expect(shoes.includeInMenu, isFalse);
+      },
+    );
+
+    test(
+      'keeps the children and their menu flags, for the caller to filter',
+      () async {
+        final recorder = _RecordingClient(_shoesAnswer());
+        final shoes = await CatalogRepository(
+          recorder.client,
+        ).fetchCategoryByUid('NTM=');
+
+        expect(shoes!.children.map((c) => c.name), [
+          'Women',
+          'Men',
+          'Archive',
+        ]);
+        expect(shoes.children.map((c) => c.includeInMenu), [
+          true,
+          true,
+          false,
+        ]);
+      },
+    );
+
+    test('is null when no category has that uid', () async {
+      final recorder = _RecordingClient({
+        '__typename': 'Query',
+        'categories': {'__typename': 'CategoryResult', 'items': <dynamic>[]},
+      });
+      expect(
+        await CatalogRepository(
+          recorder.client,
+        ).fetchCategoryByUid('Tm9wZQ=='),
+        isNull,
+      );
+    });
+
+    test('sends nothing for a blank uid', () async {
+      final recorder = _RecordingClient(_shoesAnswer());
+      final repository = CatalogRepository(recorder.client);
+      expect(await repository.fetchCategoryByUid(''), isNull);
+      expect(await repository.fetchCategoryByUid('  '), isNull);
+      expect(recorder.operations, isEmpty);
     });
   });
 }

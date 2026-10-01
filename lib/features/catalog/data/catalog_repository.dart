@@ -66,6 +66,21 @@ class CatalogRepository {
     return source.where((c) => c.includeInMenu).toList(growable: false);
   }
 
+  /// One category by its [uid], wherever it sits — also one the admin keeps out
+  /// of the menu (Shoes, Bags ...), which [fetchCategoryTree] leaves out. Its
+  /// children come as the tree's do (hidden ones included, flagged by
+  /// [Category.includeInMenu]: a surface that shows them filters on it). Null
+  /// when no category has that uid.
+  Future<Category?> fetchCategoryByUid(String uid) async {
+    if (uid.trim().isEmpty) return null;
+    final data = await _query(CatalogQueries.categoryByUid, {'uid': uid});
+    final items = (data['categories'] as Map<String, dynamic>?)?['items'];
+    final first = (items as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .firstOrNull;
+    return first == null ? null : _parseCategory(first);
+  }
+
   /// Stand-in thumbnails for categories with no `image` of their own: the first
   /// product inside each, in a single aliased round trip. Mirrors what the
   /// storefront does for its sub-category rail.
