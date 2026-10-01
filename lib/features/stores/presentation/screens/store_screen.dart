@@ -8,7 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_theme.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/hubapp/hubapp.dart';
@@ -17,7 +18,10 @@ import '../../../../core/store/store_controller.dart';
 import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/hub_back_button.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/offline_state.dart';
 import '../../../../l10n/l10n.dart';
@@ -38,8 +42,6 @@ import '../widgets/store_about.dart';
 import '../widgets/store_reviews.dart';
 import '../widgets/store_widgets.dart';
 import '../widgets/stores_unavailable.dart';
-import '../../../../core/widgets/hub_bottom_sheet.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// The tabs of a store page, in order.
 enum StoreTab { products, reviews, about, policies }
@@ -48,6 +50,13 @@ enum StoreTab { products, reviews, about, policies }
 /// the logo, name, location and figures, "Contact vendor", then Products (the
 /// seller's catalogue with the PLP's search, filters, sort and paging),
 /// Reviews, About and Policies.
+///
+/// Products is the store's front page (13): a banner under the status bar with
+/// floating back / search / share buttons, the logo overhanging it, and the
+/// figures, which collapse into a bar titled with the store's name as the page
+/// scrolls. The other tabs are its inside pages (13b): the bar always shows
+/// the store's name, a compact row (logo, name, where and since when, the
+/// rating) sits under it, and the four equal tabs pin below that.
 ///
 /// From `hmStore(code)`; the products are core `products` filtered by the
 /// seller's `vendor_id`. A card handed over by the list ([preview]) paints the
@@ -73,7 +82,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   final ScrollController _scroll = ScrollController();
   final TextEditingController _search = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  final GlobalKey _infoKey = GlobalKey(debugLabel: 'store-info');
   Timer? _debounce;
 
   StoreTab _tab = StoreTab.products;
@@ -82,9 +90,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   /// The seller whose products are listed, once known.
   int? _vendorId;
 
-  /// The banner, and the white strip the logo overhangs into.
+  /// The banner, which includes the status bar's area (Figma 13), and the
+  /// header with the white strip the logo overhangs into.
   static const double _bannerHeight = 196;
   static const double _headerHeight = 236;
+
+  /// The floating buttons sit 5 px under the status bar: 40 px in a 50 px bar.
+  static const double _toolbarHeight = 50;
 
   @override
   void initState() {
@@ -109,17 +121,35 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       ? null
       : ref.read(storeProductsControllerProvider(_vendorId!).notifier);
 
+  /// The status bar's height, read from the view: the page's zero-size scaffold
+  /// app bar hides it from the body's MediaQuery.
+  double get _statusBar {
+    final view = View.of(context);
+    return view.padding.top / view.devicePixelRatio;
+  }
+
+  /// How far the front page scrolls before its header is the collapsed bar.
+  double get _collapseDistance => _headerHeight - _toolbarHeight - _statusBar;
+
   void _onScroll() {
-    final collapsed = _scroll.offset > _headerHeight - kToolbarHeight - 12;
+    if (!_scroll.hasClients) return;
+    final collapsed = _scroll.offset > _collapseDistance - 12;
     if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
     if (_scroll.position.pixels < _scroll.position.maxScrollExtent - 400) {
       return;
     }
-    if (_tab == StoreTab.products) {
-      _products?.loadMore();
-    } else if (_tab == StoreTab.reviews && _sellerCode != null) {
+    if (_tab == StoreTab.products) _products?.loadMore();
+  }
+
+  /// The inside pages page their reviews as they scroll.
+  bool _onInnerScroll(ScrollNotification notification) {
+    if (_tab == StoreTab.reviews &&
+        _sellerCode != null &&
+        notification.metrics.axis == Axis.vertical &&
+        notification.metrics.extentAfter < 400) {
       ref.read(storeReviewsControllerProvider(_sellerCode!).notifier).loadMore();
     }
+    return false;
   }
 
   /// Dials the seller (the website's "Contact Vendor" is a `tel:` link).
@@ -132,20 +162,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     }
   }
 
-  /// Where the tabs pin under the collapsed header.
-  double get _tabsPinnedAt {
-    final info = _infoKey.currentContext?.size?.height ?? 0;
-    return _headerHeight - kToolbarHeight + info;
-  }
-
   void _selectTab(StoreTab tab) {
     if (tab == _tab) return;
-    setState(() => _tab = tab);
-    // A tab opens at its top when the page was scrolled past it.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scroll.hasClients) return;
-      final pinned = _tabsPinnedAt;
-      if (_scroll.offset > pinned) _scroll.jumpTo(pinned);
+    setState(() {
+      _tab = tab;
+      _collapsed = false;
     });
   }
 
@@ -327,10 +348,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   /// a back button over [body].
   Widget _plain(BuildContext context, Widget body) => HubScaffold(
     currentTab: AppTab.home,
-    appBar: AppBar(
-      automaticallyImplyLeading: false,
-      leading: HubBackButton(onPressed: _back),
-    ),
+    appBar: HubTopBar(showBack: true, onBack: _back),
     body: body,
   );
 
@@ -354,9 +372,94 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       if (profile.hasPolicies) StoreTab.policies,
     ];
     final tab = tabs.contains(_tab) ? _tab : StoreTab.products;
+    final labels = {
+      StoreTab.products: l10n.storeTabProducts,
+      StoreTab.reviews: l10n.storeTabReviews,
+      StoreTab.about: l10n.storeTabAbout,
+      StoreTab.policies: l10n.storeTabPolicies,
+    };
+
+    if (tab != StoreTab.products) {
+      // The inside pages (Figma 13b).
+      return HubScaffold(
+        currentTab: AppTab.home,
+        appBar: HubTopBar(
+          title: store.name,
+          showBack: true,
+          onBack: _back,
+          actions: [
+            HubIconButton(
+              icon: HubIcons.search,
+              tooltip: l10n.storeSearchHint(store.name),
+              onPressed: _focusSearch,
+            ),
+            if (store.webUrl != null)
+              HubIconButton(
+                icon: HubIcons.share2,
+                tooltip: l10n.actionShare,
+                onPressed: () => _share(store),
+              ),
+          ],
+        ),
+        body: NotificationListener<ScrollNotification>(
+          onNotification: _onInnerScroll,
+          child: CustomScrollView(
+            // Each tab opens at its top.
+            key: ValueKey(tab),
+            slivers: [
+              SliverToBoxAdapter(
+                child: _StoreRow(profile: profile, extras: extras),
+              ),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _TabsHeader(
+                  tabs: tabs,
+                  selected: tab,
+                  labels: labels,
+                  onSelect: _selectTab,
+                  compact: true,
+                ),
+              ),
+              ...switch (tab) {
+                StoreTab.reviews => [
+                  ...storeReviewsSlivers(
+                    context,
+                    ref.watch(storeReviewsControllerProvider(store.code)),
+                    onRetry: () => ref
+                        .read(
+                          storeReviewsControllerProvider(store.code).notifier,
+                        )
+                        .refresh(),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+                StoreTab.about => [
+                  SliverToBoxAdapter(
+                    child: StoreAboutTab(
+                      profile: profile,
+                      onPolicies: () => _selectTab(StoreTab.policies),
+                      onCategory: _showCategory,
+                      salesCount: extras ? profile.salesCount : null,
+                      onCall: phone == null ? null : () => _call(phone),
+                    ),
+                  ),
+                  _fillGrouped(context),
+                ],
+                _ => [
+                  SliverToBoxAdapter(child: StorePoliciesTab(profile: profile)),
+                  _fillGrouped(context),
+                ],
+              },
+            ],
+          ),
+        ),
+      );
+    }
+
+    // The front page (Figma 13): the header is the scroll view's own
+    // collapsing bar.
     return HubScaffold(
       currentTab: AppTab.home,
-      // The header is the scroll view's own collapsing bar.
       appBar: const PreferredSize(
         preferredSize: Size.zero,
         child: SizedBox.shrink(),
@@ -367,13 +470,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         slivers: [
           _header(context, l10n, profile),
           SliverToBoxAdapter(
-            child: KeyedSubtree(
-              key: _infoKey,
-              child: _StoreInfo(
-                profile: profile,
-                extras: extras,
-                onContact: phone == null ? null : () => _call(phone),
-              ),
+            child: _StoreInfo(
+              profile: profile,
+              extras: extras,
+              onContact: phone == null ? null : () => _call(phone),
             ),
           ),
           SliverPersistentHeader(
@@ -381,51 +481,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             delegate: _TabsHeader(
               tabs: tabs,
               selected: tab,
-              labels: {
-                StoreTab.products: l10n.storeTabProducts,
-                StoreTab.reviews: l10n.storeTabReviews,
-                StoreTab.about: l10n.storeTabAbout,
-                StoreTab.policies: l10n.storeTabPolicies,
-              },
+              labels: labels,
               onSelect: _selectTab,
-              background: Theme.of(context).scaffoldBackgroundColor,
-              hairline: context.hairline,
             ),
           ),
-          ...switch (tab) {
-            StoreTab.products => _productSlivers(
-              context,
-              l10n,
-              store,
-              products,
-            ),
-            StoreTab.reviews => [
-              ...storeReviewsSlivers(
-                context,
-                ref.watch(storeReviewsControllerProvider(store.code)),
-                onRetry: () => ref
-                    .read(storeReviewsControllerProvider(store.code).notifier)
-                    .refresh(),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-            ],
-            StoreTab.about => [
-              SliverToBoxAdapter(
-                child: StoreAboutTab(
-                  profile: profile,
-                  onPolicies: () => _selectTab(StoreTab.policies),
-                  onCategory: _showCategory,
-                  salesCount: extras ? profile.salesCount : null,
-                  onCall: phone == null ? null : () => _call(phone),
-                ),
-              ),
-              _fillGrouped(context),
-            ],
-            StoreTab.policies => [
-              SliverToBoxAdapter(child: StorePoliciesTab(profile: profile)),
-              _fillGrouped(context),
-            ],
-          },
+          ..._productSlivers(context, l10n, store, products),
         ],
       ),
     );
@@ -434,15 +494,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   /// Carries the About and Policies pages' grey down to the bottom.
   Widget _fillGrouped(BuildContext context) => SliverFillRemaining(
     hasScrollBody: false,
-    child: ColoredBox(color: _groupedColor(context)),
+    child: ColoredBox(color: groupedPageColor(context)),
   );
 
-  Color _groupedColor(BuildContext context) =>
-      context.isDarkMode ? AppColors.surfaceDark : AppColors.surfaceSubtle;
-
   /// The banner with the floating back, search and share buttons (Figma 13);
-  /// scrolled, it collapses into a white bar titled with the store's name
-  /// (13b).
+  /// scrolled, it collapses into a white bar titled with the store's name.
   Widget _header(
     BuildContext context,
     AppLocalizations l10n,
@@ -453,14 +509,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     // bar inset from the body, so a SliverAppBar would put its toolbar — the
     // back, search and share buttons — under the clock on a phone that draws
     // edge-to-edge (Android 15+). The real inset is read from the view. It
-    // adds to the expanded and the collapsed height alike, so the collapse
-    // and tab-pin offsets below (header minus toolbar) do not change.
-    final view = View.of(context);
+    // adds to the expanded and the collapsed height alike, so the header's
+    // expanded height below is what Figma draws, status bar included.
     final media = MediaQuery.of(context);
-    final inset = view.padding.top / view.devicePixelRatio;
+    final inset = _statusBar;
     return MediaQuery(
       data: media.copyWith(padding: media.padding.copyWith(top: inset)),
-      child: _headerBar(context, l10n, store, profile),
+      child: _headerBar(context, l10n, store, profile, inset),
     );
   }
 
@@ -469,22 +524,27 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     AppLocalizations l10n,
     HmStoreCard store,
     StoreProfile profile,
+    double inset,
   ) {
+    final t = AppTextStyles.of(context);
     return SliverAppBar(
       pinned: true,
-      expandedHeight: _headerHeight,
+      expandedHeight: _headerHeight - inset,
+      toolbarHeight: _toolbarHeight,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
       elevation: 0,
       automaticallyImplyLeading: false,
       centerTitle: false,
-      leadingWidth: 64,
+      // The back button is 16 px from the edge: 40 px in 72.
+      leadingWidth: 72,
       leading: Center(
-        child: _CircleButton(
+        child: HubIconButton(
           icon: HubIcons.arrowLeft,
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          onTap: _back,
+          background: Colors.white,
+          onPressed: _back,
         ),
       ),
       titleSpacing: 0,
@@ -495,38 +555,30 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           store.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 18,
-            height: 24 / 18,
-            fontWeight: FontWeight.w700,
-            color: context.scaffoldHeading,
-          ),
+          style: t.heading2.copyWith(color: context.scaffoldHeading),
         ),
       ),
       actions: [
-        _CircleButton(
+        HubIconButton(
           icon: HubIcons.search,
           tooltip: l10n.storeSearchHint(store.name),
-          onTap: _focusSearch,
+          background: Colors.white,
+          onPressed: _focusSearch,
         ),
         if (store.webUrl != null) ...[
           const SizedBox(width: 8),
-          _CircleButton(
+          HubIconButton(
             icon: HubIcons.share2,
             tooltip: l10n.actionShare,
-            onTap: () => _share(store),
+            background: Colors.white,
+            onPressed: () => _share(store),
           ),
         ],
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
       ],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
-        // The banner runs up behind the status bar too, so the white strip
-        // the logo overhangs into keeps its height.
-        background: _Banner(
-          profile: profile,
-          bannerHeight: _bannerHeight + MediaQuery.paddingOf(context).top,
-        ),
+        background: _Banner(profile: profile, bannerHeight: _bannerHeight),
       ),
     );
   }
@@ -543,15 +595,27 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       SliverPadding(
         padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 0),
         sliver: SliverToBoxAdapter(
-          child: _StoreSearchField(
+          child: StoreSearchField(
+            height: 42,
             controller: _search,
             focusNode: _searchFocus,
             hint: l10n.storeSearchHint(store.name),
-            activeFilters: state.activeFilterCount,
             onChanged: _onSearchChanged,
             onSubmitted: _submitSearch,
             onClear: _clearSearch,
-            onFilters: () => _openFilters(state),
+            // The filter action 14 px from the end: a 40 px button, 3 px short.
+            trailing: Padding(
+              padding: const EdgeInsetsDirectional.only(end: 3),
+              child: HubIconButton(
+                icon: HubIcons.slidersHorizontal,
+                iconSize: 18,
+                showDot: state.activeFilterCount > 0,
+                tooltip: state.activeFilterCount > 0
+                    ? '${l10n.filtersLabel} (${state.activeFilterCount})'
+                    : l10n.filtersLabel,
+                onPressed: () => _openFilters(state),
+              ),
+            ),
           ),
         ),
       ),
@@ -584,7 +648,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     if (state.isLoading && state.products.isEmpty) {
       return const [
         SliverToBoxAdapter(
-          child: ProductGridSkeleton(count: 4,
+          child: ProductGridSkeleton(
+            count: 4,
             padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
           ),
         ),
@@ -620,9 +685,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       return [
         SliverToBoxAdapter(
           child: EmptyState(
-            icon: filtered
-                ? HubIcons.searchX
-                : HubIcons.package,
+            icon: filtered ? HubIcons.searchX : HubIcons.package,
             title: filtered ? l10n.storeNoMatches : l10n.storeNoProducts,
           ),
         ),
@@ -632,7 +695,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       SliverPadding(
         padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
         sliver: SliverGrid(
-          gridDelegate: productGridDelegate(context),
+          // Figma 13's cards: 16 px apart across, 14 down.
+          gridDelegate: ProductGridDelegate(
+            infoHeight: ProductCardMetrics.infoHeight(context),
+            mainAxisSpacing: 14,
+          ),
           delegate: SliverChildBuilderDelegate((context, index) {
             final product = state.products[index];
             return ProductCard(
@@ -642,10 +709,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           }, childCount: state.products.length),
         ),
       ),
-      if (state.isLoadingMore)
-        const SliverToBoxAdapter(
-          child: ProductGridSkeleton(count: 2),
-        ),
+      if (state.isLoadingMore) const SliverToBoxAdapter(child: ProductGridSkeleton(count: 2)),
     ];
   }
 }
@@ -727,41 +791,9 @@ double _logoOpacity(BuildContext context) {
   return ((open - 0.5) * 2).clamp(0.0, 1.0);
 }
 
-/// A white 40 pt round button over the banner; on the collapsed white bar it
-/// reads as a plain icon button.
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, size: 22, color: AppColors.inkHeading),
-        ),
-      ),
-    ),
-  );
-}
-
 /// The name with the verified mark, the location line ("Dubai, United Arab
-/// Emirates · Furniture"), the seller's short description, the rating ·
-/// products · joined figures and "Contact vendor" (Figma 13 "store-info").
+/// Emirates · Furniture"), the rating · products · joined figures and "Contact
+/// vendor" (Figma 13 "store-info").
 class _StoreInfo extends StatelessWidget {
   const _StoreInfo({
     required this.profile,
@@ -780,15 +812,11 @@ class _StoreInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final store = profile.card;
-    final isEn = Localizations.localeOf(context).languageCode == 'en';
     final joined = store.joinedAt;
-    final short = profile.shortDescription;
     final place = extras
-        ? [
-            ?profile.location,
-            ?store.categoryName,
-          ].join(' · ')
+        ? [?profile.location, ?store.categoryName].join(' · ')
         : '';
     final stats = <StoreStat>[
       if (store.isRated)
@@ -809,51 +837,24 @@ class _StoreInfo extends StatelessWidget {
             name: store.name,
             markSize: 18,
             gap: 6,
-            style: TextStyle(
-              // Playfair Display has no Arabic glyphs.
-              fontFamily: isEn ? AppTheme.displayFont : null,
-              fontSize: 22,
-              height: 28 / 22,
-              fontWeight: FontWeight.w700,
-              color: context.scaffoldHeading,
-            ),
+            // EN/Heading 1: Playfair Display (Arabic: Tajawal).
+            style: t.heading1.copyWith(color: context.scaffoldHeading),
           ),
           if (place.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Row(
               children: [
-                Icon(
-                  HubIcons.mapPin,
-                  size: 14,
-                  color: context.scaffoldMuted,
-                ),
-                const SizedBox(width: 4),
+                Icon(HubIcons.mapPin, size: 14, color: context.scaffoldMuted),
+                const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     place,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 18 / 12,
-                      color: context.scaffoldMuted,
-                    ),
+                    style: t.caption.copyWith(color: context.scaffoldMuted),
                   ),
                 ),
               ],
-            ),
-          ],
-          if (short != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              short,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                color: context.scaffoldMuted,
-              ),
             ),
           ],
           const SizedBox(height: 12),
@@ -869,7 +870,8 @@ class _StoreInfo extends StatelessWidget {
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 52,
+              // The theme's FilledButton is Figma's Button.
               child: FilledButton.icon(
                 onPressed: onContact,
                 icon: const Icon(HubIcons.phone, size: 20),
@@ -889,58 +891,131 @@ class _HeaderStat extends StatelessWidget {
   final StoreStat stat;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-    decoration: BoxDecoration(
-      color: SearchStyle.pillFill(context),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      children: [
-        stat.valueText(
-          TextStyle(
-            fontSize: 16,
-            height: 22 / 16,
-            fontWeight: FontWeight.w600,
-            color: context.scaffoldHeading,
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: SearchStyle.pillFill(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          stat.valueText(t.title.copyWith(color: context.scaffoldHeading)),
+          const SizedBox(height: 2),
+          Text(
+            stat.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: t.caption.copyWith(color: context.scaffoldMuted),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          stat.label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
-            height: 16 / 12,
-            color: context.scaffoldMuted,
-          ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
-/// The pinned tab row: start-aligned labels with the orange underline under
-/// the chosen one, over a hairline.
+/// The inside pages' store row (Figma 13b "store-row"): the 52 px logo, the
+/// name with its verified mark, where the seller is and since when it sells,
+/// and its rating in a green-tinted pill.
+class _StoreRow extends StatelessWidget {
+  const _StoreRow({required this.profile, required this.extras});
+
+  final StoreProfile profile;
+  final bool extras;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final store = profile.card;
+    final joined = store.joinedAt;
+    final caption = [
+      if (extras) ?profile.location,
+      if (joined != null)
+        '${AppLocalizations.of(context).storeStatSellingSince} '
+            '${storeJoinedShort(context, joined.toLocal())}',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 12),
+      child: Row(
+        children: [
+          StoreLogo(store: store, size: 52),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StoreNameLine(
+                  name: store.name,
+                  markSize: 14,
+                  style: t.title.copyWith(color: context.scaffoldHeading),
+                ),
+                if (caption.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: t.caption.copyWith(color: context.scaffoldMuted),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (store.isRated) ...[
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.successSubtle,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.star_rounded,
+                    size: 12,
+                    color: AppColors.ratingStar,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    formatStoreRating(store.rating!),
+                    style: t.captionStrong.copyWith(
+                      color: AppColors.inkHeading,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The pinned tab row, in the two looks Figma draws. The front page's (13):
+/// start-aligned labels 20 apart, the orange 3 px underline under the chosen
+/// one's label, over a hairline. The inside pages' (13b): four equal columns
+/// with centred labels, the underline 2 px across the chosen column.
 class _TabsHeader extends SliverPersistentHeaderDelegate {
   const _TabsHeader({
     required this.tabs,
     required this.selected,
     required this.labels,
     required this.onSelect,
-    required this.background,
-    required this.hairline,
+    this.compact = false,
   });
 
   final List<StoreTab> tabs;
   final StoreTab selected;
   final Map<StoreTab, String> labels;
   final ValueChanged<StoreTab> onSelect;
-  final Color background;
-  final Color hairline;
+  final bool compact;
 
-  static const double _height = 45;
+  /// 45 px of tabs and the hairline (13); 46 and the hairline (13b).
+  double get _height => compact ? 47 : 46;
 
   @override
   double get minExtent => _height;
@@ -954,21 +1029,39 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    final background = Theme.of(context).scaffoldBackgroundColor;
+    final rule = BoxDecoration(
+      color: background,
+      border: const Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+    );
+    if (compact) {
+      return Container(
+        decoration: rule,
+        child: Row(
+          children: [
+            for (final tab in tabs)
+              Expanded(
+                child: _CompactTab(
+                  label: labels[tab]!,
+                  selected: tab == selected,
+                  onTap: () => onSelect(tab),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
     return Container(
-      decoration: BoxDecoration(
-        color: background,
-        border: Border(bottom: BorderSide(color: hairline)),
-      ),
+      decoration: rule,
       // Scrolls sideways rather than overflowing with large text.
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (var i = 0; i < tabs.length; i++) ...[
               if (i > 0) const SizedBox(width: 20),
-              _TabLabel(
+              _FrontTab(
                 label: labels[tabs[i]]!,
                 selected: tabs[i] == selected,
                 onTap: () => onSelect(tabs[i]),
@@ -985,8 +1078,11 @@ class _TabsHeader extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _TabsHeader old) => true;
 }
 
-class _TabLabel extends StatelessWidget {
-  const _TabLabel({
+/// A front-page tab (Figma 13): 12 above and 10 below the label, the chosen
+/// one in Body Strong ink with a 3 px accent underline, the others in Body
+/// muted — which, being 3 px shorter, sit 1.5 px lower, as the frame has them.
+class _FrontTab extends StatelessWidget {
+  const _FrontTab({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -998,29 +1094,26 @@ class _TabLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     return Semantics(
       button: true,
       selected: selected,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.only(top: 12, bottom: 9),
+          padding: const EdgeInsets.only(top: 12, bottom: 10),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: selected ? AppColors.accent : Colors.transparent,
-                width: 3,
-              ),
-            ),
+            border: selected
+                ? const Border(
+                    bottom: BorderSide(color: AppColors.accent, width: 3),
+                  )
+                : null,
           ),
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              height: 20 / 14,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? context.scaffoldHeading : context.scaffoldMuted,
-            ),
+            style: selected
+                ? t.bodyStrong.copyWith(color: context.scaffoldHeading)
+                : t.body.copyWith(color: context.scaffoldMuted),
           ),
         ),
       ),
@@ -1028,81 +1121,48 @@ class _TabLabel extends StatelessWidget {
   }
 }
 
-/// "Search MIA CO products", with the filter action inside the field — a dot
-/// on it while filters are on.
-class _StoreSearchField extends StatelessWidget {
-  const _StoreSearchField({
-    required this.controller,
-    required this.focusNode,
-    required this.hint,
-    required this.activeFilters,
-    required this.onChanged,
-    required this.onSubmitted,
-    required this.onClear,
-    required this.onFilters,
+/// An inside-page tab (Figma 13b): a quarter of the width, the label centred
+/// 12 px from the top and bottom, the chosen one in Body Strong ink with a
+/// 2 px accent underline across the column.
+class _CompactTab extends StatelessWidget {
+  const _CompactTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
   });
 
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final String hint;
-  final int activeFilters;
-  final ValueChanged<String> onChanged;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-  final VoidCallback onFilters;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final muted = context.scaffoldMuted;
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      textInputAction: TextInputAction.search,
-      style: TextStyle(
-        fontSize: 14,
-        height: 20 / 14,
-        color: context.scaffoldHeading,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintMaxLines: 1,
-        hintStyle: TextStyle(fontSize: 14, height: 20 / 14, color: muted),
-        filled: true,
-        fillColor: SearchStyle.pillFill(context),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 11),
-        prefixIcon: Icon(HubIcons.search, size: 18, color: muted),
-        prefixIconConstraints: const BoxConstraints(minWidth: 42),
-        suffixIcon: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (controller.text.isNotEmpty)
-              IconButton(
-                icon: const Icon(HubIcons.x, size: 18),
-                color: muted,
-                tooltip: l10n.searchClearField,
-                onPressed: onClear,
-              ),
-            IconButton(
-              tooltip: activeFilters > 0
-                  ? '${l10n.filtersLabel} ($activeFilters)'
-                  : l10n.filtersLabel,
-              onPressed: onFilters,
-              icon: Badge(
-                isLabelVisible: activeFilters > 0,
-                smallSize: 8,
-                backgroundColor: AppColors.accent,
-                child: Icon(
-                  HubIcons.slidersHorizontal,
-                  size: 18,
-                  color: context.scaffoldHeading,
-                ),
-              ),
+    final t = AppTextStyles.of(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        child: Center(
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              border: selected
+                  ? const Border(
+                      bottom: BorderSide(color: AppColors.accent, width: 2),
+                    )
+                  : null,
             ),
-          ],
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: selected
+                  ? t.bodyStrong.copyWith(color: context.scaffoldHeading)
+                  : t.body.copyWith(color: context.scaffoldMuted),
+            ),
+          ),
         ),
       ),
     );
@@ -1124,9 +1184,10 @@ class _MetaRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final color = context.scaffoldHeading;
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 12, 4),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 4),
       child: Row(
         children: [
           Expanded(
@@ -1134,18 +1195,14 @@ class _MetaRow extends StatelessWidget {
               count ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                color: context.scaffoldMuted,
-              ),
+              style: t.caption.copyWith(color: context.scaffoldMuted),
             ),
           ),
           InkWell(
             onTap: onSort,
             borderRadius: BorderRadius.circular(8),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 11),
+              padding: const EdgeInsetsDirectional.fromSTEB(4, 11, 0, 11),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1157,12 +1214,7 @@ class _MetaRow extends StatelessWidget {
                       sortLabel,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 16 / 12,
-                        fontWeight: FontWeight.w600,
-                        color: color,
-                      ),
+                      style: t.captionStrong.copyWith(color: color),
                     ),
                   ),
                 ],

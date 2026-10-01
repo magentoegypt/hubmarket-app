@@ -9,6 +9,7 @@ import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/hubapp/hubapp.dart';
 import '../../../../core/widgets/hub_chip.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
@@ -316,8 +317,9 @@ class StoreSearchField extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (controller.text.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(HubIcons.x, size: 18),
+                    HubIconButton(
+                      icon: HubIcons.x,
+                      iconSize: 18,
                       color: muted,
                       tooltip: l10n.searchClearField,
                       onPressed: onClear,

@@ -48,7 +48,8 @@ void main() {
 
     expect(backend.of('HmStore').single.variables['code'], 'MIA');
     expect(find.text('MIA CO'), findsWidgets);
-    expect(find.text('Modern furniture for homes and offices'), findsOneWidget);
+    // Figma 13's header has no description line: the About tab carries it.
+    expect(find.text('Modern furniture for homes and offices'), findsNothing);
     // The star is an icon: Tajawal and DM Sans have no ★ glyph.
     expect(find.text('4.8 \uFFFC'), findsOneWidget);
     expect(find.text('126 reviews'), findsOneWidget);
@@ -125,7 +126,10 @@ void main() {
     expect(find.text('Typical dispatch'), findsOneWidget);
     expect(find.text('Average rating'), findsOneWidget);
     expect(find.text('Customer reviews'), findsOneWidget);
-    expect(find.text('June 2023'), findsOneWidget);
+    // Figma 13b: when the seller started selling is in the store row under
+    // the bar, not a tile.
+    expect(find.textContaining('Selling since Jun 2023'), findsOneWidget);
+    expect(find.text('June 2023'), findsNothing);
     expect(find.text('Store policies'), findsOneWidget);
     expect(find.text('Shipping policy'), findsOneWidget);
     expect(
@@ -259,11 +263,11 @@ void main() {
     expect(find.text('4.8 \uFFFC'), findsOneWidget);
     // The products start at once, from the card's seller id.
     expect(backend.of('Products'), isNotEmpty);
-    expect(find.text('Modern furniture for homes and offices'), findsNothing);
+    // Only the full profile knows the seller publishes policies.
+    expect(find.text('Policies'), findsNothing);
 
     page.complete(miaStoreData());
     await tester.pumpAndSettle();
-    expect(find.text('Modern furniture for homes and offices'), findsOneWidget);
     expect(find.text('Policies'), findsOneWidget);
   });
 
@@ -346,7 +350,7 @@ void main() {
     await tester.tap(find.text('عن المتجر'));
     await tester.pumpAndSettle();
     expect(find.text('مدة التجهيز المعتادة'), findsOneWidget);
-    expect(find.text('يونيو 2023'), findsOneWidget);
+    expect(find.textContaining('يبيع منذ يونيو 2023'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -430,8 +434,9 @@ void main() {
         'pageSize': 20,
         'currentPage': 1,
       });
-      // The header's figures: every approved review of the seller's products.
-      expect(find.text('4.8'), findsOneWidget);
+      // The seller's figures: every approved review of its products — the
+      // store row's pill and the summary card.
+      expect(find.text('4.8'), findsNWidgets(2));
       expect(find.text('126 reviews'), findsWidgets);
       expect(find.text('Sara K.'), findsOneWidget);
       expect(find.text('Great sofa'), findsOneWidget);

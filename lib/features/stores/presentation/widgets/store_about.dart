@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/widgets/grouped_list.dart';
@@ -14,27 +16,28 @@ import '../../../cms/presentation/widgets/cms_html_view.dart';
 import '../../domain/store.dart';
 import '../stores_providers.dart';
 import 'store_widgets.dart';
-import '../../../../app/theme/hub_icons.dart';
 
-/// A seller's month and year of joining ("June 2023"), the month in the
+/// A seller's month and year of joining, short ("Jun 2023"): the month in the
 /// app's language and the year in Western digits, as prices are.
-String storeJoinedLabel(BuildContext context, DateTime joined) {
+String storeJoinedShort(BuildContext context, DateTime joined) {
   final locale = Localizations.localeOf(context).languageCode;
   String month;
   try {
-    month = DateFormat.MMMM(locale).format(joined);
+    month = DateFormat.MMM(locale).format(joined);
   } catch (_) {
-    month = DateFormat.MMMM().format(joined);
+    month = DateFormat.MMM().format(joined);
   }
   return '$month ${joined.year}';
 }
 
 /// Figma 13b "About": the seller's About text, the numbers (products, sales,
-/// dispatch, rating, reviews, joining date), a summary of the policies, the
-/// categories the seller's products are in and "Call" the seller. Sections
-/// without data are left out: the Sales figure and Call come only while the
-/// server lists HubAppVendors' P3.1 fields and the website's store page
-/// shows them (its sales count and telephone).
+/// dispatch, rating, reviews), a summary of the policies, the categories the
+/// seller's products are in and "Call" the seller. Sections without data are
+/// left out: the Sales figure and Call come only while the server lists
+/// HubAppVendors' P3.1 fields and the website's store page shows them (its
+/// sales count and telephone). When the seller published a dispatch time it
+/// follows the four figures the frame draws; the joining date is in the page's
+/// store row.
 class StoreAboutTab extends ConsumerWidget {
   const StoreAboutTab({
     super.key,
@@ -73,17 +76,12 @@ class StoreAboutTab extends ConsumerWidget {
       StoreStat(storeCount(store.productCount), l10n.storeStatProductsListed),
       if (salesCount case final sales?)
         StoreStat(storeCount(sales), l10n.storeStatSales),
-      if (store.dispatchTime case final dispatch?)
-        StoreStat(dispatch.label, l10n.storeStatDispatch),
       if (store.isRated)
         StoreStat.rating(store.rating!, l10n.storeStatAverageRating),
       if (store.reviewCount > 0)
         StoreStat(storeCount(store.reviewCount), l10n.storeStatCustomerReviews),
-      if (store.joinedAt case final joined?)
-        StoreStat(
-          storeJoinedLabel(context, joined.toLocal()),
-          l10n.storeStatSellingSince,
-        ),
+      if (store.dispatchTime case final dispatch?)
+        StoreStat(dispatch.label, l10n.storeStatDispatch),
     ];
 
     return _GroupedPage(
@@ -110,7 +108,11 @@ class StoreAboutTab extends ConsumerWidget {
                   ),
                 if (profile.shippingPolicyHtml != null &&
                     profile.refundPolicyHtml != null)
-                  Divider(height: 1, thickness: 1, color: context.hairline),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.borderSubtle,
+                  ),
                 if (profile.refundPolicyHtml case final html?)
                   _PolicySummary(
                     icon: HubIcons.rotateCcw,
@@ -137,16 +139,14 @@ class StoreAboutTab extends ConsumerWidget {
             ),
           ),
         if (onCall case final call?)
-          SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: call,
-              icon: const Icon(HubIcons.phone, size: 20),
-              label: Text(
-                l10n.storeCallVendor(store.name),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+          // The theme's OutlinedButton is Figma's outline Button (52 px).
+          OutlinedButton.icon(
+            onPressed: call,
+            icon: const Icon(HubIcons.phone, size: 20),
+            label: Text(
+              l10n.storeCallVendor(store.name),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
       ],
@@ -183,12 +183,14 @@ class StorePoliciesTab extends StatelessWidget {
   }
 }
 
-/// The body copy of the About and policy texts (`--hm-subtle` on white).
-TextStyle storeBodyStyle(BuildContext context) => TextStyle(
-  fontSize: 14,
-  height: 20 / 14,
-  color: context.isDarkMode ? const Color(0xFFAEB6C2) : const Color(0xFF535D70),
-);
+/// The body copy of the About and policy texts (Body in `--hm-subtle` on
+/// white).
+TextStyle storeBodyStyle(BuildContext context) =>
+    AppTextStyles.of(context).body.copyWith(
+      color: context.isDarkMode
+          ? const Color(0xFFAEB6C2)
+          : AppColors.inkSubtle,
+    );
 
 /// A seller's HTML (About, a policy) drawn natively; its links open the
 /// matching app screen, the browser only for pages the app has no screen for.
@@ -253,12 +255,9 @@ class StoreSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final heading = Text(
       title,
-      style: TextStyle(
-        fontSize: 16,
-        height: 22 / 16,
-        fontWeight: FontWeight.w600,
-        color: context.scaffoldHeading,
-      ),
+      style: AppTextStyles.of(
+        context,
+      ).title.copyWith(color: context.scaffoldHeading),
     );
     return Container(
       padding: const EdgeInsets.all(14),
@@ -322,6 +321,7 @@ class _PolicySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     final excerpt = CmsDocument.plainText(CmsDocument.parse(html));
     return InkWell(
       onTap: onTap,
@@ -338,10 +338,7 @@ class _PolicySummary extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 20 / 14,
-                      fontWeight: FontWeight.w600,
+                    style: t.bodyStrong.copyWith(
                       color: context.scaffoldHeading,
                     ),
                   ),
@@ -351,9 +348,10 @@ class _PolicySummary extends StatelessWidget {
                       excerpt,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: storeBodyStyle(
-                        context,
-                      ).copyWith(fontSize: 12, height: 16 / 12),
+                      style: storeBodyStyle(context).copyWith(
+                        fontSize: t.caption.fontSize,
+                        height: t.caption.height,
+                      ),
                     ),
                   ],
                 ],
@@ -433,34 +431,28 @@ class _StatTile extends StatelessWidget {
   final StoreStat stat;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: groupCardColor(context),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        stat.valueText(
-          TextStyle(
-            fontSize: 16,
-            height: 22 / 16,
-            fontWeight: FontWeight.w600,
-            color: context.scaffoldHeading,
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: groupCardColor(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          stat.valueText(
+            t.title.copyWith(color: context.scaffoldHeading),
+            maxLines: 2,
           ),
-          maxLines: 2,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          stat.label,
-          style: TextStyle(
-            fontSize: 12,
-            height: 16 / 12,
-            color: context.scaffoldMuted,
+          const SizedBox(height: 2),
+          Text(
+            stat.label,
+            style: t.caption.copyWith(color: context.scaffoldMuted),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
