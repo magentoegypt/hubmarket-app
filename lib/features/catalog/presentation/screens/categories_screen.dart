@@ -5,74 +5,110 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/widgets/network_image.dart';
-import '../../../../core/widgets/async_value_view.dart';
-import '../../../../l10n/l10n.dart';
-import '../../domain/category.dart';
-import '../catalog_providers.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
+import '../../../../core/hubapp/hubapp_models.dart';
+import '../../../../core/widgets/async_value_view.dart';
+import '../../../../core/widgets/hub_icon_button.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
+import '../../../../core/widgets/network_image.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../stores/domain/store.dart';
+import '../../../stores/presentation/stores_providers.dart';
+import '../../../stores/presentation/widgets/store_widgets.dart';
+import '../../domain/category.dart';
+import '../category_icons.dart';
+import '../category_stores.dart';
+import '../catalog_providers.dart';
 
-/// Categories tab — heading + search box + a grid of category image cards
-/// (photo, name, product count) per Figma.
-class CategoriesScreen extends ConsumerWidget {
+/// Categories tab (Figma 08): a rail of the top-level categories on the
+/// start side, and for the one picked a banner, "Shop by type" tiles for its
+/// sub-categories and — with the Hub Market App's seller API — "Top stores in
+/// …". The rail ends with Bundle Deals where the app has them.
+///
+/// Tiles lead to a listing; the banner leads to the picked category's own.
+class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoriesScreen> createState() => _CategoriesScreenState();
+}
+
+class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
+  /// The category the panel shows; the first one until the shopper picks.
+  String? _selectedUid;
+  final ScrollController _panelScroll = ScrollController();
+
+  @override
+  void dispose() {
+    _panelScroll.dispose();
+    super.dispose();
+  }
+
+  void _select(Category category) {
+    if (category.uid == _selectedUid) return;
+    setState(() => _selectedUid = category.uid);
+    if (_panelScroll.hasClients) _panelScroll.jumpTo(0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final categories = ref.watch(categoryTreeProvider);
+    final bundles = ref.watch(storesAvailableProvider);
 
     return HubScaffold(
       currentTab: AppTab.categories,
-      // The page has its own search box, so drop the redundant app-bar search
-      // icon (Figma).
-      showSearch: false,
+      appBar: _RuledBar(
+        bar: HubTopBar(
+          title: l10n.navCategories,
+          showBack: false,
+          actions: [
+            HubIconButton(
+              icon: HubIcons.search,
+              tooltip: l10n.searchHint,
+              onPressed: () => context.push(AppRoutes.search),
+            ),
+          ],
+        ),
+      ),
       body: AsyncValueView(
         value: categories,
         onRetry: () => ref.invalidate(categoryTreeProvider),
         data: (items) {
-          return ListView(
-            padding: EdgeInsets.zero,
+          final menu = [
+            for (final c in items)
+              if (c.includeInMenu && c.name.isNotEmpty) c,
+          ];
+          if (menu.isEmpty) {
+            return Center(child: Text(l10n.stateEmpty));
+          }
+          final selected = menu.firstWhere(
+            (c) => c.uid == _selectedUid,
+            orElse: () => menu.first,
+          );
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),
-                child: Text(
-                  l10n.navCategories,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              SizedBox(
+                width: _CategoryRail.width,
+                child: _CategoryRail(
+                  items: menu,
+                  selectedUid: selected.uid,
+                  onSelect: _select,
+                  // Bundle Deals is the Hub Market App's list.
+                  onBundles: bundles
+                      ? () => context.push(AppRoutes.bundles)
+                      : null,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
-                child: Text(
-                  l10n.categoriesSubtitle,
-                  style: const TextStyle(color: AppColors.inkMuted),
+              Expanded(
+                child: _CategoryPanel(
+                  key: ValueKey(selected.uid),
+                  category: selected,
+                  controller: _panelScroll,
                 ),
               ),
-              // Tap-to-search box (the page has a search box per the design).
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => context.push(AppRoutes.search),
-                  child: IgnorePointer(
-                    child: TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        hintText: l10n.searchHint,
-                        prefixIcon: const Icon(HubIcons.search),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 8px section band separating the header from the grid (Figma 57:23).
-              const SizedBox(
-                height: 8,
-                child: ColoredBox(color: AppColors.surfaceMuted),
-              ),
-              _CategoryGrid(items: items),
             ],
           );
         },
@@ -81,13 +117,470 @@ class CategoriesScreen extends ConsumerWidget {
   }
 }
 
-/// Sub-category drill-down: tapping a parent category lists its child
-/// categories (which themselves drill down or open the PLP when they're leaves).
+/// The app bar with the frame's 1 pt rule along its foot (inside its 56 pt).
+class _RuledBar extends StatelessWidget implements PreferredSizeWidget {
+  const _RuledBar({required this.bar});
+
+  final HubTopBar bar;
+
+  @override
+  Size get preferredSize => bar.preferredSize;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      bar,
+      const PositionedDirectional(
+        start: 0,
+        end: 0,
+        bottom: 0,
+        child: ColoredBox(
+          color: AppColors.borderSubtle,
+          child: SizedBox(height: 1),
+        ),
+      ),
+    ],
+  );
+}
+
+/// The rail (Figma "category-list"): 104 pt wide on the `bg/subtle` ground.
+/// The picked row is white with a 3 pt orange bar on its start edge.
+class _CategoryRail extends StatelessWidget {
+  const _CategoryRail({
+    required this.items,
+    required this.selectedUid,
+    required this.onSelect,
+    this.onBundles,
+  });
+
+  final List<Category> items;
+  final String selectedUid;
+  final ValueChanged<Category> onSelect;
+  final VoidCallback? onBundles;
+
+  static const double width = 104;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    // A Material, so the rows' ink shows over the ground.
+    return Material(
+      color: AppColors.surfaceSubtle,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          for (final category in items)
+            _RailItem(
+              label: category.name,
+              selected: category.uid == selectedUid,
+              onTap: () => onSelect(category),
+            ),
+          if (onBundles != null)
+            _RailItem(
+              label: l10n.bundlesTitle,
+              selected: false,
+              onTap: onBundles!,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RailItem extends StatelessWidget {
+  const _RailItem({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : null,
+            border: selected
+                ? const BorderDirectional(
+                    start: BorderSide(color: AppColors.accent, width: 3),
+                  )
+                : null,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+          child: Center(
+            child: SizedBox(
+              width: 84,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: (selected ? t.captionStrong : t.caption).copyWith(
+                  color: selected ? AppColors.accentStrong : AppColors.inkSubtle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// What the rail's pick shows: the banner, the sub-category tiles and the
+/// category's top stores.
+class _CategoryPanel extends ConsumerWidget {
+  const _CategoryPanel({
+    super.key,
+    required this.category,
+    required this.controller,
+  });
+
+  final Category category;
+  final ScrollController controller;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+
+    final subs = [
+      for (final c in category.children)
+        if (c.includeInMenu && c.name.isNotEmpty) c,
+    ];
+    // Sub-categories carry no photo on this store: a product of each stands
+    // in, as the storefront does — and for the banner of a category without
+    // a photo of its own.
+    final thumbnails =
+        ref
+            .watch(
+              categoryThumbnailsProvider(
+                categoryThumbnailKey([
+                  ...subs,
+                  if ((category.image ?? '').isEmpty) category,
+                ]),
+              ),
+            )
+            .valueOrNull ??
+        const <String, String>{};
+
+    final storesOn = ref.watch(storesAvailableProvider);
+    final categoryId = int.tryParse(categoryIdFromUid(category.uid) ?? '');
+    final stores = storesOn && categoryId != null
+        ? ref.watch(categoryStoresProvider(categoryId)).valueOrNull
+        : null;
+    final topStores = stores?.items ?? const <HmStoreCard>[];
+
+    final counts = [
+      if (category.productCount > 0)
+        l10n.categoryProductCount(category.productCount),
+      if (stores != null && stores.totalCount > 0)
+        l10n.categoryStoreCount(stores.totalCount),
+    ].join(' · ');
+
+    final bannerImage = (category.image ?? '').isNotEmpty
+        ? category.image
+        : thumbnails[category.uid];
+
+    return ListView(
+      controller: controller,
+      padding: const EdgeInsetsDirectional.fromSTEB(14, 16, 16, 16),
+      children: [
+        _Banner(
+          key: const ValueKey('category-banner'),
+          name: category.name,
+          counts: counts,
+          imageUrl: bannerImage,
+          onTap: () => context.push(
+            AppRoutes.category(category.uid),
+            extra: category.name,
+          ),
+        ),
+        if (subs.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            l10n.categoryShopByType,
+            style: t.title.copyWith(color: AppColors.inkHeading),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 12,
+            runSpacing: 14,
+            children: [
+              for (final sub in subs)
+                TypeTile(
+                  category: sub,
+                  imageUrl: (sub.image ?? '').isNotEmpty
+                      ? sub.image
+                      : thumbnails[sub.uid],
+                ),
+            ],
+          ),
+        ],
+        if (topStores.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            l10n.categoryTopStores(category.name),
+            style: t.title.copyWith(color: AppColors.inkHeading),
+          ),
+          const SizedBox(height: 14),
+          for (var i = 0; i < topStores.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            _StoreRow(store: topStores[i]),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// The category banner (Figma "banner"): 96 pt tall, 12 pt corners, the photo
+/// under a navy wash that fades out from the start edge, the name in Heading 1
+/// and the counts under it. Opens the category's listing.
+class _Banner extends StatelessWidget {
+  const _Banner({
+    super.key,
+    required this.name,
+    required this.counts,
+    required this.imageUrl,
+    required this.onTap,
+  });
+
+  final String name;
+  final String counts;
+  final String? imageUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Semantics(
+      button: true,
+      label: name,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 96,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: AppColors.brandPrimary),
+              if ((imageUrl ?? '').isNotEmpty)
+                HubImage(
+                  url: imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_) =>
+                      const ColoredBox(color: AppColors.brandPrimary),
+                  error: (_) =>
+                      const ColoredBox(color: AppColors.brandPrimary),
+                ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: AlignmentDirectional.centerStart,
+                    end: AlignmentDirectional.centerEnd,
+                    colors: [Color(0xCC0F2144), Color(0x000F2144)],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.heading1.copyWith(color: Colors.white),
+                    ),
+                    if (counts.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        counts,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.caption.copyWith(color: AppColors.borderStrong),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(onTap: onTap),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A sub-category tile (Figma "sub/…"): a 74 pt rounded photo and its name in
+/// up to two lines. Opens the category's listing.
+class TypeTile extends StatelessWidget {
+  const TypeTile({super.key, required this.category, required this.imageUrl});
+
+  final Category category;
+
+  /// The category's own photo, or the product stand-in the panel resolved;
+  /// null shows the category's icon.
+  final String? imageUrl;
+
+  static const double size = 74;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final fallback = ColoredBox(
+      color: AppColors.surfaceSubtle,
+      child: Center(
+        child: Icon(
+          categoryIcon(category.urlKey, category.name),
+          size: 28,
+          color: AppColors.brandPrimary,
+        ),
+      ),
+    );
+    return SizedBox(
+      width: size,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => openCategory(context, category),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox.square(
+                dimension: size,
+                child: (imageUrl ?? '').isEmpty
+                    ? fallback
+                    : HubImage(
+                        url: imageUrl,
+                        shimmer: true,
+                        placeholder: (_) =>
+                            const ColoredBox(color: AppColors.surfaceSubtle),
+                        error: (_) => fallback,
+                      ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 32),
+              child: Text(
+                category.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: t.captionStrong.copyWith(color: AppColors.inkHeading),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens a category's listing, which draws its own sub-category rail.
+void openCategory(BuildContext context, Category category) => context.push(
+  AppRoutes.category(category.uid),
+  extra: category.name,
+);
+
+/// One of the category's top stores (Figma "top-stores/row"): logo, name,
+/// "★ 4.8 · 38 products" and a chevron. Opens the store.
+class _StoreRow extends StatelessWidget {
+  const _StoreRow({required this.store});
+
+  final HmStoreCard store;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    final shape = RoundedRectangleBorder(
+      side: const BorderSide(color: AppColors.borderSubtle),
+      borderRadius: BorderRadius.circular(12),
+    );
+    return Material(
+      color: Colors.white,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => openStore(context, store),
+        customBorder: shape,
+        child: Padding(
+          // 10 inside the 1 pt outline.
+          padding: const EdgeInsets.all(11),
+          child: Row(
+            children: [
+              StoreLogo(store: store, size: 36),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      store.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
+                    ),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          if (store.isRated) ...[
+                            ratingSpan(
+                              store.rating!,
+                              size: 12,
+                              color: AppColors.inkMuted,
+                              starFirst: true,
+                            ),
+                            const TextSpan(text: ' · '),
+                          ],
+                          TextSpan(
+                            text: l10n.categoryProductCount(store.productCount),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.caption.copyWith(color: AppColors.inkMuted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              // chevron_right mirrors itself in RTL.
+              const Icon(
+                HubIcons.chevronRight,
+                size: 18,
+                color: AppColors.inkMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sub-category drill-down: the categories below one, as the same tiles.
 ///
-/// Reached from the Categories tab, which browses the tree rather than jumping
-/// to products. Its tiles resolve artwork the same way the listing's rail does,
-/// so a level whose categories carry no `image` still shows real imagery
-/// (CL042-DEV22) instead of a wall of placeholders.
+/// The Categories tab no longer routes here (its panel shows the tiles and a
+/// tile opens the listing, which draws its own sub-category rail); the route
+/// stays for links that name one.
 class SubcategoriesScreen extends ConsumerWidget {
   const SubcategoriesScreen({
     super.key,
@@ -105,192 +598,56 @@ class SubcategoriesScreen extends ConsumerWidget {
 
     return HubScaffold(
       currentTab: AppTab.categories,
+      appBar: HubTopBar(
+        title: category.valueOrNull?.name ?? title ?? l10n.navCategories,
+      ),
       body: AsyncValueView(
         value: category,
         onRetry: () => ref.invalidate(categoryTreeProvider),
         data: (cat) {
-          final subs = (cat?.children ?? const <Category>[])
-              .where((c) => c.includeInMenu)
-              .toList(growable: false);
-          return ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 4),
-                child: Text(
-                  cat?.name ?? title ?? l10n.navCategories,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 4),
-                child: Text(
-                  l10n.categoryCount(subs.length),
-                  style: const TextStyle(color: AppColors.inkMuted),
-                ),
-              ),
-              _CategoryGrid(items: subs),
-            ],
-          );
+          final subs = [
+            for (final c in cat?.children ?? const <Category>[])
+              if (c.includeInMenu) c,
+          ];
+          if (subs.isEmpty) {
+            return Center(child: Text(l10n.stateEmpty));
+          }
+          return _SubcategoryTiles(items: subs);
         },
       ),
     );
   }
 }
 
-/// Opens a tapped category: drills into the sub-category grid when it has
-/// navigable children, otherwise jumps straight to its product listing.
-///
-/// This tab is the browse surface — its job is to open up the tree, so a parent
-/// shows what's inside it rather than going straight to products. Home and the
-/// drawer still go directly to the listing, which is the shortcut path. (The
-/// two were briefly unified onto the listing; the grid is what's wanted here.)
-void _openCategory(BuildContext context, Category category) {
-  final hasSubcategories = category.children.any((c) => c.includeInMenu);
-  context.push(
-    hasSubcategories
-        ? AppRoutes.subcategories(category.uid)
-        : AppRoutes.category(category.uid),
-    extra: category.name,
-  );
-}
-
-/// Two-column grid of category cards, shared by the top-level Categories tab
-/// and the sub-category drill-down.
-///
-/// Sub-categories carry no `image` on this store, which left the whole
-/// drill-down as a wall of placeholders (CL042-DEV22). Resolve a stand-in from
-/// the first product in each — the substitution the storefront makes — in a
-/// single batched query for the whole grid.
-class _CategoryGrid extends ConsumerWidget {
-  const _CategoryGrid({required this.items});
+class _SubcategoryTiles extends ConsumerWidget {
+  const _SubcategoryTiles({required this.items});
 
   final List<Category> items;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
     final thumbnails =
         ref
             .watch(categoryThumbnailsProvider(categoryThumbnailKey(items)))
             .valueOrNull ??
         const <String, String>{};
-    if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(child: Text(l10n.stateEmpty)),
-      );
-    }
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return ListView(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        // Figma card ≈ 170×147 (photo 94 + label panel 53).
-        childAspectRatio: 170 / 147,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final category = items[index];
-        return _CategoryCard(
-          category: category,
-          imageUrl: (category.image ?? '').isNotEmpty
-              ? category.image
-              : thumbnails[category.uid],
-        );
-      },
-    );
-  }
-}
-
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.category, this.imageUrl});
-
-  final Category category;
-
-  /// The category's own photo, or the product stand-in resolved by the grid.
-  /// Null when neither exists — the card then shows the neutral placeholder
-  /// rather than borrowing an unrelated image.
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Material(
-      color: Colors.white,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: AppColors.borderDefault),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _openCategory(context, category),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 14,
           children: [
-            // Full-bleed photo area (Figma 94px of a 147px card).
-            Expanded(
-              child: SizedBox(
-                width: double.infinity,
-                child: HubImage(
-                  url: imageUrl,
-                  shimmer: true,
-                  error: (_) => const _CategoryPlaceholder(),
-                ),
+            for (final sub in items)
+              TypeTile(
+                category: sub,
+                imageUrl: (sub.image ?? '').isNotEmpty
+                    ? sub.image
+                    : thumbnails[sub.uid],
               ),
-            ),
-            // White label panel — name + product count.
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    category.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.5,
-                      color: AppColors.inkHeading,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.categoryProductCount(category.productCount),
-                    style: const TextStyle(
-                      color: AppColors.inkMuted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Pale navy chip with the neutral category glyph — the stand-in for a
-/// category tile that has no photo (the beauty teardrop was Zoonze's).
-class _CategoryPlaceholder extends StatelessWidget {
-  const _CategoryPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: AppColors.surfaceTint,
-      child: Center(
-        child: Icon(HubIcons.layoutGrid, color: AppColors.brandPrimary),
-      ),
+      ],
     );
   }
 }

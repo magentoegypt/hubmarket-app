@@ -65,7 +65,7 @@
   "fieldMediaUrl": "رابط الوسائط",
   "availableStoresTitle": "طرق عرض المتجر المتاحة",
   "navHome": "الرئيسية",
-  "navCategories": "الفئات",
+  "navCategories": "الأقسام",
   "navCart": "السلة",
   "navWishlist": "المفضلة",
   "navAccount": "حسابي",
@@ -110,6 +110,23 @@
   },
   "categoryCount": "{count} فئة",
   "@categoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryShopByType": "تسوّق حسب النوع",
+  "categoryTopStores": "أفضل متاجر {category}",
+  "@categoryTopStores": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryStoreCount": "{count, plural, =1{متجر واحد} =2{متجران} few{{count} متاجر} many{{count} متجرًا} other{{count} متجر}}",
+  "@categoryStoreCount": {
     "placeholders": {
       "count": {
         "type": "int"

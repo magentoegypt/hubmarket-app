@@ -129,6 +129,23 @@
       }
     }
   },
+  "categoryShopByType": "Shop by type",
+  "categoryTopStores": "Top stores in {category}",
+  "@categoryTopStores": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryStoreCount": "{count, plural, =1{1 store} other{{count} stores}}",
+  "@categoryStoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "storesTitle": "Stores",
   "storesSearchHint": "Search stores",
   "storesFeaturedBadge": "FEATURED STORE",
