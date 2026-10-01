@@ -42,10 +42,11 @@ import '../../../app/theme/hub_icons.dart';
 /// With the Hub Market App API (Build 2) the Home is the admin's layout from
 /// `hmAppHome` ([HmHomeView]). Without it — the module not deployed, the probe
 /// unable to tell, or `hmAppHome` failing or empty — it is Build 1
-/// ([_Build1Home]), exactly as before: categories and products from the
-/// catalogue, the promise strip, promo cards and trust row from the
-/// storefront's own CMS blocks, with lazy rails and Retry. A section whose
-/// source is empty collapses — nothing is hard-coded or invented.
+/// ([_Build1Home]): categories and products from the catalogue, the promise
+/// strip, promo cards, trust row and Sell card from the storefront's own CMS
+/// blocks, with lazy rails and Retry. Both draw the frame's pieces with the same
+/// widgets (`widgets/hm_*.dart`); Build 1 has the sections its data allows. A
+/// section whose source is empty collapses — nothing is hard-coded or invented.
 class HubHomeScreen extends ConsumerWidget {
   const HubHomeScreen({super.key});
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -17,6 +18,7 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/widgets/shimmer.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/deals/presentation/widgets/bundle_card.dart';
 import 'package:hubmarket_app/features/deals/presentation/widgets/deal_countdown.dart';
@@ -29,6 +31,7 @@ import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/catalog/presentation/catalog_providers.dart';
 import 'package:hubmarket_app/features/home/data/hm_home_repository.dart';
 import 'package:hubmarket_app/features/home/data/home_content_repository.dart';
+import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_view.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
@@ -133,6 +136,7 @@ Widget _app({
   required GlobalKey boundary,
   required bool hubApp,
   required FakeLocalCache cache,
+  bool loading = false,
 }) {
   Widget stub(BuildContext context, GoRouterState state) =>
       Scaffold(appBar: AppBar(), body: Text('route ${state.uri}'));
@@ -190,13 +194,17 @@ Widget _app({
             ? HubAppState.available(HmAppConfig(storeCode: locale))
             : const HubAppState.unavailable(),
       ),
-      hmHomeProvider.overrideWith(
-        (ref) async => hubApp
-            ? hmHomeFromJson(
-                hmAuditHomeJson(countdown: countdown, arabic: locale == 'ar'),
-              )
-            : null,
-      ),
+      hmHomeProvider.overrideWith((ref) {
+        // A Home that never answers: the skeleton.
+        if (loading) return Completer<HmHome?>().future;
+        return Future.value(
+          hubApp
+              ? hmHomeFromJson(
+                  hmAuditHomeJson(countdown: countdown, arabic: locale == 'ar'),
+                )
+              : null,
+        );
+      }),
       homeCmsBlocksProvider.overrideWith((ref) async => _build1Blocks),
       homeCategoriesProvider.overrideWith((ref) async => _build1Categories),
       categoryThumbnailsProvider.overrideWith(
@@ -440,6 +448,30 @@ void main() {
   });
 
   for (final locale in const ['en', 'ar']) {
+    testWidgets('Home while it loads ($locale)', (tester) async {
+      tester.view.physicalSize = const Size(390, 1300);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        _app(
+          locale: locale,
+          boundary: key,
+          hubApp: true,
+          cache: FakeLocalCache(),
+          loading: true,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await _writeCapture(tester, key, 'home_loading_$locale');
+      // The category tiles and two rails, as skeletons: no content, no error.
+      expect(find.byType(SkeletonBox), findsWidgets);
+      expect(find.byType(HmSectionHeader), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 10));
+    });
+
     testWidgets('Build 2 Home, the whole page ($locale)', (tester) async {
       await _capture(tester, locale: locale, hubApp: true);
     });

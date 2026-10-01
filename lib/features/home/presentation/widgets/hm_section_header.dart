@@ -6,7 +6,7 @@ import '../../../../app/theme/hub_icons.dart';
 
 /// A Home section header (Figma 07 "section-header/…"): an optional leading
 /// glyph, the admin's title (Heading 1) and subtitle (Caption, 2 pt under it),
-/// and the orange "See all →" action (Body Strong, 2 pt before a 16 pt arrow)
+/// and the orange "See All →" action (Body Strong, 2 pt before a 16 pt arrow)
 /// on the end side, centred on the whole header.
 ///
 /// The header is as tall as its text: 28 for a title, 46 with a subtitle (30
