@@ -67,8 +67,9 @@ class HmPickedForYou extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // The text takes the width Refresh leaves (267 + 91 in the
+                  // frame, nothing between).
                   if (onRefresh != null) ...[
-                    const SizedBox(width: 8),
                     Material(
                       color: Colors.white,
                       shape: const StadiumBorder(

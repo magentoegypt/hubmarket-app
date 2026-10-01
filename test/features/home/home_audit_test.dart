@@ -11,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hubmarket_app/app/theme/app_colors.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
 import 'package:hubmarket_app/core/config/store_timezone.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
@@ -65,8 +66,9 @@ import 'hm_home_fixtures.dart';
 /// (`build/ui_audit/home_rects_<capture>.json`), so a section can be cut out of
 /// the render and laid next to the same section of the frame.
 
-/// The page is taller than the 6313 / 6427 px of the frames only when something
-/// was added to it, so the viewport is a little taller than either.
+/// The viewport the page is first laid out in: taller than either frame (6313 /
+/// 6427 px), so every section is built (a list builds what it can see). The
+/// capture is then trimmed to the page itself.
 const double _kViewportHeight = 7600;
 
 /// Live CMS markup of the Build 1 blocks (hub-market.magento2.click, 1 Oct 2026).
@@ -290,6 +292,23 @@ void _expectFrameGeometry(WidgetTester tester, String locale) {
     inset + (ar ? 144 : 142),
     reason: 'the header',
   );
+  // The search field ends in a full-height orange button: 50 x 46, flush with
+  // the field's end.
+  final searchButton = find.byWidgetPredicate(
+    (w) =>
+        w is Container &&
+        w.color == AppColors.accent &&
+        w.constraints == const BoxConstraints.tightFor(width: 50, height: 46),
+  );
+  size('search button', searchButton, const Size(50, 46));
+  expect(
+    ar
+        ? tester.getTopLeft(searchButton).dx
+        : tester.getTopRight(searchButton).dx,
+    ar ? 16 : 374,
+    reason: 'the search button ends 16 pt from the edge',
+  );
+  expect(tester.getTopLeft(searchButton).dy, inset + 2 + 40 + 12);
   size('utility strip', find.byType(HmDeliveryStrip), const Size(390, 32), const Size(390, 34));
   size('active order', find.byType(ActiveOrderCard), const Size(358, 66), const Size(358, 68));
   size('hero carousel', find.byType(HmHeroCarousel), const Size(390, 236));
