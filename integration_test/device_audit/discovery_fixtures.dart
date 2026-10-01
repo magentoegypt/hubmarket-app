@@ -55,24 +55,38 @@ const build1Blocks = <String, String>{
 
 /// The category tree Build 1's "Shop by category" and its rails read.
 const build1Categories = <Category>[
-  Category(uid: 'Mw==', name: 'Grocery', urlKey: 'super-market', productCount: 7),
+  Category(
+    uid: 'Mw==',
+    name: 'Grocery',
+    urlKey: 'super-market',
+    productCount: 7,
+  ),
   Category(uid: 'NA==', name: 'Pharmacy', urlKey: 'pharmacy', productCount: 8),
-  Category(uid: 'NQ==', name: 'Furniture', urlKey: 'furniture', productCount: 7),
+  Category(
+    uid: 'NQ==',
+    name: 'Furniture',
+    urlKey: 'furniture',
+    productCount: 7,
+  ),
   Category(uid: 'Ng==', name: 'Fashion', urlKey: 'clothes', productCount: 19),
   Category(uid: 'Nw==', name: 'FMCG', urlKey: 'fmcg', productCount: 5),
 ];
 
-Product _homeProduct(String name, double price, [double? was, double? rating]) =>
-    Product(
-      sku: name,
-      name: name,
-      urlKey: name.toLowerCase().replaceAll(' ', '-'),
-      brand: 'MIA CO',
-      regularPrice: Money(amount: was ?? price, currency: 'AED'),
-      finalPrice: Money(amount: price, currency: 'AED'),
-      ratingSummary: rating == null ? null : rating * 20,
-      reviewCount: rating == null ? null : 3,
-    );
+Product _homeProduct(
+  String name,
+  double price, [
+  double? was,
+  double? rating,
+]) => Product(
+  sku: name,
+  name: name,
+  urlKey: name.toLowerCase().replaceAll(' ', '-'),
+  brand: 'MIA CO',
+  regularPrice: Money(amount: was ?? price, currency: 'AED'),
+  finalPrice: Money(amount: price, currency: 'AED'),
+  ratingSummary: rating == null ? null : rating * 20,
+  reviewCount: rating == null ? null : 3,
+);
 
 /// The products of every Build 1 category rail.
 final build1Rail = <Product>[
@@ -101,8 +115,7 @@ CustomerOrder homeOpenOrder() => CustomerOrder(
 
 /// "YOUR SEARCHES": the customer's own recent searches, newest first, as the
 /// local cache holds them.
-String homeSearchHistory() =>
-    jsonEncode(['bag', 'shirt', 'dress', 'women']);
+String homeSearchHistory() => jsonEncode(['bag', 'shirt', 'dress', 'women']);
 
 /// One unread notification, so the Home bell shows its orange dot (Figma 07).
 List<NotificationItem> homeUnreadInbox() => [
@@ -284,13 +297,7 @@ HubAppState searchHubApp(String locale) => HubAppState.available(
 
 /// The landing's recent searches (Figma 09b).
 List<String> searchRecents(String locale) => locale == 'ar'
-    ? const [
-        'كنبة سرير',
-        'مكتب',
-        'حليب جهينة',
-        'فستان مزهر',
-        'تلفزيون سامسونج',
-      ]
+    ? const ['كنبة سرير', 'مكتب', 'حليب جهينة', 'فستان مزهر', 'تلفزيون سامسونج']
     : const [
         'sofa bed',
         'office desk',
@@ -303,18 +310,13 @@ List<String> searchRecents(String locale) => locale == 'ar'
 /// counts the tiles show ("7+ items").
 List<Category> searchPopularTree(String locale) {
   final ar = locale == 'ar';
-  Category category(
-    int id,
-    String key,
-    String en,
-    String arName,
-    int count,
-  ) => Category(
-    uid: categoryUidFromId('$id'),
-    name: ar ? arName : en,
-    urlKey: key,
-    productCount: count,
-  );
+  Category category(int id, String key, String en, String arName, int count) =>
+      Category(
+        uid: categoryUidFromId('$id'),
+        name: ar ? arName : en,
+        urlKey: key,
+        productCount: count,
+      );
   return [
     category(12, 'super-market', 'Grocery', 'سوبر ماركت', 7),
     category(14, 'clothes', 'Fashion', 'أزياء', 19),

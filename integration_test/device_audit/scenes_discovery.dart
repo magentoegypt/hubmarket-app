@@ -30,12 +30,12 @@ import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../test/features/home/hm_home_fixtures.dart' as home_fixtures;
+import '../../test/features/stores/stores_harness.dart';
 import '../../test/support/algolia_fakes.dart';
 import '../../test/support/fakes.dart';
 import '../../test/support/hubapp_fakes.dart';
 import '../../test/support/search_fixtures.dart';
 import '../../test/support/store_fixtures.dart';
-import '../../test/features/stores/stores_harness.dart';
 import 'audit_scene.dart';
 import 'discovery_fixtures.dart';
 import 'harness.dart';
@@ -413,9 +413,7 @@ AuditSetup _searchSetup(
       ),
     ),
     publicGraphqlClientProvider.overrideWithValue(
-      hubApp
-          ? searchStoresBackend(locale).client
-          : fakeGraphQLClient(),
+      hubApp ? searchStoresBackend(locale).client : fakeGraphQLClient(),
     ),
     if (tries != null)
       searchTrySuggestionsProvider.overrideWith((ref, query) async => tries),
