@@ -55,9 +55,9 @@ const int _digestPage = 50;
 /// [year] is the current calendar year.
 ///
 /// A cancelled or refunded order (`CustomerOrder.isCancelled`, the Orders
-/// screen's own test) spends nothing and is not an order the customer
-/// "placed" for the stats; every order in any currency other than the first
-/// one's leaves the stats out (one market, one currency).
+/// screen's own test) spends nothing and is not counted in the stats. Orders in
+/// more than one currency leave the stats out: one market, one currency, and
+/// nothing to add them up in.
 AccountOrdersOverview summariseOrders(
   List<CustomerOrder> orders, {
   required bool complete,
