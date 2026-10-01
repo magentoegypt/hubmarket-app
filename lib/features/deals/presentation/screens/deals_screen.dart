@@ -5,17 +5,20 @@ import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_chip.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/product_navigation.dart';
 import '../../../catalog/presentation/widgets/product_card.dart';
+import '../../../catalog/presentation/widgets/sort_sheet.dart';
 import '../../domain/deals.dart';
 import '../deals_controller.dart';
 import '../widgets/deal_countdown.dart';
 import '../widgets/hm_list_widgets.dart';
 import '../widgets/list_states.dart';
-import '../../../../core/widgets/hub_bottom_sheet.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Today's Deals (Figma 10b, `hmDeals`): the countdown banner, department
 /// chips, the count with the sort and the Filters sheet, and the deals in a
@@ -94,13 +97,13 @@ class _DealsList extends StatelessWidget {
                 sliver: SliverToBoxAdapter(
                   child: HmChipRow(
                     chips: [
-                      HmFilterChip(
+                      HubChip(
                         label: l10n.dealsAllChip,
                         selected: filters.categoryId == null,
                         onTap: () => controller.selectCategory(null),
                       ),
                       for (final c in chips)
-                        HmFilterChip(
+                        HubChip(
                           label: c.name,
                           selected: filters.categoryId == c.id,
                           onTap: () => controller.selectCategory(
@@ -170,7 +173,7 @@ class _DealsList extends StatelessWidget {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 sliver: SliverGrid.builder(
-                  gridDelegate: productGridDelegate(context),
+                  gridDelegate: hmGridDelegate(context),
                   itemCount: deals.length,
                   itemBuilder: (context, i) => ProductCard(
                     product: deals[i],
@@ -201,20 +204,13 @@ class _DealsList extends StatelessWidget {
     final picked = await showHubBottomSheet<DealsSort>(
       context: context,
       showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final sort in DealsSort.values)
-              ListTile(
-                title: Text(dealsSortLabel(l10n, sort)),
-                trailing: sort == current
-                    ? const Icon(HubIcons.check, color: AppColors.brandPrimary)
-                    : null,
-                onTap: () => Navigator.pop(context, sort),
-              ),
-          ],
-        ),
+      backgroundColor: Colors.white,
+      builder: (_) => SortChoiceSheet<DealsSort>(
+        current: current,
+        choices: [
+          for (final sort in DealsSort.values)
+            (value: sort, label: dealsSortLabel(l10n, sort)),
+        ],
       ),
     );
     if (picked != null) controller.setSort(picked);
@@ -224,8 +220,12 @@ class _DealsList extends StatelessWidget {
     final picked = await showHubBottomSheet<DealsFilters>(
       context: context,
       isScrollControlled: true,
-      showDragHandle: true,
       backgroundColor: Colors.white,
+      // Figma 11's scrim: the brand navy at 55 %.
+      barrierColor: AppColors.brandPrimary.withValues(alpha: 0.55),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => DealsFilterSheet(
         initial: state.filters,
         categories: state.categories,
@@ -245,10 +245,11 @@ String dealsSortLabel(AppLocalizations l10n, DealsSort sort) => switch (sort) {
   DealsSort.newest => l10n.sortNewest,
 };
 
-/// The Filters sheet of Today's Deals (Figma 10b's "Filters", laid out as
-/// 11): the sort, a minimum discount and the department, applied together.
-/// Returns the chosen [DealsFilters]; Reset clears them, keeping the sheet
-/// open.
+/// The Filters sheet of Today's Deals, built as Figma 11's: a grabber, the
+/// "Filters" header with Reset, one section per filter — the sort, a minimum
+/// discount and the department, chips under a Title — and the full-width
+/// button on a rule. Returns the chosen [DealsFilters]; Reset clears them,
+/// keeping the sheet open.
 class DealsFilterSheet extends StatefulWidget {
   const DealsFilterSheet({
     super.key,
@@ -272,25 +273,94 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final t = AppTextStyles.of(context);
-    Widget section(String title, List<Widget> chips) => Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: t.title.copyWith(color: AppColors.inkHeading)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 8, children: chips),
-        ],
-      ),
+    // The home indicator / navigation bar: the sheet is already lifted by it
+    // (showHubBottomSheet), so the footer only tops up to 12 px when there is
+    // less than that — Figma's 34 px under the button is the iPhone's.
+    final view = View.of(context);
+    final footerBottom = (12 - view.padding.bottom / view.devicePixelRatio)
+        .clamp(0.0, 12.0);
+
+    Widget section(String title, List<Widget> chips) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: t.title.copyWith(color: AppColors.inkHeading)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: chips),
+      ],
     );
 
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 8, 0),
+    final sections = <Widget>[
+      section(l10n.dealsFilterSortBy, [
+        for (final sort in DealsSort.values)
+          HubChip(
+            label: dealsSortLabel(l10n, sort),
+            selected: _filters.sort == sort,
+            onTap: () =>
+                setState(() => _filters = _filters.copyWith(sort: sort)),
+          ),
+      ]),
+      section(l10n.filterDiscountLabel, [
+        HubChip(
+          label: l10n.dealsFilterAnyDiscount,
+          selected: _filters.minDiscount == null,
+          onTap: () =>
+              setState(() => _filters = _filters.copyWith(minDiscount: null)),
+        ),
+        for (final percent in DealsFilters.discountSteps)
+          HubChip(
+            label: l10n.filterDiscountOption(percent),
+            selected: _filters.minDiscount == percent,
+            onTap: () => setState(
+              () => _filters = _filters.copyWith(minDiscount: percent),
+            ),
+          ),
+      ]),
+      if (widget.categories.isNotEmpty)
+        section(l10n.dealsFilterCategory, [
+          HubChip(
+            label: l10n.dealsAllChip,
+            selected: _filters.categoryId == null,
+            onTap: () =>
+                setState(() => _filters = _filters.copyWith(categoryId: null)),
+          ),
+          for (final c in widget.categories)
+            HubChip(
+              label: '${c.name} (${c.count})',
+              selected: _filters.categoryId == c.id,
+              onTap: () =>
+                  setState(() => _filters = _filters.copyWith(categoryId: c.id)),
+            ),
+        ]),
+    ];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // The grabber: 40 x 4, 10 px from the top.
+        const Padding(
+          padding: EdgeInsets.only(top: 10, bottom: 4),
+          child: Center(
+            child: SizedBox(
+              width: 40,
+              height: 4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.borderStrong,
+                  borderRadius: BorderRadius.all(Radius.circular(2)),
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 8 above and 12 below the 24 px title, as Figma's header; Reset is a
+        // 32 px target centred on the same line.
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+          ),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 8),
             child: Row(
               children: [
                 Expanded(
@@ -302,86 +372,46 @@ class _DealsFilterSheetState extends State<DealsFilterSheet> {
                 TextButton(
                   onPressed: () =>
                       setState(() => _filters = const DealsFilters()),
-                  child: Text(
-                    l10n.filterResetLabel,
-                    style: const TextStyle(color: AppColors.accentStrong),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accentStrong,
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: t.bodyStrong,
                   ),
+                  child: Text(l10n.filterResetLabel),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.borderDefault),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 16),
+        ),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                section(l10n.dealsFilterSortBy, [
-                  for (final sort in DealsSort.values)
-                    HmFilterChip(
-                      label: dealsSortLabel(l10n, sort),
-                      selected: _filters.sort == sort,
-                      onTap: () => setState(
-                        () => _filters = _filters.copyWith(sort: sort),
-                      ),
-                    ),
-                ]),
-                section(l10n.filterDiscountLabel, [
-                  HmFilterChip(
-                    label: l10n.dealsFilterAnyDiscount,
-                    selected: _filters.minDiscount == null,
-                    onTap: () => setState(
-                      () => _filters = _filters.copyWith(minDiscount: null),
-                    ),
-                  ),
-                  for (final percent in DealsFilters.discountSteps)
-                    HmFilterChip(
-                      label: l10n.filterDiscountOption(percent),
-                      selected: _filters.minDiscount == percent,
-                      onTap: () => setState(
-                        () => _filters = _filters.copyWith(minDiscount: percent),
-                      ),
-                    ),
-                ]),
-                if (widget.categories.isNotEmpty)
-                  section(l10n.dealsFilterCategory, [
-                    HmFilterChip(
-                      label: l10n.dealsAllChip,
-                      selected: _filters.categoryId == null,
-                      onTap: () => setState(
-                        () => _filters = _filters.copyWith(categoryId: null),
-                      ),
-                    ),
-                    for (final c in widget.categories)
-                      HmFilterChip(
-                        label: '${c.name} (${c.count})',
-                        selected: _filters.categoryId == c.id,
-                        onTap: () => setState(
-                          () => _filters = _filters.copyWith(categoryId: c.id),
-                        ),
-                      ),
-                  ]),
+                for (final (i, s) in sections.indexed) ...[
+                  if (i > 0) const SizedBox(height: 22),
+                  s,
+                ],
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.borderDefault),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: SizedBox(
-              height: 52,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(_filters),
-                style: FilledButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(l10n.filterApplyLabel),
-              ),
+        ),
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.borderSubtle)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, footerBottom),
+            child: HubButton(
+              label: l10n.filterApplyLabel,
+              onPressed: () => Navigator.of(context).pop(_filters),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

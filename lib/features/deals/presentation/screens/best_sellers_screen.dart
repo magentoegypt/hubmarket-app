@@ -94,7 +94,7 @@ class _BestSellersGrid extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               sliver: SliverGrid.builder(
-                gridDelegate: productGridDelegate(context),
+                gridDelegate: hmGridDelegate(context),
                 itemCount: items.length,
                 itemBuilder: (context, i) => ProductCard(
                   product: items[i],

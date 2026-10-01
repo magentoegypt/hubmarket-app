@@ -1655,8 +1655,18 @@
     }
   },
   "bundleAdd": "Add Bundle",
+  "bundleListAdd": "Add bundle",
   "bundleCardDiscount": "-{percent}% Bundle",
   "@bundleCardDiscount": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleListBadge": "-{percent}% BUNDLE",
+  "@bundleListBadge": {
+    "description": "The discount pill on a card of the Bundle Deals list (Figma 10c), upper case as the frame draws it.",
     "placeholders": {
       "percent": {
         "type": "int"

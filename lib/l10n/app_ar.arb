@@ -949,8 +949,17 @@
     }
   },
   "bundleAdd": "أضف الباقة",
+  "bundleListAdd": "أضف الباقة",
   "bundleCardDiscount": "باقة ‎-{percent}%",
   "@bundleCardDiscount": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bundleListBadge": "باقة ‎-{percent}%",
+  "@bundleListBadge": {
     "placeholders": {
       "percent": {
         "type": "int"
@@ -965,7 +974,7 @@
       }
     }
   },
-  "bundleSoldBy": "يبيعه {seller}",
+  "bundleSoldBy": "يبيعها {seller}",
   "@bundleSoldBy": {
     "placeholders": {
       "seller": {
