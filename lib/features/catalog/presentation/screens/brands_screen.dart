@@ -104,21 +104,22 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
           onChanged: (v) => setState(() => _query = v),
           textInputAction: TextInputAction.search,
           style: t.body.copyWith(color: AppColors.inkHeading),
+          // The theme's Figma "Input" (white, 1 px outline, radius 12, 52 px),
+          // with the icon where the frame has it: 16 px in, 20 px wide, 10 px
+          // before the text.
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: t.body.copyWith(color: AppColors.inkMuted),
-            prefixIcon: const Icon(HubIcons.search, size: 20, color: AppColors.inkMuted),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 16),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.borderStrong),
+            prefixIcon: const Padding(
+              padding: EdgeInsetsDirectional.only(start: 16, end: 10),
+              child: Icon(
+                HubIcons.search,
+                size: 20,
+                color: AppColors.inkMuted,
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
-            ),
+            prefixIconConstraints: const BoxConstraints(),
+            contentPadding: const EdgeInsetsDirectional.fromSTEB(0, 16, 16, 16),
           ),
         ),
         const SizedBox(height: 14),
@@ -157,11 +158,11 @@ class _BrandsScreenState extends ConsumerState<BrandsScreen> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 10,
               mainAxisSpacing: 14,
-              mainAxisExtent: 132,
+              mainAxisExtent: BrandCard.heightFor(context),
             ),
             itemCount: shown.length,
             itemBuilder: (context, i) => BrandCard(
@@ -219,6 +220,17 @@ class BrandCard extends StatelessWidget {
   final Brand brand;
   final int? productCount;
 
+  /// The card's height (Figma 10d: 126 at 1x text in English): the 1 px
+  /// outline, 10 above the 60 px logo, the name, the count 6 apart, and 12
+  /// below — the two lines are as tall as the language and the user's text
+  /// size make them.
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    double line(TextStyle style) => scaler.scale(style.fontSize!) * style.height!;
+    return 2 + 10 + 60 + 6 + line(t.captionStrong) + 6 + line(t.micro) + 12;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -234,7 +246,8 @@ class BrandCard extends StatelessWidget {
         onTap: () =>
             context.push(AppRoutes.brandPage(brand.urlKey), extra: brand),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
+          // 8 / 10 / 8 / 12 inside the 1 px outline (Figma's border-box).
+          padding: const EdgeInsets.fromLTRB(9, 11, 9, 13),
           child: Column(
             children: [
               SizedBox(
