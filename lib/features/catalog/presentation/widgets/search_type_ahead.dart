@@ -126,8 +126,12 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
     if (result.products.isEmpty) {
       return Column(
         children: [
-          if (loading) const _Pending() else const SizedBox(height: 6),
-          if (widget.scope != null) scopeChip,
+          // The no-results page starts right under the field (Figma S2).
+          if (loading) const _Pending(),
+          if (widget.scope != null) ...[
+            if (!loading) const SizedBox(height: 6),
+            scopeChip,
+          ],
           Expanded(
             child: SearchNoResults(
               query: answer.request.query,
@@ -150,7 +154,11 @@ class _SearchTypeAheadState extends ConsumerState<SearchTypeAhead> {
               scopeChip,
               _GroupLabel(text: l10n.searchProductsHeading.toUpperCase()),
               const SizedBox(height: 4),
-              for (final hit in result.products) _HitRow(hit: hit),
+              // The frame's group is a column with 4 pt between its rows.
+              for (final hit in result.products) ...[
+                _HitRow(hit: hit),
+                const SizedBox(height: 4),
+              ],
               _SeeProductsIn(
                 allLabel: widget.scope?.name ?? l10n.searchAllDepartments,
                 total: result.totalCount,
@@ -225,7 +233,9 @@ class _ScopeChip extends StatelessWidget {
             customBorder: shape,
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 10, 6),
+              // 12 / 6 / 10 / 6 inside the 1 pt outline, which the frame draws
+              // within its 30 pt box.
+              padding: const EdgeInsetsDirectional.fromSTEB(13, 7, 11, 7),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

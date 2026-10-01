@@ -117,7 +117,7 @@
   "homeDealBadge": "DEAL",
   "reviewsScreenTitle": "Reviews",
   "categoriesSubtitle": "Shop by what you love",
-  "categoryProductCount": "{count} products",
+  "categoryProductCount": "{count, plural, =1{1 product} other{{count} products}}",
   "@categoryProductCount": {
     "placeholders": {
       "count": {
@@ -130,6 +130,34 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "categoryShopByType": "Shop by type",
+  "categoryTopStores": "Top stores in {category}",
+  "@categoryTopStores": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryStoreCount": "{count, plural, =1{1 store} other{{count} stores}}",
+  "@categoryStoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryProductCountFrom": "{count, plural, =1{1 product from {store}} other{{count} products from {store}}}",
+  "@categoryProductCountFrom": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "store": {
+        "type": "String"
       }
     }
   },
@@ -223,6 +251,35 @@
   "filterResetLabel": "Reset",
   "filterClearAllLabel": "Clear All",
   "filterApplyLabel": "Apply Filters",
+  "filterSortByLabel": "Sort by",
+  "filterPriceCurrencyLabel": "Price ({currency})",
+  "@filterPriceCurrencyLabel": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMinLabel": "Min",
+  "filterMaxLabel": "Max",
+  "filterStoreLabel": "Store",
+  "filterAllStores": "All stores",
+  "filterShowResults": "{count, plural, =1{Show 1 result} other{Show {count} results}}",
+  "@filterShowResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filterRatingChip": "Rating {stars}+",
+  "@filterRatingChip": {
+    "placeholders": {
+      "stars": {
+        "type": "String"
+      }
+    }
+  },
   "filterAll": "All",
   "actionShare": "Share",
   "badgeNew": "NEW",
@@ -242,9 +299,12 @@
   "sortPriceHighLow": "Price: High to Low",
   "sortNameAz": "Name: A–Z",
   "sortNewest": "Newest First",
+  "sortLowestPrice": "Lowest price",
+  "sortHighestPrice": "Highest price",
+  "sortNewestFirst": "Newest first",
   "sortComingSoon": "Coming soon",
   "filterDiscountLabel": "Discount",
-  "filterRatingLabel": "Rating",
+  "filterRatingLabel": "Customer rating",
   "filterDiscountOption": "{percent}% or more",
   "@filterDiscountOption": {
     "placeholders": {
@@ -254,6 +314,7 @@
     }
   },
   "filterRatingAndAbove": "& above",
+  "filterRatingAndUp": "& up",
   "clearLabel": "Clear",
   "resultsCount": "{count} results",
   "@resultsCount": {
@@ -265,6 +326,7 @@
   },
   "searchHint": "Search for products…",
   "searchFieldHint": "Search for products, brands…",
+  "searchFieldHintStores": "Search products, brands, vendors…",
   "searchRecentTitle": "Recent searches",
   "searchTrendingTitle": "Trending searches",
   "searchClearHistory": "Clear",

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../domain/category.dart';
 import '../catalog_providers.dart';
@@ -121,7 +122,10 @@ class _RailTile extends StatelessWidget {
               maxLines: 1,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
+              // Caption Strong, as the Categories page names its tiles.
+              style: AppTextStyles.of(
+                context,
+              ).captionStrong.copyWith(color: AppColors.inkHeading),
             ),
           ],
         ),

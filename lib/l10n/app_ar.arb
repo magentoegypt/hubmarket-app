@@ -104,7 +104,7 @@
   "homeDealBadge": "خصم",
   "reviewsScreenTitle": "التقييمات",
   "categoriesSubtitle": "تسوّقي حسب ما تحبين",
-  "categoryProductCount": "{count} منتج",
+  "categoryProductCount": "{count, plural, =1{منتج واحد} =2{منتجان} few{{count} منتجات} many{{count} منتج} other{{count} منتج}}",
   "@categoryProductCount": {
     "placeholders": {
       "count": {
@@ -117,6 +117,34 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "categoryShopByType": "تسوّق حسب النوع",
+  "categoryTopStores": "أفضل متاجر {category}",
+  "@categoryTopStores": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "categoryStoreCount": "{count, plural, =1{متجر واحد} =2{متجران} few{{count} متاجر} many{{count} متجرًا} other{{count} متجر}}",
+  "@categoryStoreCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryProductCountFrom": "{count, plural, =1{منتج واحد من {store}} =2{منتجان من {store}} few{{count} منتجات من {store}} many{{count} منتج من {store}} other{{count} منتج من {store}}}",
+  "@categoryProductCountFrom": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "store": {
+        "type": "String"
       }
     }
   },
@@ -165,6 +193,35 @@
   "filterResetLabel": "إعادة ضبط",
   "filterClearAllLabel": "مسح الكل",
   "filterApplyLabel": "تطبيق الفلاتر",
+  "filterSortByLabel": "ترتيب حسب",
+  "filterPriceCurrencyLabel": "السعر ({currency})",
+  "@filterPriceCurrencyLabel": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMinLabel": "الحد الأدنى",
+  "filterMaxLabel": "الحد الأقصى",
+  "filterStoreLabel": "المتجر",
+  "filterAllStores": "كل المتاجر",
+  "filterShowResults": "{count, plural, =1{عرض نتيجة واحدة} =2{عرض نتيجتين} few{عرض {count} نتائج} many{عرض {count} نتيجة} other{عرض {count} نتيجة}}",
+  "@filterShowResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filterRatingChip": "تقييم {stars}+",
+  "@filterRatingChip": {
+    "placeholders": {
+      "stars": {
+        "type": "String"
+      }
+    }
+  },
   "filterAll": "الكل",
   "actionShare": "مشاركة",
   "badgeNew": "جديد",
@@ -184,9 +241,12 @@
   "sortPriceHighLow": "السعر: من الأعلى للأقل",
   "sortNameAz": "الاسم: أ–ي",
   "sortNewest": "الأحدث أولاً",
+  "sortLowestPrice": "الأقل سعرًا",
+  "sortHighestPrice": "الأعلى سعرًا",
+  "sortNewestFirst": "الأحدث أولًا",
   "sortComingSoon": "قريبًا",
   "filterDiscountLabel": "الخصم",
-  "filterRatingLabel": "التقييم",
+  "filterRatingLabel": "تقييم العملاء",
   "filterDiscountOption": "{percent}% أو أكثر",
   "@filterDiscountOption": {
     "placeholders": {
@@ -196,10 +256,12 @@
     }
   },
   "filterRatingAndAbove": "فأكثر",
+  "filterRatingAndUp": "فأكثر",
   "clearLabel": "مسح",
   "resultsCount": "{count} نتيجة",
   "searchHint": "ابحث في المتجر كامل هنا…",
   "searchFieldHint": "ابحث عن المنتجات والماركات…",
+  "searchFieldHintStores": "ابحث عن المنتجات والعلامات والبائعين…",
   "searchRecentTitle": "عمليات البحث الأخيرة",
   "searchTrendingTitle": "الأكثر بحثًا",
   "searchClearHistory": "مسح",

@@ -13,6 +13,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../stores/presentation/stores_providers.dart';
 import '../../data/catalog_repository.dart';
 import '../../data/catalog_search.dart';
 import '../../domain/brand.dart';
@@ -232,7 +233,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         automaticallyImplyLeading: false,
         centerTitle: false,
         titleSpacing: 0,
-        toolbarHeight: SearchFieldBar.height,
+        toolbarHeight: SearchFieldBar.heightFor(
+          results: mode == _SearchMode.results,
+        ),
         scrolledUnderElevation: 0,
         title: SearchFieldBar(
           controller: _controller,
@@ -246,7 +249,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           onChanged: _onChanged,
           onSubmitted: _submit,
           onClear: _clearField,
-          hint: ref.watch(searchHintProvider),
+          // The admin's placeholder, else the app's: "vendors" only where
+          // search can find them (the Hub Market App's seller API).
+          hint:
+              ref.watch(searchHintProvider) ??
+              (ref.watch(storesAvailableProvider)
+                  ? AppLocalizations.of(context).searchFieldHintStores
+                  : null),
         ),
       ),
       body: switch (mode) {

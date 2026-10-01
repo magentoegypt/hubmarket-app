@@ -72,8 +72,8 @@ class SearchFilters {
   final double? priceFrom;
   final double? priceTo;
 
-  /// "N★ & above", in whole stars.
-  final int? minRating;
+  /// "N★ & up", in stars: 4.5, 4, 3.5 (Figma 11) — or a whole number.
+  final double? minRating;
 
   bool get hasPrice => priceFrom != null || priceTo != null;
 
