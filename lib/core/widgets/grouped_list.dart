@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_text_styles.dart';
+import '../../app/theme/hub_icons.dart';
 import '../../app/theme/theme_x.dart';
 import 'hub_top_bar.dart';
-import '../../app/theme/hub_icons.dart';
 
-/// The grouped-settings look of the account sub-pages (Figma 20b, 20h, 27):
-/// white rounded cards on a light grey page, each under a small uppercase
-/// label.
+/// The grouped-settings look of the Account frames (20, 20b, 20e, 20h, 27):
+/// white 14 px cards on the light grey page, each under a small muted label,
+/// rows of an icon, a label, an optional value and a chevron, a hairline
+/// between rows.
 
 /// Page background behind [GroupCard]s.
 Color groupedPageColor(BuildContext context) =>
@@ -18,30 +20,57 @@ Color groupCardColor(BuildContext context) =>
     context.isDarkMode ? const Color(0xFF243244) : Colors.white;
 
 /// App bar of a pushed sub-page: the Figma "App bar" ([HubTopBar]) — back button
-/// and a start-aligned 18 Bold title.
+/// and a start-aligned 18 Bold title. [divider] draws the 1 px `border/subtle`
+/// rule on the bar's last pixel, as the frames on a white page do (20c, 20g,
+/// 28); the bar keeps its 56 px.
 PreferredSizeWidget subpageAppBar(
   BuildContext context,
   String title, {
   List<Widget>? actions,
-}) => HubTopBar(title: title, actions: actions ?? const <Widget>[]);
+  bool divider = false,
+}) => HubTopBar(
+  title: title,
+  actions: actions ?? const <Widget>[],
+  bottom: divider ? const _AppBarDivider() : null,
+);
 
-/// Small uppercase label above a group ("POPULAR TOPICS").
+/// A hairline over the last pixel of the app bar's row: it takes no height of
+/// its own, so the bar stays the frame's 56 px.
+class _AppBarDivider extends StatelessWidget implements PreferredSizeWidget {
+  const _AppBarDivider();
+
+  @override
+  Size get preferredSize => Size.zero;
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    height: 0,
+    child: OverflowBox(
+      maxHeight: 1,
+      alignment: Alignment.bottomCenter,
+      child: Divider(height: 1, thickness: 1, color: AppColors.borderSubtle),
+    ),
+  );
+}
+
+/// Small muted label above a group ("POPULAR TOPICS"): EN/Caption Strong, the
+/// text in capitals. [top] is the gap above it (18 between groups, 14 under the
+/// app bar), [bottom] the gap to the card (8; 20b draws 16).
 class GroupLabel extends StatelessWidget {
-  const GroupLabel(this.text, {super.key});
+  const GroupLabel(this.text, {super.key, this.top = 18, this.bottom = 8});
 
   final String text;
+  final double top;
+  final double bottom;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.fromSTEB(2, 20, 2, 8),
+    padding: EdgeInsetsDirectional.only(top: top, bottom: bottom),
     child: Text(
       text.toUpperCase(),
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
-        color: context.scaffoldMuted,
-      ),
+      style: AppTextStyles.of(
+        context,
+      ).captionStrong.copyWith(color: context.scaffoldMuted),
     ),
   );
 }
@@ -60,7 +89,7 @@ class GroupCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: groupCardColor(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,7 +101,7 @@ class GroupCard extends StatelessWidget {
                 thickness: 1,
                 color: context.isDarkMode
                     ? Colors.white12
-                    : AppColors.borderDefault,
+                    : AppColors.borderSubtle,
               ),
             children[i],
           ],
@@ -82,14 +111,18 @@ class GroupCard extends StatelessWidget {
   }
 }
 
-/// A tappable row inside a [GroupCard]: icon, label, optional subtitle and
-/// trailing value, and a chevron.
+/// A tappable row inside a [GroupCard]: a 20 px icon, the label (EN/Body), an
+/// optional subtitle and trailing value (EN/Body Strong, muted unless
+/// [valueColor] says otherwise) and a chevron. 14 px of padding and 12 between
+/// the parts, so a one-line row is 48 px (EN) high.
 class GroupRow extends StatelessWidget {
   const GroupRow({
     super.key,
     required this.label,
     required this.onTap,
     this.icon,
+    this.iconColor,
+    this.labelColor,
     this.subtitle,
     this.value,
     this.valueColor,
@@ -99,6 +132,11 @@ class GroupRow extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final IconData? icon;
+
+  /// The icon's colour; `text/subtle` by default, the label's own for a row
+  /// that says something (Sign out).
+  final Color? iconColor;
+  final Color? labelColor;
   final String? subtitle;
   final String? value;
   final Color? valueColor;
@@ -106,14 +144,20 @@ class GroupRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final dark = context.isDarkMode;
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 20, color: context.scaffoldHeading),
+              Icon(
+                icon,
+                size: 20,
+                color: iconColor ?? (dark ? Colors.white70 : AppColors.inkSubtle),
+              ),
               const SizedBox(width: 12),
             ],
             Expanded(
@@ -122,39 +166,30 @@ class GroupRow extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w500,
-                      color: context.scaffoldHeading,
+                    style: t.body.copyWith(
+                      color: labelColor ?? context.scaffoldHeading,
                     ),
                   ),
-                  if (subtitle != null && subtitle!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                  if (subtitle != null && subtitle!.isNotEmpty)
                     Text(
                       subtitle!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.scaffoldMuted,
-                      ),
+                      style: t.caption.copyWith(color: context.scaffoldMuted),
                     ),
-                  ],
                 ],
               ),
             ),
             if (value != null && value!.isNotEmpty) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Text(
                 value!,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+                style: t.bodyStrong.copyWith(
                   color: valueColor ?? context.scaffoldMuted,
                 ),
               ),
             ],
             if (showChevron) ...[
-              const SizedBox(width: 6),
-              Icon(HubIcons.chevronRight, size: 20, color: context.scaffoldMuted),
+              const SizedBox(width: 12),
+              Icon(HubIcons.chevronRight, size: 18, color: context.scaffoldMuted),
             ],
           ],
         ),

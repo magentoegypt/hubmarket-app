@@ -52,6 +52,10 @@ abstract final class HubIcons {
   /// `bell`
   static const IconData bell = IconData(0xe059, fontFamily: _family);
 
+  /// `box` — the plain cube. The frames' "icon/package" (the Orders tile, the
+  /// help topics) draws this one; [package] is the strapped parcel.
+  static const IconData box = IconData(0xe061, fontFamily: _family);
+
   /// `camera`
   static const IconData camera = IconData(0xe064, fontFamily: _family);
 
@@ -210,6 +214,10 @@ abstract final class HubIcons {
   /// `party-popper`
   static const IconData partyPopper = IconData(0xe343, fontFamily: _family);
 
+  /// `pen` (the font's legacy `edit-2`) — the plain pencil. The frames'
+  /// "icon/edit" draws this one; [pencil] has the ferrule line.
+  static const IconData pen = IconData(0xe12f, fontFamily: _family);
+
   /// `pencil`
   static const IconData pencil = IconData(0xe1f9, fontFamily: _family);
 
@@ -290,6 +298,9 @@ abstract final class HubIcons {
 
   /// `square-check`
   static const IconData squareCheck = IconData(0xe559, fontFamily: _family);
+
+  /// `star` — the outline; a filled star stays `Icons.star_rounded`.
+  static const IconData star = IconData(0xe176, fontFamily: _family);
 
   /// `store`
   static const IconData store = IconData(0xe3e4, fontFamily: _family);

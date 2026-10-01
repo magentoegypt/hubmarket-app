@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
-import '../../../../core/widgets/button_spinner.dart';
 import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_checkbox.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../cms/presentation/cms_navigation.dart';
 import '../../../cms/presentation/cms_providers.dart';
+import '../../../store_credit/domain/credit_money.dart';
 import '../../../store_credit/presentation/store_credit_providers.dart';
 import '../delete_account_action.dart';
 import '../../../../app/theme/hub_icons.dart';
@@ -41,11 +44,12 @@ class PrivacyDataScreen extends ConsumerWidget {
       appBar: subpageAppBar(context, l10n.privacyDataTitle),
       body: ColoredBox(
         color: groupedPageColor(context),
+        // The frame's body: 14 under the bar, 16 between its parts.
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           children: [
             if (legal.isNotEmpty) ...[
-              GroupLabel(l10n.privacyPolicies),
+              GroupLabel(l10n.privacyPolicies, top: 0, bottom: 16),
               GroupCard(
                 children: [
                   for (final link in legal)
@@ -58,7 +62,7 @@ class PrivacyDataScreen extends ConsumerWidget {
               ),
             ],
             if (signedIn) ...[
-              const SizedBox(height: 20),
+              if (legal.isNotEmpty) const SizedBox(height: 16),
               const _DeleteAccountCard(),
             ],
           ],
@@ -90,11 +94,7 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final body = TextStyle(
-      fontSize: 14,
-      height: 1.45,
-      color: context.scaffoldHeading,
-    );
+    final t = AppTextStyles.of(context);
     // Deleting the account forfeits its store credit: say so while there is
     // some (Build 2 with store credit on).
     final credit = ref.watch(storeCreditEnabledProvider)
@@ -106,144 +106,112 @@ class _DeleteAccountCardState extends ConsumerState<_DeleteAccountCard> {
       if (credit != null && credit.amount > 0)
         // "AED 120.00" in a left-to-right isolate, so it keeps its order in
         // RTL.
-        l10n.deleteAccountLoseCredit('\u2066${credit.formatted()}\u2069'),
+        l10n.deleteAccountLoseCredit('\u2066${credit.ledger}\u2069'),
     ];
+    // Figma `delete-account`: 16 px of padding, 12 between the parts, a 2 px
+    // `danger-subtle` border at radius 16.
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: groupCardColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.dangerSurface, width: 1.5),
+        border: Border.all(color: AppColors.dangerSurface, width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const Icon(
-                HubIcons.trash2,
-                color: AppColors.danger,
-                size: 22,
-              ),
+              const Icon(HubIcons.trash2, color: AppColors.danger, size: 20),
               const SizedBox(width: 8),
-              Text(
-                l10n.deleteAccountTitle,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.danger,
+              Expanded(
+                child: Text(
+                  l10n.deleteAccountTitle,
+                  style: t.heading2.copyWith(color: AppColors.danger),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(l10n.deleteAccountIntro, style: body),
-          const SizedBox(height: 10),
-          for (final item in losses)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 1),
-                    child: Icon(
-                      HubIcons.triangleAlert,
-                      size: 16,
-                      color: AppColors.danger,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: context.scaffoldMuted,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.accentSurface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 12),
+          Text(
+            l10n.deleteAccountIntro,
+            style: t.body.copyWith(color: context.scaffoldHeading),
+          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < losses.length; i++) ...[
+            if (i > 0) const SizedBox(height: 6),
+            Row(
               children: [
                 const Icon(
-                  HubIcons.info,
-                  size: 18,
-                  color: AppColors.accentStrong,
+                  HubIcons.triangleAlert,
+                  size: 14,
+                  color: AppColors.danger,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    l10n.deleteAccountRecordsNote,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      height: 1.4,
-                      color: AppColors.accentStrong,
+                    losses[i],
+                    style: t.caption.copyWith(
+                      color: context.isDarkMode
+                          ? context.scaffoldMuted
+                          : AppColors.inkSubtle,
                     ),
                   ),
                 ),
               ],
             ),
+          ],
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.warningSubtle,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(HubIcons.info, size: 16, color: AppColors.warning),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.deleteAccountRecordsNote,
+                    style: t.caption.copyWith(color: AppColors.warning),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           InkWell(
             onTap: _busy
                 ? null
                 : () => setState(() => _understood = !_understood),
-            borderRadius: BorderRadius.circular(8),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Checkbox(
+                HubCheckbox(
                   value: _understood,
-                  activeColor: AppColors.brandPrimary,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
                   onChanged: _busy
                       ? null
-                      : (v) => setState(() => _understood = v ?? false),
+                      : (v) => setState(() => _understood = v),
                 ),
-                Expanded(child: Text(l10n.deleteAccountUnderstand, style: body)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.deleteAccountUnderstand,
+                    style: t.body.copyWith(color: context.scaffoldHeading),
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 52,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.dangerSurface,
-                foregroundColor: AppColors.danger,
-                disabledBackgroundColor: AppColors.dangerSurface.withValues(
-                  alpha: 0.6,
-                ),
-                disabledForegroundColor: AppColors.danger.withValues(
-                  alpha: 0.45,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: (_understood && !_busy) ? _delete : null,
-              child: _busy
-                  ? const ButtonSpinner()
-                  : Text(
-                      l10n.deleteAccountAction,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-            ),
+          const SizedBox(height: 12),
+          HubButton(
+            label: l10n.deleteAccountAction,
+            style: HubButtonStyle.danger,
+            loading: _busy,
+            onPressed: _understood ? _delete : null,
           ),
         ],
       ),

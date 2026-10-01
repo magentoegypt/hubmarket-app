@@ -16,6 +16,8 @@ import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/core/store/store_repository.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/edit_profile_screen.dart';
+import 'package:hubmarket_app/core/widgets/hub_switch.dart';
+import 'package:hubmarket_app/features/auth/presentation/widgets/auth_field.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/notifications/presentation/notification_settings_controller.dart';
@@ -58,6 +60,17 @@ class _RefusingAccountRepository extends FakeAccountRepository {
 
   final Object refusal;
   final List<String> changes = [];
+  final List<String> profileSaves = [];
+
+  /// Save changes saves the profile first; the refusal comes after it.
+  @override
+  Future<void> updateProfile({
+    required String firstName,
+    required String lastName,
+    String? dateOfBirth,
+  }) async {
+    profileSaves.add('$firstName $lastName');
+  }
 
   @override
   Future<void> changePassword(String current, String next) async {
@@ -132,23 +145,25 @@ Future<void> _pumpProfile(
   await tester.pumpAndSettle();
 }
 
+/// The text field of the [AuthField] labelled [label].
+Finder _field(String label) => find.descendant(
+  of: find.ancestor(of: find.text(label), matching: find.byType(AuthField)),
+  matching: find.byType(TextField),
+);
+
+/// Opens the Change password card, fills it and presses Save changes.
 Future<void> _submitPasswords(
   WidgetTester tester,
   AppLocalizations l10n,
 ) async {
-  await tester.tap(find.text(l10n.profilePasswordSection).first);
+  await tester.tap(find.byType(HubSwitch));
   await tester.pumpAndSettle();
-  await tester.enterText(
-    find.widgetWithText(TextFormField, l10n.fieldCurrentPassword),
-    'old-secret',
-  );
-  await tester.enterText(
-    find.widgetWithText(TextFormField, l10n.fieldNewPassword),
-    'New@2026x',
-  );
-  await tester.tap(
-    find.widgetWithText(OutlinedButton, l10n.profilePasswordSection),
-  );
+  await tester.enterText(_field(l10n.fieldCurrentPassword), 'old-secret');
+  await tester.enterText(_field(l10n.fieldNewPassword), 'New@2026x');
+  await tester.enterText(_field(l10n.profileConfirmNewPassword), 'New@2026x');
+  final save = find.widgetWithText(FilledButton, l10n.profileSaveChanges);
+  await tester.ensureVisible(save);
+  await tester.tap(save);
   await tester.pumpAndSettle();
 }
 
@@ -197,7 +212,7 @@ void main() {
     });
   });
 
-  group('Edit Profile › Change Password', () {
+  group('Profile details › Change password', () {
     testWidgets("shows the store's refusal, not a generic error", (
       tester,
     ) async {
@@ -208,6 +223,8 @@ void main() {
       await _pumpProfile(tester, account);
       await _submitPasswords(tester, en);
 
+      // The profile went first, then the password, which the store refused.
+      expect(account.profileSaves, ['Layla Hassan']);
       expect(account.changes, ['old-secret>New@2026x']);
       expect(find.text('Invalid login or password.'), findsOneWidget);
       expect(find.text(en.errorGeneric), findsNothing);

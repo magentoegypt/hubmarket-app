@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/widgets/grouped_list.dart';
@@ -50,11 +51,9 @@ class FaqTile extends ConsumerWidget {
       collapsedIconColor: context.scaffoldMuted,
       title: Text(
         item.question,
-        style: TextStyle(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w600,
-          color: context.scaffoldHeading,
-        ),
+        style: AppTextStyles.of(
+          context,
+        ).bodyStrong.copyWith(color: context.scaffoldHeading),
       ),
       children: [
         CmsHtmlView(

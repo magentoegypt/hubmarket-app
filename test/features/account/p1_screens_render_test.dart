@@ -44,7 +44,8 @@ import '../../support/fakes.dart';
 import '../../support/fonts.dart';
 import '../../support/hubapp_fakes.dart';
 
-/// Renders the P1 stream-B screens — Figma 15, 20f, 21b, 20h, 27, 28 and 20b
+/// Renders the P1 stream-B screens — Figma 15, 20f, 21b, 20h, 27, 28 and 20b (the
+/// Account ones as `p1_NAME`: the audit captures are in account_subpages_audit_test)
 /// — in English and Arabic to `build/test_screens/` for comparison with the
 /// frames (build/ is gitignored; nothing is asserted on the images). Each
 /// render also fails on any layout exception, so it doubles as an RTL and
@@ -290,7 +291,7 @@ void main() {
     testWidgets('20f My product reviews ($locale)', (tester) async {
       await _render(
         tester,
-        name: '20f_my_reviews',
+        name: 'p1_20f_my_reviews',
         locale: locale,
         screen: const MyReviewsScreen(),
         reviews: FakeReviewsRepository(customerReviews: _mine(ar)),
@@ -325,7 +326,7 @@ void main() {
     testWidgets('20h Notification settings ($locale)', (tester) async {
       await _render(
         tester,
-        name: '20h_notification_settings',
+        name: 'p1_20h_notification_settings',
         locale: locale,
         push: true,
         screen: const NotificationSettingsScreen(),
@@ -335,7 +336,7 @@ void main() {
     testWidgets('27 Help centre ($locale)', (tester) async {
       await _render(
         tester,
-        name: '27_help_centre',
+        name: 'p1_27_help_centre',
         locale: locale,
         height: 1560,
         screen: const HelpScreen(),
@@ -345,7 +346,7 @@ void main() {
     testWidgets('28 Content page ($locale)', (tester) async {
       await _render(
         tester,
-        name: '28_content_page',
+        name: 'p1_28_content_page',
         locale: locale,
         screen: const CmsPageScreen(
           url: 'privacy-policy-cookie-restriction-mode',
@@ -359,7 +360,7 @@ void main() {
     testWidgets('20b Privacy & data ($locale)', (tester) async {
       await _render(
         tester,
-        name: '20b_privacy_data',
+        name: 'p1_20b_privacy_data',
         locale: locale,
         screen: const PrivacyDataScreen(),
       );

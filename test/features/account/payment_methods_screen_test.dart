@@ -60,8 +60,9 @@ void main() {
         ),
       ],
     );
-    expect(find.text('Visa'), findsOneWidget);
-    expect(find.text('•••• 1111'), findsOneWidget);
+    // "Visa •••• 1111" and when it expires, as Figma 20e draws them.
+    expect(find.text('Visa •••• 1111'), findsOneWidget);
+    expect(find.text('Expires 12/30'), findsOneWidget);
     expect(find.byTooltip('Remove card'), findsOneWidget);
   });
 }

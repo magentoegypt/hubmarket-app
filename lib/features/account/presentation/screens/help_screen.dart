@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/app_info.dart';
 import '../../../../core/config/store_contact.dart';
@@ -19,7 +21,6 @@ import '../../../returns/presentation/returns_providers.dart';
 import '../help_faq.dart';
 import '../widgets/contact_form_card.dart';
 import '../widgets/faq_tile.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// Help centre (Figma 27): a search over the FAQ, the contact channels the
 /// store publishes, the FAQ topics, the contact form and the About & legal
@@ -58,6 +59,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final contact = ref.watch(storeContactProvider);
     final features =
         ref.watch(storeFeaturesProvider).valueOrNull ?? StoreFeatures.none;
@@ -76,8 +78,8 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
       if (contact.whatsapp != null)
         _ContactTile(
           icon: HubIcons.messageCircle,
-          tint: const Color(0xFFE8F7EE),
-          color: const Color(0xFF15803D),
+          tint: AppColors.successSubtle,
+          color: AppColors.successStrong,
           label: l10n.helpWhatsApp,
           // The service hours the admin set (`hmAppConfig.contact.hours`);
           // no hours claim without them.
@@ -87,19 +89,21 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
       if (contact.phone != null)
         _ContactTile(
           icon: HubIcons.phone,
-          tint: AppColors.surfaceTint,
-          color: const Color(0xFF1D4ED8),
+          tint: AppColors.infoSubtle,
+          color: AppColors.info,
           label: l10n.helpCallUs,
           caption: contact.phoneDisplay ?? contact.phone!,
+          ltrCaption: true,
           onTap: () => _open(Uri(scheme: 'tel', path: contact.phone)),
         ),
       if (contact.email != null)
         _ContactTile(
           icon: HubIcons.mail,
-          tint: const Color(0xFFFFF1E6),
-          color: AppColors.accentStrong,
+          tint: AppColors.warningSubtle,
+          color: AppColors.warning,
           label: l10n.helpEmailUs,
           caption: contact.email!,
+          ltrCaption: true,
           onTap: () => _open(mailtoUri(contact.email!)),
         ),
     ];
@@ -123,44 +127,23 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
       body: ColoredBox(
         color: groupedPageColor(context),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+          // Figma body: 14 under the bar, 18 between its parts.
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
           children: [
-            Text(
-              l10n.helpHowCanWeHelp,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: context.scaffoldHeading,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
+            _SearchField(
               controller: _search,
-              onChanged: (v) =>
-                  setState(() => _query = v.trim().toLowerCase()),
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: l10n.helpSearchHint,
-                prefixIcon: const Icon(HubIcons.search),
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(HubIcons.x),
-                        tooltip: l10n.searchClearField,
-                        onPressed: () {
-                          _search.clear();
-                          setState(() => _query = '');
-                        },
-                      ),
-                filled: true,
-                fillColor: groupCardColor(context),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: _fieldBorder(context),
-                enabledBorder: _fieldBorder(context),
-              ),
+              label: l10n.helpHowCanWeHelp,
+              hint: l10n.helpSearchHint,
+              clearTooltip: l10n.searchClearField,
+              showClear: _query.isNotEmpty,
+              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+              onClear: () {
+                _search.clear();
+                setState(() => _query = '');
+              },
             ),
             if (channels.isNotEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               // Three equal slots as in the frame, so a store publishing one
               // channel shows one tile rather than a full-width banner. Equal
               // heights too: a tile without a caption (WhatsApp with no hours
@@ -185,11 +168,11 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
               GroupLabel(l10n.helpFrequentlyAsked),
               if (results.isEmpty)
                 GroupCard(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   children: [
                     Text(
                       l10n.helpNoResults,
-                      style: TextStyle(color: context.scaffoldMuted),
+                      style: t.body.copyWith(color: context.scaffoldMuted),
                     ),
                   ],
                 )
@@ -216,7 +199,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
               ],
             ],
             if (features.contactEnabled) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
               const ContactFormCard(),
             ],
             GroupLabel(l10n.helpAboutLegal),
@@ -240,7 +223,7 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
               Center(
                 child: Text(
                   l10n.helpAppVersion(version),
-                  style: TextStyle(fontSize: 12, color: context.scaffoldFaint),
+                  style: t.caption.copyWith(color: context.scaffoldMuted),
                 ),
               ),
             ],
@@ -249,14 +232,81 @@ class _HelpScreenState extends ConsumerState<HelpScreen> {
       ),
     );
   }
-
-  OutlineInputBorder _fieldBorder(BuildContext context) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: context.hairline),
-  );
 }
 
-/// One contact channel card: a tinted icon chip, the channel and a caption.
+/// "How can we help?": the label (EN/Caption Strong) over a white 52 px search
+/// field — a 20 px search icon, EN/Body text, the hint in `text/muted` — with a
+/// clear button once something is typed.
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.clearTooltip,
+    required this.showClear,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final String clearTooltip;
+  final bool showClear;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    // A 52 px field whatever the locale's line height (EN 20, AR 22).
+    final vertical = (52 - t.body.fontSize! * t.body.height!) / 2;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: t.captionStrong.copyWith(color: context.scaffoldHeading),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          onChanged: onChanged,
+          textInputAction: TextInputAction.search,
+          style: t.body.copyWith(color: AppColors.inkHeading),
+          cursorColor: AppColors.brandPrimary,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: hint,
+            hintStyle: t.body.copyWith(color: AppColors.inkMuted),
+            contentPadding: EdgeInsetsDirectional.fromSTEB(
+              0,
+              vertical,
+              showClear ? 0 : 16,
+              vertical,
+            ),
+            prefixIcon: const Padding(
+              padding: EdgeInsetsDirectional.only(start: 16, end: 10),
+              child: Icon(HubIcons.search, size: 20, color: AppColors.inkMuted),
+            ),
+            prefixIconConstraints: const BoxConstraints(),
+            suffixIcon: showClear
+                ? IconButton(
+                    icon: const Icon(HubIcons.x, size: 20),
+                    tooltip: clearTooltip,
+                    color: AppColors.inkMuted,
+                    onPressed: onClear,
+                  )
+                : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One contact channel card (Figma `contact/…`): a 40 px tinted icon chip, the
+/// channel (EN/Caption Strong) and a caption (EN/Micro, muted).
 class _ContactTile extends StatelessWidget {
   const _ContactTile({
     required this.icon,
@@ -265,6 +315,7 @@ class _ContactTile extends StatelessWidget {
     required this.label,
     required this.caption,
     required this.onTap,
+    this.ltrCaption = false,
   });
 
   final IconData icon;
@@ -274,10 +325,14 @@ class _ContactTile extends StatelessWidget {
 
   /// The number, address or hours under the label; none when null.
   final String? caption;
+
+  /// A number or an address reads left to right in Arabic too.
+  final bool ltrCaption;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     return Material(
       color: groupCardColor(context),
       borderRadius: BorderRadius.circular(14),
@@ -285,7 +340,7 @@ class _ContactTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 12, 6, 12),
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 12),
           child: Column(
             children: [
               Container(
@@ -297,24 +352,21 @@ class _ContactTile extends StatelessWidget {
                 ),
                 child: Icon(icon, size: 20, color: color),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: context.scaffoldHeading,
-                ),
+                style: t.captionStrong.copyWith(color: context.scaffoldHeading),
               ),
               if (caption != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   caption!,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: context.scaffoldMuted),
+                  textDirection: ltrCaption ? TextDirection.ltr : null,
+                  style: t.micro.copyWith(color: context.scaffoldMuted),
                 ),
               ],
             ],

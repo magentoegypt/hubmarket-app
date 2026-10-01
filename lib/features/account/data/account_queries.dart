@@ -163,6 +163,31 @@ query CustomerOrders($pageSize: Int!, $currentPage: Int!) {
   }
 }''');
 
+  /// The customer's orders as one line each — number, date, status, grand
+  /// total — newest first, for what Account (Figma 20) counts and sums
+  /// (active orders, shopping stats). Same scope and sort as [orders], none
+  /// of its weight (lines, addresses, packages).
+  static const String orderDigests = r'''
+query CustomerOrderDigests($pageSize: Int!, $currentPage: Int!) {
+  customer {
+    orders(
+      pageSize: $pageSize
+      currentPage: $currentPage
+      scope: WEBSITE
+      sort: { sort_field: CREATED_AT, sort_direction: DESC }
+    ) {
+      total_count
+      page_info { current_page total_pages }
+      items {
+        number
+        order_date
+        status
+        total { grand_total { value currency } }
+      }
+    }
+  }
+}''';
+
   /// One of the signed-in customer's orders by its number (the increment id
   /// customers see, e.g. `000000248`): an order opened from a push, a link or
   /// Order placed. `scope: WEBSITE` for the same reason as [orders].
@@ -309,6 +334,14 @@ mutation UpdateProfile($input: CustomerUpdateInput!) {
   updateCustomerV2(input: $input) {
     customer { firstname lastname email }
   }
+}
+''';
+
+  /// What Profile details shows beyond the session's customer: the date of
+  /// birth and whether the e-mail address is confirmed.
+  static const String profileExtras = r'''
+query CustomerProfileExtras {
+  customer { date_of_birth confirmation_status }
 }
 ''';
 

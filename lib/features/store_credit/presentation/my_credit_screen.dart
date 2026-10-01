@@ -11,6 +11,7 @@ import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/grouped_list.dart';
 import '../../../l10n/l10n.dart';
 import '../../account/presentation/order_format.dart';
+import '../domain/credit_money.dart';
 import '../domain/store_credit.dart';
 import 'buy_credit_card.dart';
 import 'store_credit_providers.dart';
@@ -151,7 +152,7 @@ class CreditBalanceCard extends StatelessWidget {
           const SizedBox(height: 6),
           // "AED 120.00" keeps its order inside the Arabic layout.
           Text(
-            account.balance.formatted(),
+            account.balance.ledger,
             textDirection: TextDirection.ltr,
             style: t.display.copyWith(color: Colors.white),
           ),
@@ -308,7 +309,7 @@ class CreditTransactionRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '$sign ${tx.magnitude.formatted()}',
+                '$sign ${tx.magnitude.ledger}',
                 textDirection: TextDirection.ltr,
                 style: t.bodyStrong.copyWith(
                   color: tx.isCredit ? positive : context.scaffoldHeading,
@@ -317,7 +318,7 @@ class CreditTransactionRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 l10n.myCreditBalanceAfter(
-                  '\u2066${tx.balanceAfter.formatted()}\u2069',
+                  '\u2066${tx.balanceAfter.ledger}\u2069',
                 ),
                 style: t.micro.copyWith(color: context.scaffoldMuted),
               ),

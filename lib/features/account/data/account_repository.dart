@@ -14,6 +14,7 @@ import '../../catalog/domain/money.dart';
 import '../../marketplace/marketplace_features.dart';
 import '../domain/customer_address.dart';
 import '../domain/order.dart';
+import '../domain/profile_extras.dart';
 import '../domain/saved_card.dart';
 import 'account_queries.dart';
 
@@ -31,6 +32,34 @@ class AccountRepository {
 
   Future<OrderPage> fetchOrders({int pageSize = 10, int currentPage = 1}) async {
     final data = await _orderRun(AccountQueries.orders, {
+      'pageSize': pageSize,
+      'currentPage': currentPage,
+    }, mutation: false);
+    final orders =
+        (data['customer'] as Map<String, dynamic>?)?['orders']
+            as Map<String, dynamic>?;
+    if (orders == null) return OrderPage.empty;
+    final items = (orders['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .toList();
+    final pageInfo = orders['page_info'] as Map<String, dynamic>?;
+    return OrderPage(
+      items: items,
+      totalCount: (orders['total_count'] as int?) ?? items.length,
+      currentPage: (pageInfo?['current_page'] as int?) ?? currentPage,
+      totalPages: (pageInfo?['total_pages'] as int?) ?? 1,
+    );
+  }
+
+  /// A page of the customer's orders as digests (number, date, status,
+  /// grand total), newest first: what Account's counts and shopping stats are
+  /// built from. Parsed like [fetchOrders], with only those fields set.
+  Future<OrderPage> fetchOrderDigests({
+    int pageSize = 50,
+    int currentPage = 1,
+  }) async {
+    final data = await _run(AccountQueries.orderDigests, {
       'pageSize': pageSize,
       'currentPage': currentPage,
     }, mutation: false);
@@ -273,12 +302,30 @@ class AccountRepository {
     mutation: true,
   );
 
+  /// Saves the name and, when one is given, the date of birth (`YYYY-MM-DD`);
+  /// a date left out is not touched.
   Future<void> updateProfile({
     required String firstName,
     required String lastName,
+    String? dateOfBirth,
   }) => _run(AccountQueries.updateProfile, {
-    'input': {'firstname': firstName, 'lastname': lastName},
+    'input': {
+      'firstname': firstName,
+      'lastname': lastName,
+      if (dateOfBirth != null && dateOfBirth.isNotEmpty)
+        'date_of_birth': dateOfBirth,
+    },
   }, mutation: true);
+
+  /// The date of birth and e-mail confirmation of the signed-in customer.
+  Future<ProfileExtras> fetchProfileExtras() async {
+    final data = await _run(
+      AccountQueries.profileExtras,
+      const <String, dynamic>{},
+      mutation: false,
+    );
+    return ProfileExtras.fromJson(data['customer'] as Map<String, dynamic>?);
+  }
 
   /// Throws a `server` [Failure] with the store's message when it refuses:
   /// a wrong current password ("Invalid login or password."), a new one it

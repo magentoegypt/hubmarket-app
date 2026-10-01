@@ -141,7 +141,7 @@ void main() {
       final credit = FakeStoreCreditRepository();
       await _pump(tester, hubApp: accountHubApp(), credit: credit);
       expect(
-        find.text(en.deleteAccountLoseCredit('\u2066AED 120\u2069')),
+        find.text(en.deleteAccountLoseCredit('\u2066AED 120.00\u2069')),
         findsOneWidget,
       );
       expect(credit.calls, ['fetchBalance']);
@@ -173,7 +173,7 @@ void main() {
     testWidgets('Arabic keeps the amount left-to-right', (tester) async {
       await _pump(tester, locale: 'ar', hubApp: accountHubApp());
       expect(
-        find.text(ar.deleteAccountLoseCredit('\u2066AED 120\u2069')),
+        find.text(ar.deleteAccountLoseCredit('\u2066AED 120.00\u2069')),
         findsOneWidget,
       );
     });

@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../app/routes.dart';
 import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/theme_x.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/store/store_controller.dart';
@@ -13,6 +14,7 @@ import '../../../core/store/store_urls.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/grouped_list.dart';
+import '../../../core/widgets/hub_icon_button.dart';
 import '../../../core/widgets/web_view_screen.dart';
 import '../../../l10n/l10n.dart';
 import '../domain/cms_document.dart';
@@ -94,10 +96,12 @@ class _CmsPageScreenState extends ConsumerState<CmsPageScreen> {
       appBar: subpageAppBar(
         context,
         title,
+        // The 1 px rule under the bar of the white content page (Figma 28).
+        divider: true,
         actions: [
           if (loaded != null)
-            IconButton(
-              icon: const Icon(HubIcons.share2),
+            HubIconButton(
+              icon: HubIcons.share2,
               tooltip: l10n.actionShare,
               onPressed: () => _share(loaded),
             ),
@@ -115,7 +119,7 @@ class _CmsPageScreenState extends ConsumerState<CmsPageScreen> {
     final blocks = page.blocks;
     final sections = CmsDocument.sections(blocks);
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -131,6 +135,7 @@ class _CmsPageScreenState extends ConsumerState<CmsPageScreen> {
             const SizedBox(height: 16),
           ],
           CmsHtmlView(
+            page: true,
             blocks: blocks,
             blockKeys: {
               for (var i = 0; i < blocks.length; i++)
@@ -207,25 +212,25 @@ class _SectionChips extends StatelessWidget {
     );
   }
 
+  /// Figma `on-this-page` chip: 28 px (12 / 6 px of padding), the title in
+  /// EN/Caption Strong — navy with white when it is the section in view, the
+  /// page's grey with ink otherwise.
   Widget _chip(BuildContext context, CmsSection section, bool selected) {
+    final t = AppTextStyles.of(context);
     return Material(
       color: selected
           ? AppColors.brandPrimary
-          : (context.isDarkMode ? Colors.white10 : AppColors.surfaceMuted),
+          : (context.isDarkMode ? Colors.white10 : AppColors.surfaceSubtle),
       shape: const StadiumBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => onTap(section.index),
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Text(
             section.title,
             maxLines: 1,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
+            style: t.captionStrong.copyWith(
               color: selected ? Colors.white : context.scaffoldHeading,
             ),
           ),

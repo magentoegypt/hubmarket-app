@@ -139,7 +139,8 @@ class _BuyCreditCardState extends ConsumerState<BuyCreditCard> {
             l10n.myCreditBuyTitle,
             style: t.title.copyWith(color: context.scaffoldHeading),
           ),
-          const SizedBox(height: 4),
+          // Figma `buy-credit`: 12 between every part.
+          const SizedBox(height: 12),
           Text(
             l10n.myCreditBuyBody,
             style: t.caption.copyWith(color: context.scaffoldMuted),

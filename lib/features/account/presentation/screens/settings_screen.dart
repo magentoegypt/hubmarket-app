@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_mode_controller.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/app_info.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/store/store_controller.dart';
+import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../notifications/presentation/notification_settings_controller.dart';
@@ -16,7 +18,10 @@ import '../../../../app/theme/hub_icons.dart';
 
 /// App settings: language toggle (EN/AR) + notification preferences, plus a
 /// shortcut to Help. The same language switch lives in the menu drawer; this
-/// screen is the discoverable home for it.
+/// screen is the discoverable home for it (Account's Language row opens it).
+///
+/// Not in the Figma frames; laid out with the Account pages' pieces (the
+/// sub-page app bar, grouped cards under small labels).
 ///
 /// The dev and staging builds add developer tools: the theme switch (the
 /// design is light only) and the connection test.
@@ -26,104 +31,132 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final store = ref.watch(storeControllerProvider);
     final promoEnabled = ref.watch(notificationSettingsProvider);
     final developerTools = ref.watch(developerToolsProvider);
+    final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
     final isAuthenticated = ref.watch(
       authControllerProvider.select((s) => s.isAuthenticated),
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
+      backgroundColor: groupedPageColor(context),
+      appBar: subpageAppBar(context, l10n.settingsTitle),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
           if (developerTools) ...[
-            _SectionHeader(l10n.settingsTheme),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SegmentedButton<ThemeMode>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(value: ThemeMode.light, label: Text(l10n.themeWhite)),
-                  ButtonSegment(value: ThemeMode.dark, label: Text(l10n.themeBlack)),
-                  ButtonSegment(value: ThemeMode.system, label: Text(l10n.themeSystem)),
-                ],
-                selected: {ref.watch(themeModeProvider)},
-                onSelectionChanged: (s) =>
-                    ref.read(themeModeProvider.notifier).set(s.first),
-              ),
+            GroupLabel(l10n.settingsTheme, top: 0),
+            GroupCard(
+              padding: const EdgeInsets.all(14),
+              children: [
+                SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text(l10n.themeWhite),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text(l10n.themeBlack),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text(l10n.themeSystem),
+                    ),
+                  ],
+                  selected: {ref.watch(themeModeProvider)},
+                  onSelectionChanged: (s) =>
+                      ref.read(themeModeProvider.notifier).set(s.first),
+                ),
+              ],
             ),
-            const Divider(height: 32),
           ],
 
-          _SectionHeader(l10n.languageToggleLabel),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: [
-                ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
-                ButtonSegment(value: 'ar', label: Text(l10n.languageArabic)),
-              ],
-              selected: {store.activeLocale == 'ar' ? 'ar' : 'en'},
-              onSelectionChanged: (selection) => ref
-                  .read(storeControllerProvider.notifier)
-                  .switchLocale(selection.first),
-            ),
+          GroupLabel(l10n.languageToggleLabel, top: developerTools ? 18 : 0),
+          GroupCard(
+            padding: const EdgeInsets.all(14),
+            children: [
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
+                  ButtonSegment(value: 'ar', label: Text(l10n.languageArabic)),
+                ],
+                selected: {store.activeLocale == 'ar' ? 'ar' : 'en'},
+                onSelectionChanged: (selection) => ref
+                    .read(storeControllerProvider.notifier)
+                    .switchLocale(selection.first),
+              ),
+            ],
           ),
-          const Divider(height: 32),
 
           // Push only exists with FCM (no Firebase config ships yet), and
           // order pushes need backend device tokens — so no promise about
           // them either.
-          if (ref.watch(pushNotificationsAvailableProvider)) ...[
-            _SectionHeader(l10n.notificationsTitle),
-            SwitchListTile.adaptive(
-              value: promoEnabled,
-              onChanged: (v) => ref
-                  .read(notificationSettingsProvider.notifier)
-                  .setPromotions(v),
-              title: Text(l10n.notificationsPromoTitle),
-              subtitle: Text(l10n.notificationsPromoBody),
+          if (pushAvailable) ...[
+            GroupLabel(l10n.notificationsTitle),
+            GroupCard(
+              children: [
+                _onCard(
+                  SwitchListTile.adaptive(
+                    value: promoEnabled,
+                    onChanged: (v) => ref
+                        .read(notificationSettingsProvider.notifier)
+                        .setPromotions(v),
+                    title: Text(l10n.notificationsPromoTitle),
+                    subtitle: Text(l10n.notificationsPromoBody),
+                  ),
+                ),
+              ],
             ),
-            const Divider(height: 32),
           ],
 
-          ListTile(
-            leading: const Icon(HubIcons.circleHelp),
-            title: Text(l10n.accountHelp),
-            trailing: const Icon(HubIcons.chevronRight),
-            onTap: () => context.push(AppRoutes.help),
+          const SizedBox(height: 18),
+          GroupCard(
+            children: [
+              _onCard(
+                ListTile(
+                  leading: const Icon(HubIcons.circleHelp),
+                  title: Text(l10n.accountHelp),
+                  trailing: const Icon(HubIcons.chevronRight),
+                  onTap: () => context.push(AppRoutes.help),
+                ),
+              ),
+              // Live on-device connection probe (runs storeConfig against the
+              // active store view) — lets us tell a network/WAF problem apart
+              // from an empty catalogue when content isn't loading on a real
+              // device. A developer tool (its screen is English only), so not
+              // in the customer build.
+              if (developerTools)
+                _onCard(
+                  ListTile(
+                    leading: const Icon(HubIcons.wifi),
+                    title: Text(l10n.settingsConnectionTest),
+                    subtitle: Text(l10n.settingsConnectionTestSubtitle),
+                    trailing: const Icon(HubIcons.chevronRight),
+                    onTap: () => context.push(AppRoutes.diagnostics),
+                  ),
+                ),
+              // Account deletion must be reachable from inside the app
+              // whenever an account exists (App Store Review Guideline
+              // 5.1.1(v)) — hidden for guests, who have nothing to delete.
+              if (isAuthenticated) _onCard(const _DeleteAccountTile()),
+            ],
           ),
-          // Live on-device connection probe (runs storeConfig against the active
-          // store view) — lets us tell a network/WAF problem apart from an empty
-          // catalogue when content isn't loading on a real device. A developer
-          // tool (its screen is English only), so not in the customer build.
-          if (developerTools)
-            ListTile(
-              leading: const Icon(HubIcons.wifi),
-              title: Text(l10n.settingsConnectionTest),
-              subtitle: Text(l10n.settingsConnectionTestSubtitle),
-              trailing: const Icon(HubIcons.chevronRight),
-              onTap: () => context.push(AppRoutes.diagnostics),
-            ),
-          // Account deletion must be reachable from inside the app whenever an
-          // account exists (App Store Review Guideline 5.1.1(v)) — hidden for
-          // guests, who have nothing to delete.
-          if (isAuthenticated) ...[
-            const Divider(height: 32),
-            const _DeleteAccountTile(),
-          ],
-          const Divider(height: 32),
           Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                ref.watch(appVersionProvider).maybeWhen(
+                ref
+                    .watch(appVersionProvider)
+                    .maybeWhen(
                       data: (v) => v == null ? '' : '${l10n.versionLabel} $v',
                       orElse: () => '',
                     ),
-                style: TextStyle(color: context.scaffoldMuted, fontSize: 12),
+                style: t.caption.copyWith(color: context.scaffoldMuted),
               ),
             ),
           ),
@@ -132,6 +165,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 }
+
+/// A list tile on a [GroupCard]: in a Material of its own, because the card's
+/// white would otherwise hide the tile's ink.
+Widget _onCard(Widget tile) =>
+    Material(type: MaterialType.transparency, child: tile);
 
 /// Destructive account deletion. Confirms first, spelling out exactly what is
 /// lost, and only clears local state after Magento confirms the delete — a
@@ -173,23 +211,4 @@ class _DeleteAccountTileState extends ConsumerState<_DeleteAccountTile> {
       onTap: _busy ? null : _confirmAndDelete,
     );
   }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
-    child: Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        color: context.scaffoldMuted,
-        fontWeight: FontWeight.w700,
-        fontSize: 12,
-        letterSpacing: 1,
-      ),
-    ),
-  );
 }

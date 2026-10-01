@@ -611,13 +611,76 @@
   "accountTrackOrder": "Track an order",
   "accountAddresses": "Saved Addresses",
   "accountHelp": "Help & FAQ",
-  "accountLogOut": "Log Out",
+  "accountLogOut": "Sign out",
   "accountMember": "Member",
   "accountStatOrders": "Orders",
   "accountStatWishlist": "Wishlist",
+  "accountEditProfile": "Edit profile",
+  "accountOrdersCount": "{count, plural, =1{1 order} other{{count} orders}}",
+  "@accountOrdersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountWishlistItemsCount": "{count, plural, =1{1 wishlist item} other{{count} wishlist items}}",
+  "@accountWishlistItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileOrders": "Orders",
+  "accountTileReturns": "Returns",
+  "accountTileAddresses": "Addresses",
+  "accountTileOrdersActive": "{count} active",
+  "@accountTileOrdersActive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileWishlistItems": "{count, plural, =1{1 item} other{{count} items}}",
+  "@accountTileWishlistItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileReturnsOpen": "{count} open",
+  "@accountTileReturnsOpen": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileAddressesSaved": "{count} saved",
+  "@accountTileAddressesSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountStatsTitle": "Shopping stats",
+  "accountStatsTotalSpent": "Total spent",
+  "accountStatsOrdersThisYear": "Orders this year",
+  "accountStatsAverageOrder": "Avg. order",
+  "accountGroupMyAccount": "My account",
+  "accountGroupPreferences": "Preferences",
+  "accountGroupPrivacy": "Privacy",
+  "accountGroupHelp": "Help",
+  "accountStoredPaymentMethods": "Stored payment methods",
+  "accountContactWhatsApp": "Contact Hub Market (WhatsApp)",
+  "accountSellOnHubMarket": "Sell on Hub Market",
   "helpCentreTitle": "Help centre",
   "helpHowCanWeHelp": "How can we help?",
-  "helpSearchHint": "Search e.g. “track my order”",
+  "helpSearchHint": "Search e.g. “return an item”",
   "helpFrequentlyAsked": "Frequently asked",
   "helpNoResults": "No answers match your search. Try other words, or send us a message.",
   "helpPopularTopics": "Popular topics",
@@ -681,8 +744,8 @@
       }
     }
   },
-  "notificationsPromoTitle": "Promotions & offers",
-  "notificationsPromoBody": "Get notified about sales, new arrivals and exclusive offers.",
+  "notificationsPromoTitle": "Deals & offers",
+  "notificationsPromoBody": "Daily deals and new stores",
   "notificationSettingsTitle": "Notification settings",
   "notificationsPushSection": "Push notifications",
   "notificationSettingsSaved": "Your preferences are saved.",
@@ -692,6 +755,14 @@
   "newsletterGeneral": "General subscription",
   "newsletterGeneralBody": "Deals and new stores by email. Unsubscribe any time.",
   "notificationsMarkAllRead": "Mark all as read",
+  "notificationsToday": "Today",
+  "notificationsEarlier": "Earlier",
+  "notificationsFilterAll": "All",
+  "notificationsFilterOrders": "Orders",
+  "notificationsFilterReturns": "Returns",
+  "notificationsFilterOffers": "Offers",
+  "notificationsFilterEmpty": "Nothing in this category yet.",
+  "notificationsKeptNote": "Notifications are kept on this device for 30 days.",
   "notificationsEmptyTitle": "No notifications yet",
   "notificationsEmptyBody": "Order updates, offers and price drops will show up here.",
   "notifJustNow": "Just now",
@@ -1200,19 +1271,25 @@
   "addressHintStreet": "Street 9",
   "actionChange": "Change",
   "actionEdit": "Edit",
-  "profileTitle": "Edit Profile",
+  "profileTitle": "Profile details",
   "profileSaved": "Profile updated",
   "profilePersonalInfo": "Personal Information",
   "profilePreferences": "Preferences",
   "profilePushNotifications": "Push Notifications",
   "profileEmailOffers": "Email Offers",
-  "profileSaveChanges": "Save Changes",
+  "profileSaveChanges": "Save changes",
   "profileMobileChange": "Change",
   "profileMobileAdd": "Add",
   "profileMobileNotSet": "No mobile number added",
   "profileMobileUpdated": "Mobile number updated",
   "actionCancel": "Cancel",
-  "profilePasswordSection": "Change Password",
+  "profilePasswordSection": "Change password",
+  "profileEmailAddress": "Email address",
+  "profileMobileNumber": "Mobile number",
+  "profileBirthDate": "Date of birth (optional)",
+  "profileBirthDatePick": "Select a date",
+  "profileConfirmNewPassword": "Confirm new password",
+  "profileVerified": "Verified",
   "fieldCurrentPassword": "Current password",
   "fieldNewPassword": "New password",
   "passwordChanged": "Password changed",
@@ -1232,7 +1309,7 @@
       }
     }
   },
-  "myReviewsApprovalNote": "New reviews appear on the product page once approved",
+  "myReviewsApprovalNote": "Reviews are published after a quick check",
   "myReviewsEmptyBody": "Reviews you write on product pages show up here.",
   "myReviewsSignIn": "Sign in to see the reviews you've written.",
   "checkoutTitle": "Checkout",
@@ -1346,9 +1423,18 @@
   "paymentFailedPayCod": "Pay cash on delivery",
   "paymentFailedBackToCart": "Back to cart",
   "countryUae": "United Arab Emirates",
-  "savedCardsTitle": "Payment Methods",
+  "savedCardsTitle": "Payment methods",
   "savedCardsEmptyTitle": "No saved cards",
   "savedCardsEmptyBody": "Cards saved to your account appear here.",
+  "savedCardsSection": "Saved cards",
+  "savedCardExpires": "Expires {date}",
+  "@savedCardExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "savedCardExpired": "Expired",
   "savedCardRemove": "Remove card",
   "savedCardRemoveConfirmTitle": "Remove this card?",

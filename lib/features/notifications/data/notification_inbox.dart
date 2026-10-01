@@ -19,6 +19,11 @@ class NotificationInbox {
   static const String _cacheKey = 'notification_inbox';
   static const int _maxItems = 100;
 
+  /// How long a notification stays on the device — the 30 days Figma 20g's
+  /// footer promises. Older ones are dropped when the inbox is read from the
+  /// cache and when a new one arrives.
+  static const Duration retention = Duration(days: 30);
+
   LocalCache? _cache;
   StreamSubscription<NotificationMessage>? _sub;
 
@@ -42,10 +47,13 @@ class NotificationInbox {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return;
-      items.value = decoded
+      final loaded = decoded
           .whereType<Map<dynamic, dynamic>>()
           .map((e) => NotificationItem.fromJson(e.cast<String, dynamic>()))
           .toList(growable: false);
+      final kept = withinRetention(loaded);
+      items.value = kept;
+      if (kept.length != loaded.length) _persist();
     } catch (_) {
       // Corrupt cache — start clean.
     }
@@ -70,9 +78,22 @@ class NotificationInbox {
   }
 
   void add(NotificationItem item) {
-    final next = [item, ...items.value];
+    final next = withinRetention([item, ...items.value]);
     items.value = next.length > _maxItems ? next.sublist(0, _maxItems) : next;
     _persist();
+  }
+
+  /// [list] without what is older than [retention] at [now] (the clock by
+  /// default).
+  static List<NotificationItem> withinRetention(
+    List<NotificationItem> list, {
+    DateTime? now,
+  }) {
+    final cutoff = (now ?? DateTime.now()).subtract(retention);
+    return [
+      for (final item in list)
+        if (!item.receivedAt.isBefore(cutoff)) item,
+    ];
   }
 
   void markAllRead() {

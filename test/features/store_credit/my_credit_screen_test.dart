@@ -62,15 +62,15 @@ void main() {
 
       expect(find.text('My credit'), findsOneWidget);
       expect(find.text('Credit balance'), findsOneWidget);
-      expect(find.text('AED 120'), findsOneWidget);
+      expect(find.text('AED 120.00'), findsOneWidget);
       expect(
         find.text('Use it on any order at checkout — it never expires.'),
         findsOneWidget,
       );
       expect(find.text('Transactions'), findsOneWidget);
       expect(find.text('Refund to credit'), findsOneWidget);
-      expect(find.text('+ AED 43'), findsOneWidget);
-      expect(find.text('\u2212 AED 23'), findsOneWidget);
+      expect(find.text('+ AED 43.00'), findsOneWidget);
+      expect(find.text('\u2212 AED 23.00'), findsOneWidget);
       expect(find.text('Used at checkout'), findsOneWidget);
       expect(find.text('Spent credit on order #000000231'), findsOneWidget);
       expect(find.text('26 Sep 2026'), findsOneWidget);
@@ -180,7 +180,7 @@ void main() {
 
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
-      expect(find.text('AED 120'), findsOneWidget);
+      expect(find.text('AED 120.00'), findsOneWidget);
       expect(credit.calls, ['fetchAccount:1', 'fetchAccount:1']);
     });
   });
@@ -196,7 +196,7 @@ void main() {
 
       expect(find.text('My credit'), findsOneWidget);
       // In a left-to-right isolate, so it keeps its order in Arabic.
-      expect(find.text('\u2066AED 120\u2069'), findsOneWidget);
+      expect(find.text('\u2066AED 120.00\u2069'), findsOneWidget);
       await tester.ensureVisible(find.text('My credit'));
       await tester.tap(find.text('My credit'));
       await tester.pumpAndSettle();
@@ -212,7 +212,7 @@ void main() {
         height: 1400,
         deployed: false,
       );
-      expect(find.text('Log Out'), findsOneWidget);
+      expect(find.text('Sign out'), findsOneWidget);
       expect(find.text('My credit'), findsNothing);
       expect(credit.calls, isEmpty);
     });
