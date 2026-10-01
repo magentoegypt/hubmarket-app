@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_theme.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/store_features.dart';
-import '../../../../core/widgets/button_spinner.dart';
 import '../../../../core/widgets/failure_message.dart';
+import '../../../../core/widgets/hub_bottom_sheet.dart';
+import '../../../../core/widgets/hub_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/order.dart';
 import '../order_cancellation.dart';
-import '../../../../core/widgets/hub_bottom_sheet.dart';
-import '../../../../app/theme/hub_icons.dart';
 
 /// The foot of an order screen (Figma 22): a note and "Cancel order", shown
 /// only when [offersOrderCancel] allows it. Opens the 21b sheet; a customer's
@@ -34,6 +34,7 @@ class OrderCancelSection extends ConsumerWidget {
         ref.watch(storeFeaturesProvider).valueOrNull ?? StoreFeatures.none;
     if (!offersOrderCancel(features, order)) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(14),
@@ -53,11 +54,7 @@ class OrderCancelSection extends ConsumerWidget {
               Expanded(
                 child: Text(
                   l10n.orderCancelHint,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.4,
-                    color: context.scaffoldMuted,
-                  ),
+                  style: t.caption.copyWith(color: context.scaffoldMuted),
                 ),
               ),
             ],
@@ -121,24 +118,11 @@ class DangerButton extends StatelessWidget {
   final bool busy;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 52,
-    child: FilledButton(
-      style: FilledButton.styleFrom(
-        backgroundColor: AppColors.dangerSurface,
-        foregroundColor: AppColors.danger,
-        disabledBackgroundColor: AppColors.dangerSurface,
-        disabledForegroundColor: AppColors.danger.withValues(alpha: 0.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      onPressed: busy ? null : onPressed,
-      child: busy
-          ? const ButtonSpinner()
-          : Text(
-              label,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-    ),
+  Widget build(BuildContext context) => HubButton(
+    label: label,
+    style: HubButtonStyle.danger,
+    loading: busy,
+    onPressed: onPressed,
   );
 }
 
@@ -149,28 +133,48 @@ Future<CancelOutcome?> showCancelOrderSheet(
   BuildContext context, {
   required CustomerOrder order,
   required List<String> reasons,
-}) => showHubBottomSheet<CancelOutcome>(
-  context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  showDragHandle: true,
-  // White like the frame, not Material's tinted sheet surface.
-  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-  ),
-  builder: (_) => CancelOrderSheet(order: order, reasons: reasons),
-);
+}) {
+  // The sheet keeps 30 px under its buttons (the frame), or the system
+  // gesture area when that is taller: showHubBottomSheet already adds the
+  // inset, so only what is missing to 30 px is added here. Read from the view:
+  // under a Scaffold with a tab bar, MediaQuery has already used it up.
+  final view = View.of(context);
+  final inset = view.padding.bottom / view.devicePixelRatio;
+  final bottomExtra = (30 - inset).clamp(0.0, 30.0);
+  return showHubBottomSheet<CancelOutcome>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    // The sheet draws its own 40 px handle.
+    showDragHandle: false,
+    // White like the frame, not Material's tinted sheet surface; the page
+    // behind is dimmed with the brand navy at 55 %.
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    barrierColor: AppColors.brandPrimary.withValues(alpha: 0.55),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => CancelOrderSheet(
+      order: order,
+      reasons: reasons,
+      bottomExtra: bottomExtra,
+    ),
+  );
+}
 
 class CancelOrderSheet extends ConsumerStatefulWidget {
   const CancelOrderSheet({
     super.key,
     required this.order,
     required this.reasons,
+    this.bottomExtra = 30,
   });
 
   final CustomerOrder order;
   final List<String> reasons;
+
+  /// Space under the buttons, on top of the system inset.
+  final double bottomExtra;
 
   @override
   ConsumerState<CancelOrderSheet> createState() => _CancelOrderSheetState();
@@ -199,41 +203,64 @@ class _CancelOrderSheetState extends ConsumerState<CancelOrderSheet> {
     }
   }
 
+  /// "The whole order is cancelled — both packages (MIA CO and loly store).",
+  /// or every item when the order was not split by store, then what a paid or
+  /// guest order adds.
+  String _note(AppLocalizations l10n) {
+    final stores = <String>[];
+    for (final package in widget.order.packages) {
+      final name = package.seller?.name.trim() ?? '';
+      if (name.isNotEmpty) stores.add(name);
+    }
+    final whole = stores.length >= 2
+        ? l10n.orderCancelWholePackages(
+            stores.length,
+            _joinNames(l10n, stores),
+          )
+        : l10n.orderCancelWholeOrder;
+    return [
+      whole,
+      if (widget.order.hasInvoice) l10n.orderCancelRefundNote,
+      if (widget.order.placedAsGuest) l10n.orderCancelGuestNote,
+    ].join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     final order = widget.order;
-    final note = [
-      l10n.orderCancelWholeOrder,
-      if (order.hasInvoice) l10n.orderCancelRefundNote,
-      if (order.placedAsGuest) l10n.orderCancelGuestNote,
-    ].join(' ');
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         20,
-        0,
+        12,
         20,
-        16 + MediaQuery.viewInsetsOf(context).bottom,
+        widget.bottomExtra + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            l10n.orderCancelTitle(order.number),
-            style: TextStyle(
-              fontFamily: AppTheme.displayFont,
-              // Playfair has no Arabic glyphs.
-              fontFamilyFallback: const [AppTheme.arabicFont],
-              fontSize: 23,
-              fontWeight: FontWeight.w700,
-              color: context.scaffoldHeading,
+          // Handle: 40 x 4, `--hm-default`.
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          Text(
+            l10n.orderCancelTitle(order.number),
+            style: t.heading1.copyWith(color: context.scaffoldHeading),
+          ),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.accentSurface,
+              color: AppColors.warningSubtle,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -242,63 +269,52 @@ class _CancelOrderSheetState extends ConsumerState<CancelOrderSheet> {
                 const Icon(
                   HubIcons.package,
                   size: 18,
-                  color: AppColors.accentStrong,
+                  color: AppColors.warning,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    note,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      height: 1.45,
-                      color: AppColors.accentStrong,
-                    ),
+                    _note(l10n),
+                    style: t.caption.copyWith(color: AppColors.warning),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Text(
             l10n.orderCancelReasonTitle,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: context.scaffoldHeading,
-            ),
+            style: t.title.copyWith(color: context.scaffoldHeading),
           ),
-          const SizedBox(height: 6),
-          for (final reason in widget.reasons) ...[
+          const SizedBox(height: 12),
+          for (final reason in widget.reasons)
             _ReasonRow(
               label: reason,
               selected: reason == _reason,
               onTap: _busy ? null : () => setState(() => _reason = reason),
             ),
-            Divider(height: 1, thickness: 1, color: context.hairline),
-          ],
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(
-              _error!,
-              style: const TextStyle(color: AppColors.danger, fontSize: 13),
-            ),
+            Text(_error!, style: t.caption.copyWith(color: AppColors.danger)),
           ],
-          const SizedBox(height: 18),
-          DangerButton(
-            label: l10n.orderCancelAction,
-            busy: _busy,
-            onPressed: _confirm,
-          ),
-          const SizedBox(height: 6),
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.accentStrong,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            child: Text(
-              l10n.orderCancelKeep,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DangerButton(
+                  label: l10n.orderCancelAction,
+                  busy: _busy,
+                  onPressed: _confirm,
+                ),
+                const SizedBox(height: 10),
+                HubButton(
+                  label: l10n.orderCancelKeep,
+                  style: HubButtonStyle.ghost,
+                  onPressed: _busy ? null : () => Navigator.of(context).pop(),
+                ),
+              ],
             ),
           ),
         ],
@@ -307,6 +323,15 @@ class _CancelOrderSheetState extends ConsumerState<CancelOrderSheet> {
   }
 }
 
+/// "Anna, Ben and Cleo" in the app's language.
+String _joinNames(AppLocalizations l10n, List<String> names) {
+  if (names.length < 2) return names.join();
+  final head = names.sublist(0, names.length - 1).join(l10n.listSeparator);
+  return '$head${l10n.listAnd}${names.last}';
+}
+
+/// One reason: a 22 px radio (a navy ring round a white dot once chosen, a
+/// 1.5 px `--hm-strong` ring before), the reason in EN/Body, a hairline under.
 class _ReasonRow extends StatelessWidget {
   const _ReasonRow({
     required this.label,
@@ -319,30 +344,51 @@ class _ReasonRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    selected: selected,
-    inMutuallyExclusiveGroup: true,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-              size: 24,
-              color: selected ? AppColors.brandPrimary : context.scaffoldMuted,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 14.5, color: context.scaffoldHeading),
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Semantics(
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: context.isDarkMode
+                    ? Colors.white12
+                    : AppColors.borderSubtle,
               ),
             ),
-          ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? AppColors.brandPrimary
+                        : AppColors.borderControl,
+                    width: selected ? 7 : 1.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: t.body.copyWith(color: context.scaffoldHeading),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

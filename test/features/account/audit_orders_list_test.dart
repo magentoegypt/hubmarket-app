@@ -6,6 +6,7 @@ import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/orders_screen.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/returns/domain/returns.dart';
+import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/audit_pump.dart';
 import '../../support/fakes.dart';
@@ -148,6 +149,33 @@ void main() {
         ),
       );
       await captureScreen(tester, key, 'audit_21_orders_$locale');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  // Figma 21b (64:2779 / 71:2972): "Cancel order" on the first card opens the
+  // sheet over the list.
+  for (final locale in ['en', 'ar']) {
+    testWidgets('21b Cancel order ($locale)', (tester) async {
+      final key = GlobalKey();
+      await pumpAudit(
+        tester,
+        locale: locale,
+        boundary: key,
+        screen: const OrdersScreen(),
+        account: FakeAccountRepository(orders: _orders(locale)),
+        returns: FakeReturnsRepository(),
+      );
+      final l10n = lookupAppLocalizations(Locale(locale));
+      await tester.tap(find.text(l10n.orderCancelAction));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      // Both stores are named: the order was split in two packages.
+      expect(
+        find.textContaining(locale == 'ar' ? 'الطردان' : 'both packages'),
+        findsOneWidget,
+      );
+      await captureScreen(tester, key, 'audit_21b_cancel_order_$locale');
       expect(tester.takeException(), isNull);
     });
   }

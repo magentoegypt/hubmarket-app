@@ -853,6 +853,19 @@
     }
   },
   "orderCancelWholeOrder": "The whole order is cancelled — every item in it.",
+  "orderCancelWholePackages": "The whole order is cancelled — {count, plural, =2{both packages} other{all {count} packages}} ({stores}).",
+  "@orderCancelWholePackages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "stores": {
+        "type": "String"
+      }
+    }
+  },
+  "listSeparator": ", ",
+  "listAnd": " and ",
   "orderCancelRefundNote": "Anything already paid is refunded.",
   "orderCancelGuestNote": "We'll email you a link to confirm the cancellation.",
   "orderCancelReasonTitle": "Why are you cancelling?",
