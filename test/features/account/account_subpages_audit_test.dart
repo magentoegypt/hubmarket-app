@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show Locale, TextField;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/config/store_contact.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/core/widgets/hub_switch.dart';
 import 'package:hubmarket_app/features/account/domain/profile_extras.dart';
@@ -8,6 +9,7 @@ import 'package:hubmarket_app/features/account/domain/saved_card.dart';
 import 'package:hubmarket_app/features/account/presentation/profile_extras_provider.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/edit_profile_screen.dart';
 import 'package:hubmarket_app/features/auth/presentation/widgets/auth_field.dart';
+import 'package:hubmarket_app/features/account/presentation/screens/help_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/my_reviews_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/payment_methods_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/privacy_data_screen.dart';
@@ -221,6 +223,38 @@ void main() {
         ],
       );
       await captureAudit(tester, boundary, '20f_my_reviews', locale);
+    });
+
+    testWidgets('27 Help centre ($locale)', (tester) async {
+      final boundary = await pumpAuditScreen(
+        tester,
+        screen: const HelpScreen(),
+        locale: locale,
+        // The frame's full scroll (1460 / 1486) plus the tab bar the app keeps.
+        height: (locale == 'ar' ? 1486 : 1460) + 100,
+        overrides: [
+          _legalLinks(locale),
+          storeContactProvider.overrideWithValue(
+            const StoreContact(
+              website: 'https://hub-market.magento2.click',
+              whatsapp: 'https://wa.me/971501234567',
+              phone: '+971501234567',
+              phoneDisplay: '+971 50 123 4567',
+              email: 'care@hub.ae',
+              hours: '24/7',
+            ),
+          ),
+        ],
+      );
+      // The frame draws the message filled in.
+      await tester.enterText(
+        find.byType(TextField).last,
+        locale == 'ar'
+            ? 'الطرد الثاني من متجر ميا لم يتحرك منذ الاثنين — الطلب HM-100248.'
+            : 'My second package from MIA CO hasn’t moved since Monday — order HM-100248.',
+      );
+      await tester.pumpAndSettle();
+      await captureAudit(tester, boundary, '27_help_centre', locale);
     });
 
     testWidgets('20c Profile details ($locale)', (tester) async {

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/theme_x.dart';
+import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
-import '../../../../core/widgets/button_spinner.dart';
 import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../data/account_repository.dart';
@@ -38,7 +40,11 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
     final customer = ref.read(authControllerProvider).customer;
     _name = TextEditingController(text: customer?.fullName ?? '');
     _email = TextEditingController(text: customer?.email ?? '');
-    _phone = TextEditingController(text: customer?.mobileNumber ?? '');
+    // "+971 50 123 4567", as the frame prints it.
+    final mobile = customer?.mobileNumber;
+    _phone = TextEditingController(
+      text: mobile == null ? '' : Phone.display(mobile),
+    );
   }
 
   @override
@@ -83,6 +89,8 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
+    // Figma `contact-form`: 14 px of padding, 12 between the parts.
     return GroupCard(
       padding: const EdgeInsets.all(14),
       children: [
@@ -93,22 +101,14 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
             children: [
               Text(
                 l10n.helpMessageTitle,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: context.scaffoldHeading,
-                ),
+                style: t.title.copyWith(color: context.scaffoldHeading),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 l10n.helpMessageIntro,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.4,
-                  color: context.scaffoldMuted,
-                ),
+                style: t.caption.copyWith(color: context.scaffoldMuted),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _LabeledField(
                 label: l10n.helpMessageName,
                 controller: _name,
@@ -133,7 +133,7 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
               _LabeledField(
                 label: l10n.helpMessageBody,
                 controller: _comment,
-                minLines: 4,
+                minLines: 3,
                 maxLines: 8,
                 keyboardType: TextInputType.multiline,
                 validator: (v) => Validators.required(context, v),
@@ -146,29 +146,24 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
                       const Icon(
                         HubIcons.circleCheck,
                         size: 18,
-                        color: AppColors.success,
+                        color: AppColors.successStrong,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           l10n.helpMessageSent,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: AppColors.success,
+                          style: t.caption.copyWith(
+                            color: AppColors.successStrong,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              FilledButton(
-                onPressed: _busy ? null : _send,
-                child: _busy
-                    ? const ButtonSpinner()
-                    : Text(
-                        l10n.helpMessageSend,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
+              HubButton(
+                label: l10n.helpMessageSend,
+                loading: _busy,
+                onPressed: _send,
               ),
             ],
           ),
@@ -178,7 +173,10 @@ class _ContactFormCardState extends ConsumerState<ContactFormCard> {
   }
 }
 
-/// A label above an outlined field, as in the Figma forms.
+/// A label above a field, as the Figma forms draw them: EN/Caption Strong
+/// over a white box with a 1 px `border/strong` outline at radius 12 (the
+/// global input theme). A one-line field is 52 px with its 20 px icon; the
+/// message box is at least 96 px with 14 / 12 px of padding and no icon.
 class _LabeledField extends StatelessWidget {
   const _LabeledField({
     required this.label,
@@ -208,53 +206,56 @@ class _LabeledField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rtl = Directionality.of(context) == TextDirection.rtl;
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: context.hairline),
+    final t = AppTextStyles.of(context);
+    final multiline = maxLines > 1;
+    // A one-line field is 52 px whatever the locale's line height.
+    final vertical = (52 - t.body.fontSize! * t.body.height!) / 2;
+    final field = TextFormField(
+      controller: controller,
+      validator: validator,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      minLines: minLines,
+      maxLines: maxLines,
+      textDirection: forceLtr ? TextDirection.ltr : null,
+      textAlign: forceLtr && rtl ? TextAlign.right : TextAlign.start,
+      style: t.body.copyWith(color: AppColors.inkHeading),
+      cursorColor: AppColors.brandPrimary,
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: multiline
+            ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
+            : EdgeInsetsDirectional.fromSTEB(
+                icon == null ? 16 : 0,
+                vertical,
+                16,
+                vertical,
+              ),
+        prefixIcon: icon == null
+            ? null
+            : Padding(
+                padding: const EdgeInsetsDirectional.only(start: 16, end: 10),
+                child: Icon(icon, size: 20, color: AppColors.inkMuted),
+              ),
+        prefixIconConstraints: const BoxConstraints(),
+      ),
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: context.scaffoldHeading,
-            ),
+            style: t.captionStrong.copyWith(color: context.scaffoldHeading),
           ),
           const SizedBox(height: 6),
-          TextFormField(
-            controller: controller,
-            validator: validator,
-            keyboardType: keyboardType,
-            textCapitalization: textCapitalization,
-            minLines: minLines,
-            maxLines: maxLines,
-            textDirection: forceLtr ? TextDirection.ltr : null,
-            textAlign: forceLtr && rtl ? TextAlign.right : TextAlign.start,
-            decoration: InputDecoration(
-              prefixIcon: icon == null
-                  ? null
-                  : Icon(icon, size: 20, color: context.scaffoldMuted),
-              filled: true,
-              fillColor: groupCardColor(context),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 14,
-              ),
-              border: border,
-              enabledBorder: border,
-              focusedBorder: border.copyWith(
-                borderSide: const BorderSide(
-                  color: AppColors.brandPrimary,
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
+          multiline
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 96),
+                  child: field,
+                )
+              : field,
         ],
       ),
     );

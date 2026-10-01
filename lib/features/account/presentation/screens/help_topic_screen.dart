@@ -21,7 +21,7 @@ class HelpTopicScreen extends StatelessWidget {
       body: ColoredBox(
         color: groupedPageColor(context),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
           children: [FaqAccordion(items: topic.items, expandFirst: true)],
         ),
       ),

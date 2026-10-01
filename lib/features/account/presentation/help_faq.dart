@@ -63,7 +63,8 @@ List<FaqTopic> bundledHelpFaq(
 
 /// Icon for a FAQ topic's `data-icon` key; the generic help icon otherwise.
 IconData faqTopicIcon(String? key) => switch (key) {
-  'orders' => HubIcons.package,
+  // The frame's "icon/package" is Lucide `box`.
+  'orders' => HubIcons.box,
   'delivery' => HubIcons.truck,
   'returns' => HubIcons.rotateCcw,
   'payments' => HubIcons.creditCard,
