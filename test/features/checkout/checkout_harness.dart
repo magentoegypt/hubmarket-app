@@ -312,7 +312,7 @@ Future<void> capture(
   WidgetTester tester,
   GlobalKey boundary,
   String name,
-) async {
+) => withCaptureLanguage(tester, name, () async {
   await tester.runAsync(() async {
     final object =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -322,4 +322,4 @@ Future<void> capture(
       ..createSync(recursive: true)
       ..writeAsBytesSync(png!.buffer.asUint8List());
   });
-}
+});

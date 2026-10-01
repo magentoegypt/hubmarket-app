@@ -76,13 +76,41 @@ Future<void> withRealShadows(Future<void> Function() body) async {
 /// `build/test_screens/<name>.png` — a visual record for review against the
 /// Figma frames. `build/` is gitignored and nothing is asserted on the image.
 ///
-/// A capture named `…_ar` (or `…_ar_…`) is taken with Arabic prices ("425 د.إ"),
+/// A capture named `..._ar` (or `..._ar_...`) is taken with Arabic prices ("425 د.إ"),
 /// as the app root would set them from the store view, and the tree is put back
-/// afterwards so the test's own assertions still see what it built.
+/// afterwards so the test's own assertions still see what it built. A harness
+/// with its own image code wraps it in [withCaptureLanguage].
 Future<void> captureScreen(
   WidgetTester tester,
   GlobalKey boundaryKey,
   String name,
+) => withCaptureLanguage(tester, name, () async {
+  // Asset images decode asynchronously; finish them before the capture.
+  await tester.runAsync(() async {
+    for (final element in find.byType(Image).evaluate()) {
+      await precacheImage((element.widget as Image).image, element);
+    }
+  });
+  await tester.pump();
+  await tester.runAsync(() async {
+    final boundary =
+        boundaryKey.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+    final image = await boundary.toImage(pixelRatio: 1);
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    File('build/test_screens/$name.png')
+      ..createSync(recursive: true)
+      ..writeAsBytesSync(png!.buffer.asUint8List());
+  });
+});
+
+/// Runs [capture] with [Money.arabic] set for a capture called [name]: Arabic
+/// when the name has an `_ar` part, English otherwise, and puts it (and the
+/// tree) back afterwards.
+Future<void> withCaptureLanguage(
+  WidgetTester tester,
+  String name,
+  Future<void> Function() capture,
 ) async {
   final arabic = RegExp(r'_ar(_|$)').hasMatch(name);
   final previous = Money.arabic;
@@ -92,23 +120,7 @@ Future<void> captureScreen(
     await _rebuildAll(tester);
   }
   try {
-    // Asset images decode asynchronously; finish them before the capture.
-    await tester.runAsync(() async {
-      for (final element in find.byType(Image).evaluate()) {
-        await precacheImage((element.widget as Image).image, element);
-      }
-    });
-    await tester.pump();
-    await tester.runAsync(() async {
-      final boundary =
-          boundaryKey.currentContext!.findRenderObject()!
-              as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 1);
-      final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      File('build/test_screens/$name.png')
-        ..createSync(recursive: true)
-        ..writeAsBytesSync(png!.buffer.asUint8List());
-    });
+    await capture();
   } finally {
     if (switchMoney) {
       Money.arabic = previous;

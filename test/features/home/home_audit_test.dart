@@ -247,7 +247,7 @@ Future<void> _writeCapture(
   WidgetTester tester,
   GlobalKey boundaryKey,
   String name,
-) async {
+) => withCaptureLanguage(tester, name, () async {
   await tester.runAsync(() async {
     for (final element in find.byType(Image).evaluate()) {
       final image = (element.widget as Image).image;
@@ -267,7 +267,7 @@ Future<void> _writeCapture(
       ..createSync(recursive: true)
       ..writeAsBytesSync(png!.buffer.asUint8List());
   });
-}
+});
 
 /// The sizes Figma 07 (English) and AR-07 (Arabic) give the pieces of the Home,
 /// as `get_metadata` reports them, asserted on the render: if a shared style or
