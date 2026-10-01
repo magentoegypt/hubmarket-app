@@ -22,15 +22,21 @@ const _hidden = <(String, HubAppState)>[
 ];
 
 void main() {
-  group('Account (20): My returns', () {
-    testWidgets('listed under My Orders when returns are on', (tester) async {
+  group('Account (20): the Returns tile', () {
+    testWidgets('between Orders and Addresses when returns are on', (
+      tester,
+    ) async {
       await pumpReturns(tester, location: AppRoutes.account);
-      expect(find.text(en.returnsMyReturns), findsOneWidget);
-      final orders = tester.getTopLeft(find.text(en.accountOrders)).dy;
-      final returns = tester.getTopLeft(find.text(en.returnsMyReturns)).dy;
+      expect(find.text(en.accountTileReturns), findsOneWidget);
+      final orders = tester.getTopLeft(find.text(en.accountTileOrders)).dx;
+      final returns = tester.getTopLeft(find.text(en.accountTileReturns)).dx;
+      final addresses = tester
+          .getTopLeft(find.text(en.accountTileAddresses))
+          .dx;
       expect(returns, greaterThan(orders));
+      expect(addresses, greaterThan(returns));
 
-      await tester.tap(find.text(en.returnsMyReturns));
+      await tester.tap(find.text(en.accountTileReturns));
       await tester.pumpAndSettle();
       expect(find.text(en.returnsEmptyTitle), findsOneWidget);
     });
@@ -38,8 +44,8 @@ void main() {
     for (final (name, state) in _hidden) {
       testWidgets('hidden: $name', (tester) async {
         await pumpReturns(tester, location: AppRoutes.account, hubApp: state);
-        expect(find.text(en.accountOrders), findsOneWidget);
-        expect(find.text(en.returnsMyReturns), findsNothing);
+        expect(find.text(en.accountTileOrders), findsOneWidget);
+        expect(find.text(en.accountTileReturns), findsNothing);
       });
     }
   });

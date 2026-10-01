@@ -545,10 +545,73 @@
   "accountTrackOrder": "Track an order",
   "accountAddresses": "Saved Addresses",
   "accountHelp": "Help & FAQ",
-  "accountLogOut": "Log Out",
+  "accountLogOut": "Sign out",
   "accountMember": "Member",
   "accountStatOrders": "Orders",
   "accountStatWishlist": "Wishlist",
+  "accountEditProfile": "Edit profile",
+  "accountOrdersCount": "{count, plural, =1{1 order} other{{count} orders}}",
+  "@accountOrdersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountWishlistItemsCount": "{count, plural, =1{1 wishlist item} other{{count} wishlist items}}",
+  "@accountWishlistItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileOrders": "Orders",
+  "accountTileReturns": "Returns",
+  "accountTileAddresses": "Addresses",
+  "accountTileOrdersActive": "{count} active",
+  "@accountTileOrdersActive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileWishlistItems": "{count, plural, =1{1 item} other{{count} items}}",
+  "@accountTileWishlistItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileReturnsOpen": "{count} open",
+  "@accountTileReturnsOpen": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountTileAddressesSaved": "{count} saved",
+  "@accountTileAddressesSaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountStatsTitle": "Shopping stats",
+  "accountStatsTotalSpent": "Total spent",
+  "accountStatsOrdersThisYear": "Orders this year",
+  "accountStatsAverageOrder": "Avg. order",
+  "accountGroupMyAccount": "My account",
+  "accountGroupPreferences": "Preferences",
+  "accountGroupPrivacy": "Privacy",
+  "accountGroupHelp": "Help",
+  "accountStoredPaymentMethods": "Stored payment methods",
+  "accountContactWhatsApp": "Contact Hub Market (WhatsApp)",
+  "accountSellOnHubMarket": "Sell on Hub Market",
   "helpCentreTitle": "Help centre",
   "helpHowCanWeHelp": "How can we help?",
   "helpSearchHint": "Search e.g. “track my order”",
@@ -1099,7 +1162,7 @@
   "addressHintStreet": "Street 9",
   "actionChange": "Change",
   "actionEdit": "Edit",
-  "profileTitle": "Edit Profile",
+  "profileTitle": "Profile details",
   "profileSaved": "Profile updated",
   "profilePersonalInfo": "Personal Information",
   "profilePreferences": "Preferences",
@@ -1200,7 +1263,7 @@
   },
   "checkoutFreeOrder": "No payment needed — your order total is free",
   "countryUae": "United Arab Emirates",
-  "savedCardsTitle": "Payment Methods",
+  "savedCardsTitle": "Payment methods",
   "savedCardsEmptyTitle": "No saved cards",
   "savedCardsEmptyBody": "Cards saved to your account appear here.",
   "savedCardExpired": "Expired",

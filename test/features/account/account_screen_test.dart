@@ -14,10 +14,12 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/saved_card.dart';
+import 'package:hubmarket_app/features/account/presentation/account_overview.dart';
 import 'package:hubmarket_app/features/account/presentation/account_screen.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
+import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/notifications/presentation/notification_settings_controller.dart';
 import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
@@ -43,6 +45,7 @@ Widget _harness({
   bool newsletter = true,
   FakeLocalCache? cache,
   List<SavedCard> cards = const [],
+  AccountOrdersOverview? overview,
 }) {
   final router = GoRouter(
     initialLocation: '/account',
@@ -75,6 +78,10 @@ Widget _harness({
       // Keep the authenticated view's quick-stats / nav counts offline so no
       // real GraphQL query schedules a retry-backoff timer.
       customerOrderCountProvider.overrideWith((ref) => 0),
+      // ... and what the tiles and the stats card count: no order history,
+      // no saved address.
+      accountOrdersOverviewProvider.overrideWith((ref) async => overview),
+      addressesProvider.overrideWith((ref) async => const []),
       savedCardsProvider.overrideWith((ref) async => cards),
       cartRepositoryProvider.overrideWithValue(FakeCartRepository()),
       wishlistRepositoryProvider.overrideWithValue(FakeWishlistRepository()),
@@ -177,14 +184,16 @@ void main() {
     await tester.pumpWidget(_harness(token: 'persisted'));
     await tester.pumpAndSettle();
 
+    // The header (Figma 20): the name over what the customer has, and Edit
+    // profile; Sign out ends the page.
     expect(find.text('Layla Hassan'), findsOneWidget);
-    expect(find.text('layla@example.com'), findsOneWidget);
-    expect(find.text('Log Out'), findsOneWidget);
+    expect(find.text('0 orders · 0 wishlist items'), findsOneWidget);
+    expect(find.text('Edit profile'), findsOneWidget);
+    expect(find.text('Sign out'), findsOneWidget);
   });
 
-  testWidgets('quick stats count orders and wishlist, not vouchers', (
-    tester,
-  ) async {
+  testWidgets('quick tiles: orders, wishlist, addresses — no returns, no '
+      'vouchers', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -192,22 +201,70 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Orders'), findsOneWidget);
-    expect(find.text('Wishlist'), findsWidgets);
-    // Nothing in Magento counts vouchers: no invented "0 Vouchers".
+    expect(find.text('Wishlist'), findsWidgets); // the tile and the tab bar
+    expect(find.text('Addresses'), findsOneWidget);
+    expect(find.text('0 items'), findsOneWidget); // the wishlist's count
+    expect(find.text('0 saved'), findsOneWidget); // saved addresses
+    // Build 1 takes no returns in the app, and nothing in Magento counts
+    // vouchers: no Returns tile, no invented "0 Vouchers".
+    expect(find.text('Returns'), findsNothing);
     expect(find.text('Vouchers'), findsNothing);
   });
 
-  testWidgets('no Payment Methods row with no saved card', (tester) async {
+  testWidgets('the tiles count what the history holds, and the stats card '
+      'adds it up', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _harness(
+        token: 'persisted',
+        overview: const AccountOrdersOverview(
+          activeCount: 2,
+          stats: ShoppingStats(
+            totalSpent: Money(amount: 1284, currency: 'AED'),
+            ordersThisYear: 7,
+            averageOrder: Money(amount: 183.4, currency: 'AED'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 active'), findsOneWidget);
+    expect(find.text('Shopping stats'), findsOneWidget);
+    // Whole dirhams, as the frame prints them.
+    expect(find.text('AED 1,284'), findsOneWidget);
+    expect(find.text('7'), findsOneWidget);
+    expect(find.text('AED 183'), findsOneWidget);
+    expect(find.text('Total spent'), findsOneWidget);
+    expect(find.text('Orders this year'), findsOneWidget);
+    expect(find.text('Avg. order'), findsOneWidget);
+  });
+
+  testWidgets('no stats card without the order history', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    // The overview is null (offline, or too many orders to add up): no card,
+    // and the Orders tile has nothing to count.
+    await tester.pumpWidget(_harness(token: 'persisted'));
+    await tester.pumpAndSettle();
+    expect(find.text('Shopping stats'), findsNothing);
+    expect(find.textContaining('active'), findsNothing);
+  });
+
+  testWidgets('no Stored payment methods row with no saved card', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     // No card gateway in the app, so nothing to list: no row.
     await tester.pumpWidget(_harness(token: 'persisted'));
     await tester.pumpAndSettle();
-    expect(find.text('Payment Methods'), findsNothing);
+    expect(find.text('Stored payment methods'), findsNothing);
   });
 
-  testWidgets('Payment Methods once the vault holds a card', (tester) async {
+  testWidgets('Stored payment methods once the vault holds a card', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -220,10 +277,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Payment Methods'), findsOneWidget);
+    expect(find.text('Stored payment methods'), findsOneWidget);
   });
 
-  testWidgets('links reviews, newsletter, privacy, help and about', (
+  testWidgets('links reviews, newsletter, privacy, help and WhatsApp', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
@@ -240,7 +297,10 @@ void main() {
     expect(find.text('Privacy & data'), findsOneWidget);
     expect(find.text('Delete account'), findsOneWidget);
     expect(find.text('Help centre'), findsOneWidget);
-    expect(find.text('About Hub Market'), findsOneWidget);
+    // The store publishes a WhatsApp number (see _testContact).
+    expect(find.text('Contact Hub Market (WhatsApp)'), findsOneWidget);
+    // About moved to the Help centre's About & legal group (Figma 27).
+    expect(find.text('About Hub Market'), findsNothing);
   });
 
   testWidgets('rows follow the store switches and FCM', (tester) async {

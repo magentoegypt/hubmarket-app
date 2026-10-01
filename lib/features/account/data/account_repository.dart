@@ -51,6 +51,34 @@ class AccountRepository {
     );
   }
 
+  /// A page of the customer's orders as digests (number, date, status,
+  /// grand total), newest first: what Account's counts and shopping stats are
+  /// built from. Parsed like [fetchOrders], with only those fields set.
+  Future<OrderPage> fetchOrderDigests({
+    int pageSize = 50,
+    int currentPage = 1,
+  }) async {
+    final data = await _run(AccountQueries.orderDigests, {
+      'pageSize': pageSize,
+      'currentPage': currentPage,
+    }, mutation: false);
+    final orders =
+        (data['customer'] as Map<String, dynamic>?)?['orders']
+            as Map<String, dynamic>?;
+    if (orders == null) return OrderPage.empty;
+    final items = (orders['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(_parseOrder)
+        .toList();
+    final pageInfo = orders['page_info'] as Map<String, dynamic>?;
+    return OrderPage(
+      items: items,
+      totalCount: (orders['total_count'] as int?) ?? items.length,
+      currentPage: (pageInfo?['current_page'] as int?) ?? currentPage,
+      totalPages: (pageInfo?['total_pages'] as int?) ?? 1,
+    );
+  }
+
   /// The signed-in customer's order [number] (the increment id customers see,
   /// e.g. `000000248`), or null when they have no order by that number.
   Future<CustomerOrder?> fetchOrderByNumber(String number) async {
