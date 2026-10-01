@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/button_spinner.dart';
@@ -15,6 +16,7 @@ import '../../../auth/presentation/auth_error_text.dart';
 import '../../../auth/presentation/screens/verify_code_screen.dart';
 import '../../data/account_repository.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'profile_value_field.dart';
 
 /// Edit-Profile mobile-number editor. Shows the current mobile and, on
 /// "Change", sends a WhatsApp code to the NEW number (the registration send,
@@ -116,66 +118,33 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
     return _editing ? _editor(l10n) : _display(l10n, mobile);
   }
 
+  /// The number as Profile details (Figma 20c) draws it: a field showing it,
+  /// with "Change" (or "Add") at its end — the number is changed through a
+  /// code, not typed in place.
   Widget _display(AppLocalizations l10n, String? mobile) {
     final hasMobile = mobile != null && mobile.isNotEmpty;
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
-      child: Row(
-        children: [
-          const Icon(
-            HubIcons.smartphone,
-            size: 20,
-            color: AppColors.inkMuted,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.fieldMobileNumber,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.inkMuted,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  hasMobile ? mobile : l10n.profileMobileNotSet,
-                  textDirection: hasMobile ? TextDirection.ltr : null,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: hasMobile ? AppColors.inkHeading : AppColors.inkFaint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: _startEdit,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.brandPrimary,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: Text(
-              hasMobile ? l10n.profileMobileChange : l10n.profileMobileAdd,
-            ),
-          ),
-        ],
+    final t = AppTextStyles.of(context);
+    return ProfileValueField(
+      label: l10n.profileMobileNumber,
+      icon: HubIcons.phone,
+      value: hasMobile ? Phone.display(mobile) : null,
+      placeholder: l10n.profileMobileNotSet,
+      ltr: true,
+      onTap: _startEdit,
+      trailing: Text(
+        hasMobile ? l10n.profileMobileChange : l10n.profileMobileAdd,
+        style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
       ),
     );
   }
 
   Widget _editor(AppLocalizations l10n) {
+    final t = AppTextStyles.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       padding: const EdgeInsets.all(14),
       child: Form(
@@ -184,12 +153,8 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              l10n.fieldMobileNumber,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkMuted,
-              ),
+              l10n.profileMobileNumber,
+              style: t.captionStrong.copyWith(color: AppColors.inkHeading),
             ),
             const SizedBox(height: 8),
             PhoneNumberField(
@@ -206,7 +171,7 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
             const SizedBox(height: 8),
             Text(
               l10n.authSignUpMobileHelp,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.inkMuted),
+              style: t.caption.copyWith(color: AppColors.inkMuted),
             ),
             const SizedBox(height: 12),
             Row(

@@ -1,23 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/theme_x.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/config/store_features.dart';
-import '../../../../core/store/store_controller.dart';
+import '../../../../core/validation/password_policy.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/failure_message.dart';
-import '../../../../core/widgets/hub_back_button.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_button.dart';
+import '../../../../core/widgets/hub_footer_bar.dart';
+import '../../../../core/widgets/hub_switch.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
-import '../../../notifications/presentation/notification_settings_controller.dart';
+import '../../../auth/presentation/widgets/auth_field.dart';
 import '../../data/account_repository.dart';
-import '../newsletter_controller.dart';
+import '../profile_extras_provider.dart';
 import '../widgets/mobile_number_editor.dart';
-import '../../../../app/theme/hub_icons.dart';
+import '../widgets/profile_avatar.dart';
+import '../widgets/profile_value_field.dart';
 
+/// Profile details (Figma 20c): the avatar, first and last name, e-mail,
+/// mobile number, date of birth and the Change password card, with one Save
+/// changes for all of it.
+///
+/// Built from what the backend holds:
+/// * the avatar is initials — the backend has no customer-photo endpoint, so
+///   the frame's "Change photo" is left out;
+/// * "Verified" under the e-mail shows only when the store confirmed the
+///   address (`confirmation_status`); under the mobile number it is left out —
+///   nothing says whether a number was verified, only that the app changes it
+///   through a code (see [MobileNumberEditor]);
+/// * the date of birth is the account's `date_of_birth` (optional);
+/// * the new password follows the store's own rule ([PasswordPolicy]); the
+///   strength bar fills with what the typed password satisfies.
+///
+/// The language, push and e-mail-offer rows this page used to carry are on
+/// Account (Language, Notifications, Newsletter), as the frame has them.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -28,77 +51,39 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _profileKey = GlobalKey<FormState>();
   final _passwordKey = GlobalKey<FormState>();
-  late final TextEditingController _fullName;
+  late final TextEditingController _firstName;
+  late final TextEditingController _lastName;
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
-  bool _savingProfile = false;
-  bool _savingPassword = false;
-  bool _showPassword = false;
+  final _confirmPassword = TextEditingController();
+
+  /// The Change password card is open (the switch is on).
+  bool _changePassword = false;
+
+  /// Whether each of the three password fields hides its characters.
+  final List<bool> _hidden = [true, true, true];
+
+  /// The date picked on this page; until one is, the account's own shows.
+  DateTime? _birthDate;
+  bool _birthDatePicked = false;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     final customer = ref.read(authControllerProvider).customer;
-    _fullName = TextEditingController(text: customer?.fullName ?? '');
+    _firstName = TextEditingController(text: customer?.firstName ?? '');
+    _lastName = TextEditingController(text: customer?.lastName ?? '');
   }
 
   @override
   void dispose() {
-    _fullName.dispose();
+    _firstName.dispose();
+    _lastName.dispose();
     _currentPassword.dispose();
     _newPassword.dispose();
+    _confirmPassword.dispose();
     super.dispose();
-  }
-
-  Future<void> _saveProfile() async {
-    if (!_profileKey.currentState!.validate()) return;
-    setState(() => _savingProfile = true);
-    final l10n = AppLocalizations.of(context);
-    try {
-      // Single Full Name field (Figma) → split for Magento's first/last. Last
-      // token is the surname; a single token fills both so validation passes.
-      final parts = _fullName.text
-          .trim()
-          .split(RegExp(r'\s+'))
-          .where((s) => s.isNotEmpty)
-          .toList();
-      final first = parts.isEmpty
-          ? ''
-          : (parts.length == 1
-                ? parts.first
-                : parts.sublist(0, parts.length - 1).join(' '));
-      final last = parts.isEmpty ? '' : parts.last;
-      await ref
-          .read(accountRepositoryProvider)
-          .updateProfile(firstName: first, lastName: last);
-      await ref.read(authControllerProvider.notifier).refreshCustomer();
-      _snack(l10n.profileSaved);
-    } catch (_) {
-      _snack(l10n.errorGeneric);
-    } finally {
-      if (mounted) setState(() => _savingProfile = false);
-    }
-  }
-
-  Future<void> _changePassword() async {
-    if (!_passwordKey.currentState!.validate()) return;
-    setState(() => _savingPassword = true);
-    final l10n = AppLocalizations.of(context);
-    try {
-      await ref
-          .read(accountRepositoryProvider)
-          .changePassword(_currentPassword.text, _newPassword.text);
-      _currentPassword.clear();
-      _newPassword.clear();
-      _snack(l10n.passwordChanged);
-    } catch (error) {
-      // The store's own (localized) words — a wrong current password, a new
-      // one it won't take — like the other forms; generic only when it gave
-      // none.
-      if (mounted) _snack(serverMessageOr(context, error, l10n.errorGeneric));
-    } finally {
-      if (mounted) setState(() => _savingPassword = false);
-    }
   }
 
   void _snack(String message) {
@@ -109,407 +94,374 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  /// Saves the newsletter opt-in on the account at once, like the push
-  /// switch beside it.
-  Future<void> _setEmailOffers(bool value) async {
+  /// Saves the profile and, when the card is open, the new password: the
+  /// profile first, then the password, whose refusal is the store's own words.
+  Future<void> _save(DateTime? birthDate) async {
+    final profileOk = _profileKey.currentState?.validate() ?? true;
+    final passwordOk =
+        !_changePassword || (_passwordKey.currentState?.validate() ?? true);
+    if (!profileOk || !passwordOk) return;
+    setState(() => _saving = true);
     final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final repository = ref.read(accountRepositoryProvider);
     try {
-      final saved = await ref
-          .read(newsletterProvider.notifier)
-          .setSubscribed(value);
-      if (value && !saved) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.footerSubscribeConfirm)),
-        );
-      }
-    } catch (error) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(serverMessageOr(context, error, l10n.errorGeneric)),
-        ),
+      await repository.updateProfile(
+        firstName: _firstName.text.trim(),
+        lastName: _lastName.text.trim(),
+        dateOfBirth: birthDate == null
+            ? null
+            : DateFormat('yyyy-MM-dd').format(birthDate),
       );
+    } catch (_) {
+      _snack(l10n.errorGeneric);
+      if (mounted) setState(() => _saving = false);
+      return;
+    }
+    var message = l10n.profileSaved;
+    try {
+      if (_changePassword) {
+        await repository.changePassword(
+          _currentPassword.text,
+          _newPassword.text,
+        );
+        message = l10n.passwordChanged;
+        _currentPassword.clear();
+        _newPassword.clear();
+        _confirmPassword.clear();
+        if (mounted) setState(() => _changePassword = false);
+      }
+      await ref.read(authControllerProvider.notifier).refreshCustomer();
+      _snack(message);
+    } catch (error) {
+      // The store's own (localized) words — a wrong current password, a new
+      // one it won't take — like the other forms; generic only when it gave
+      // none.
+      if (mounted) _snack(serverMessageOr(context, error, l10n.errorGeneric));
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
-    final letters = parts.take(2).map((p) => p.substring(0, 1).toUpperCase());
-    final joined = letters.join();
-    return joined.isEmpty ? '?' : joined;
+  Future<void> _pickBirthDate(DateTime? current) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime(now.year - 30, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _birthDate = picked;
+        _birthDatePicked = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).languageCode;
     final customer = ref.watch(authControllerProvider).customer;
-    final isAr =
-        ref.watch(storeControllerProvider.select((s) => s.activeLocale)) ==
-        'ar';
-    final pushEnabled = ref.watch(notificationSettingsProvider);
-    // Push only exists with FCM; e-mail offers are the account's newsletter
-    // flag (is_subscribed), shown while the store has the newsletter on.
-    final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
-    final newsletterEnabled =
-        ref.watch(storeFeaturesProvider).valueOrNull?.newsletterEnabled ??
-        false;
-    final emailOffers = ref.watch(newsletterProvider);
+    final extras = ref.watch(profileExtrasProvider).valueOrNull;
+    final policy = ref.watch(passwordPolicyProvider);
+    final birthDate = _birthDatePicked
+        ? _birthDate
+        : DateTime.tryParse(extras?.dateOfBirth ?? '');
+
+    // The session may still be restoring when the page opens: fill the names
+    // when the customer arrives, as long as nothing was typed.
+    ref.listen(authControllerProvider.select((s) => s.customer), (_, next) {
+      if (next != null &&
+          _firstName.text.isEmpty &&
+          _lastName.text.isEmpty) {
+        _firstName.text = next.firstName;
+        _lastName.text = next.lastName;
+      }
+    });
 
     return HubScaffold(
       currentTab: AppTab.account,
-      showSearch: false,
-      appBar: AppBar(
-        centerTitle: true,
-        leading: const HubBackButton(),
-        title: Text(l10n.profileTitle),
+      appBar: subpageAppBar(context, l10n.profileTitle, divider: true),
+      bottomBar: HubFooterBar(
+        child: HubButton(
+          label: l10n.profileSaveChanges,
+          loading: _saving,
+          onPressed: _saving ? null : () => _save(birthDate),
+        ),
       ),
       body: ListView(
-        padding: EdgeInsets.zero,
+        // Figma body: 12 under the bar, 14 between the fields.
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         children: [
-          const SizedBox(height: 24),
-          // Initials avatar. No photo upload: the backend has no
-          // customer-photo endpoint (the app's first client had a custom
-          // `uploadCustomerAvatar` module that Hub Market doesn't).
-          Center(
-            child: _AvatarBadge(initials: _initials(customer?.fullName ?? '')),
-          ),
-          const SizedBox(height: 16),
-          _SectionHeader(l10n.profilePersonalInfo),
+          // The avatar: 8 above, 4 below. No photo upload (see the class doc).
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Form(
-              key: _profileKey,
-              child: Column(
-                children: [
-                  _ProfileField(
-                    controller: _fullName,
-                    label: l10n.fieldFullName,
-                    icon: HubIcons.user,
-                    validator: (v) => Validators.required(context, v),
-                  ),
-                  const SizedBox(height: 12),
-                  _ProfileField(
-                    initialValue: customer?.email ?? '',
-                    label: l10n.fieldEmail,
-                    icon: HubIcons.mail,
-                    enabled: false,
-                  ),
-                  const SizedBox(height: 12),
-                  // Mobile number — OTP-gated in-place editor (WhatsApp verify).
-                  const MobileNumberEditor(),
-                ],
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Center(
+              child: ProfileAvatar(
+                name: customer?.fullName ?? '',
+                diameter: 84,
+                // 28 in DM Sans; the Arabic frame keeps the hub avatar's 18.
+                fontSize: AppTextStyles.of(context).arabic ? 18 : 28,
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          _SectionHeader(l10n.profilePreferences),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+          const SizedBox(height: 14),
+          Form(
+            key: _profileKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _PrefRow(
-                  label: l10n.languageToggleLabel,
-                  onTap: () => ref
-                      .read(storeControllerProvider.notifier)
-                      .switchLocale(isAr ? 'en' : 'ar'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isAr ? 'AR' : 'EN',
-                        style: TextStyle(color: context.scaffoldMuted),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: AuthField(
+                        controller: _firstName,
+                        label: l10n.fieldFirstName,
+                        icon: HubIcons.user,
+                        textCapitalization: TextCapitalization.words,
+                        validator: (v) => Validators.required(context, v),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        HubIcons.chevronRight,
-                        color: context.scaffoldMuted,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-                if (pushAvailable) ...[
-                  const SizedBox(height: 12),
-                  _PrefToggleRow(
-                    label: l10n.profilePushNotifications,
-                    value: pushEnabled,
-                    onChanged: (v) => ref
-                        .read(notificationSettingsProvider.notifier)
-                        .setPromotions(v),
-                  ),
-                ],
-                if (newsletterEnabled) ...[
-                  const SizedBox(height: 12),
-                  _PrefToggleRow(
-                    label: l10n.profileEmailOffers,
-                    value: emailOffers.valueOrNull ?? false,
-                    onChanged: emailOffers.isLoading
-                        ? null
-                        : (v) => _setEmailOffers(v),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                _PrefRow(
-                  label: l10n.profilePasswordSection,
-                  onTap: () => setState(() => _showPassword = !_showPassword),
-                  trailing: Icon(
-                    _showPassword ? HubIcons.chevronUp : HubIcons.chevronRight,
-                    color: context.scaffoldMuted,
-                    size: 20,
-                  ),
-                ),
-                if (_showPassword) ...[
-                  const SizedBox(height: 12),
-                  Form(
-                    key: _passwordKey,
-                    child: Column(
-                      children: [
-                        _ProfileField(
-                          controller: _currentPassword,
-                          label: l10n.fieldCurrentPassword,
-                          icon: HubIcons.lock,
-                          obscureText: true,
-                          validator: (v) => Validators.required(context, v),
-                        ),
-                        const SizedBox(height: 12),
-                        _ProfileField(
-                          controller: _newPassword,
-                          label: l10n.fieldNewPassword,
-                          icon: HubIcons.rotateCcwKey,
-                          obscureText: true,
-                          validator: (v) => Validators.password(context, v),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _savingPassword ? null : _changePassword,
-                            child: _savingPassword
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(l10n.profilePasswordSection),
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AuthField(
+                        controller: _lastName,
+                        label: l10n.fieldLastName,
+                        icon: HubIcons.user,
+                        textCapitalization: TextCapitalization.words,
+                        validator: (v) => Validators.required(context, v),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ProfileValueField(
+                  label: l10n.profileEmailAddress,
+                  icon: HubIcons.mail,
+                  value: customer?.email,
+                  ltr: true,
+                ),
+                if (extras?.emailConfirmed ?? false) ...[
+                  const SizedBox(height: 6),
+                  _Verified(label: l10n.profileVerified),
                 ],
+                const SizedBox(height: 14),
+                // Mobile number — OTP-gated in-place editor (WhatsApp verify).
+                const MobileNumberEditor(),
+                const SizedBox(height: 14),
+                ProfileValueField(
+                  label: l10n.profileBirthDate,
+                  icon: HubIcons.gift,
+                  value: birthDate == null ? null : _dateLabel(birthDate, locale),
+                  placeholder: l10n.profileBirthDatePick,
+                  onTap: () => _pickBirthDate(birthDate),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          // Save Changes (Figma) — full-width navy.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _savingProfile ? null : _saveProfile,
-                child: _savingProfile
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.profileSaveChanges),
-              ),
+          const SizedBox(height: 14),
+          _passwordCard(context, l10n, policy),
+        ],
+      ),
+    );
+  }
+
+  /// "12 Mar 1994".
+  static String _dateLabel(DateTime date, String locale) {
+    try {
+      return DateFormat('d MMM yyyy', locale).format(date);
+    } catch (_) {
+      return DateFormat('d MMM yyyy').format(date);
+    }
+  }
+
+  /// Figma `password`: a 1 px `border/subtle` card at radius 14, 14 px of
+  /// padding, 12 between its parts; the switch opens the three fields.
+  Widget _passwordCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    PasswordPolicy? policy,
+  ) {
+    final t = AppTextStyles.of(context);
+    final strength = profilePasswordStrength(_newPassword.text, policy);
+    Widget field(
+      TextEditingController controller,
+      String label,
+      int index, {
+      String? Function(String)? validator,
+      TextInputAction action = TextInputAction.next,
+      ValueChanged<String>? onChanged,
+    }) => AuthField(
+      controller: controller,
+      label: label,
+      icon: HubIcons.lock,
+      obscureText: _hidden[index],
+      textInputAction: action,
+      validator: validator,
+      onChanged: onChanged,
+      trailing: PasswordVisibilityToggle(
+        obscured: _hidden[index],
+        onPressed: () => setState(() => _hidden[index] = !_hidden[index]),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _changePassword = !_changePassword),
+            child: Row(
+              children: [
+                const Icon(
+                  HubIcons.lock,
+                  size: 20,
+                  color: AppColors.inkSubtle,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.profilePasswordSection,
+                    style: t.title.copyWith(color: AppColors.inkHeading),
+                  ),
+                ),
+                HubSwitch(
+                  value: _changePassword,
+                  onChanged: (v) => setState(() => _changePassword = v),
+                  semanticLabel: l10n.profilePasswordSection,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
+          if (_changePassword)
+            Form(
+              key: _passwordKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 12),
+                  field(
+                    _currentPassword,
+                    l10n.fieldCurrentPassword,
+                    0,
+                    validator: (v) => Validators.required(context, v),
+                  ),
+                  const SizedBox(height: 12),
+                  field(
+                    _newPassword,
+                    l10n.fieldNewPassword,
+                    1,
+                    validator: (v) =>
+                        Validators.newPassword(context, v, policy: policy),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  _StrengthMeter(
+                    score: strength,
+                    rule: Validators.passwordRuleText(l10n, policy),
+                  ),
+                  const SizedBox(height: 12),
+                  field(
+                    _confirmPassword,
+                    l10n.profileConfirmNewPassword,
+                    2,
+                    action: TextInputAction.done,
+                    validator: (v) => Validators.confirmPassword(
+                      context,
+                      v,
+                      _newPassword.text,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-/// Circular initials avatar with a navy ring (Figma).
-class _AvatarBadge extends StatelessWidget {
-  const _AvatarBadge({required this.initials});
-  final String initials;
+/// How many of four things a new password has: the store's minimum length, a
+/// letter, a digit and a symbol (0–4) — what the strength bar fills with. The
+/// bar only shows progress; whether the password is accepted is the store's
+/// rule ([PasswordPolicy]), checked on save.
+int profilePasswordStrength(String value, [PasswordPolicy? policy]) {
+  if (value.isEmpty) return 0;
+  var score = 0;
+  if (value.runes.length >= (policy?.minLength ?? 8)) score++;
+  if (RegExp('[a-zA-Z]').hasMatch(value)) score++;
+  if (RegExp('[0-9]').hasMatch(value)) score++;
+  if (RegExp('[^a-zA-Z0-9]').hasMatch(value)) score++;
+  return score;
+}
+
+/// The strength bar of Figma 20c: four 4 px segments 4 apart, the lit ones
+/// green (red for one, amber for two), then the store's rule in EN/Caption.
+class _StrengthMeter extends StatelessWidget {
+  const _StrengthMeter({required this.score, required this.rule});
+
+  final int score;
+  final String rule;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceTint,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.brandPrimary, width: 2),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: const TextStyle(
-          color: AppColors.brandPrimary,
-          fontWeight: FontWeight.w700,
-          fontSize: 26,
-        ),
-      ),
-    );
-  }
-}
-
-/// Muted uppercase section header (Figma "PERSONAL INFORMATION" / "PREFERENCES").
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.fromSTEB(24, 16, 24, 8),
-    child: Text(
-      label.toUpperCase(),
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.8,
-        color: context.scaffoldMuted,
-      ),
-    ),
-  );
-}
-
-/// Filled, rounded text field with a leading icon (Figma personal-info rows).
-class _ProfileField extends StatelessWidget {
-  const _ProfileField({
-    required this.label,
-    required this.icon,
-    this.controller,
-    this.initialValue,
-    this.validator,
-    this.enabled = true,
-    this.obscureText = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final TextEditingController? controller;
-  final String? initialValue;
-  final String? Function(String?)? validator;
-  final bool enabled;
-  final bool obscureText;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      initialValue: initialValue,
-      validator: validator,
-      enabled: enabled,
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
-        filled: true,
-        // Dark mode: a light fill hid the (light) input text (QA "Profile page").
-        fillColor: context.fieldFill,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-}
-
-/// A tappable preference row (filled, rounded): label + trailing widget.
-class _PrefRow extends StatelessWidget {
-  const _PrefRow({
-    required this.label,
-    required this.trailing,
-    required this.onTap,
-  });
-
-  final String label;
-  final Widget trailing;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: context.fieldFill,
-      borderRadius: BorderRadius.circular(12),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: context.scaffoldHeading,
+    final t = AppTextStyles.of(context);
+    final lit = switch (score) {
+      <= 1 => AppColors.danger,
+      2 => AppColors.warning,
+      _ => AppColors.successStrong,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < 4; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              Expanded(
+                child: Container(
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: i < score ? lit : AppColors.borderSubtle,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              trailing,
             ],
-          ),
+          ],
         ),
-      ),
+        const SizedBox(height: 6),
+        Text(rule, style: t.caption.copyWith(color: AppColors.inkMuted)),
+      ],
     );
   }
 }
 
-/// A preference row with a trailing switch (filled, rounded).
-class _PrefToggleRow extends StatelessWidget {
-  const _PrefToggleRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
+/// "Verified": the badge-check and EN/Caption in `success`.
+class _Verified extends StatelessWidget {
+  const _Verified({required this.label});
 
   final String label;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.fieldFill,
-        borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const Icon(HubIcons.badgeCheck, size: 13, color: AppColors.successStrong),
+      const SizedBox(width: 4),
+      Text(
+        label,
+        style: AppTextStyles.of(
+          context,
+        ).caption.copyWith(color: AppColors.successStrong),
       ),
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: context.scaffoldHeading,
-              ),
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: AppColors.brandPrimary,
-          ),
-        ],
-      ),
-    );
-  }
+    ],
+  );
 }

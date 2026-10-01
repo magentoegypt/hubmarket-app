@@ -1,9 +1,13 @@
-import 'package:flutter/widgets.dart' show Locale;
+import 'package:flutter/material.dart' show Locale, TextField;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/core/widgets/hub_switch.dart';
+import 'package:hubmarket_app/features/account/domain/profile_extras.dart';
 import 'package:hubmarket_app/features/account/domain/saved_card.dart';
+import 'package:hubmarket_app/features/account/presentation/profile_extras_provider.dart';
+import 'package:hubmarket_app/features/account/presentation/screens/edit_profile_screen.dart';
+import 'package:hubmarket_app/features/auth/presentation/widgets/auth_field.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/my_reviews_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/payment_methods_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/privacy_data_screen.dart';
@@ -217,6 +221,37 @@ void main() {
         ],
       );
       await captureAudit(tester, boundary, '20f_my_reviews', locale);
+    });
+
+    testWidgets('20c Profile details ($locale)', (tester) async {
+      final boundary = await pumpAuditScreen(
+        tester,
+        screen: const EditProfileScreen(),
+        locale: locale,
+        // The frame's full scroll (1124 / 1146) plus the tab bar the app keeps.
+        height: (locale == 'ar' ? 1146 : 1124) + 100,
+        overrides: [
+          profileExtrasProvider.overrideWith(
+            (ref) async => const ProfileExtras(
+              dateOfBirth: '1994-03-12',
+              emailConfirmed: true,
+            ),
+          ),
+        ],
+      );
+      // The frame draws Change password open, with a ten-character password
+      // that has a letter, a digit and no symbol: three bars.
+      await tester.tap(find.byType(HubSwitch));
+      await tester.pumpAndSettle();
+      Finder field(String label) => find.descendant(
+        of: find.ancestor(of: find.text(label), matching: find.byType(AuthField)),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(field(l10n.fieldCurrentPassword), 'password1');
+      await tester.enterText(field(l10n.fieldNewPassword), 'Password12');
+      await tester.enterText(field(l10n.profileConfirmNewPassword), 'Password12');
+      await tester.pumpAndSettle();
+      await captureAudit(tester, boundary, 'audit_20c_profile', locale);
     });
 
     testWidgets('20g Notifications ($locale)', (tester) async {

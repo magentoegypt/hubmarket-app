@@ -14,6 +14,7 @@ import '../../catalog/domain/money.dart';
 import '../../marketplace/marketplace_features.dart';
 import '../domain/customer_address.dart';
 import '../domain/order.dart';
+import '../domain/profile_extras.dart';
 import '../domain/saved_card.dart';
 import 'account_queries.dart';
 
@@ -301,12 +302,30 @@ class AccountRepository {
     mutation: true,
   );
 
+  /// Saves the name and, when one is given, the date of birth (`YYYY-MM-DD`);
+  /// a date left out is not touched.
   Future<void> updateProfile({
     required String firstName,
     required String lastName,
+    String? dateOfBirth,
   }) => _run(AccountQueries.updateProfile, {
-    'input': {'firstname': firstName, 'lastname': lastName},
+    'input': {
+      'firstname': firstName,
+      'lastname': lastName,
+      if (dateOfBirth != null && dateOfBirth.isNotEmpty)
+        'date_of_birth': dateOfBirth,
+    },
   }, mutation: true);
+
+  /// The date of birth and e-mail confirmation of the signed-in customer.
+  Future<ProfileExtras> fetchProfileExtras() async {
+    final data = await _run(
+      AccountQueries.profileExtras,
+      const <String, dynamic>{},
+      mutation: false,
+    );
+    return ProfileExtras.fromJson(data['customer'] as Map<String, dynamic>?);
+  }
 
   /// Throws a `server` [Failure] with the store's message when it refuses:
   /// a wrong current password ("Invalid login or password."), a new one it

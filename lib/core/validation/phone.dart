@@ -57,6 +57,16 @@ abstract final class Phone {
         : e164.replaceAll('+', '');
   }
 
+  /// A number as the frames print it: `+971501234567` → `+971 50 123 4567`.
+  /// A shape that is not a UAE mobile comes back as it was stored.
+  static String display(String raw) {
+    final e164 = normalizeUae(raw);
+    if (!_uaeE164.hasMatch(e164)) return raw;
+    final sub = e164.substring(4);
+    return '+$uaeDial ${sub.substring(0, 2)} ${sub.substring(2, 5)} '
+        '${sub.substring(5)}';
+  }
+
   /// Masks a number for the "Code sent to …" caption, e.g.
   /// `+971501234567` → `+971 50 ••• 4567`. Falls back to the normalized form
   /// when the shape is unexpected (non-UAE numbers stay readable).

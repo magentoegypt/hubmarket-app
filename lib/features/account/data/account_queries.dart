@@ -337,6 +337,14 @@ mutation UpdateProfile($input: CustomerUpdateInput!) {
 }
 ''';
 
+  /// What Profile details shows beyond the session's customer: the date of
+  /// birth and whether the e-mail address is confirmed.
+  static const String profileExtras = r'''
+query CustomerProfileExtras {
+  customer { date_of_birth confirmation_status }
+}
+''';
+
   /// The newsletter opt-in on the customer account (Customers › Newsletter).
   static const String newsletterStatus = r'''
 query CustomerNewsletter {
