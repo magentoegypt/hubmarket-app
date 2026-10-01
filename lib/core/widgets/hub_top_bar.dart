@@ -12,7 +12,10 @@ import 'hub_back_button.dart';
 /// Pass it as `appBar:` of a `Scaffold` / `HubScaffold`. [showBack] defaults to
 /// "this route can be popped", so tab roots get none and pushed pages get one.
 /// [subtitle] puts a muted caption under the title (the cart's "4 items · 2
-/// stores"); [titleWidget] replaces the title for anything richer.
+/// stores"); [titleWidget] replaces the title for anything richer. Like the
+/// frames' auto layout, the children sit 4 px apart; [divider] draws the 1 px
+/// `border/subtle` rule on the bar's last pixel (inside its 56 px, so the body
+/// starts where the bar ends).
 class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
   const HubTopBar({
     super.key,
@@ -27,6 +30,7 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.foregroundColor,
     this.bottom,
     this.horizontalPadding = 12,
+    this.divider = false,
   });
 
   final String? title;
@@ -50,6 +54,7 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
   /// A strip under the row (tabs, a search field, a divider).
   final PreferredSizeWidget? bottom;
   final double horizontalPadding;
+  final bool divider;
 
   static const double rowHeight = 56;
 
@@ -103,20 +108,42 @@ class HubTopBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               SizedBox(
                 height: rowHeight,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: Row(
-                    children: [
-                      if (lead != null) ...[lead, const SizedBox(width: 4)],
-                      Expanded(
-                        child: Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: titleColumn,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                        ),
+                        child: Row(
+                          children: [
+                            if (lead != null) ...[
+                              lead,
+                              const SizedBox(width: 4),
+                            ],
+                            Expanded(
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: titleColumn,
+                              ),
+                            ),
+                            for (final action in actions) ...[
+                              const SizedBox(width: 4),
+                              action,
+                            ],
+                          ],
                         ),
                       ),
-                      ...actions,
-                    ],
-                  ),
+                    ),
+                    if (divider)
+                      const PositionedDirectional(
+                        start: 0,
+                        end: 0,
+                        bottom: 0,
+                        height: 1,
+                        child: ColoredBox(color: AppColors.borderSubtle),
+                      ),
+                  ],
                 ),
               ),
               if (bottom != null) bottom!,

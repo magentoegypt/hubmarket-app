@@ -34,9 +34,10 @@ class HmTitleAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final bar = HubTopBar(
+    return HubTopBar(
       title: title,
       showBack: true,
+      divider: divider,
       actions:
           actions ??
           [
@@ -45,29 +46,12 @@ class HmTitleAppBar extends StatelessWidget implements PreferredSizeWidget {
               tooltip: l10n.navSearch,
               onPressed: () => context.push(AppRoutes.search),
             ),
-            // The frames' app bars space their children 4 px apart.
-            const SizedBox(width: 4),
             HubIconButton(
               icon: HubIcons.shoppingCart,
               tooltip: l10n.navCart,
               onPressed: () => context.go(AppRoutes.cart),
             ),
           ],
-    );
-    if (!divider) return bar;
-    return Stack(
-      children: [
-        bar,
-        // Inside the bar's 56 px, not under it: the frames' body starts where
-        // the bar ends.
-        const PositionedDirectional(
-          start: 0,
-          end: 0,
-          bottom: 0,
-          height: 1,
-          child: ColoredBox(color: AppColors.borderSubtle),
-        ),
-      ],
     );
   }
 }

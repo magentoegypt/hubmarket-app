@@ -400,14 +400,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               tooltip: l10n.storeSearchHint(store.name),
               onPressed: _focusSearch,
             ),
-            if (store.webUrl != null) ...[
-              const SizedBox(width: 4), // the frames' 4 px between items
+            if (store.webUrl != null)
               HubIconButton(
                 icon: HubIcons.share2,
                 tooltip: l10n.actionShare,
                 onPressed: () => _share(store),
               ),
-            ],
           ],
         ),
         body: NotificationListener<ScrollNotification>(

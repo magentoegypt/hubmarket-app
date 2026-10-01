@@ -54,6 +54,21 @@ void main() {
       );
     });
 
+    test('Arabic puts the dirham sign after the number, as the frames do', () {
+      addTearDown(() => Money.arabic = false);
+      Money.arabic = true;
+
+      // A right-to-left isolate around "425 د.إ" (number first, sign to its left).
+      expect(
+        const Money(amount: 425, currency: 'AED').formatted(),
+        '⁧425 د.إ⁩',
+      );
+      expect(
+        const Money(amount: 1250.5, currency: 'AED').formatted(),
+        '⁧1,250.50 د.إ⁩',
+      );
+    });
+
     test('a float that is whole to the fils still reads whole', () {
       expect(
         const Money(amount: 543.0000001, currency: 'AED').formatted(),

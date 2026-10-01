@@ -11,6 +11,7 @@ import '../core/widgets/offline_state.dart';
 import '../features/app_status/presentation/app_status_gate.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../features/cart/presentation/cart_controller.dart';
+import '../features/catalog/domain/money.dart';
 import '../features/wishlist/presentation/wishlist_controller.dart';
 import '../l10n/l10n.dart';
 import 'notification_routes.dart';
@@ -110,6 +111,8 @@ class _HubAppState extends ConsumerState<HubApp>
     final store = ref.watch(storeControllerProvider);
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    // Prices read "425 د.إ" in Arabic, "AED 425" otherwise (see Money.arabic).
+    Money.arabic = store.isRtl;
 
     return MaterialApp.router(
       scaffoldMessengerKey: _messengerKey,

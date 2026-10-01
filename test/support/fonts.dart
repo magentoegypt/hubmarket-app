@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/features/catalog/domain/money.dart';
 
 /// Loads the app's bundled fonts (DM Sans, Tajawal, Playfair Display, the Lucide
 /// icon font) and the Material icon font into the test engine, so golden-style captures render
@@ -74,25 +75,56 @@ Future<void> withRealShadows(Future<void> Function() body) async {
 /// Writes the [RepaintBoundary] behind [boundaryKey] to
 /// `build/test_screens/<name>.png` — a visual record for review against the
 /// Figma frames. `build/` is gitignored and nothing is asserted on the image.
+///
+/// A capture named `…_ar` (or `…_ar_…`) is taken with Arabic prices ("425 د.إ"),
+/// as the app root would set them from the store view, and the tree is put back
+/// afterwards so the test's own assertions still see what it built.
 Future<void> captureScreen(
   WidgetTester tester,
   GlobalKey boundaryKey,
   String name,
 ) async {
-  // Asset images decode asynchronously; finish them before the capture.
-  await tester.runAsync(() async {
-    for (final element in find.byType(Image).evaluate()) {
-      await precacheImage((element.widget as Image).image, element);
+  final arabic = RegExp(r'_ar(_|$)').hasMatch(name);
+  final previous = Money.arabic;
+  final switchMoney = arabic != previous;
+  if (switchMoney) {
+    Money.arabic = arabic;
+    await _rebuildAll(tester);
+  }
+  try {
+    // Asset images decode asynchronously; finish them before the capture.
+    await tester.runAsync(() async {
+      for (final element in find.byType(Image).evaluate()) {
+        await precacheImage((element.widget as Image).image, element);
+      }
+    });
+    await tester.pump();
+    await tester.runAsync(() async {
+      final boundary =
+          boundaryKey.currentContext!.findRenderObject()!
+              as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 1);
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      File('build/test_screens/$name.png')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(png!.buffer.asUint8List());
+    });
+  } finally {
+    if (switchMoney) {
+      Money.arabic = previous;
+      await _rebuildAll(tester);
     }
-  });
+  }
+}
+
+/// Marks every element dirty and pumps a frame, so text built from state that
+/// lives outside the tree (like [Money.arabic]) is built again.
+Future<void> _rebuildAll(WidgetTester tester) async {
+  void dirty(Element element) {
+    element.markNeedsBuild();
+    element.visitChildren(dirty);
+  }
+
+  dirty(tester.binding.rootElement!);
   await tester.pump();
-  await tester.runAsync(() async {
-    final boundary =
-        boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    final image = await boundary.toImage(pixelRatio: 1);
-    final png = await image.toByteData(format: ui.ImageByteFormat.png);
-    File('build/test_screens/$name.png')
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(png!.buffer.asUint8List());
-  });
 }

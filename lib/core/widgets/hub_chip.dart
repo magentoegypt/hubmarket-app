@@ -4,7 +4,8 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 
 /// Figma "Chip": a 36 px pill with 14 px of padding, the label in EN/Body Strong
-/// (AR Medium). Unselected it is white with a 1 px `border/default` outline;
+/// (AR Medium). Unselected it is white with a 1 px `border/default` outline
+/// that takes room of its own (the frame's border box: 1 + 14 px each side);
 /// selected it is the navy fill with a white label.
 ///
 /// [leading] / [trailing] sit inside the padding (an icon, a count); with no
@@ -34,7 +35,7 @@ class HubChip extends StatelessWidget {
     final t = AppTextStyles.of(context);
     final foreground = selected ? Colors.white : AppColors.inkHeading;
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: selected ? 14 : 15),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
