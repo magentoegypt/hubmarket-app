@@ -13,6 +13,7 @@ import 'package:hubmarket_app/features/account/presentation/screens/help_screen.
 import 'package:hubmarket_app/features/account/presentation/screens/my_reviews_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/payment_methods_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/privacy_data_screen.dart';
+import 'package:hubmarket_app/features/account/presentation/screens/settings_screen.dart';
 import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
@@ -244,6 +245,16 @@ void main() {
         ],
       );
       await captureAudit(tester, boundary, '20f_my_reviews', locale);
+    });
+
+    // Not in the frames (no pairs.py entry): Account's Language row opens it.
+    testWidgets('Settings ($locale)', (tester) async {
+      final boundary = await pumpAuditScreen(
+        tester,
+        screen: const SettingsScreen(),
+        locale: locale,
+      );
+      await captureAudit(tester, boundary, 'audit_settings', locale);
     });
 
     testWidgets('28 Content page ($locale)', (tester) async {

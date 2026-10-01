@@ -318,7 +318,7 @@ class CreditTransactionRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 l10n.myCreditBalanceAfter(
-                  '\u2066${tx.balanceAfter.formatted()}\u2069',
+                  '\u2066${tx.balanceAfter.ledger}\u2069',
                 ),
                 style: t.micro.copyWith(color: context.scaffoldMuted),
               ),

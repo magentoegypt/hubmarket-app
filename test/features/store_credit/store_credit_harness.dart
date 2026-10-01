@@ -44,11 +44,16 @@ Widget storeCreditHarness({
   List<Override> overrides = const [],
 }) {
   final router = GoRouter(
-    initialLocation: '/screen',
+    // The screen sits over Home, as it does in the app: pushed, so its app bar
+    // has the back arrow the frames draw.
+    initialLocation: '${AppRoutes.home}/screen',
     routes: [
-      GoRoute(path: '/screen', builder: (_, __) => screen),
+      GoRoute(
+        path: AppRoutes.home,
+        builder: (_, __) => Scaffold(body: Text('route ${AppRoutes.home}')),
+        routes: [GoRoute(path: 'screen', builder: (_, __) => screen)],
+      ),
       for (final path in [
-        AppRoutes.home,
         AppRoutes.categories,
         AppRoutes.cart,
         AppRoutes.wishlist,
