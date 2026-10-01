@@ -378,23 +378,23 @@ class _CategoryChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // "All" first, then the categories.
+    final all = <({String? uid, String label, int? count})>[
+      (uid: null, label: l10n.filterAll, count: allCount),
+      for (final c in chips) (uid: c.uid, label: c.name, count: c.count),
+    ];
     return HmChipRow(
       bleed: true,
       chips: [
-        for (var i = 0; i <= chips.length; i++)
-          () {
-            final chip = i == 0 ? null : chips[i - 1];
-            final label = chip?.name ?? l10n.filterAll;
-            final count = chip == null ? allCount : chip.count;
-            return StorePill(
-              label: label,
-              semanticLabel: count == null
-                  ? null
-                  : l10n.storesCategoryChip(label, count),
-              selected: chip?.uid == selectedUid,
-              onTap: () => onPick(chip?.uid),
-            );
-          }(),
+        for (final c in all)
+          StorePill(
+            label: c.label,
+            semanticLabel: c.count == null
+                ? null
+                : l10n.storesCategoryChip(c.label, c.count!),
+            selected: c.uid == selectedUid,
+            onTap: () => onPick(c.uid),
+          ),
       ],
     );
   }
@@ -437,10 +437,7 @@ class _ListHeading extends StatelessWidget {
               children: [
                 Icon(HubIcons.arrowUpDown, size: 16, color: color),
                 const SizedBox(width: 4),
-                Text(
-                  sortLabel,
-                  style: t.captionStrong.copyWith(color: color),
-                ),
+                Text(sortLabel, style: t.captionStrong.copyWith(color: color)),
               ],
             ),
           ),

@@ -126,12 +126,14 @@ class StoreReviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              // As Figma 15's reviewers: a 40 px disc, the initials in Body
+              // Strong accent.
               CircleAvatar(
-                radius: 18,
+                radius: 20,
                 backgroundColor: AppColors.accentSubtle,
                 child: Text(
                   reviewerInitials(review.nickname),
-                  style: t.micro.copyWith(color: AppColors.accentStrong),
+                  style: t.bodyStrong.copyWith(color: AppColors.accentStrong),
                 ),
               ),
               const SizedBox(width: 12),
@@ -177,10 +179,7 @@ class StoreReviewCard extends StatelessWidget {
           ],
           if (text != null) ...[
             const SizedBox(height: 4),
-            Text(
-              text,
-              style: t.body.copyWith(color: context.scaffoldHeading),
-            ),
+            Text(text, style: t.body.copyWith(color: context.scaffoldHeading)),
           ],
           if (product != null) ...[
             const SizedBox(height: 10),
