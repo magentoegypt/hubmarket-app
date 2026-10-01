@@ -77,16 +77,17 @@ class HmPickedForYou extends ConsumerWidget {
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
                         onTap: onRefresh,
+                        // 1 pt border + 12 / 8 pt of padding: 34 pt high.
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: 13,
+                            vertical: 9,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                HubIcons.refreshCw,
+                                HubIcons.rotateCcw,
                                 size: 14,
                                 color: AppColors.inkHeading,
                               ),
@@ -152,8 +153,9 @@ class _SearchChip extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        // 1 pt border + 10 / 5 pt of padding: 28 pt high.
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

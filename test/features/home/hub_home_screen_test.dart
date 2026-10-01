@@ -108,7 +108,6 @@ Future<void> _render(WidgetTester tester, String locale) async {
   final key = GlobalKey();
   await tester.pumpWidget(_harness(locale, key));
   await tester.pumpAndSettle();
-  await captureScreen(tester, key, 'home_$locale');
 }
 
 void main() {

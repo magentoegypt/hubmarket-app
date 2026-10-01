@@ -172,7 +172,6 @@ void main() {
     ) async {
       final key = GlobalKey();
       await _pump(tester, _harness(locale: 'en', boundary: key));
-      await captureScreen(tester, key, 'home_hubapp_en');
 
       for (final text in [
         'Free delivery on qualifying orders', // DELIVERY_STRIP
@@ -240,7 +239,6 @@ void main() {
         ),
       );
       expect(find.text('ابحث في هب ماركت'), findsOneWidget);
-      await captureScreen(tester, key, 'home_hubapp_ar');
 
       expect(find.text('بقالة طازجة من بائعين محليين'), findsOneWidget);
       expect(find.text('عروض اليوم'), findsOneWidget);

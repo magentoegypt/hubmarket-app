@@ -12,6 +12,7 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/widgets/hub_icon_button.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/domain/order.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
@@ -386,7 +387,7 @@ void main() {
         );
         // The bell's unread dot.
         expect(
-          find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible),
+          find.byWidgetPredicate((w) => w is HubIconButton && w.showDot),
           findsOneWidget,
         );
         // The v3 card's rating.
@@ -485,7 +486,7 @@ void main() {
       expect(account.recentOrderCalls, 0);
       // No unread notifications, no dot.
       expect(
-        find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible),
+        find.byWidgetPredicate((w) => w is HubIconButton && w.showDot),
         findsNothing,
       );
     });

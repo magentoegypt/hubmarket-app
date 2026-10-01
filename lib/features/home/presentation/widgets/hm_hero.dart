@@ -176,7 +176,7 @@ class HmHeroSlide extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: t.caption.copyWith(
-                            color: const Color(0xFFCBD3E2),
+                            color: AppColors.onInverseMuted,
                           ),
                         ),
                       ),
@@ -290,19 +290,24 @@ class HmPromoTile extends StatelessWidget {
                     ),
                   ),
                 ],
+                // 12 pt around the text; the title may run on into the end
+                // padding (it is one line, as in the frame), the subtitle stops
+                // at 144 pt.
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 0, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      if (banner.kicker != null)
+                      if (banner.kicker != null) ...[
                         Text(
                           banner.kicker!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: t.micro.copyWith(color: Colors.white),
                         ),
+                        const SizedBox(height: 2),
+                      ],
                       Text(
                         banner.title,
                         maxLines: 1,
@@ -311,14 +316,17 @@ class HmPromoTile extends StatelessWidget {
                       ),
                       if (banner.subtitle != null) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          banner.subtitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.caption.copyWith(
-                            color: hasImage
-                                ? const Color(0xFFCBD3E2)
-                                : Colors.white,
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 144),
+                          child: Text(
+                            banner.subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.caption.copyWith(
+                              color: hasImage
+                                  ? AppColors.onInverseMuted
+                                  : Colors.white,
+                            ),
                           ),
                         ),
                       ],

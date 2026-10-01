@@ -62,23 +62,26 @@ class HubIconButton extends StatelessWidget {
       ),
     );
     if (showDot) {
+      // Figma's dot is a 9 px orange circle at (23, 8) with its ring as an
+      // outside stroke, so the ring grows the box instead of eating the core.
+      final ring = dotBorderColor == null ? 0.0 : 1.5;
       button = Stack(
         clipBehavior: Clip.none,
         children: [
           button,
           PositionedDirectional(
-            top: 8,
-            end: 8,
+            top: 8 - ring,
+            end: 8 - ring,
             child: IgnorePointer(
               child: Container(
-                width: 9,
-                height: 9,
+                width: 9 + 2 * ring,
+                height: 9 + 2 * ring,
                 decoration: BoxDecoration(
                   color: AppColors.accent,
                   shape: BoxShape.circle,
                   border: dotBorderColor == null
                       ? null
-                      : Border.all(color: dotBorderColor!, width: 1.5),
+                      : Border.all(color: dotBorderColor!, width: ring),
                 ),
               ),
             ),

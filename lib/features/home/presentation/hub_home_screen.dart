@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/shell/hub_scaffold.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/hubapp/hubapp_providers.dart';
@@ -91,7 +93,7 @@ class HubHomeScreen extends ConsumerWidget {
     return HubScaffold(
       currentTab: AppTab.home,
       showSearch: false,
-      appBar: const _HomeHeader(),
+      appBar: _HomeHeader(deliverLine: _HomeHeader.deliverLineFor(context)),
       body: body,
     );
   }
@@ -210,86 +212,109 @@ class _HomeUnavailable extends ConsumerWidget {
 
 // ─────────────────────────────────────────────────────────────── header
 
+/// The Home header (Figma 07 "Header"), not the shared app bar: the logo
+/// lockup and the bell, a 46 px search field ending in the orange search
+/// button, and the "Deliver to" row, on navy under the status bar. The drawer
+/// and its hamburger are not part of this design.
+///
+/// Under the status bar it is 2 + 40 (logo row) + 12 + 46 (search) + 12 + the
+/// "Deliver to" line + 14: 142 in English, 144 in Arabic, whose captions are a
+/// line taller. Like every app bar, its [preferredSize] leaves the status bar
+/// out: the Scaffold adds the inset to the slot, and the [SafeArea] inside
+/// keeps the content below it.
 class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
-  const _HomeHeader();
+  const _HomeHeader({required this.deliverLine});
 
-  static const double _contentHeight = 4 + 48 + 8 + 46 + 10 + 20 + 12;
+  /// The height of the "Deliver to" line: the language's Caption line height
+  /// at the reader's text size.
+  final double deliverLine;
+
+  /// The Caption line of [context]'s language, as the header needs it.
+  static double deliverLineFor(BuildContext context) {
+    final caption = AppTextStyles.of(context).caption;
+    return MediaQuery.textScalerOf(context).scale(caption.fontSize! * caption.height!);
+  }
 
   @override
-  Size get preferredSize {
-    final view = WidgetsBinding.instance.platformDispatcher.views.first;
-    final top = view.viewPadding.top / view.devicePixelRatio;
-    return Size.fromHeight(top + _contentHeight);
-  }
+  Size get preferredSize =>
+      Size.fromHeight(2 + 40 + 12 + 46 + 12 + deliverLine + 14);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    return Material(
-      color: AppColors.brandPrimary,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 8, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 48,
-                child: Row(
-                  children: [
-                    const BrandLogo(height: 34, onDark: true),
-                    const Spacer(),
-                    // With the unread dot, as in the app bar.
-                    const NotificationBell(
-                      color: Colors.white,
-                      icon: HubIcons.bell,
-                    ),
-                  ],
+    final t = AppTextStyles.of(context);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Material(
+        color: AppColors.brandPrimary,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 2, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 40,
+                  child: Row(
+                    children: [
+                      const BrandLogo(height: 36, onDark: true),
+                      const Spacer(),
+                      // With the unread dot, ringed in the header's navy.
+                      const NotificationBell(
+                        color: Colors.white,
+                        dotBorderColor: AppColors.brandPrimary,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8),
-                child: _SearchBox(
+                const SizedBox(height: 12),
+                _SearchBox(
                   hint:
                       ref.watch(searchHintProvider) ??
                       l10n.homeSearchMarketplaceHint,
                   onTap: () => context.push(AppRoutes.search),
                 ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 20,
-                child: InkWell(
-                  onTap: () => context.push(AppRoutes.addresses),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        HubIcons.mapPin,
-                        size: 16,
-                        color: AppColors.accent,
+                const SizedBox(height: 12),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: InkWell(
+                    onTap: () => context.push(AppRoutes.addresses),
+                    child: SizedBox(
+                      height: deliverLine,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            HubIcons.mapPin,
+                            size: 16,
+                            color: AppColors.accent,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            l10n.homeDeliverTo,
+                            style: t.caption.copyWith(
+                              color: AppColors.onInverseMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            l10n.homeChooseArea,
+                            style: t.captionStrong.copyWith(color: Colors.white),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            HubIcons.chevronDown,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.homeDeliverTo,
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.homeChooseArea,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Icon(HubIcons.chevronDown, size: 16, color: Colors.white),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -297,6 +322,9 @@ class _HomeHeader extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
+/// The search field (Figma "search"): 46 px, white, radius 12, the hint in
+/// Body on the start side and the 50 px orange search button filling the
+/// field's end.
 class _SearchBox extends StatelessWidget {
   const _SearchBox({required this.hint, required this.onTap});
 
@@ -305,41 +333,46 @@ class _SearchBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
     return Semantics(
       button: true,
       label: hint,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 46,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 14),
-                  child: Text(
-                    hint,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.inkMuted, fontSize: 14),
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 46,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 14),
+                    child: Text(
+                      hint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.body.copyWith(color: AppColors.inkMuted),
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                width: 50,
-                decoration: const BoxDecoration(
+                const SizedBox(width: 10),
+                Container(
+                  width: 50,
+                  height: 46,
                   color: AppColors.accent,
-                  borderRadius: BorderRadiusDirectional.horizontal(
-                    end: Radius.circular(12),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    HubIcons.search,
+                    size: 20,
+                    color: Colors.white,
                   ),
                 ),
-                child: const Icon(HubIcons.search, color: Colors.white),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

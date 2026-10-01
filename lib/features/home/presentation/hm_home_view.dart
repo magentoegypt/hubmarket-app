@@ -324,7 +324,7 @@ class HmSectionView extends ConsumerWidget {
             ? const SizedBox.shrink()
             : HmTrustGrid(items: items);
       case HmSectionType.cmsBlock:
-        return HmCmsBlockView(html: html);
+        return HmCmsBlockView(html: html, identifier: s.cmsBlock?.identifier);
       case HmSectionType.activeOrder:
         return HmActiveOrderSection(section: s);
       case HmSectionType.unknown:

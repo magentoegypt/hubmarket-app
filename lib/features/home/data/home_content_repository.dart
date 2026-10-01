@@ -13,7 +13,15 @@ abstract final class HomeCmsBlocks {
   static const String promos = 'hm_home_promos';
   static const String trust = 'hm_home_trust';
 
-  static const List<String> all = <String>[deliveryPromise, promos, trust];
+  /// The "Sell on Hub Market" card's block (a heading, a line and a link).
+  static const String sell = 'hm_home_sell';
+
+  static const List<String> all = <String>[
+    deliveryPromise,
+    promos,
+    trust,
+    sell,
+  ];
 }
 
 const String _cmsBlocksQuery = r'''

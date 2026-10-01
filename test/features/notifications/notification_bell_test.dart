@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/routes.dart';
 import 'package:hubmarket_app/app/theme/app_colors.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/app/theme/hub_icons.dart';
+import 'package:hubmarket_app/core/widgets/hub_icon_button.dart';
 import 'package:hubmarket_app/features/notifications/data/notification_inbox.dart';
 import 'package:hubmarket_app/features/notifications/domain/notification_item.dart';
 import 'package:hubmarket_app/features/notifications/presentation/notification_bell.dart';
@@ -53,8 +55,9 @@ Widget _app({String locale = 'en'}) {
   );
 }
 
+/// The bell (Figma "icon-btn/bell") while it carries the unread dot.
 Finder get _dot =>
-    find.byWidgetPredicate((w) => w is Badge && w.isLabelVisible);
+    find.byWidgetPredicate((w) => w is HubIconButton && w.showDot);
 
 void main() {
   tearDown(() => NotificationInbox.instance.items.value = const []);
@@ -68,11 +71,24 @@ void main() {
     await tester.pumpWidget(_app());
     await tester.pump();
 
+    // A dot (Figma 07 "unread"), not a count: the 9 px orange circle of
+    // HubIconButton, at the bell's top end.
     expect(_dot, findsOneWidget);
-    final badge = tester.widget<Badge>(_dot);
-    expect(badge.backgroundColor, AppColors.accent);
-    // A dot (Figma 07 "unread"), not a count.
-    expect(badge.label, isNull);
+    expect(
+      tester.widget<HubIconButton>(_dot).icon,
+      HubIcons.bell,
+    );
+    final dot = find.descendant(
+      of: _dot,
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).color == AppColors.accent,
+      ),
+    );
+    expect(dot, findsOneWidget);
+    expect(tester.getSize(dot), const Size(9, 9));
     expect(find.byTooltip('Notifications, 2 unread'), findsOneWidget);
   });
 
