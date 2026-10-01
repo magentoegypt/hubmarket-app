@@ -17,6 +17,8 @@ import 'package:hubmarket_app/features/catalog/presentation/catalog_providers.da
 import 'package:hubmarket_app/features/home/data/home_content_repository.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_category_chips.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_cms_sections.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -31,6 +33,9 @@ const _cms = <String, String>{
       '<div class="hm-promos"><a class="hm-promo" href="https://hub-market.magento2.click/en/electronics.html/"><span class="hm-promo__icon">⚡</span><span class="hm-promo__kicker">Flash Sale</span><span class="hm-promo__title">Up to 50% Off</span><span class="hm-promo__text">Electronics &amp; Tech &middot; Today only</span></a><a class="hm-promo" href="https://hub-market.magento2.click/en/super-market.html/"><span class="hm-promo__icon">🌙</span><span class="hm-promo__kicker">Seasonal Offers</span><span class="hm-promo__title">Fresh Grocery Deals</span><span class="hm-promo__text">Same-day delivery &middot; Free over AED 150</span></a></div>',
   HomeCmsBlocks.trust:
       '<div class="hm-trust"><div class="hm-trust__item"><span class="hm-trust__title">Trusted Sellers</span><span class="hm-trust__text">Verified &amp; approved</span></div><div class="hm-trust__item"><span class="hm-trust__title">Secure Payments</span><span class="hm-trust__text">Cash on delivery, Visa, Mastercard</span></div><div class="hm-trust__item"><span class="hm-trust__title">Easy Returns</span><span class="hm-trust__text">14-day return policy</span></div></div>',
+  // Not on the live store yet: the card appears once the block exists.
+  HomeCmsBlocks.sell:
+      '<h3>Sell on Hub Market</h3><p>Open your store and reach customers nationwide.</p><p><a href="https://hub-market.magento2.click/en/catalog/category/view/id/5/">Start selling</a></p>',
 };
 
 const _categories = <Category>[
@@ -121,6 +126,15 @@ void main() {
     expect(find.text('Corner Sofa Bed'), findsWidgets); // rail products
     expect(find.text('Up to 50% Off'), findsOneWidget);
     expect(find.text('Trusted Sellers'), findsOneWidget);
+    // The strip carries the track link, as in Figma 07.
+    expect(find.text('Track order'), findsOneWidget);
+    // Shop by category: the admin Home's pastel tiles, "All" as the action.
+    expect(find.byType(HmCategoryTile), findsNWidgets(_categories.length));
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('See All'), findsWidgets); // the rails
+    // "Sell on Hub Market" from the hm_home_sell block, with its button.
+    expect(find.byType(HmSellCard), findsOneWidget);
+    expect(find.text('Start selling'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

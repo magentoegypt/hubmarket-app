@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/category_icons.dart';
 import '../../domain/hm_home.dart';
+import 'hm_metrics.dart';
 
 /// The storefront's pastel ramp for category chips (`_hm-figma.less`),
 /// slots 0–7: mint, blue, amber, pink, lavender, cream, rose, indigo.
@@ -31,7 +34,7 @@ class HmCategoryChips extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
-      height: HmCategoryTile.height,
+      height: HmCategoryTile.heightFor(context),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -66,7 +69,26 @@ class HmCategoryTile extends StatelessWidget {
   });
 
   static const double width = 74;
+
+  /// The frame's height, at normal text size.
   static const double height = 112;
+
+  /// The tile's height for the language and text size of [context]: [height],
+  /// or taller when a larger text setting needs the room (12 above the glyph,
+  /// 28, 4, up to two lines of name, 4, the count, 10 below).
+  static double heightFor(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    final content =
+        12 +
+        28 +
+        4 +
+        2 * HmMetrics.line(context, t.captionStrong) +
+        4 +
+        HmMetrics.line(context, t.micro) +
+        10 +
+        HmMetrics.slack(context);
+    return math.max(height, content);
+  }
 
   final String name;
   final Color tint;

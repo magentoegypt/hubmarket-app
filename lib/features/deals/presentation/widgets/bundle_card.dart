@@ -37,6 +37,9 @@ class BundleRailCard extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     double line(TextStyle style) =>
         scaler.scale(style.fontSize! * style.height!);
+    // A point for the rounding of scaled lines; none at normal text size,
+    // where the frame's numbers are exact.
+    final slack = scaler.scale(100) == 100 ? 0.0 : 1.0;
     return 2 + // the border
         150 +
         14 +
@@ -51,7 +54,8 @@ class BundleRailCard extends StatelessWidget {
         line(t.button) +
         8 +
         52 +
-        14;
+        14 +
+        slack;
   }
 
   @override

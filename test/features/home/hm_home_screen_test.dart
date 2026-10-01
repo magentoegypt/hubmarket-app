@@ -21,6 +21,7 @@ import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_cms_sections.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -324,6 +325,8 @@ void main() {
       expect(find.text('Shop by category'), findsOneWidget);
       expect(find.text('Corner Sofa Bed'), findsWidgets); // lazy rails
       expect(find.text('Fresh Groceries From Local Vendors'), findsNothing);
+      // The store has no hm_home_sell block: no Sell card.
+      expect(find.byType(HmSellCard), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

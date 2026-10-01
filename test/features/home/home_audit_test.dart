@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -31,8 +32,10 @@ import 'package:hubmarket_app/features/home/data/home_content_repository.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_providers.dart';
 import 'package:hubmarket_app/features/home/presentation/hm_home_view.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
+import 'package:hubmarket_app/app/shell/hub_bottom_nav.dart';
 import 'package:hubmarket_app/features/home/presentation/hub_home_screen.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_category_chips.dart';
+import 'package:hubmarket_app/features/home/presentation/widgets/hm_product_rail.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_cms_sections.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_hero.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_section_header.dart';
@@ -359,12 +362,31 @@ Future<void> _capture(
   );
   await tester.pumpAndSettle();
 
+  // Trim the viewport to the page — the last section, the 28 pt under it and
+  // the tab bar — so the capture ends where the frame does (its tab bar under
+  // the Sell card) instead of in a blank tail.
+  var bottom = 0.0;
+  for (final finder in [
+    find.byType(HmSellCard),
+    find.byType(HmTrustGrid),
+    find.byType(HmPromoBanners),
+    find.byType(HmProductRail),
+  ]) {
+    for (final element in finder.evaluate()) {
+      bottom = math.max(bottom, tester.getRect(find.byWidget(element.widget)).bottom);
+    }
+  }
+  final tabBar = tester.getSize(find.byType(HubBottomNav)).height;
+  final pageHeight = bottom + HmHomeView.gap + tabBar;
+  tester.view.physicalSize = Size(390, pageHeight);
+  await tester.pumpAndSettle();
+
   final name = hubApp ? 'home_hubapp_$locale' : 'home_$locale';
   await _writeCapture(tester, key, name);
 
   // Where everything sits, for tool-side alignment with the frame.
   final rects = <String, Object?>{
-    'viewport': [390.0, _kViewportHeight],
+    'viewport': [390.0, pageHeight],
     'sections': <String, Object?>{},
   };
   final sections = rects['sections']! as Map<String, Object?>;

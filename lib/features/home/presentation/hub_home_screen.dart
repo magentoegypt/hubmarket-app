@@ -418,7 +418,7 @@ class _ShopByCategory extends ConsumerWidget {
                 onAction: () => context.go(AppRoutes.categories),
               ),
               SizedBox(
-                height: HmCategoryTile.height,
+                height: HmCategoryTile.heightFor(context),
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),

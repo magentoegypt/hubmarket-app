@@ -8,15 +8,11 @@ import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'hm_metrics.dart';
 
 /// Opens a seller's store page (`/store/:code`).
 void openStore(BuildContext context, HmStoreCard store) =>
     context.push(AppRoutes.store(store.code));
-
-/// The height of one line of [style] at the reader's text size: the unit the
-/// cards add up their fixed heights in.
-double _line(BuildContext context, TextStyle style) =>
-    MediaQuery.textScalerOf(context).scale(style.fontSize! * style.height!);
 
 /// Featured Stores rail (Figma 07, component "Featured store card"): logo with
 /// the verified badge, rating, product count, dispatch time, Visit Store.
@@ -58,14 +54,15 @@ class HmFeaturedStoreCard extends StatelessWidget {
         16 +
         64 +
         6 +
-        _line(context, t.title) +
+        HmMetrics.line(context, t.title) +
         6 +
-        _line(context, t.bodyStrong) +
+        HmMetrics.line(context, t.bodyStrong) +
         6 +
-        _line(context, t.caption) +
+        HmMetrics.line(context, t.caption) +
         6 +
         34 +
-        14;
+        14 +
+        HmMetrics.slack(context);
   }
 
   @override
@@ -104,7 +101,7 @@ class HmFeaturedStoreCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 SizedBox(
-                  height: _line(context, t.bodyStrong),
+                  height: HmMetrics.line(context, t.bodyStrong),
                   child: store.rating == null
                       ? null
                       : _Rating(
@@ -202,10 +199,11 @@ class HmTopVendorCard extends StatelessWidget {
     return 2 + // the border
         86 +
         4 +
-        _line(context, t.title) +
+        HmMetrics.line(context, t.title) +
         3 +
-        _line(context, t.caption) +
-        14;
+        HmMetrics.line(context, t.caption) +
+        14 +
+        HmMetrics.slack(context);
   }
 
   @override

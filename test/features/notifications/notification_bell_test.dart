@@ -22,15 +22,16 @@ NotificationItem _item(String id, {bool read = false}) => NotificationItem(
   read: read,
 );
 
-/// An app bar with the bell, as [HubAppBar] has it.
-Widget _app({String locale = 'en'}) {
+/// An app bar with the bell, as [HubAppBar] has it ([ring]: the Home header's
+/// navy ring around the dot).
+Widget _app({String locale = 'en', Color? ring}) {
   final router = GoRouter(
     initialLocation: '/screen',
     routes: [
       GoRoute(
         path: '/screen',
         builder: (_, __) => Scaffold(
-          appBar: AppBar(actions: const [NotificationBell()]),
+          appBar: AppBar(actions: [NotificationBell(dotBorderColor: ring)]),
         ),
       ),
       GoRoute(
@@ -90,6 +91,33 @@ void main() {
     expect(dot, findsOneWidget);
     expect(tester.getSize(dot), const Size(9, 9));
     expect(find.byTooltip('Notifications, 2 unread'), findsOneWidget);
+  });
+
+  testWidgets('the Home header rings the dot outside its 9 px core', (
+    tester,
+  ) async {
+    NotificationInbox.instance.items.value = [_item('a')];
+    await tester.pumpWidget(_app(ring: AppColors.brandPrimary));
+    await tester.pump();
+
+    // Figma's unread dot is a 9 px orange circle at (23, 8) of the 40 px bell
+    // with the header's navy as an outside stroke (1.5 pt): the box grows by
+    // the ring, the orange core stays 9.
+    final dot = find.descendant(
+      of: _dot,
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).color == AppColors.accent,
+      ),
+    );
+    expect(tester.getSize(dot), const Size(12, 12));
+    final decoration = tester.widget<Container>(dot).decoration! as BoxDecoration;
+    expect(decoration.border!.top.color, AppColors.brandPrimary);
+    expect(decoration.border!.top.width, 1.5);
+    final bell = tester.getTopLeft(find.byType(InkWell));
+    expect(tester.getTopLeft(dot) - bell, const Offset(23 - 1.5, 8 - 1.5));
   });
 
   testWidgets('no dot once everything is read', (tester) async {
