@@ -92,7 +92,8 @@ shared widgets `HubTopBar` / `HubChip` / `HubButton` / `HubIconButton` / `Produc
 deliberate deviations, what still differs and why); `flutter test --dart-define=UI_AUDIT=true` renders every
 screen with the iPhone insets and `python tool/ui_audit/pairs.py en|ar` lays each next to its frame.
 The screens have no hamburger menu; a pushed page whose frame shows no tab bar passes `showTabBar: false` to
-`HubScaffold`.
+`HubScaffold`. The app is portrait only on phones (Android manifest `screenOrientation`, iOS Info.plist;
+`test/platform/orientation_lock_test.dart` guards both): every frame is a portrait phone frame.
 
 ## 5. Conventions (kept from the Zoonze base)
 

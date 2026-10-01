@@ -36,7 +36,7 @@ DEVICE=<adb serial> TARGET=integration_test/device_check_test.dart SHOT_LOCALE=e
 python tool/ui_audit/device_pairs.py en      # the frame on the left, the phone on the right
 ```
 
-The run holds the phone in portrait whatever way it is held (the app itself does not lock its orientation).
+The phone stays in portrait whatever way it is held: the app itself is locked to portrait (Android manifest, iOS Info.plist; `test/platform/orientation_lock_test.dart` guards both).
 
 **What the audit reports as errors:** a layout overflow or any other framework error raised while a screen
 is up, and `INSET`: a pinned control (a button outside any scroll view) that reaches more than 8 dp into the
