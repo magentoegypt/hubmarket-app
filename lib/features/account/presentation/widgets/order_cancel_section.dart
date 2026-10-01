@@ -65,30 +65,45 @@ class OrderCancelSection extends ConsumerWidget {
           const SizedBox(height: 12),
           DangerButton(
             label: l10n.orderCancelAction,
-            onPressed: () async {
-              final outcome = await showCancelOrderSheet(
-                context,
-                order: order,
-                reasons: features.cancellationReasons,
-              );
-              if (!context.mounted || outcome == null) return;
-              final messenger = ScaffoldMessenger.of(context);
-              switch (outcome) {
-                case OrderCancelled(order: final updated):
-                  messenger.showSnackBar(
-                    SnackBar(content: Text(l10n.orderCancelDone)),
-                  );
-                  if (updated != null) onCancelled(updated);
-                case CancellationEmailSent():
-                  messenger.showSnackBar(
-                    SnackBar(content: Text(l10n.orderCancelEmailSent)),
-                  );
-              }
-            },
+            onPressed: () => startOrderCancel(
+              context,
+              order: order,
+              reasons: features.cancellationReasons,
+              onCancelled: onCancelled,
+            ),
           ),
         ],
       ),
     );
+  }
+}
+
+/// "Cancel order" pressed: opens the 21b sheet and, once the customer confirms,
+/// says what happened — cancelled (the updated order goes to [onCancelled]) or,
+/// for a guest, that the e-mail with the confirming link is on its way. Shared
+/// by the order detail's cancel card and the orders list.
+Future<void> startOrderCancel(
+  BuildContext context, {
+  required CustomerOrder order,
+  required List<String> reasons,
+  ValueChanged<CustomerOrder>? onCancelled,
+}) async {
+  final l10n = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final outcome = await showCancelOrderSheet(
+    context,
+    order: order,
+    reasons: reasons,
+  );
+  if (!context.mounted || outcome == null) return;
+  switch (outcome) {
+    case OrderCancelled(order: final updated):
+      messenger.showSnackBar(SnackBar(content: Text(l10n.orderCancelDone)));
+      if (updated != null) onCancelled?.call(updated);
+    case CancellationEmailSent():
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.orderCancelEmailSent)),
+      );
   }
 }
 

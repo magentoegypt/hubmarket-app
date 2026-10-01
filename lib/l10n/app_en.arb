@@ -761,6 +761,9 @@
   "ordersFilterToReceive": "To Receive",
   "ordersFilterDelivered": "Delivered",
   "ordersFilterCancelled": "Cancelled",
+  "ordersTitle": "My orders",
+  "ordersFilterInProgress": "In progress",
+  "ordersFilterReturns": "Returns",
   "orderNumber": "Order #{number}",
   "@orderNumber": {
     "placeholders": {
@@ -817,6 +820,12 @@
   "orderNoTracking": "Tracking details appear here once your order ships.",
   "orderTrackingCopied": "Tracking number copied",
   "orderViewDetails": "View Details",
+  "orderViewOrder": "View order",
+  "orderBuyAgain": "Buy again",
+  "orderRateItems": "Rate items",
+  "orderRatePickTitle": "Rate an item",
+  "orderViewReturn": "View return",
+  "orderReturnInProgress": "Return in progress",
   "orderPaymentSection": "Payment Method",
   "orderTimelineSection": "Order Timeline",
   "orderBillingAddress": "Billing Address",

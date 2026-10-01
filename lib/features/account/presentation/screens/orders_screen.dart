@@ -5,20 +5,23 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/shell/hub_scaffold.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/config/store_timezone.dart';
-import '../../../../core/widgets/network_image.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/grouped_list.dart';
+import '../../../../core/widgets/hub_chip.dart';
+import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../core/widgets/shimmer.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
+import '../../../returns/domain/returns.dart';
+import '../../../returns/presentation/returns_providers.dart';
 import '../../data/account_repository.dart';
+import '../../domain/order.dart';
 import '../guest_orders_controller.dart';
 import '../order_actions.dart';
-import '../../../../core/widgets/hub_back_button.dart';
-import '../../domain/order.dart';
-import '../order_format.dart';
-import '../../../../app/theme/hub_icons.dart';
+import '../widgets/order_list_card.dart';
 
 class OrdersScreen extends ConsumerStatefulWidget {
   const OrdersScreen({super.key});
@@ -27,16 +30,21 @@ class OrdersScreen extends ConsumerStatefulWidget {
   ConsumerState<OrdersScreen> createState() => _OrdersScreenState();
 }
 
-/// Order status buckets for the filter tabs (Figma). Mapped from Magento's
-/// free-text status, which varies by config — matched loosely on keywords.
-enum _OrderFilter { all, toReceive, delivered, cancelled }
+/// Order status buckets for the filter chips (Figma 21), mapped from Magento's
+/// free-text status — which varies by config — matched loosely on keywords.
+/// [returns] keeps the orders the customer has returned something from.
+enum _OrderFilter { all, inProgress, delivered, returns }
 
-bool _statusMatches(_OrderFilter f, CustomerOrder o) {
+bool _statusMatches(
+  _OrderFilter f,
+  CustomerOrder o,
+  Map<String, List<ReturnSummary>> returns,
+) {
   return switch (f) {
     _OrderFilter.all => true,
     _OrderFilter.delivered => o.isDelivered,
-    _OrderFilter.cancelled => o.isCancelled,
-    _OrderFilter.toReceive => !o.isDelivered && !o.isCancelled,
+    _OrderFilter.inProgress => !o.isDelivered && !o.isCancelled,
+    _OrderFilter.returns => returns.containsKey(o.number),
   };
 }
 
@@ -65,6 +73,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   Future<void> _reorder(CustomerOrder order) =>
       reorderOrder(context, ref, order);
 
+  /// Choosing Returns needs every return the customer has, not the first page.
+  Future<void> _setFilter(_OrderFilter filter) async {
+    setState(() => _filter = filter);
+    if (filter != _OrderFilter.returns) return;
+    final notifier = ref.read(myReturnsControllerProvider.notifier);
+    for (var i = 0; i < 20; i++) {
+      final state = ref.read(myReturnsControllerProvider);
+      if (state.isLoading || !state.hasMore) break;
+      await notifier.loadMore();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -76,23 +96,34 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     return HubScaffold(
       currentTab: AppTab.account,
-      appBar: AppBar(
-        centerTitle: true,
-        leading: const HubBackButton(),
-        title: Text(l10n.accountOrders),
+      appBar: HubTopBar(title: l10n.ordersTitle),
+      body: ColoredBox(
+        color: groupedPageColor(context),
+        child: isAuthenticated
+            ? _customerBody(l10n, ref.watch(ordersControllerProvider))
+            : _guestBody(l10n, ref.watch(guestOrdersControllerProvider)),
       ),
-      body: isAuthenticated
-          ? _customerBody(l10n, ref.watch(ordersControllerProvider))
-          : _guestBody(l10n, ref.watch(guestOrdersControllerProvider)),
     );
   }
 
-  Widget _card(CustomerOrder order) => _OrderCard(
-    order: order,
-    onDetails: () => context.push(AppRoutes.orderDetail, extra: order),
-    onTrack: () => context.push(AppRoutes.orderTracking, extra: order),
-    onReorder: () => _reorder(order),
-  );
+  Widget _card(
+    CustomerOrder order, {
+    Map<String, List<ReturnSummary>> returns = const {},
+  }) {
+    final own = returns[order.number] ?? const <ReturnSummary>[];
+    return OrderListCard(
+      order: order,
+      returns: own,
+      onOpen: () => context.push(AppRoutes.orderDetail, extra: order),
+      onBuyAgain: () => _reorder(order),
+      onRate: () => rateOrderItems(context, order),
+      onOpenReturn: (open) => context.push(
+        open.length == 1
+            ? AppRoutes.returnDetail(open.single.id)
+            : AppRoutes.returns,
+      ),
+    );
+  }
 
   Widget _customerBody(AppLocalizations l10n, OrdersState state) {
     if (state.isLoading && state.orders.isEmpty) {
@@ -111,36 +142,51 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         title: l10n.ordersEmpty,
       );
     }
+    // The customer's returns, by order: the Returns chip, each store's "Return
+    // in progress" pill and "View return". Only while returns are on.
+    final returnsOn = ref.watch(returnsAvailableProvider);
+    final byOrder = <String, List<ReturnSummary>>{};
+    if (returnsOn) {
+      for (final r in ref.watch(myReturnsControllerProvider).items) {
+        byOrder.putIfAbsent(r.orderNumber, () => []).add(r);
+      }
+    }
+    final filter = returnsOn || _filter != _OrderFilter.returns
+        ? _filter
+        : _OrderFilter.all;
     final filtered = state.orders
-        .where((o) => _statusMatches(_filter, o))
+        .where((o) => _statusMatches(filter, o, byOrder))
         .toList();
-    return ListView(
-      controller: _scroll,
-      padding: EdgeInsets.zero,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _FilterBar(
-          current: _filter,
-          onChanged: (f) => setState(() => _filter = f),
+          current: filter,
+          showReturns: returnsOn,
+          onChanged: _setFilter,
         ),
-        const _Band(),
-        if (filtered.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(40),
-            child: EmptyState(
-              icon: HubIcons.receiptText,
-              title: l10n.ordersEmpty,
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Column(children: [for (final o in filtered) _card(o)]),
-          ),
-        if (state.isLoadingMore)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+        Expanded(
+          child: filtered.isEmpty
+              ? EmptyState(
+                  icon: HubIcons.receiptText,
+                  title: l10n.ordersEmpty,
+                )
+              : ListView(
+                  controller: _scroll,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  children: [
+                    for (final o in filtered) ...[
+                      _card(o, returns: byOrder),
+                      const SizedBox(height: 12),
+                    ],
+                    if (state.isLoadingMore)
+                      const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                  ],
+                ),
+        ),
       ],
     );
   }
@@ -156,11 +202,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       return LoadFailureView(error: state.error, onRetry: notifier.refresh);
     }
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
         if (state.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 48, 24, 8),
+            padding: const EdgeInsets.fromLTRB(8, 36, 8, 8),
             child: EmptyState(
               icon: HubIcons.truck,
               title: l10n.ordersGuestTitle,
@@ -168,40 +214,30 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             ),
           )
         else ...[
-          const _Band(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Column(
-              children: [
-                for (final o in state.orders) _card(o),
-                for (final entry in state.unresolved)
-                  _UnresolvedRow(
-                    number: entry.number,
-                    onRetry: notifier.refresh,
-                    onRemove: () => notifier.forget(entry.number),
-                  ),
-              ],
+          for (final o in state.orders) ...[
+            _card(o),
+            const SizedBox(height: 12),
+          ],
+          for (final entry in state.unresolved) ...[
+            _UnresolvedRow(
+              number: entry.number,
+              onRetry: notifier.refresh,
+              onRemove: () => notifier.forget(entry.number),
             ),
-          ),
+            const SizedBox(height: 12),
+          ],
         ],
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Column(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push(AppRoutes.guestTrackOrder),
-                  icon: const Icon(HubIcons.search, size: 18),
-                  label: Text(l10n.ordersTrackAnother),
-                ),
-              ),
-              TextButton(
-                onPressed: () => context.push(AppRoutes.signIn),
-                child: Text(l10n.ordersGuestSignIn),
-              ),
-            ],
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.guestTrackOrder),
+            icon: const Icon(HubIcons.search, size: 18),
+            label: Text(l10n.ordersTrackAnother),
           ),
+        ),
+        TextButton(
+          onPressed: () => context.push(AppRoutes.signIn),
+          child: Text(l10n.ordersGuestSignIn),
         ),
       ],
     );
@@ -225,20 +261,19 @@ class _UnresolvedRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final t = AppTextStyles.of(context);
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 6, 6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderDefault),
+        color: groupCardColor(context),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               l10n.ordersGuestUnresolved(number),
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+              style: t.caption.copyWith(color: AppColors.inkMuted),
             ),
           ),
           TextButton(onPressed: onRetry, child: Text(l10n.actionRetry)),
@@ -249,93 +284,85 @@ class _UnresolvedRow extends StatelessWidget {
   }
 }
 
-/// 8px light section separator (Figma).
-class _Band extends StatelessWidget {
-  const _Band();
-  @override
-  Widget build(BuildContext context) => const SizedBox(
-    height: 8,
-    child: ColoredBox(color: AppColors.surfaceMuted),
-  );
-}
-
-/// The orders' first load: three cards shaped like [_OrderCard] — number and
-/// date, a line, the total and the two actions — shimmering in place of a
-/// spinner. White cards like the real ones, in both themes.
+/// The orders' first load: three cards shaped like [OrderListCard] — number,
+/// date and total, a rule, two store rows and the actions — shimmering in place
+/// of a spinner. White cards like the real ones.
 class _OrdersSkeleton extends StatelessWidget {
   const _OrdersSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    Widget part(double factor, {double height = 12}) => FractionallySizedBox(
-      alignment: AlignmentDirectional.centerStart,
-      widthFactor: factor,
-      child: SkeletonBox(height: height, borderRadius: 4),
+    Widget bar(double width, {double height = 12}) =>
+        SkeletonBox(width: width, height: height, borderRadius: 4);
+    Widget row() => const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          SkeletonBox.circle(size: 28),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 70, height: 14, borderRadius: 4),
+                SizedBox(height: 6),
+                SkeletonBox(width: 96, height: 20, borderRadius: 10),
+              ],
+            ),
+          ),
+          SizedBox(width: 10),
+          SkeletonBox(width: 40, height: 40),
+          SizedBox(width: 6),
+          SkeletonBox(width: 40, height: 40),
+        ],
+      ),
     );
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       children: [
         for (var i = 0; i < 3; i++)
           Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderDefault),
+              color: groupCardColor(context),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Shimmer(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            part(0.45, height: 14),
+                            bar(140, height: 16),
                             const SizedBox(height: 6),
-                            part(0.6),
+                            bar(110),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const SkeletonBox(width: 72, height: 22, borderRadius: 11),
+                      bar(52, height: 15),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      const SkeletonBox(width: 48, height: 48),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            part(0.85),
-                            const SizedBox(height: 6),
-                            part(0.3),
-                          ],
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.borderSubtle,
                   ),
-                  const SizedBox(height: 14),
+                  row(),
+                  if (i == 0) row(),
+                  const SizedBox(height: 6),
                   const Row(
                     children: [
-                      SkeletonBox(width: 40, height: 11, borderRadius: 4),
-                      Spacer(),
-                      SkeletonBox(width: 84, height: 15, borderRadius: 4),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    children: [
-                      Expanded(child: SkeletonBox(height: 36, borderRadius: 18)),
+                      Expanded(child: SkeletonBox(height: 52, borderRadius: 12)),
                       SizedBox(width: 10),
-                      Expanded(child: SkeletonBox(height: 36, borderRadius: 18)),
+                      Expanded(child: SkeletonBox(height: 52, borderRadius: 12)),
                     ],
                   ),
                 ],
@@ -347,10 +374,18 @@ class _OrdersSkeleton extends StatelessWidget {
   }
 }
 
-/// Horizontal status filter pills (All / To Receive / Delivered / Cancelled).
+/// Figma 21 "filters": a white strip of 36 px chips — All, In progress,
+/// Delivered and, while returns are on, Returns — 4 px under the app bar, 12 px
+/// above the cards.
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.current, required this.onChanged});
+  const _FilterBar({
+    required this.current,
+    required this.showReturns,
+    required this.onChanged,
+  });
+
   final _OrderFilter current;
+  final bool showReturns;
   final ValueChanged<_OrderFilter> onChanged;
 
   @override
@@ -358,323 +393,26 @@ class _FilterBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final labels = <_OrderFilter, String>{
       _OrderFilter.all: l10n.ordersFilterAll,
-      _OrderFilter.toReceive: l10n.ordersFilterToReceive,
+      _OrderFilter.inProgress: l10n.ordersFilterInProgress,
       _OrderFilter.delivered: l10n.ordersFilterDelivered,
-      _OrderFilter.cancelled: l10n.ordersFilterCancelled,
+      if (showReturns) _OrderFilter.returns: l10n.ordersFilterReturns,
     };
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          for (final entry in labels.entries) ...[
-            _Chip(
-              label: entry.value,
-              selected: current == entry.key,
-              onTap: () => onChanged(entry.key),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.brandPrimary : AppColors.surfaceMuted,
-          borderRadius: BorderRadius.circular(999),
-          border: selected ? null : Border.all(color: AppColors.borderDefault),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : AppColors.inkMuted,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OrderCard extends ConsumerWidget {
-  const _OrderCard({
-    required this.order,
-    required this.onDetails,
-    required this.onTrack,
-    required this.onReorder,
-  });
-
-  final CustomerOrder order;
-  final VoidCallback onDetails;
-  final VoidCallback onTrack;
-  final VoidCallback onReorder;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    // Magento stamps order dates in the store's zone — see orderFmtDate.
-    final storeZone = ref.watch(storeTimezoneProvider).valueOrNull ?? '';
-    final isPast = order.isDelivered || order.isCancelled;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderDefault),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push(AppRoutes.orderDetail, extra: order),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: number + date·items, status pill.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '#${order.number}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: AppColors.inkHeading,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${orderFmtDate(order.date, Localizations.localeOf(context).languageCode, storeZone)} · ${l10n.orderItemCount(order.itemCount)}',
-                          style: const TextStyle(
-                            color: AppColors.inkMuted,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusPill(order: order),
-                ],
-              ),
-              if (order.lines.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                for (final line in order.lines) _LineRow(line: line),
-              ],
-              const SizedBox(height: 2),
-              const Divider(height: 1, thickness: 1, color: AppColors.borderDefault),
-              const SizedBox(height: 12),
-              // Total.
-              Row(
-                children: [
-                  Text(
-                    l10n.orderTotalLabel,
-                    style: const TextStyle(
-                      color: AppColors.inkMuted,
-                      fontSize: 11,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (order.total != null)
-                    Text(
-                      order.total!.formatted(),
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.brandPrimary,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Actions: View Details + (Track in progress / Reorder past).
-              Row(
-                children: [
-                  Expanded(
-                    child: _ActionButton(
-                      label: l10n.orderViewDetails,
-                      onTap: onDetails,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ActionButton(
-                      label: isPast ? l10n.orderReorder : l10n.orderTrack,
-                      onTap: isPast ? onReorder : onTrack,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: Colors.white,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 12),
+        child: Row(
+          children: [
+            for (final entry in labels.entries) ...[
+              if (entry.key != labels.keys.first) const SizedBox(width: 8),
+              HubChip(
+                label: entry.value,
+                selected: current == entry.key,
+                onTap: () => onChanged(entry.key),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Solid status pill: gold = delivered, grey = cancelled, navy = in progress.
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.order});
-  final CustomerOrder order;
-
-  @override
-  Widget build(BuildContext context) {
-    final cancelled = order.isCancelled;
-    final color = order.isDelivered
-        ? AppColors.accentGold
-        : cancelled
-        ? AppColors.inkMuted
-        : AppColors.brandPrimary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: cancelled ? AppColors.surfaceMuted : color,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        order.status,
-        style: TextStyle(
-          color: cancelled ? AppColors.inkMuted : Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-/// Outlined navy action pill (Track / Reorder).
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.brandPrimary),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppColors.brandPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One order line as a single row — thumbnail + product name + quantity —
-/// matching the website order summary (QA: image, name and qty must sit on the
-/// same line per item, not stacked as image-row-then-text-row). RTL-safe: the
-/// Row mirrors so the thumbnail leads on the right in Arabic.
-class _LineRow extends StatelessWidget {
-  const _LineRow({required this.line});
-  final OrderLine line;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _Thumb(url: line.imageUrl),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  line.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    height: 1.3,
-                    color: AppColors.inkHeading,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  l10n.orderQty(line.quantity.toInt()),
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.inkMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Thumb extends StatelessWidget {
-  const _Thumb({required this.url});
-  final String? url;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: HubImage(
-          url: url,
-          decodeWidth: 48,
-          placeholder: (_) => const ColoredBox(color: AppColors.surfaceTint),
-          error: (_) => const ColoredBox(
-            color: AppColors.surfaceTint,
-            child: Icon(
-              HubIcons.image,
-              size: 18,
-              color: AppColors.inkMuted,
-            ),
-          ),
+          ],
         ),
       ),
     );

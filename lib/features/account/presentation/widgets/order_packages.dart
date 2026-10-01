@@ -13,6 +13,7 @@ import '../../../marketplace/domain/seller_groups.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
 import '../../domain/order.dart';
 import '../../../../app/theme/hub_icons.dart';
+import 'order_status_pill.dart';
 
 /// One store's part of an order as the order screens show it: its lines and
 /// store and — when the server split the order (`hm_packages`, HubAppOrders) —
@@ -212,23 +213,10 @@ class OrderPackageStatusPill extends StatelessWidget {
     };
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 150),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label.toUpperCase(),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 11,
-            height: 14 / 11,
-            fontWeight: FontWeight.w700,
-            color: foreground,
-          ),
-        ),
+      child: StatusPill(
+        label: label,
+        background: background,
+        foreground: foreground,
       ),
     );
   }
