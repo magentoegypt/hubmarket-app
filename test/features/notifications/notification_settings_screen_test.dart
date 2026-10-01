@@ -10,6 +10,8 @@ import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
+import 'package:hubmarket_app/core/widgets/hub_checkbox.dart';
+import 'package:hubmarket_app/core/widgets/hub_switch.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
 import 'package:hubmarket_app/features/account/presentation/newsletter_controller.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
@@ -93,7 +95,7 @@ void main() {
     expect(find.text(en.notificationSettingsTitle), findsOneWidget);
     expect(find.text(en.newsletterGeneral), findsOneWidget);
     expect(find.text(en.notificationsPromoTitle), findsNothing);
-    expect(find.byType(Switch), findsNothing);
+    expect(find.byType(HubSwitch), findsNothing);
     // Nothing changed yet, nothing to save.
     expect(tester.widget<FilledButton>(_save).onPressed, isNull);
   });
@@ -104,7 +106,7 @@ void main() {
 
     await tester.tap(find.text(en.newsletterGeneral));
     await tester.pumpAndSettle();
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    expect(tester.widget<HubCheckbox>(find.byType(HubCheckbox)).value, isTrue);
     expect(account.newsletterCalls, isEmpty, reason: 'saved only on Save');
 
     await tester.tap(_save);
@@ -117,9 +119,9 @@ void main() {
   testWidgets('unsubscribing sends false', (tester) async {
     final account = FakeAccountRepository(newsletterSubscribed: true);
     await _pump(tester, account: account);
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    expect(tester.widget<HubCheckbox>(find.byType(HubCheckbox)).value, isTrue);
 
-    await tester.tap(find.byType(Checkbox));
+    await tester.tap(find.byType(HubCheckbox));
     await tester.pumpAndSettle();
     await tester.tap(_save);
     await tester.pumpAndSettle();
@@ -131,14 +133,14 @@ void main() {
   ) async {
     final account = FakeAccountRepository(newsletterNeedsConfirmation: true);
     await _pump(tester, account: account);
-    await tester.tap(find.byType(Checkbox));
+    await tester.tap(find.byType(HubCheckbox));
     await tester.pumpAndSettle();
     await tester.tap(_save);
     await tester.pumpAndSettle();
     expect(account.newsletterCalls, [true]);
     expect(find.text(en.footerSubscribeConfirm), findsOneWidget);
     // The box shows what the store saved: not subscribed until confirmed.
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
+    expect(tester.widget<HubCheckbox>(find.byType(HubCheckbox)).value, isFalse);
   });
 
   testWidgets('push appears with FCM and saves the promotions opt-in', (
@@ -150,9 +152,9 @@ void main() {
       push: true,
     );
     expect(find.text(en.notificationsPushSection.toUpperCase()), findsOneWidget);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    expect(tester.widget<HubSwitch>(find.byType(HubSwitch)).value, isTrue);
 
-    await tester.tap(find.byType(Switch));
+    await tester.tap(find.byType(HubSwitch));
     await tester.pumpAndSettle();
     await tester.tap(_save);
     await tester.pumpAndSettle();

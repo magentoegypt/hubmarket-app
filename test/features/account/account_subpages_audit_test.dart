@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/features/account/data/account_repository.dart';
+import 'package:hubmarket_app/core/widgets/hub_switch.dart';
 import 'package:hubmarket_app/features/account/domain/saved_card.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/my_reviews_screen.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/payment_methods_screen.dart';
@@ -10,6 +11,7 @@ import 'package:hubmarket_app/features/catalog/data/reviews_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
 import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
+import 'package:hubmarket_app/features/notifications/presentation/notification_settings_screen.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/fakes.dart';
@@ -137,6 +139,24 @@ void main() {
         ],
       );
       await captureAudit(tester, boundary, '20f_my_reviews', locale);
+    });
+
+    testWidgets('20h Notification settings ($locale)', (tester) async {
+      final boundary = await pumpAuditScreen(
+        tester,
+        screen: const NotificationSettingsScreen(),
+        locale: locale,
+        overrides: [
+          // Subscribed, as the frame's ticked box says.
+          accountRepositoryProvider.overrideWithValue(
+            FakeAccountRepository(newsletterSubscribed: true),
+          ),
+        ],
+      );
+      // The frame draws Deals & offers off and Save ready: switch it off.
+      await tester.tap(find.byType(HubSwitch));
+      await tester.pumpAndSettle();
+      await captureAudit(tester, boundary, '20h_notification_settings', locale);
     });
 
     testWidgets('20e Stored payment methods ($locale)', (tester) async {
