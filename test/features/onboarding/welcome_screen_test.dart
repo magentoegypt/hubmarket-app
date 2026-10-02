@@ -174,6 +174,25 @@ void main() {
     }));
   }
 
+  testWidgets('the slide kickers are set in capitals, whatever case the admin '
+      'typed', (tester) async {
+    await _phone(tester);
+    await tester.pumpWidget(
+      _harness(
+        slides: [
+          _slide(1, 'Same-Day Delivery'),
+          _slide(2, 'New Season'),
+        ],
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('SAME-DAY DELIVERY'), findsOneWidget);
+    expect(find.text('Same-Day Delivery'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('without slides: the logo panel (Build 1), no invented pill', (
     tester,
   ) async {
