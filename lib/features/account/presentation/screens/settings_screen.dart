@@ -17,8 +17,9 @@ import '../delete_account_action.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// App settings: language toggle (EN/AR) + notification preferences, plus a
-/// shortcut to Help. The same language switch lives in the menu drawer; this
-/// screen is the discoverable home for it (Account's Language row opens it).
+/// shortcut to Help. This screen is the language switch's home (Account's
+/// Language row opens it, signed in or out: the menu drawer that once held a
+/// second copy is gone).
 ///
 /// Not in the Figma frames; laid out with the Account pages' pieces (the
 /// sub-page app bar, grouped cards under small labels).
