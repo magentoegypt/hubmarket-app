@@ -9,6 +9,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/free_shipping.dart';
+import '../../../../core/address/fulfillment_preview.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/load_failure_view.dart';
 import '../../../../core/widgets/shimmer.dart';
@@ -222,6 +223,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         freeShippingThreshold: threshold,
         storeCredit: ref.watch(cartStoreCreditProvider).valueOrNull,
       ),
+      const FulfillmentPreviewCard(),
       const CartTrustTicks(),
     ];
     // A light page of light cards, as the frame draws it, in dark mode too.

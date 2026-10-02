@@ -7,6 +7,7 @@ import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/account/data/account_repository.dart';
 import 'city_fields.dart';
 import 'city_manager.dart';
+import 'delivery_headers.dart';
 
 // Explicit shopping destination survives navigation and authentication changes.
 // The order always uses its independently validated checkout address.
@@ -25,7 +26,10 @@ class DeliveryLocation extends Notifier<CitySelection?> {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (!next.isAuthenticated) {
         _generation++;
-        if (!_explicit) state = null;
+        if (!_explicit) {
+          state = null;
+          ref.read(deliveryHeadersProvider.notifier).state = {};
+        }
       } else if (previous?.isAuthenticated != true) {
         _restoreSavedArea();
       }
@@ -85,6 +89,7 @@ class DeliveryLocation extends Notifier<CitySelection?> {
           !_explicit &&
           value.valid) {
         state = value;
+        _setHeaders(value);
       }
     } catch (_) {
       // A stale/incomplete saved address never invents a shopping destination.
@@ -96,6 +101,7 @@ class DeliveryLocation extends Notifier<CitySelection?> {
       _explicit = true;
       _generation++;
       state = value;
+      _setHeaders(value);
     }
   }
 
@@ -103,6 +109,16 @@ class DeliveryLocation extends Notifier<CitySelection?> {
     _explicit = true;
     _generation++;
     state = null;
+    ref.read(deliveryHeadersProvider.notifier).state = {};
+  }
+
+  void _setHeaders(CitySelection value) {
+    ref.read(deliveryHeadersProvider.notifier).state = {
+      'X-Hub-Country': value.country,
+      'X-Hub-Region': '${value.regionId ?? 0}',
+      'X-Hub-City': '${value.city!.id}',
+      'X-Hub-Locality': '${value.locality?.id ?? 0}',
+    };
   }
 }
 

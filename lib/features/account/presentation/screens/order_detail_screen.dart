@@ -9,6 +9,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/config/store_timezone.dart';
+import '../../../../core/address/fulfillment_order.dart';
 import '../../../../core/widgets/grouped_list.dart';
 import '../../../../core/widgets/hub_button.dart';
 import '../../../../core/widgets/hub_icon_button.dart';
@@ -90,6 +91,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           statusPill: OrderStatusPill(order: order),
         ),
       if (showTracking) _TrackingCard(trackings: looseTrackings),
+      FulfillmentOrderCard(number: order.number),
       if ((order.shippingAddress ?? '').isNotEmpty)
         _AddressCard(
           title: (order.shippingName ?? '').isNotEmpty

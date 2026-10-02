@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../../features/auth/presentation/auth_controller.dart';
 import '../config/app_config.dart';
+import '../address/delivery_headers.dart';
 import '../storage/secure_token_store.dart';
 import '../store/store_controller.dart';
 import 'possible_types.dart';
@@ -109,6 +110,7 @@ GraphQLClient buildGraphQLClient({
   Future<String?> Function()? token,
   void Function()? onAuthError,
   bool getForQueries = false,
+  Map<String, String> deliveryHeaders = const {},
   http.Client? httpClient,
 }) {
   // Set the stable User-Agent at the transport level too (not only via
@@ -121,6 +123,7 @@ GraphQLClient buildGraphQLClient({
     // lets the edge content-negotiate a different/compressed payload) — match
     // the raw-probe request that succeeds on iOS.
     defaultHeaders: {
+      ...deliveryHeaders,
       'User-Agent': config.userAgent,
       'Accept': 'application/json',
     },
@@ -198,6 +201,18 @@ final guestGraphqlClientProvider = Provider<GraphQLClient>(
     storeCode: () => ref.read(storeControllerProvider).activeStoreCode,
   ),
 );
+
+/// Area-specific catalog reads use POST and an isolated cache. Cart and account
+/// traffic keep their existing client and validated checkout address.
+final deliveryCatalogClientProvider = Provider<GraphQLClient>((ref) {
+  final headers = ref.watch(deliveryHeadersProvider);
+  if (headers.isEmpty) return ref.watch(graphqlClientProvider);
+  return buildGraphQLClient(
+    config: ref.watch(appConfigProvider),
+    storeCode: () => ref.read(storeControllerProvider).activeStoreCode,
+    deliveryHeaders: headers,
+  );
+});
 
 /// The token-less client for **public reads**, with queries sent as HTTP GET
 /// so Magento's GraphQL full-page cache (Varnish / built-in FPC — it caches
