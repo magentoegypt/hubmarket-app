@@ -22,8 +22,8 @@ recount if you edit.
 **Name.** `Hub Market` in both languages (the logo is Latin). Decided on 30 Sep 2026; "ME Hub
 Market", raised in DEV03, is dropped. The app already carries the name (`CFBundleDisplayName`,
 the Android label, the launch screen). A search of the public App Store (UAE, Egypt, Saudi
-Arabia, US, UK) found no app with that exact name; App Store Connect gives the final answer when
-the app record is created. If it were taken, the fallback is a longer name that starts with it.
+Arabia, US, UK) found no app with that exact name, and both stores accepted it: the App Store
+Connect app record (30 Sep 2026) and the Google Play app (2 Oct 2026) are named `Hub Market`.
 
 **Category.** Shopping on both stores. Skip a secondary category: Health & Fitness and
 Lifestyle invite questions the app does not answer (see the privacy document).

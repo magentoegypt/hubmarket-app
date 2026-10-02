@@ -18,23 +18,28 @@ the code, not from memory. Nothing here publishes anything or creates an account
 
 | Area | State |
 |---|---|
-| Android build | Every push to `main` (except `[skip ci]`) runs the gate, builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist, with a debug key the runner makes anew on every run, so no build installs over an older one (the note under section 3). The same push also builds the Play bundle and uploads it to **internal testing** once that is switched on (section 3b). `Release · Android` stays for a one-off bundle; its `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
+| Android build | Every push to `main` (except `[skip ci]`) runs the gate, builds the production APK and updates the Loadly link. It is **debug-signed** until the upload-keystore secrets exist, with a debug key the runner makes anew on every run, so no build installs over an older one (the note under section 3). The same push also builds the Play bundle and uploads it to **internal testing** once that is switched on (section 3b). The Play app record **Hub Market** (`com.hubmarket.app`, free, English (United States)) was created on 2 Oct 2026 in the agency's organisation account, as a draft with no release: that job stays skipped until the upload keystore exists and a first release was uploaded by hand (section 4). `Release · Android` stays for a one-off bundle; its `.aab` packaging step has **not been run yet**, so step 4 of the first release doubles as its dry run. |
 | iOS build | Every push to `main` builds the signed App Store IPA and uploads it to **TestFlight** (the first one, 1.0.0 (1), went through on 30 Sep 2026), and, once `IOS_ADHOC_PROFILE_BASE64` exists, an ad-hoc IPA to Loadly (section 3b). **The Apple side is set up:** the App ID `com.hubmarket.app` (Push Notifications and Associated Domains on), an App Store profile and the App Store Connect app record "Hub Market". `Release · iOS` stays for one-off runs. |
 | Identity | Android `com.hubmarket.app` (`.dev` and `.staging` for the other flavors); iOS `com.hubmarket.app`; name "Hub Market"; version `1.0.0+1`; Android compile and target SDK 36; iOS 15 and up, iPhone only; portrait only (Android manifest, iOS Info.plist). |
 | Icon and launch screen | Client artwork, correct formats (1024×1024 icon with no alpha; adaptive Android icon; native launch screen). Not present: the Play **feature graphic** (1024×500). |
 | Listing text, privacy answers, review notes | Drafted in English and Arabic (files above); each needs the client to confirm the facts it lists. |
 | iOS privacy | An app privacy manifest is in the project, and the leftover cleartext (HTTP) exception from the Zoonze base is gone: the live server serves only HTTPS. |
-| Screenshots | Capture pipeline for both platforms (iOS captured in English and Arabic; Android waits for an unlocked phone). The catalogue is still test data and the hero and seller profiles still say Egypt, so the shots are not store-ready. |
-| Deep links | Templates ready; blocked on the Play signing SHA-256, the Apple Team ID and the web team. |
+| Screenshots | Both platforms are captured in English and Arabic on the final eight-shot list (iOS 1284×2778 from CI, Android from a 720×1640 phone scaled to 1080×2160; see [screenshots.md](screenshots.md)). The catalogue is still test data and the hero and seller profiles still say Egypt, so the shots are not store-ready. |
+| Deep links | Templates ready; the Apple Team ID is known. Blocked on the Play app-signing SHA-256 (it exists once the first release is uploaded) and the web team. |
 | Push notifications | The Firebase project **Hub Market** (`hub-market-1d742`) exists with the Android and iOS apps registered (2 Oct 2026). Its config files are injected from two secrets and never committed (section 3), so push stays dormant until those are set and the steps of section 6 are done. |
 | Payment | Cash on delivery only. Card, Tabby and Tamara wait on DEV08 and DEV09. |
 
 ## 2. What we need from the client
 
 **Accounts**
-1. A **Google Play Console** developer account (an organisation account, verified) and who gets access.
-2. An **Apple Developer Program** membership (organisation) with App Store Connect access; the
-   ten-character **Team ID**.
+1. ~~A **Google Play Console** developer account (an organisation account, verified)~~ Done: the
+   agency's organisation account holds the Hub Market app record (2 Oct 2026). Still to settle: who
+   else gets access (Users and permissions), and whether the client's own account takes the app over
+   later (both stores can transfer an app between developer accounts).
+2. ~~An **Apple Developer Program** membership (organisation) with App Store Connect access; the
+   **Team ID**~~ Done 30 Sep 2026: the agency's account holds the App ID `com.hubmarket.app`, an App
+   Store profile and the App Store Connect app "Hub Market" (section 1); the same ownership
+   question as for Play.
 3. ~~A **Firebase project** for push~~ Done 2 Oct 2026: the project Hub Market, with both apps
    registered, sits in the agency's Google account; add the client as an Owner (Project settings ›
    Users and permissions) when ownership moves. Still needed: the **APNs key** uploaded in Cloud
@@ -160,8 +165,9 @@ TestFlight tab) with *automatic distribution* on; otherwise each build has to be
 
 ## 4. First Android release
 
-1. **Play Console:** create the app (name, English as the default language, Arabic as a second,
-   App, free), then fill the *App content* pages with the answers in
+1. **Play Console:** **the app was created on 2 Oct 2026** (Hub Market, `com.hubmarket.app`,
+   English (United States) as the default language, App, free; a draft). Still to do: add Arabic as a
+   second language, then fill the *App content* pages with the answers in
    [privacy-and-data-safety.md](privacy-and-data-safety.md) and [app-review-notes.md](app-review-notes.md).
 2. **Upload key:** generate the keystore (section 3) and set the four `ANDROID_*` secrets. Enrol in
    **Play App Signing** when Play offers it (the default for new apps).
