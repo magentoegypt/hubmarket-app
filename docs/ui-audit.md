@@ -109,7 +109,9 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
 
 - No social sign-in (Apple / Google / Facebook) and no per-store coupons or per-store delivery estimates:
   the backend has none.
-- "AI ENGINE" badge and personalisation claims on "Picked for you" are removed (QA02).
+- "Picked for you" shows the admin's badge ("AI ENGINE") and the "Personalised recommendations…" subtitle only
+  when the shopper's own picks arrive (`hmPickedForYou`, `personalized: true`); until then it is the top-rated list
+  with the admin's subtitle and no pill: the app never labels the generic list as personal (QA02).
 - No free-shipping progress bar: the live schema has no threshold (`free_shipping_subtotal`).
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.
@@ -196,12 +198,11 @@ tone `#F26522`: the app draws a tile without an image as a solid card in its ton
 Today's Deals' More link (cleared, so "All Deals" opens the Deals page). The hero kickers are set in capitals by the
 app (the frame and the website do it; the admin types any case; a tile's kicker stays as typed). What still differs:
 
-- **Picked For You**: the "AI ENGINE" pill and the "Personalised recommendations based on your search history &
-  behaviour" subtitle are the deliberate deviation of section 4 (the admin's own subtitle is shown); the "YOUR
-  SEARCHES" chips appear once the customer has searched (a fresh install has no history). The products are the same
-  four top-rated ones for everyone (HubApp ranks PICKED_FOR_YOU by rating, at least two approved reviews, up to the
-  section limit, and flags it `personalizable`: the app may swap in the customer's own recently viewed), and Refresh
-  gets them again: `hmAppHome` is a cached public GET, the section has no offset and no badge field.
+- **Picked For You** follows the frame once the shopper has a profile: the badge (admin text, "AI ENGINE"), the
+  "Personalised recommendations based on your search history & behaviour" subtitle and the shopper's own picks come
+  with `hmPickedForYou` (`personalized: true`). Before that, and for a new install (Algolia builds profiles in
+  batches, about an hour after the first events), it is the 16 top-rated products, four at a time, with the admin's
+  subtitle and no pill. The "YOUR SEARCHES" chips appear once the customer has searched.
 - Signed in only: the active-order card, the bell's unread dot, the cart count on the tab.
 
 Small known gaps: Welcome's hero is a little shorter than the frame on a phone (the frame's content is taller than the

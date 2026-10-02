@@ -11,9 +11,12 @@ forms. Re-check all three when a payment gateway, Firebase, analytics or crash r
 
 **The short version.** The app collects what a shop needs to take and deliver an order: contact
 details, delivery addresses, orders, returns (with optional photos), reviews and messages, a
-customer id, and (once push is on) a push token. It sends search terms to the store's search. It
-does **not** track people, show ads, read location, contacts or the advertising id, or bundle an
-analytics or crash-reporting SDK. Payment is cash on delivery, so it never handles card details.
+customer id, and (once push is on) a push token. It sends search terms to the store's search and,
+unless the customer turns it off in Settings, the products they view, tap, add to the cart or
+wishlist and order, under a random id of the install, to Algolia to personalise "Picked For You".
+It does **not** track people across other apps or sites, show ads, read location, contacts or the
+advertising id, or bundle an analytics or crash-reporting SDK. Payment is cash on delivery, so it
+never handles card details.
 
 ---
 
@@ -28,14 +31,17 @@ analytics or crash-reporting SDK. Payment is cash on delivery, so it never handl
 | Photos on a return request and its replies | Chosen or taken by the customer through the system picker or camera; the app never asks for library or storage access. Resized to at most 2048 px and re-encoded. | The store; visible to the seller and staff | Showing the seller what is wrong |
 | Contact form message (name, email, message) | Help centre | The store's own contact form; the message is e-mailed to the store | Customer support |
 | Search terms | Search box | **Algolia** (the store's search provider). The searches are tagged `app` for the store's Algolia Analytics (only the extra filter-count queries switch analytics off) and no user token is sent, so Algolia counts users by connection address. If Algolia cannot be reached, the store's own search answers. | Search results |
+| Product activity: a product viewed, tapped in a list, added to the cart or the wishlist, an order placed, with a random install id (`hm-` and 32 characters, made on first use) | Product pages, lists, cart, wishlist, checkout | **Algolia Insights** (the store's search provider), tagged with the id and the product index of the store view. The id also goes to the store (`hmPickedForYou`) to ask for this shopper's picks. | Personalised "Picked For You" (Algolia Personalization). **On by default; Settings > Personalised picks switches it off**, and then nothing is sent or asked. The id carries no name or e-mail and stays across a sign-in. |
 | Push token, platform, app version, language | Only when Firebase is configured and the customer has not turned notifications off | The store, bound to the customer's account (or kept as a guest device) | Order updates. Removed at sign-out or when notifications are switched off. |
 | Sign-in token | After sign-in | Stored on the phone in the platform's secure storage (Keychain, Android Keystore-backed) | Staying signed in |
-| Language and store view, recent searches, guest cart id, a short list of guest orders (order number, lookup token, and the billing email and last name used to re-open them), cached store data | Use of the app | **Stays on the phone** (local storage). The sign-in token and the cart are cleared at sign-out or account deletion; the rest goes when the app is uninstalled. | Convenience |
+| Language and store view, recent searches, the install id and the Personalised picks switch, guest cart id, a short list of guest orders (order number, lookup token, and the billing email and last name used to re-open them), cached store data | Use of the app | **Stays on the phone** (local storage). The sign-in token and the cart are cleared at sign-out or account deletion; the rest goes when the app is uninstalled. | Convenience |
 
 **Not collected:** location, contacts, calendar, microphone, the advertising id, browsing history
-outside the app, health data, payment card details, analytics or crash data. There is no tracking
-and no third-party advertising, so the app needs no App Tracking Transparency prompt and no
-consent banner.
+outside the app, health data, payment card details, crash data. The product activity above is used
+only to personalise the shop for the same install, by the store's own search provider: there is no
+cross-app tracking and no third-party advertising, so the app needs no App Tracking Transparency
+prompt. **CONFIRM** with the client whether it wants an ask-first prompt as well (the website sends
+the same events only after cookie consent; the app personalises by default and has an off switch).
 
 ## 2. Who else receives data
 
@@ -43,7 +49,7 @@ consent banner.
 |---|---|---|---|
 | Hub Market store (the client's Magento server) | Controller of the customer data | Everything in section 1 | Name the legal entity in the privacy policy. |
 | Marketplace sellers | Independent parties fulfilling their own orders | Name, phone, delivery address and the order for their own items; return messages and photos | Confirm which fields the seller panel shows (Vnecoms), and say so in the policy. |
-| Algolia | Service provider (search and search analytics) | Search terms, and the connection's IP address | The client signs Algolia's data-processing agreement and names its hosting region and analytics retention in the policy. |
+| Algolia | Service provider (search, search analytics and Personalization) | Search terms, the connection's IP address, and the product activity events with the random install id | The client signs Algolia's data-processing agreement and names its hosting region and analytics retention in the policy. |
 | Google Firebase Cloud Messaging | Service provider (push), **only once Firebase is set up** | Push token, installation id | Follow Google's "Data safety" and Apple's privacy-details pages for Firebase when it goes live. |
 | WhatsApp or SMS code delivery (SmsExtend on the server) | Service provider | The phone number and the code | Name the provider in the policy. |
 | Apple and Google | Distribution, push delivery | Their own account data | – |
@@ -52,8 +58,8 @@ No data is sold. No data goes to a data broker or is joined with third-party dat
 
 ## 3. Apple: App Privacy answers
 
-Tracking: **No** for every type. Purpose for every type below: **App Functionality** only. The
-same list is in `ios/Runner/PrivacyInfo.xcprivacy`.
+Tracking: **No** for every type. Purpose: **App Functionality**, and also **Product Personalization**
+for Product interaction and Device ID. The same list is in `ios/Runner/PrivacyInfo.xcprivacy`.
 
 | Apple category | Collected | Linked to the user | What collects it |
 |---|---|---|---|
@@ -66,7 +72,8 @@ same list is in `ios/Runner/PrivacyInfo.xcprivacy`.
 | User content: Customer support | Yes | Yes | Help centre contact form |
 | User content: Other user content | Yes | Yes | Reviews |
 | Identifiers: User ID | Yes | Yes | The customer account behind the sign-in token |
-| Identifiers: Device ID | Yes, **once push is on** | Yes | FCM push token |
+| Identifiers: Device ID | Yes (the random install id, always unless switched off; the FCM push token once push is on) | Yes | Personalised picks (install id); push (FCM token) |
+| Usage data: Product interaction | Yes (**CONFIRM**) | Yes (conservative: the id stays on the install) | Product pages viewed, products tapped, added to the cart or wishlist, orders: sent to Algolia for "Picked For You"; the Settings switch turns it off |
 | Search history | Yes (**CONFIRM**) | No | Search terms reach Algolia (with its analytics, which counts users by connection address) and the store's search (which keeps terms and counts for its own reporting); no customer id is sent with them. A stricter reading would call the connection address a link: if the client prefers it, declare "linked". |
 | Financial info (payment info, other) | **No** | – | Cash on delivery: no card data. **CONFIRM** if the store credit balance should also be declared as "Other financial info"; we treat it as purchase history. |
 | Location, Contacts, Health, Sensitive info, Browsing history, Usage data, Diagnostics | No | – | Nothing collects them |
@@ -96,7 +103,8 @@ only). **Can people ask for their data to be deleted?** Yes: in the app, and thr
 | Messages: Other in-app messages | Yes (return replies, contact form) | Yes, return replies go to the seller | Optional | App functionality, customer support |
 | App activity: In-app search history | Yes | No: Algolia processes it for the store | Required to search | App functionality |
 | App activity: Other user-generated content | Yes (reviews) | Reviews are shown publicly on the store | Optional | App functionality |
-| Device or other IDs | Yes, **once push is on** (FCM token) | No | Optional (notifications can be switched off) | App functionality |
+| App activity: App interactions | Yes (products viewed, tapped, added, ordered) | No: Algolia processes it for the store | Optional (Settings > Personalised picks) | Personalization |
+| Device or other IDs | Yes (the random install id; the FCM token once push is on) | No | Optional (the Settings switch; notifications can be switched off) | App functionality, personalization |
 | Location, Contacts, Audio, Files, Calendar, Health | No | – | – | – |
 | App info and performance: crash logs, diagnostics | **No**, no such SDK is bundled | – | – | – |
 
@@ -236,7 +244,9 @@ the mobile app. It should say, in English and Arabic:
 4. How long data is kept, including order and invoice records under UAE law.
 5. The customer's rights (access, correction, deletion, and how to ask), under the UAE personal
    data protection law (Federal Decree-Law 45 of 2021: counsel to confirm the exact wording).
-6. That the app does not track people or show ads, and does not read location or contacts.
+6. That the app does not show ads or read location or contacts and does not track people across
+   other apps and sites; that it uses the products a customer views, taps, adds or orders to
+   personalise recommendations (through Algolia), under a random id, and how to switch that off.
 7. Children: the app is for adults.
 8. How changes are announced.
 
@@ -249,6 +259,8 @@ the mobile app. It should say, in English and Arabic:
 | 3 | Does the seller panel show buyers' email and phone? | Confirm, then keep "shared" as in section 4. |
 | 4 | Sign Algolia's data-processing agreement; which region hosts the index? | Yes; name it in the policy. |
 | 4b | Keep Algolia Analytics on for the app's searches? It shows which searches find nothing. | Keep it and say in the policy that Algolia keeps search terms and connection addresses for its analytics; or switch `analytics` off for those queries in `lib/features/catalog/data/algolia/algolia_search.dart` (a one-line change) and the search-history answer gets simpler. |
+| 4c | Does Algolia's agreement cover Insights and Personalization events, and do they stay in the index's region? | Confirm both; name Personalization in the policy. |
+| 4d | Consent: the website sends the same events only after cookie consent. Ask first in the app too, or keep the default-on switch? | Keep the switch and the policy text; add a one-time prompt if counsel wants strict parity with the website. |
 | 5 | Which provider delivers the WhatsApp or SMS codes? | Name it in the policy. |
 | 6 | Add crash reporting (Firebase Crashlytics) before launch? | Optional. It would add "crash logs, diagnostics" and a device id to both forms and to the privacy manifest. |
 | 7 | Return photos may carry GPS data from a phone camera. | Strip photo metadata on the server (a follow-up on the backend PR). |

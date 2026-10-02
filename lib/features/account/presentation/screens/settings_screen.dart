@@ -13,6 +13,7 @@ import '../../../../core/widgets/grouped_list.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../../notifications/presentation/notification_settings_controller.dart';
+import '../../../personalization/data/personalization_identity.dart';
 import '../delete_account_action.dart';
 import '../../../../app/theme/hub_icons.dart';
 
@@ -37,6 +38,7 @@ class SettingsScreen extends ConsumerWidget {
     final promoEnabled = ref.watch(notificationSettingsProvider);
     final developerTools = ref.watch(developerToolsProvider);
     final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
+    final personalised = ref.watch(personalizationEnabledProvider);
     final isAuthenticated = ref.watch(
       authControllerProvider.select((s) => s.isAuthenticated),
     );
@@ -114,6 +116,24 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ],
+
+          // Picked For You and the events behind it (Algolia Insights, under a
+          // random id of this install): on until the shopper turns it off.
+          GroupLabel(l10n.settingsPersonalisationGroup),
+          GroupCard(
+            children: [
+              _onCard(
+                SwitchListTile.adaptive(
+                  value: personalised,
+                  onChanged: (v) => ref
+                      .read(personalizationEnabledProvider.notifier)
+                      .set(v),
+                  title: Text(l10n.settingsPersonalisationTitle),
+                  subtitle: Text(l10n.settingsPersonalisationBody),
+                ),
+              ),
+            ],
+          ),
 
           const SizedBox(height: 18),
           GroupCard(

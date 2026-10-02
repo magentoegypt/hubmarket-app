@@ -70,6 +70,16 @@ rebuild: the retry and the Retry button are for that. Remote feature flags (`hmA
 `returns`, `whatsapp_login`, `push` — an unset flag counts as off. The Figma
 section "G · Managed from the backend" shows the admin screens and the full map.
 
+**Picked For You is personal** (`features/personalization/`). The Home draws the cached
+top-rated section (16 products; Refresh turns to the next four), then asks `hmPickedForYou`
+(an uncached POST) with this install's random user token and swaps its picks in only when it
+answers `personalized: true`; only then the section shows the admin's `badge` and the
+"Personalised recommendations…" subtitle (the generic list is never labelled personal). The picks
+come from Algolia Personalization, fed by Insights events the app sends under the same token
+(`Viewed Product`, `Product Clicked`, `Added to Cart`, `Added to Wishlist`, `Placed order`: the
+website's names; product ids are the decoded GraphQL `uid`). Settings > Personalised picks
+switches both off; the privacy documents and `PrivacyInfo.xcprivacy` describe it.
+
 Only the app icon, the native launch screen and interface wording ship with the
 app (see Figma G3).
 

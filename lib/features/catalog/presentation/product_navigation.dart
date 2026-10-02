@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/widgets/network_image.dart';
+import '../../personalization/data/insights_tracker.dart';
 import '../domain/product.dart';
 import '../domain/product_preview.dart';
 
@@ -42,6 +44,14 @@ void openProduct(BuildContext context, Product product) {
       ).catchError((_) {}),
     );
   }
+  // "Product Clicked" for Algolia Personalization (a no-op with it switched off
+  // in Settings, and never in the way of the navigation).
+  trackInsights(
+    () => ProviderScope.containerOf(context, listen: false).read(
+      insightsTrackerProvider,
+    ),
+    (tracker) => tracker.productClicked(product.sku),
+  );
   context.push(
     AppRoutes.product(product.urlKey),
     extra: ProductPreview.of(product),

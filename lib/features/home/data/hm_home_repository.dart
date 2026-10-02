@@ -38,7 +38,7 @@ query HmAppHome {
     store_code
     generated_at
     sections {
-      id type title subtitle limit ends_at countdown_ends_at personalizable
+      id type title subtitle badge limit ends_at countdown_ends_at personalizable
       more_link { ...HmLinkFields }
       banners { id slot title kicker subtitle cta_label image_url tone accent link { ...HmLinkFields } }
       categories { id uid name url_key product_count icon tint link { ...HmLinkFields } }
@@ -52,9 +52,11 @@ query HmAppHome {
 }
 ''';
 
-  /// The full request: [document] for [audience] and every fragment it uses.
-  static String documentFor(HmAudience audience) =>
-      document.replaceFirst('(audience: GUEST)', '(audience: ${audience.wire})') +
+  /// The full request: [document] for [audience] and every fragment it uses;
+  /// [badge] false leaves the section badge out (a HubApp older than it).
+  static String documentFor(HmAudience audience, {bool badge = true}) =>
+      (badge ? document : document.replaceFirst(' badge limit', ' limit'))
+          .replaceFirst('(audience: GUEST)', '(audience: ${audience.wire})') +
       HmFragments.link +
       HmFragments.storeCard +
       BrandsRepository.brandFields +
@@ -62,13 +64,25 @@ query HmAppHome {
       DealsFragments.cardProduct;
 
   /// The Home for [audience] in the active store view. Throws [HubAppMissing]
-  /// without the module, a [Failure] otherwise.
+  /// without the module, a [Failure] otherwise. A HubApp that has the module
+  /// but not the section badge is asked again without it: a missing pill must
+  /// never turn the whole Home down.
   Future<HmHome> fetchHome(HmAudience audience) async {
-    final data = await sendListing(
+    Future<Map<String, dynamic>> send(bool badge) => sendListing(
       _marketplace,
-      documentFor(audience),
+      documentFor(audience, badge: badge),
       (document, _) => runHubAppQuery(_client, document),
     );
+    Map<String, dynamic> data;
+    try {
+      data = await send(true);
+    } on HubAppMissing catch (missing) {
+      if (isMissingRootField(missing, 'hmAppHome') ||
+          !missing.message.contains('"badge"')) {
+        rethrow;
+      }
+      data = await send(false);
+    }
     final json = data['hmAppHome'];
     if (json is! Map<String, dynamic>) {
       throw const Failure(FailureKind.server, detail: 'hmAppHome is empty');
@@ -109,6 +123,7 @@ HmHomeSection? hmHomeSectionFromJson(Object? json) {
     // doesn't rely on that.
     title: title == '-' ? null : title,
     subtitle: hmString(json['subtitle']) == '-' ? null : hmString(json['subtitle']),
+    badge: hmString(json['badge']),
     limit: hmInt(json['limit']) ?? 0,
     endsAt: hmDateTime(json['ends_at']),
     countdownEndsAt: hmDateTime(json['countdown_ends_at']),

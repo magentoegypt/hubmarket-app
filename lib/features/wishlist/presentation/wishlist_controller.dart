@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/store/store_controller.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../personalization/data/insights_tracker.dart';
 import '../data/wishlist_repository.dart';
 import '../domain/wishlist_entry.dart';
 
@@ -123,6 +124,11 @@ class WishlistController extends Notifier<WishlistState> {
         data = await _repo.removeItem(wishlistId, itemId);
       } else {
         data = await _repo.addProduct(wishlistId, sku);
+        // "Added to Wishlist" for Algolia Personalization.
+        trackInsights(
+          () => ref.read(insightsTrackerProvider),
+          (tracker) => tracker.addedToWishlist(sku),
+        );
       }
       state = WishlistState(id: data.id, entries: data.entries);
     } catch (error) {

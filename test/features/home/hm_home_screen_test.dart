@@ -214,7 +214,8 @@ void main() {
       ]) {
         expect(find.text(text), findsWidgets, reason: text);
       }
-      // Picked For You is top-rated products: no "AI" badge (QA02).
+      // Picked For You is the top-rated list here: no pill until the shopper's
+      // own picks arrive (see hm_picked_for_you_test.dart).
       expect(find.text('AI ENGINE'), findsNothing);
       // The countdown, days and clock.
       expect(find.text('2d'), findsOneWidget);

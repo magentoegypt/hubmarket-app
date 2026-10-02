@@ -7,6 +7,7 @@ import '../../../core/validation/phone.dart';
 import '../../account/data/guest_order_store.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../cart/presentation/cart_controller.dart';
+import '../../personalization/data/insights_tracker.dart';
 import '../../catalog/domain/money.dart';
 import '../data/checkout_repository.dart';
 import '../domain/checkout.dart';
@@ -468,11 +469,26 @@ class CheckoutController extends Notifier<CheckoutState> {
               ),
             );
       }
+      // The lines of the order, read before the cart is cleared: "Placed order"
+      // for Algolia Personalization (the website's server sends it for its own
+      // orders, and cannot for an order placed from here).
+      final lines = [
+        for (final item in ref.read(cartControllerProvider).cart.items)
+          TrackedLine(
+            sku: item.sku,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          ),
+      ];
       // The order consumed the cart server-side — reset it (drop the stale id +
       // persisted guest id) so it reads empty and the next add-to-cart creates a
       // fresh cart, instead of failing against the consumed one.
       await ref.read(cartControllerProvider.notifier).clearAfterOrder();
       state = state.copyWith(isBusy: false);
+      trackInsights(
+        () => ref.read(insightsTrackerProvider),
+        (tracker) => tracker.orderPlaced(lines),
+      );
       return result;
     } catch (error) {
       state = state.copyWith(isBusy: false, error: error);

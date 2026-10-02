@@ -1,7 +1,8 @@
 # =============================================================================
 # COPY - do not edit here. Source of truth is the backend repo:
 #   magentoegypt/multivendor PR #22 (https://github.com/magentoegypt/multivendor/pull/22)
-#   branch figma-parity-home, merged as bb1ca0555 (PR head 9c0d00841)
+#   branch figma-parity-home, merged as bb1ca0555 (PR head 9c0d00841); current as of 750072d4f
+#   (adds HmHomeSection.badge, hmPickedForYou and HmProductPage.personalized)
 #   app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
 # Refresh with:
 #   git -C <multivendor> show figma-parity-home:app/code/MagentoEgypt/HubApp/docs/CONTRACT.graphql
@@ -83,6 +84,11 @@ type Query {
         pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
         currentPage: Int = 1 @doc(description: "Page number from 1.")
     ): HmProductPage! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\BestSellers") @doc(description: "Products by units ordered (top-level order lines, cancelled orders excluded).") @cache(cacheIdentity: "MagentoEgypt\\HubApp\\Model\\Resolver\\Identity\\ProductPageIdentity")
+    hmPickedForYou(
+        user_token: String! @doc(description: "The shopper's Algolia user token: the one the app sends its Insights events with (anonymous id, or the signed-in customer's token)."),
+        pageSize: Int = 4 @doc(description: "Items per page, 1-16."),
+        currentPage: Int = 1 @doc(description: "Page number from 1; Refresh pages through up to 16.")
+    ): HmProductPage! @resolver(class: "MagentoEgypt\\HubApp\\Model\\Resolver\\PickedForYou") @doc(description: "Picked For You for one shopper, ranked by Algolia Personalization from their events. personalized false: no profile yet, the top-rated list the Home section shows. Not cached; send as POST.") @cache(cacheable: false)
     hmBundleDeals(
         category_id: Int @doc(description: "Only bundles under this top-level category (ids from `categories`)."),
         pageSize: Int = 20 @doc(description: "Items per page, 1-50."),
@@ -269,6 +275,7 @@ type HmHomeSection @doc(description: "One Home section; only the content field m
     type: HmSectionType! @doc(description: "Kind; selects the widget and content field.")
     title: String @doc(description: "Title in the store view's language; null hides the header.")
     subtitle: String @doc(description: "Subtitle in the store view's language.")
+    badge: String @doc(description: "Small pill above the title in the store view's language (admin Badge field); null: no pill.")
     limit: Int! @doc(description: "Configured maximum items.")
     ends_at: String @doc(description: "Scheduled end, ISO-8601 UTC; hide after it.")
     countdown_ends_at: String @doc(description: "TODAYS_DEALS: end-of-day (store timezone, ISO-8601 with offset) of the soonest-ending shown offer.")
@@ -341,6 +348,7 @@ type HmProductPage @doc(description: "Ranked products page.") {
     total_count: Int! @doc(description: "Ranked products available (capped at 200).")
     page_info: SearchResultPageInfo! @doc(description: "Paging.")
     countdown_ends_at: String @doc(description: "hmDeals: soonest offer end on this page.")
+    personalized: Boolean @doc(description: "hmPickedForYou: true when the order comes from the shopper's own profile; false: the top-rated fallback. Null for other lists.")
     categories: [HmCategoryCount!] @doc(description: "hmDeals: departments, the active top-level categories, of the deals matching every filter but category_id, catalogue order, with counts; empty when fewer than two. Null for other lists.")
 }
 

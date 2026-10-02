@@ -23,6 +23,7 @@ import '../../../marketplace/domain/product_offer.dart';
 import '../../../marketplace/marketplace_features.dart';
 import '../../../marketplace/presentation/other_sellers.dart';
 import '../../../marketplace/presentation/seller_widgets.dart';
+import '../../../personalization/data/insights_tracker.dart';
 import '../../data/brands_provider.dart';
 import '../../domain/product.dart';
 import '../../domain/product_detail.dart';
@@ -68,6 +69,21 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   final Map<String, int> _selection = <String, int>{};
   int _quantity = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    // "Viewed Product" for Algolia Personalization, once the product has
+    // loaded (the tracker counts a page opened twice in a row as one view).
+    ref.listenManual(productDetailProvider(widget.urlKey), (_, next) {
+      final detail = next.valueOrNull;
+      if (detail == null) return;
+      trackInsights(
+        () => ref.read(insightsTrackerProvider),
+        (tracker) => tracker.productViewed(detail.sku),
+      );
+    }, fireImmediately: true);
+  }
 
   /// "Compare": the sheet of every other seller's offer. An offer is added to
   /// the cart the way this page adds — with this page's quantity — or opened on
