@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../../core/address/delivery_location.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -199,7 +200,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         bottomNavigationBar: product == null ? null : _buyBar(product),
         body: AsyncValueView(
           value: detail,
-          loading: () => _withBack(ProductDetailSkeleton(preview: widget.preview)),
+          loading: () =>
+              _withBack(ProductDetailSkeleton(preview: widget.preview)),
           onRetry: () => ref.invalidate(productDetailProvider(widget.urlKey)),
           data: (data) {
             if (awaitingBundle) {
@@ -301,7 +303,8 @@ class _Content extends ConsumerWidget {
           v.inStock &&
           v.attributes[option.attributeCode] == value.valueIndex &&
           selection.entries.every(
-            (e) => e.key == option.attributeCode || v.attributes[e.key] == e.value,
+            (e) =>
+                e.key == option.attributeCode || v.attributes[e.key] == e.value,
           ),
     );
   }
@@ -347,6 +350,8 @@ class _Content extends ConsumerWidget {
     final rail = product.alsoLike.isNotEmpty;
 
     final blocks = <Widget>[
+      const DeliveryLocationBar(),
+      DeliveryCoverageText(sku: variant?.sku ?? product.sku),
       // Figma 14 "sold-by" (16:1020), above the title.
       if (soldBy != null && !soldBy.isMarketplace) SoldByRow(seller: soldBy),
       Column(
@@ -366,8 +371,7 @@ class _Content extends ConsumerWidget {
         ratingSummary: product.ratingSummary,
         reviewCount: product.reviewCount,
         inStock: inStock,
-        onReviews: () =>
-            context.push(AppRoutes.productReviews(product.urlKey)),
+        onReviews: () => context.push(AppRoutes.productReviews(product.urlKey)),
       ),
       if (price != null)
         Align(
