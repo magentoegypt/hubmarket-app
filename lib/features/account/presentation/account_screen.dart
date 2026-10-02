@@ -49,7 +49,8 @@ import 'widgets/profile_avatar.dart';
 /// Signed out: sign in / create account, and the guest's way back to their
 /// orders — the lookup by order number, e-mail and last name (Figma 26) and,
 /// once this device has placed or looked one up, My Orders (see
-/// `GuestOrderStore`).
+/// `GuestOrderStore`) — then Preferences (Language) and Help (Help centre),
+/// which need no account.
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
@@ -223,12 +224,6 @@ class _Authenticated extends ConsumerWidget {
     final addresses = ref.watch(addressesProvider).valueOrNull?.length;
     final overview = ref.watch(accountOrdersOverviewProvider).valueOrNull;
     final openReturns = ref.watch(openReturnsCountProvider).valueOrNull;
-    final activeLocale = ref.watch(
-      storeControllerProvider.select((s) => s.activeLocale),
-    );
-    final languageLabel = activeLocale == 'ar'
-        ? l10n.languageArabic
-        : l10n.languageEnglish;
     final pushAvailable = ref.watch(pushNotificationsAvailableProvider);
     final newsletterEnabled =
         ref.watch(storeFeaturesProvider).valueOrNull?.newsletterEnabled ??
@@ -347,16 +342,7 @@ class _Authenticated extends ConsumerWidget {
             ],
           ),
           GroupLabel(l10n.accountGroupPreferences),
-          GroupCard(
-            children: [
-              GroupRow(
-                icon: HubIcons.globe,
-                label: l10n.languageToggleLabel,
-                value: languageLabel,
-                onTap: () => context.push(AppRoutes.settings),
-              ),
-            ],
-          ),
+          const GroupCard(children: [_LanguageRow()]),
           GroupLabel(l10n.accountGroupPrivacy),
           GroupCard(
             children: [
@@ -607,8 +593,30 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-/// Signed out: sign in / create account, and the guest's way back to their
-/// orders. Not in the Figma frames; built from the same pieces.
+/// The Language row of Preferences (Figma 20): the active language as its
+/// value, opening Settings, where it is switched. Signed in or not: Welcome is
+/// only met when the app starts, so this is where a guest changes it after.
+class _LanguageRow extends ConsumerWidget {
+  const _LanguageRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final activeLocale = ref.watch(
+      storeControllerProvider.select((s) => s.activeLocale),
+    );
+    return GroupRow(
+      icon: HubIcons.globe,
+      label: l10n.languageToggleLabel,
+      value: activeLocale == 'ar' ? l10n.languageArabic : l10n.languageEnglish,
+      onTap: () => context.push(AppRoutes.settings),
+    );
+  }
+}
+
+/// Signed out: sign in / create account, the guest's way back to their
+/// orders, and the two things that need no account: the language and the Help
+/// centre. Not in the Figma frames; built from the same pieces.
 class _Guest extends ConsumerWidget {
   const _Guest();
 
@@ -672,6 +680,18 @@ class _Guest extends ConsumerWidget {
                 icon: HubIcons.truck,
                 label: l10n.accountTrackOrder,
                 onTap: () => context.push(AppRoutes.guestTrackOrder),
+              ),
+            ],
+          ),
+          GroupLabel(l10n.accountGroupPreferences),
+          const GroupCard(children: [_LanguageRow()]),
+          GroupLabel(l10n.accountGroupHelp),
+          GroupCard(
+            children: [
+              GroupRow(
+                icon: HubIcons.circleHelp,
+                label: l10n.helpCentreTitle,
+                onTap: () => context.push(AppRoutes.help),
               ),
             ],
           ),

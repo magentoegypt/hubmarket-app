@@ -60,7 +60,12 @@ Widget _harness({
         '/signup',
       ])
         GoRoute(path: p, builder: (_, __) => const Scaffold()),
-      for (final p in [AppRoutes.orders, AppRoutes.guestTrackOrder])
+      for (final p in [
+        AppRoutes.orders,
+        AppRoutes.guestTrackOrder,
+        AppRoutes.settings,
+        AppRoutes.help,
+      ])
         GoRoute(
           path: p,
           builder: (_, __) => Scaffold(body: Text('route $p')),
@@ -127,6 +132,85 @@ void main() {
     expect(find.text('Your Hub Market account'), findsOneWidget);
     expect(find.text('Sign In'), findsWidgets);
     expect(find.text('Create Account'), findsWidgets);
+  });
+
+  // Neither needs an account: a guest has no other way to the language switch
+  // (Welcome shows once per launch) or to the Help centre.
+  group('a guest has the language and the Help centre', () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    final ar = lookupAppLocalizations(const Locale('ar'));
+
+    testWidgets('Language shows the language and opens Settings', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_harness(token: null));
+      await tester.pumpAndSettle();
+      expect(find.text(en.accountGroupPreferences.toUpperCase()), findsOneWidget);
+      expect(find.text(en.languageToggleLabel), findsOneWidget);
+      expect(find.text(en.languageEnglish), findsOneWidget);
+
+      await tester.tap(find.text(en.languageToggleLabel));
+      await tester.pumpAndSettle();
+      expect(find.text('route ${AppRoutes.settings}'), findsOneWidget);
+    });
+
+    testWidgets('Help centre opens the Help screen', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_harness(token: null));
+      await tester.pumpAndSettle();
+      expect(find.text(en.accountGroupHelp.toUpperCase()), findsOneWidget);
+
+      await tester.tap(find.text(en.helpCentreTitle));
+      await tester.pumpAndSettle();
+      expect(find.text('route ${AppRoutes.help}'), findsOneWidget);
+    });
+
+    testWidgets('in Arabic the page reads right to left with Arabic as the '
+        'language', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_harness(token: null, locale: 'ar'));
+      await tester.pumpAndSettle();
+      expect(find.text(ar.languageToggleLabel), findsOneWidget);
+      expect(find.text(ar.languageArabic), findsOneWidget);
+      expect(find.text(ar.helpCentreTitle), findsOneWidget);
+      expect(
+        Directionality.of(tester.element(find.text(ar.helpCentreTitle))),
+        TextDirection.rtl,
+      );
+    });
+
+    // The WhatsApp and Sell rows belong to a signed-in customer's Help group;
+    // the Help centre itself lists the contact channels.
+    testWidgets('no WhatsApp or Sell row for a guest', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_harness(token: null));
+      await tester.pumpAndSettle();
+      expect(find.text(en.accountContactWhatsApp), findsNothing);
+      expect(find.text(en.accountSellOnHubMarket), findsNothing);
+    });
+
+    testWidgets('signed in keeps the same Language row', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_harness(token: 'persisted'));
+      await tester.pumpAndSettle();
+      expect(find.text(en.languageToggleLabel), findsOneWidget);
+      expect(find.text(en.languageEnglish), findsOneWidget);
+
+      await tester.tap(find.text(en.languageToggleLabel));
+      await tester.pumpAndSettle();
+      expect(find.text('route ${AppRoutes.settings}'), findsOneWidget);
+    });
   });
 
   group('a guest gets back to their orders', () {
