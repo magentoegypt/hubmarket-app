@@ -31,10 +31,11 @@ class NotificationMessage {
 /// exists) and `ios/Runner/GoogleService-Info.plist` in the Runner target.
 /// Without one, every FCM call degrades to a no-op and the app runs normally.
 ///
-/// Hub Market ships none yet: the previous client's Firebase project was
-/// deliberately not carried over, and this app must never register devices
-/// with it. Adding Hub Market's own config files turns FCM on with no code
-/// change.
+/// Hub Market's own config (project `hub-market-1d742`) is injected by CI from
+/// secrets and never committed (`tool/firebase_config.sh`), so a local build, or
+/// CI without the secrets, has none and runs with FCM off. The previous
+/// client's Firebase project was deliberately not carried over, and this app
+/// must never register devices with it.
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -144,8 +145,8 @@ class NotificationService {
   /// notifications that display its foreground pushes and the permission ask.
   ///
   /// Without FCM there is nothing to show, so nothing starts: no notification
-  /// channel is created and `FirebaseMessaging` is never touched. (The
-  /// Android manifest also drops POST_NOTIFICATIONS until FCM is configured.)
+  /// channel is created and `FirebaseMessaging` is never touched, so nothing
+  /// asks for the notification permission either.
   Future<void> init() async {
     await _initFirebase();
   }
@@ -176,9 +177,9 @@ class NotificationService {
 
   /// Initialises Firebase from the bundled platform config only — never from
   /// options compiled into the app, so there is no path by which a build could
-  /// talk to another client's Firebase project. With no config bundled (the
-  /// state of this app today) `initializeApp` throws, FCM stays off, and
-  /// nothing else depends on it.
+  /// talk to another client's Firebase project. With no config bundled (a local
+  /// build, or CI without the Firebase secrets) `initializeApp` throws, FCM
+  /// stays off, and nothing else depends on it.
   Future<void> _initFirebase() async {
     try {
       await Firebase.initializeApp();
