@@ -45,6 +45,18 @@ void main() {
     expect(single, isEmpty, reason: 'single-form Arabic plurals');
   });
 
+  test('a review count is never written without its plural', () {
+    // "{count} reviews" outside a plural reads "1 reviews" for one review.
+    final flat = <String>[
+      for (final key in _messageKeys(en))
+        if (en[key] is String &&
+            !_isPlural(en[key]) &&
+            RegExp(r'\{count\}\s+reviews?\b').hasMatch(en[key] as String))
+          key,
+    ];
+    expect(flat, isEmpty, reason: 'review counts without a plural');
+  });
+
   test('the checks see a missing placeholder and a missing plural', () {
     expect(_usesPlaceholder('{count} نتيجة', 'count'), isTrue);
     expect(_usesPlaceholder('{count, plural, other{نتائج}}', 'count'), isTrue);

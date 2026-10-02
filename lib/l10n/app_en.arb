@@ -1974,7 +1974,7 @@
     }
   },
   "bundleUnavailable": "Bundles can't be added in the app right now.",
-  "reviewsCount": "{count} reviews",
+  "reviewsCount": "{count, plural, =1{1 review} other{{count} reviews}}",
   "@reviewsCount": {
     "placeholders": {
       "count": {
@@ -1991,7 +1991,7 @@
       }
     }
   },
-  "pdpRatingReviews": "{rating} · {count} reviews",
+  "pdpRatingReviews": "{rating} · {count, plural, =1{1 review} other{{count} reviews}}",
   "@pdpRatingReviews": {
     "placeholders": {
       "rating": {
