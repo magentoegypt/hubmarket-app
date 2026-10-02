@@ -8,14 +8,18 @@ permissions:
   contents: read
 jobs:
   ios:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.44.4
           cache: true
+      - run: mkdir -p build/ios/SourcePackages
       - run: flutter pub get
       - name: Run on iPhone simulator
         shell: bash
