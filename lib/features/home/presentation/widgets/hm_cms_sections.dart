@@ -17,9 +17,10 @@ import '../../domain/home_content.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// The delivery-promise strip under the header (Figma 07 "utility-strip"):
-/// the `hm_delivery_promise` block's line and "Track order ›". 8 pt above and
-/// below its Caption Strong line (32 pt in English, 34 in Arabic); the track
-/// link's hit area runs the strip's height and ends 16 pt from the edge.
+/// the first clause of the `hm_delivery_promise` block's line, on one line,
+/// and "Track order ›". 8 pt above and below its Caption Strong line (32 pt in
+/// English, 34 in Arabic); the track link's hit area runs the strip's height
+/// and ends 16 pt from the edge.
 class HmDeliveryStrip extends ConsumerWidget {
   const HmDeliveryStrip({super.key, required this.text});
 
@@ -50,12 +51,13 @@ class HmDeliveryStrip extends ConsumerWidget {
                       color: AppColors.accentStrong,
                     ),
                     const SizedBox(width: 6),
-                    // One line, as the frame draws it; the admin's longer copy
-                    // ("… · Fast nationwide shipping") wraps instead of being cut.
+                    // One line, as the frame draws it: the admin's copy up to its
+                    // first "·" ("… · Fast nationwide shipping" is website copy
+                    // and would not fit beside the track link).
                     Expanded(
                       child: Text(
-                        text,
-                        maxLines: 2,
+                        HomeContentParser.firstClause(text),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: style,
                       ),
@@ -68,8 +70,11 @@ class HmDeliveryStrip extends ConsumerWidget {
               onTap: () => context.push(
                 signedIn ? AppRoutes.orders : AppRoutes.guestTrackOrder,
               ),
+              // 4 pt on the promise's side, 8 on the edge's: the icon and label
+              // keep the frame's place and the promise gets the room (its
+              // first clause misses a 360 dp phone by 0.6 pt with 8 on both).
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 8, 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

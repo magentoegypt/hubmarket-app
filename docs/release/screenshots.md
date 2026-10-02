@@ -104,9 +104,14 @@ first content:
    photographed order slip as their picture, "test Bundle Product" sold by "V8S2", stores named
    "Test 1" and "Test3", a Pharmacy store used for tests. The bundles shot (`07`) is the weakest
    until real bundles exist.
-2. **Content that names the wrong market.** The hero says "Fashion From Approved Egyptian Sellers",
-   the store page says "Giza, Egypt", and the delivery strip is cut off ("Fast natio…"). These come
-   from the admin (Hero Banner, the seller profile, the `hm_delivery_promise` block), not the app.
+2. **Content that names the wrong market.** The hero says "Fashion From Approved Egyptian Sellers"
+   and the store page says "Giza, Egypt". These come from the admin (Hero Banner, the seller
+   profile), not the app.
+   **The delivery strip changed after the first captures.** The `01-home` shots of 2 Oct show it on two
+   lines ("… orders · Fast nationwide shipping"). The Figma draws one line, so the app now shows the
+   first clause of the `hm_delivery_promise` block ("Free delivery on qualifying orders"). Re-capture
+   `01-home` (both platforms, both languages) from a build with that change before submitting, and
+   replace it in Play Console and App Store Connect.
 3. **Arabic needs Arabic content.** The Arabic set shows product and store names as the catalogue
    holds them; some are English only. One known cosmetic issue: the Arabic category tile's second
    line is cut ("أكثر من 45 منت…").

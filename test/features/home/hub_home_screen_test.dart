@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,7 +62,7 @@ final _rail = <Product>[
   _p('Burgundy Rocking Chair', 180),
 ];
 
-Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false}) {
+Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false, Map<String, String> cms = _cms}) {
   final router = GoRouter(
     initialLocation: '/home',
     routes: [
@@ -79,7 +80,7 @@ Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false}) {
       secureTokenStoreProvider.overrideWithValue(FakeSecureTokenStore()),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       hubAppOverride(const HubAppState.unavailable()),
-      homeCmsBlocksProvider.overrideWith((ref) async => _cms),
+      homeCmsBlocksProvider.overrideWith((ref) async => cms),
       homeCategoriesProvider.overrideWith(
         (ref) async => storeDown
             ? throw const Failure(FailureKind.service, detail: 'HTTP 503')
@@ -106,12 +107,12 @@ Widget _harness(String locale, GlobalKey boundary, {bool storeDown = false}) {
   );
 }
 
-Future<void> _render(WidgetTester tester, String locale) async {
-  tester.view.physicalSize = const Size(390, 3400);
+Future<void> _render(WidgetTester tester, String locale, {double width = 390, Map<String, String> cms = _cms}) async {
+  tester.view.physicalSize = Size(width, 3400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final key = GlobalKey();
-  await tester.pumpWidget(_harness(locale, key));
+  await tester.pumpWidget(_harness(locale, key, cms: cms));
   await tester.pumpAndSettle();
 }
 
@@ -120,7 +121,10 @@ void main() {
 
   testWidgets('Home renders every Build 1 section from Magento content (EN)', (tester) async {
     await _render(tester, 'en');
-    expect(find.text('Free delivery on qualifying orders · Fast nationwide shipping'), findsOneWidget);
+    // The strip is one line, as in Figma 07: the CMS line up to its first "·".
+    expect(find.text('Free delivery on qualifying orders'), findsOneWidget);
+    expect(find.textContaining('Fast nationwide'), findsNothing);
+    expect(tester.getSize(find.byType(HmDeliveryStrip)), const Size(390, 32));
     expect(find.text('Shop by category'), findsOneWidget);
     expect(find.text('Super Market'), findsWidgets); // tile + rail title
     expect(find.text('Corner Sofa Bed'), findsWidgets); // rail products
@@ -147,6 +151,22 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  // The live copy has a second clause ("· Fast nationwide shipping") that the
+  // frame's one-line strip does not carry; the first clause fits beside the
+  // track link on the 360 dp test phone, uncut.
+  for (final (locale, promise, clause) in const [
+    ('en', 'Free delivery on qualifying orders &middot; Fast nationwide shipping', 'Free delivery on qualifying orders'),
+    ('ar', 'توصيل مجاني على الطلبات المؤهلة &middot; شحن سريع', 'توصيل مجاني على الطلبات المؤهلة'),
+  ]) {
+    testWidgets('the delivery strip is one uncut line on a 360 dp phone ($locale)', (tester) async {
+      await _render(tester, locale, width: 360, cms: {..._cms, HomeCmsBlocks.deliveryPromise: '<p>$promise</p>'});
+      expect(find.text(clause), findsOneWidget);
+      expect(tester.getSize(find.byType(HmDeliveryStrip)), Size(360, locale == 'ar' ? 34 : 32));
+      expect(tester.renderObject<RenderParagraph>(find.text(clause)).didExceedMaxLines, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('A failed catalogue load offers Retry instead of a blank Home', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
