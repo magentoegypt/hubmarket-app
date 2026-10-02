@@ -7,31 +7,74 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/search_history.dart';
+import '../../../personalization/domain/personal_picks.dart';
+import '../../../personalization/presentation/personal_picks_provider.dart';
 import '../../domain/hm_home.dart';
 import 'hm_product_rail.dart';
 import '../../../../app/theme/hub_icons.dart';
 
 /// Picked For You (Figma 07 "Picked For You (AI)"): a tinted band — the
 /// admin's title and subtitle, Refresh, the customer's own recent searches as
-/// chips, and the products. No "AI" badge: the backend fills the section with
-/// top-rated products, not a recommendation engine (QA02).
-class HmPickedForYou extends ConsumerWidget {
+/// chips, and the products.
+///
+/// The Home draws the cached top-rated section first (the server sends 16);
+/// Refresh shows the next four of them. Once `hmPickedForYou` says the
+/// shopper has a profile ([PersonalPicks.personalized]) its picks replace
+/// them, and only then the section carries the admin's badge ("AI ENGINE")
+/// and the "Personalised recommendations…" subtitle: the app never labels the
+/// generic list as personal.
+class HmPickedForYou extends ConsumerStatefulWidget {
   const HmPickedForYou({super.key, required this.section, this.onRefresh});
 
   final HmHomeSection section;
+
+  /// Reloads the Home: what Refresh does when there are no more picks than
+  /// the four on show.
   final VoidCallback? onRefresh;
 
   /// Recent searches shown as chips.
   static const int searchLimit = 4;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HmPickedForYou> createState() => _HmPickedForYouState();
+}
+
+class _HmPickedForYouState extends ConsumerState<HmPickedForYou> {
+  /// Where Refresh has got to in the pool.
+  int _offset = 0;
+
+  /// Whether the pool on show is the shopper's own: a swap starts it over.
+  bool _wasPersonal = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final section = widget.section;
+    final onRefresh = widget.onRefresh;
     final t = AppTextStyles.of(context);
     final l10n = AppLocalizations.of(context);
     final searches = ref
         .watch(searchHistoryProvider)
-        .take(searchLimit)
+        .take(HmPickedForYou.searchLimit)
         .toList(growable: false);
+    final personal = section.personalizable
+        ? ref.watch(personalPicksProvider).valueOrNull
+        : null;
+    final isPersonal = personal != null;
+    if (isPersonal != _wasPersonal) {
+      _wasPersonal = isPersonal;
+      _offset = 0;
+    }
+    final pool = personal?.items ?? section.products;
+    final rotates = pool.length > kPickedPageSize;
+    final badge = isPersonal ? (section.badge ?? '').trim() : '';
+    final subtitle = isPersonal
+        ? l10n.homePickedPersonalSubtitle
+        : section.subtitle;
+    final refresh = rotates
+        ? () => setState(
+            () => _offset = nextPickedOffset(_offset, pool.length),
+          )
+        : onRefresh;
     return ColoredBox(
       color: AppColors.infoSubtle,
       child: Padding(
@@ -48,6 +91,10 @@ class HmPickedForYou extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (badge.isNotEmpty) ...[
+                          _Badge(label: badge.toUpperCase()),
+                          const SizedBox(height: 6),
+                        ],
                         if (section.hasHeader)
                           Text(
                             section.title!,
@@ -55,10 +102,10 @@ class HmPickedForYou extends ConsumerWidget {
                               color: AppColors.inkHeading,
                             ),
                           ),
-                        if (section.subtitle != null) ...[
+                        if (subtitle != null) ...[
                           if (section.hasHeader) const SizedBox(height: 6),
                           Text(
-                            section.subtitle!,
+                            subtitle,
                             style: t.caption.copyWith(
                               color: AppColors.inkMuted,
                             ),
@@ -69,7 +116,7 @@ class HmPickedForYou extends ConsumerWidget {
                   ),
                   // The text takes the width Refresh leaves (267 + 91 in the
                   // frame, nothing between).
-                  if (onRefresh != null) ...[
+                  if (refresh != null) ...[
                     Material(
                       color: Colors.white,
                       shape: const StadiumBorder(
@@ -77,7 +124,7 @@ class HmPickedForYou extends ConsumerWidget {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: InkWell(
-                        onTap: onRefresh,
+                        onTap: refresh,
                         // 1 pt border + 12 / 8 pt of padding: 34 pt high.
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -131,9 +178,55 @@ class HmPickedForYou extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 14),
-            HmProductRail(products: section.products),
+            // A new key on every Refresh: the rail starts from its first card.
+            HmProductRail(
+              key: ValueKey('$isPersonal-$_offset'),
+              products: pickedPage(pool, _offset),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The pill above the title (Figma `ai-badge`): the admin's badge text in
+/// capitals after a sparkle, white on the brand navy, as wide as the text
+/// column.
+class _Badge extends StatelessWidget {
+  const _Badge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTextStyles.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.brandPrimary,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 12,
+            height: 12,
+            child: FittedBox(
+              child: Text('✨', style: TextStyle(fontSize: 12, height: 1)),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.micro.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

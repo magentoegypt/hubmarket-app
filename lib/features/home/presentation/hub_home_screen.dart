@@ -24,6 +24,7 @@ import '../../catalog/presentation/search_providers.dart';
 import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
 import '../../notifications/presentation/notification_bell.dart';
+import '../../personalization/presentation/personal_picks_provider.dart';
 import '../data/home_content_repository.dart';
 import '../domain/hm_home.dart';
 import 'active_order_providers.dart';
@@ -54,6 +55,7 @@ class HubHomeScreen extends ConsumerWidget {
   Future<void> _reloadHubApp(WidgetRef ref) async {
     ref
       ..invalidate(hmHomeProvider)
+      ..invalidate(personalPicksProvider)
       ..invalidate(activeOrderProvider);
     try {
       await ref.read(hmHomeProvider.future);

@@ -91,6 +91,7 @@ class HmHomeSection {
     required this.type,
     this.title,
     this.subtitle,
+    this.badge,
     this.limit = 0,
     this.endsAt,
     this.countdownEndsAt,
@@ -112,6 +113,10 @@ class HmHomeSection {
   /// into null — hides the header.
   final String? title;
   final String? subtitle;
+
+  /// The small pill above the title (admin Badge field, store view's language);
+  /// null or blank: no pill.
+  final String? badge;
   final int limit;
 
   /// Scheduled end (UTC); the section hides after it.
