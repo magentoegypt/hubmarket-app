@@ -6,6 +6,7 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/config/app_config.dart';
+import '../../../../core/address/delivery_location.dart';
 import '../../../../core/widgets/hub_button.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -33,6 +34,8 @@ class HmDeliveryStrip extends ConsumerWidget {
       authControllerProvider.select((s) => s.isAuthenticated),
     );
     final style = t.captionStrong.copyWith(color: AppColors.accentStrong);
+    final destination = ref.watch(deliveryLocationProvider);
+    final ar = Localizations.localeOf(context).languageCode == 'ar';
     return Material(
       color: AppColors.accentSubtle,
       child: Padding(
@@ -40,27 +43,30 @@ class HmDeliveryStrip extends ConsumerWidget {
         child: Row(
           children: [
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    const Icon(
-                      HubIcons.truck,
-                      size: 14,
-                      color: AppColors.accentStrong,
-                    ),
-                    const SizedBox(width: 6),
-                    // One line, as the frame draws it; the admin's longer copy
-                    // ("… · Fast nationwide shipping") wraps instead of being cut.
-                    Expanded(
-                      child: Text(
-                        text,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: style,
+              child: InkWell(
+                onTap: () => showDeliveryPicker(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        HubIcons.truck,
+                        size: 14,
+                        color: AppColors.accentStrong,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      // Preserve the configured delivery copy until a shopper
+                      // selects a destination; this strip now opens the picker.
+                      Expanded(
+                        child: Text(
+                          destination?.city?.label(ar) ?? text,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: style,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -255,11 +261,17 @@ class HmTrustGrid extends StatelessWidget {
   /// Words (English and Arabic) that pick an item's glyph; the position in
   /// the row is the fallback.
   static const List<(List<String>, IconData)> _byWord = [
-    (['whatsapp', 'support', 'help', 'واتساب', 'دعم', 'مساعدة'], HubIcons.messageCircle),
+    (
+      ['whatsapp', 'support', 'help', 'واتساب', 'دعم', 'مساعدة'],
+      HubIcons.messageCircle,
+    ),
     (['return', 'refund', 'إرجاع', 'استرجاع', 'استبدال'], HubIcons.rotateCcw),
     (['deliver', 'shipping', 'توصيل', 'شحن'], HubIcons.truck),
     (['pay', 'card', 'دفع', 'بطاق'], HubIcons.creditCard),
-    (['seller', 'trust', 'verified', 'بائع', 'موثوق', 'موثّق'], HubIcons.shieldCheck),
+    (
+      ['seller', 'trust', 'verified', 'بائع', 'موثوق', 'موثّق'],
+      HubIcons.shieldCheck,
+    ),
   ];
 
   static IconData iconFor(TrustItem item, int index) {
@@ -385,7 +397,9 @@ class HmSellCard extends ConsumerWidget {
           final link = block.inlines
               .where((i) => i.href != null && i.text.trim().isNotEmpty)
               .firstOrNull;
-          if (link != null && ctaUrl == null && block.text == link.text.trim()) {
+          if (link != null &&
+              ctaUrl == null &&
+              block.text == link.text.trim()) {
             ctaLabel = link.text.trim();
             ctaUrl = link.href;
           } else if (block.text.isNotEmpty) {
@@ -459,12 +473,8 @@ class HmSellCard extends ConsumerWidget {
                 label: label,
                 style: HubButtonStyle.accent,
                 expand: false,
-                onPressed: () => openStorefrontUrl(
-                  context,
-                  ref,
-                  url,
-                  title: title,
-                ),
+                onPressed: () =>
+                    openStorefrontUrl(context, ref, url, title: title),
               ),
             ],
           ],
@@ -497,7 +507,9 @@ class HmCmsBlockView extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: CmsHtmlView(
         blocks: blocks,
-        mediaBase: Uri.parse(ref.read(appConfigProvider).graphqlEndpoint).origin,
+        mediaBase: Uri.parse(
+          ref.read(appConfigProvider).graphqlEndpoint,
+        ).origin,
         onLink: (href) => openStorefrontUrl(context, ref, href),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/offline_state.dart';
+import '../../core/address/delivery_location.dart';
 import '../routes.dart';
 import 'back_swipe.dart';
 import 'hub_bottom_nav.dart';
@@ -91,7 +92,19 @@ class _HubScaffoldState extends State<HubScaffold> {
       onPopInvokedWithResult: _onBack,
       child: Scaffold(
         appBar: widget.appBar,
-        body: widget.body,
+        body:
+            widget.showTabBar &&
+                widget.currentTab != AppTab.account &&
+                widget.currentTab != AppTab.home
+            ? Column(
+                children: [
+                  DeliveryLocationBar(
+                    showCartChecks: widget.currentTab == AppTab.cart,
+                  ),
+                  Expanded(child: widget.body),
+                ],
+              )
+            : widget.body,
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
