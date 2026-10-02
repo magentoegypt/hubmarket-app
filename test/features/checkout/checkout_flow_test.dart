@@ -60,7 +60,7 @@ void main() {
     );
     // The frame's order: apartment, street, area, emirate, country.
     expect(
-      find.text('1204, Marina Gate 2, Dubai — Dubai Marina, United Arab Emirates'),
+      find.text('1204, Marina Gate 2, Dubai / Dubai Marina, United Arab Emirates'),
       findsOneWidget,
     );
     expect(find.text('Standard delivery'), findsOneWidget);
@@ -90,7 +90,7 @@ void main() {
     await mount(tester, repo);
     await throughAddress(tester);
     final address = repo.lastAddress!['address'] as Map;
-    expect(address['city'], 'Dubai — Dubai Marina');
+    expect(address['city'], 'Dubai / Dubai Marina');
     expect(address['country_code'], 'AE');
     expect(address['region_id'], 200);
   });

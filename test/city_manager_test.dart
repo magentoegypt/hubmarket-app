@@ -32,11 +32,11 @@ void main() {
     CitySelection? value;
     final form = GlobalKey<FormState>();
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Form(key: form, child: CityManagerFields(
-      directory: directory(), initialCity: 'Dubai — Downtown', onChanged: (v) => value = v,
+      directory: directory(), initialCity: 'Dubai / Downtown', onChanged: (v) => value = v,
     )))));
     await tester.pumpAndSettle();
     expect(value?.valid, true);
-    expect(value?.addressCity, 'Dubai — Downtown');
+    expect(value?.addressCity, 'Dubai / Downtown');
     expect(value?.regionId, 200);
     expect(find.text('Emirate'), findsNothing);
     expect(form.currentState!.validate(), true);
@@ -59,7 +59,7 @@ void main() {
     CitySelection? value;
     final form = GlobalKey<FormState>();
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: Form(key: form, child: CityManagerFields(
-      directory: directory(), initialCity: 'Dubai — Downtown', onChanged: (v) => value = v,
+      directory: directory(), initialCity: 'Dubai / Downtown', onChanged: (v) => value = v,
     )))));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('cm-country-AE')));

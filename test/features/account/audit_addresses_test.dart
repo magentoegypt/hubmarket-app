@@ -67,7 +67,7 @@ List<CustomerAddress> _book(String locale) {
       telephone: '+971501234567',
       apartment: ar ? 'شقة 1204' : 'Apt 1204',
       street: ar ? 'مارينا جيت 2' : 'Marina Gate 2',
-      city: 'Dubai — Dubai Marina',
+      city: 'Dubai / Dubai Marina',
       region: ar ? 'دبي' : 'Dubai',
       defaultShipping: true,
       labelText: ar ? 'المنزل' : 'Home',
@@ -117,7 +117,7 @@ void main() {
       findsNWidgets(2),
     );
     expect(
-      find.text('Apt 1204, Marina Gate 2, Dubai — Dubai Marina, Dubai, UAE'),
+      find.text('Apt 1204, Marina Gate 2, Dubai / Dubai Marina, Dubai, UAE'),
       findsOneWidget,
     );
     expect(
@@ -210,7 +210,7 @@ void main() {
     expect(saved.lastName, 'Ahmed');
     expect(saved.telephone, '+971501234567');
     expect(saved.regionId, 200);
-    expect(saved.city, 'Dubai — Dubai Marina');
+    expect(saved.city, 'Dubai / Dubai Marina');
     expect(saved.street, 'Marina Gate 2');
     expect(saved.apartment, '1204');
     expect(saved.labelOptionId, '2');

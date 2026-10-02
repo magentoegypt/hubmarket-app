@@ -37,7 +37,7 @@ class CitySelection {
   bool get valid => ready && city != null && (country != 'AE' || !localityRequired || locality != null);
   String get addressCity => city == null
       ? ''
-      : '${city!.name}${locality == null ? '' : ' — ${locality!.name}'}';
+      : '${city!.name}${locality == null ? '' : ' / ${locality!.name}'}';
 }
 
 class CityDirectory {
@@ -169,7 +169,7 @@ class _CityManagerFieldsState extends State<CityManagerFields> {
           : <CityLocation>[];
       if (!mounted || ticket != generation) return;
       CityLocation? selected;
-      final parts = preserve ? widget.initialCity.split(' — ') : <String>[];
+      final parts = preserve ? widget.initialCity.split(' / ') : <String>[];
       for (final c in cc) {
         if (parts.isNotEmpty &&
             (c.name == parts[0] || c.arabicName == parts[0])) {
