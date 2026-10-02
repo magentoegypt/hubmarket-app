@@ -33,6 +33,18 @@ final trendingSearchesProvider = Provider<List<String>>(
       ref.watch(hmAppConfigProvider)?.search.trendingTerms ?? const <String>[],
 );
 
+/// The store's top searches from Algolia (its suggestions index asked for an
+/// empty query): the Home's Picked For You shows them in place of "Your
+/// searches" for a shopper who has not searched yet. Empty when the store has
+/// none or they can't be read, and the row is then left out. Kept for the
+/// session; asked again after a store switch and by the Home's pull to refresh.
+final topSearchesProvider = FutureProvider<List<String>>((ref) {
+  final storeCode = ref.watch(
+    storeControllerProvider.select((s) => s.activeStoreCode),
+  );
+  return ref.watch(catalogSearchProvider).topSearches(storeCode: storeCode);
+});
+
 /// The no-results page's "Popular right now" (Figma S2): the store's best
 /// sellers, from the Hub Market App (`hmBestSellers`). Empty when they can't
 /// be read — the rail then isn't shown. Only watched while the Hub Market App

@@ -57,6 +57,7 @@ class HubHomeScreen extends ConsumerWidget {
     ref
       ..invalidate(hmHomeProvider)
       ..invalidate(personalPicksProvider)
+      ..invalidate(topSearchesProvider)
       ..invalidate(activeOrderProvider);
     try {
       await ref.read(hmHomeProvider.future);

@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../catalog/presentation/search_history.dart';
+import '../../../catalog/presentation/search_providers.dart';
 import '../../../personalization/domain/personal_picks.dart';
 import '../../../personalization/presentation/personal_picks_provider.dart';
 import '../../domain/hm_home.dart';
@@ -15,7 +16,8 @@ import '../../../../app/theme/hub_icons.dart';
 
 /// Picked For You (Figma 07 "Picked For You (AI)"): a tinted band — the
 /// admin's title and subtitle, Refresh, the customer's own recent searches as
-/// chips, and the products.
+/// chips (before they have searched, the store's top searches from Algolia,
+/// labelled as such), and the products.
 ///
 /// The Home draws the cached top-rated section first (the server sends 16);
 /// Refresh shows the next four of them. Once `hmPickedForYou` says the
@@ -52,10 +54,17 @@ class _HmPickedForYouState extends ConsumerState<HmPickedForYou> {
     final onRefresh = widget.onRefresh;
     final t = AppTextStyles.of(context);
     final l10n = AppLocalizations.of(context);
-    final searches = ref
+    final own = ref
         .watch(searchHistoryProvider)
         .take(HmPickedForYou.searchLimit)
         .toList(growable: false);
+    // Before the shopper has searched, the store's top searches from Algolia
+    // take the row, under a label of their own: they are not "your" searches.
+    final searches = own.isNotEmpty
+        ? own
+        : (ref.watch(topSearchesProvider).valueOrNull ?? const <String>[])
+              .take(HmPickedForYou.searchLimit)
+              .toList(growable: false);
     final personal = section.personalizable
         ? ref.watch(personalPicksProvider).valueOrNull
         : null;
@@ -165,7 +174,9 @@ class _HmPickedForYouState extends ConsumerState<HmPickedForYou> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      l10n.homeYourSearches,
+                      own.isNotEmpty
+                          ? l10n.homeYourSearches
+                          : l10n.homeTopSearches,
                       style: t.micro.copyWith(color: AppColors.inkMuted),
                     ),
                     for (final term in searches)

@@ -207,8 +207,10 @@ app (the frame and the website do it; the admin types any case; a tile's kicker 
   "Personalised recommendations based on your search history & behaviour" subtitle and the shopper's own picks come
   with `hmPickedForYou` (`personalized: true`). Before that, and for a new install (the shopper first says Allow
   to "Personalise my picks?", and Algolia builds profiles in batches, about an hour after the first events), it is
-  the 16 top-rated products, four at a time, with the admin's subtitle and no pill. The "YOUR SEARCHES" chips appear
-  once the customer has searched.
+  the 16 top-rated products, four at a time, with the admin's subtitle and no pill. The chips row shows the
+  customer's own recent searches ("YOUR SEARCHES:"); before they have searched it shows the store's top searches from
+  Algolia under "TOP SEARCHES:" (the store's `<index>_suggestions` index asked for an empty query, terms of at most
+  two words and 20 characters, four at most): they are not the shopper's own, so the frame's label is not used.
 - Signed in only: the active-order card, the bell's unread dot, the cart count on the tab.
 
 Small known gaps: Welcome's hero is a little shorter than the frame on a phone (the frame's content is taller than the
