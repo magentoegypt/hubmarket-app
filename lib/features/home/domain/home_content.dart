@@ -37,6 +37,18 @@ abstract final class HomeContentParser {
     return text.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
+  /// The first clause of a promise line: the text before its first `·` or `•`
+  /// ("Free delivery on qualifying orders · Fast nationwide shipping" becomes
+  /// "Free delivery on qualifying orders"). A line with no separator, or with
+  /// nothing but separators, comes back as it is.
+  static String firstClause(String text) {
+    for (final clause in text.split(RegExp('[·•]'))) {
+      final trimmed = clause.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return text;
+  }
+
   static List<PromoTile> promos(String html) {
     final doc = html_parser.parseFragment(html);
     return doc

@@ -55,6 +55,32 @@ void main() {
     );
   });
 
+  test('first clause: the text before the first middle dot or bullet', () {
+    expect(
+      HomeContentParser.firstClause('Free delivery on qualifying orders · Fast nationwide shipping'),
+      'Free delivery on qualifying orders',
+    );
+    expect(HomeContentParser.firstClause('Free delivery • Fast • Cheap'), 'Free delivery');
+    expect(
+      HomeContentParser.firstClause('توصيل مجاني على الطلبات المؤهلة · شحن سريع'),
+      'توصيل مجاني على الطلبات المؤهلة',
+    );
+    // The separator needs no spaces around it.
+    expect(HomeContentParser.firstClause('Free delivery·Fast shipping'), 'Free delivery');
+  });
+
+  test('first clause: no separator, or nothing before it, keeps the text', () {
+    expect(
+      HomeContentParser.firstClause('Free delivery on qualifying orders'),
+      'Free delivery on qualifying orders',
+    );
+    // A leading separator skips to the first clause that has text.
+    expect(HomeContentParser.firstClause('· Fast shipping'), 'Fast shipping');
+    // Nothing but separators: unchanged, never an empty strip line.
+    expect(HomeContentParser.firstClause('·'), '·');
+    expect(HomeContentParser.firstClause(''), '');
+  });
+
   test('empty or foreign markup yields nothing rather than half-parsed tiles', () {
     expect(HomeContentParser.promos(''), isEmpty);
     expect(HomeContentParser.trust('<p>Not a trust block</p>'), isEmpty);
