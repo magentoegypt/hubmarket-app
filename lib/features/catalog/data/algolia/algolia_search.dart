@@ -168,6 +168,58 @@ AlgoliaQuery? trySuggestionsQuery(
   });
 }
 
+/// The most words and characters a top search may have to fit in a chip: the
+/// store's search terms also hold whole product names.
+const int kTopSearchMaxWords = 2;
+const int kTopSearchMaxLength = 20;
+
+/// The store's top searches (the Home's Picked For You, for a shopper with no
+/// searches of their own): its suggestions index asked for an empty query,
+/// which answers the most popular terms in Algolia's own order. The index is
+/// [AlgoliaSettings.suggestionIndex] when the storefront's autocomplete reads
+/// one, otherwise `<index>_suggestions`, where the Magento extension keeps the
+/// store's search terms: the Hub Market App API lists no suggestions index
+/// today, yet this one exists and is filled.
+///
+/// [limit] terms are wanted and four times as many asked for, since some are
+/// too long to be a chip ([topSearchesFromResult]).
+AlgoliaQuery topSearchesQuery(AlgoliaSettings settings, {int limit = 4}) =>
+    AlgoliaQuery(settings.suggestionIndex ?? '${settings.indexName}_suggestions', {
+      'query': '',
+      'hitsPerPage': math.max(limit, 1) * 4,
+      'attributesToRetrieve': ['query'],
+      'attributesToHighlight': <String>[],
+      // Reading the list is not a shopper searching: not counted in Analytics.
+      'analytics': false,
+    });
+
+/// The top searches of a [topSearchesQuery] answer: distinct, in Algolia's
+/// order, short enough for a chip ([kTopSearchMaxWords], [kTopSearchMaxLength]),
+/// at most [limit].
+List<String> topSearchesFromResult(
+  Map<String, dynamic> result, {
+  int limit = 4,
+}) {
+  final seen = <String>{};
+  final out = <String>[];
+  for (final hit
+      in (result['hits'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()) {
+    final text = hit['query'] is String
+        ? (hit['query'] as String).trim().replaceAll(RegExp(r'\s+'), ' ')
+        : '';
+    if (text.isEmpty ||
+        text.length > kTopSearchMaxLength ||
+        text.split(' ').length > kTopSearchMaxWords ||
+        !seen.add(text.toLowerCase())) {
+      continue;
+    }
+    out.add(text);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /// The suggested queries of a [trySuggestionsQuery] answer: distinct, in
 /// Algolia's order, never [query] itself, at most [limit].
 List<String> trySuggestionsFromResult(
@@ -515,6 +567,26 @@ class AlgoliaSearch {
         queries: [request],
       );
       return trySuggestionsFromResult(results.first, query: query, limit: limit);
+    } on Object {
+      return const <String>[];
+    }
+  }
+
+  /// The store's top searches (see [topSearchesQuery]); empty when its
+  /// suggestions index can't be read. Never rests Algolia: a missing
+  /// suggestions index says nothing about search.
+  Future<List<String>> topSearches({
+    required String storeCode,
+    int limit = 4,
+  }) async {
+    try {
+      final settings = await _settings.settingsFor(storeCode);
+      final results = await _client.multiQuery(
+        appId: settings.appId,
+        apiKey: settings.searchKey,
+        queries: [topSearchesQuery(settings, limit: limit)],
+      );
+      return topSearchesFromResult(results.first, limit: limit);
     } on Object {
       return const <String>[];
     }

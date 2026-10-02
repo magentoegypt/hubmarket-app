@@ -169,6 +169,13 @@ class CatalogSearch {
     required String query,
   }) => _algolia.trySuggestions(storeCode: storeCode, query: query);
 
+  /// The store's top searches, from Algolia; none when it can't say (GraphQL
+  /// has no searches to offer).
+  Future<List<String>> topSearches({
+    required String storeCode,
+    int limit = 4,
+  }) => _algolia.topSearches(storeCode: storeCode, limit: limit);
+
   static ProductSortField _productSort(SearchSort sort) =>
       switch ((sort.attribute, sort.descending)) {
         ('price', false) => ProductSortField.priceAsc,

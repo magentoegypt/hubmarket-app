@@ -83,7 +83,10 @@ sheet (Allow / Not now, `PersonalizationConsentPrompt`), and until Allow the app
 makes no token and does not call `hmPickedForYou`. Settings > Personalised picks changes the
 answer, and turning it off deletes the token; the privacy documents and `PrivacyInfo.xcprivacy`
 describe it. Test fakes answer the question with Not now (`FakeLocalCache()`; use
-`FakeLocalCache.neverAsked()` to open it).
+`FakeLocalCache.neverAsked()` to open it). The chips row of the section shows the shopper's own
+recent searches ("YOUR SEARCHES:"); before they have searched it shows the store's top searches
+from Algolia ("TOP SEARCHES:": `<index>_suggestions` asked for an empty query, analytics off;
+`topSearchesProvider`), which needs no consent.
 
 Only the app icon, the native launch screen and interface wording ship with the
 app (see Figma G3).

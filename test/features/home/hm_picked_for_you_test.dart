@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
+import 'package:hubmarket_app/features/catalog/presentation/search_providers.dart';
 import 'package:hubmarket_app/features/home/domain/hm_home.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_picked_for_you.dart';
 import 'package:hubmarket_app/features/home/presentation/widgets/hm_product_rail.dart';
@@ -11,6 +15,7 @@ import 'package:hubmarket_app/features/personalization/presentation/personal_pic
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../support/audit_pump.dart';
+import '../../support/fakes.dart';
 import '../../support/fonts.dart';
 
 List<Product> _pool(String name, [int count = 16]) => [
@@ -46,6 +51,7 @@ Future<void> _mount(
   Future<PersonalPicks?> Function()? picks,
   VoidCallback? onRefresh,
   String locale = 'en',
+  List<Override> more = const [],
 }) => pumpAudit(
   tester,
   locale: locale,
@@ -59,6 +65,7 @@ Future<void> _mount(
     personalPicksProvider.overrideWith(
       (ref) => picks == null ? Future.value(null) : picks(),
     ),
+    ...more,
   ],
 );
 
@@ -107,6 +114,107 @@ void main() {
       await tester.pump();
       expect(reloads, 1);
       expect(_shown(tester), ['Top0', 'Top1', 'Top2', 'Top3']);
+    });
+  });
+
+  group('the searches row', () {
+    // A shopper's own searches, as the search screen keeps them.
+    Override searched(List<String> terms) => localCacheProvider.overrideWithValue(
+      FakeLocalCache()..writeString('search_history', jsonEncode(terms)),
+    );
+
+    testWidgets('a shopper who has not searched sees the store\'s top searches '
+        'from Algolia, under a label of their own, four at most', (tester) async {
+      await _mount(
+        tester,
+        _section(),
+        more: [
+          topSearchesProvider.overrideWith(
+            (ref) async => ['bag', 'shirt', 'dress', 'women', 'shoes'],
+          ),
+        ],
+      );
+      await tester.pump();
+
+      expect(find.text(en.homeTopSearches), findsOneWidget);
+      expect(find.text(en.homeYourSearches), findsNothing);
+      for (final term in ['bag', 'shirt', 'dress', 'women']) {
+        expect(find.text(term), findsOneWidget, reason: term);
+      }
+      expect(find.text('shoes'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a shopper who has searched sees their own, and Algolia is '
+        'not even asked', (tester) async {
+      var asked = 0;
+      await _mount(
+        tester,
+        _section(),
+        more: [
+          searched(['sofa', 'lamp']),
+          topSearchesProvider.overrideWith((ref) async {
+            asked++;
+            return ['bag', 'shirt'];
+          }),
+        ],
+      );
+      await tester.pump();
+
+      expect(find.text(en.homeYourSearches), findsOneWidget);
+      expect(find.text(en.homeTopSearches), findsNothing);
+      expect(find.text('sofa'), findsOneWidget);
+      expect(find.text('lamp'), findsOneWidget);
+      expect(find.text('bag'), findsNothing);
+      expect(asked, 0);
+    });
+
+    testWidgets('with no searches of their own and none from Algolia there is '
+        'no row', (tester) async {
+      await _mount(
+        tester,
+        _section(),
+        more: [topSearchesProvider.overrideWith((ref) async => const <String>[])],
+      );
+      await tester.pump();
+
+      expect(find.text(en.homeTopSearches), findsNothing);
+      expect(find.text(en.homeYourSearches), findsNothing);
+    });
+
+    testWidgets('while Algolia answers there is no row, and a failure leaves '
+        'none', (tester) async {
+      final answer = Completer<List<String>>();
+      await _mount(
+        tester,
+        _section(),
+        more: [topSearchesProvider.overrideWith((ref) => answer.future)],
+      );
+      expect(find.text(en.homeTopSearches), findsNothing);
+
+      answer.complete(['bag']);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(en.homeTopSearches), findsOneWidget);
+    });
+
+    testWidgets('in Arabic the label is Arabic and the chips read right to '
+        'left', (tester) async {
+      await _mount(
+        tester,
+        _section(),
+        locale: 'ar',
+        more: [topSearchesProvider.overrideWith((ref) async => ['bag', 'حقيبة'])],
+      );
+      await tester.pump();
+
+      expect(find.text(ar.homeTopSearches), findsOneWidget);
+      expect(find.text('حقيبة'), findsOneWidget);
+      expect(
+        Directionality.of(tester.element(find.text(ar.homeTopSearches))),
+        TextDirection.rtl,
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

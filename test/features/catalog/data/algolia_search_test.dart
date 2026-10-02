@@ -586,6 +586,113 @@ void main() {
     });
   });
 
+  group('top searches (the Home\'s Picked For You)', () {
+    test('ask the store\'s suggestions index for an empty query, outside '
+        'Analytics', () {
+      // The live Hub Market App lists no suggestions index, yet this one is
+      // filled with the store's search terms.
+      expect(_settings.suggestionIndex, isNull);
+      final query = topSearchesQuery(_settings);
+      expect(query.indexName, 'hubmarket_en_suggestions');
+      expect(query.params['query'], '');
+      // Four wanted, sixteen asked for: some terms are whole product names.
+      expect(query.params['hitsPerPage'], 16);
+      expect(query.params['attributesToRetrieve'], ['query']);
+      expect(query.params['analytics'], false);
+    });
+
+    test('the suggestions index the storefront names wins', () {
+      final named = AlgoliaSettings.fromStorefrontConfig({
+        ...storefrontAlgoliaConfig(),
+        'autocomplete': {
+          'nbOfProductsSuggestions': 8,
+          'areSuggestionsEnabled': true,
+          'showAlgoliaSuggestions': true,
+          'suggestionsIndexName': 'hubmarket_en_query_suggestions',
+          'nbOfAlgoliaSuggestions': 5,
+        },
+      });
+      expect(topSearchesQuery(named).indexName, 'hubmarket_en_query_suggestions');
+    });
+
+    test('the answer: the store\'s terms in order, whole product names, repeats '
+        'and blanks left out, four at most', () {
+      // The live English index, 2 Oct 2026 (the first nine hits).
+      final terms = topSearchesFromResult({
+        'hits': [
+          {'query': 'bag'},
+          {'query': 'shirt'},
+          {'query': 'Fiona Fitness Short'},
+          {'query': 'fiona plastering sand for construction'},
+          {'query': 'Bag'},
+          {'query': '  '},
+          {'query': 'dress'},
+          {'query': 'iPhone 17'},
+          {'query': 'hoodie'},
+        ],
+      });
+      expect(terms, ['bag', 'shirt', 'dress', 'iPhone 17']);
+      expect(topSearchesFromResult({'hits': []}), isEmpty);
+      expect(topSearchesFromResult({}), isEmpty);
+      expect(
+        topSearchesFromResult({
+          'hits': [
+            {'query': 'bag'},
+            {'query': 'shirt'},
+          ],
+        }, limit: 1),
+        ['bag'],
+      );
+    });
+
+    test('Arabic terms are counted by words', () {
+      final terms = topSearchesFromResult({
+        'hits': [
+          {'query': 'bag'},
+          {'query': 'حقيبة'},
+          {'query': 'حقيبة كتف'},
+          {'query': 'فستان ميدي بتصميم قميص'},
+          {'query': 'سامسونج'},
+        ],
+      });
+      expect(terms, ['bag', 'حقيبة', 'حقيبة كتف', 'سامسونج']);
+    });
+
+    test('are read from Algolia, nothing when it cannot answer, and a refusal '
+        'never rests search', () async {
+      final backend = FakeAlgoliaBackend(
+        answer: (query) => query.indexName == 'hubmarket_en_suggestions'
+            ? {
+                'hits': [
+                  {'query': 'bag'},
+                  {'query': 'shirt'},
+                ],
+              }
+            : emptyResult(),
+      );
+      final search = AlgoliaSearch(
+        client: AlgoliaClient(backend.client),
+        settings: AlgoliaSettingsRepository(
+          config: AppConfig.current,
+          client: backend.client,
+          cache: FakeLocalCache(),
+          storefrontPage: (store) =>
+              Uri.parse('https://hub-market.magento2.click/$store/'),
+        ),
+      );
+
+      expect(await search.topSearches(storeCode: 'en'), ['bag', 'shirt']);
+      expect(backend.lastCall.single.indexName, 'hubmarket_en_suggestions');
+
+      backend.algoliaStatus = 404;
+      expect(await search.topSearches(storeCode: 'en'), isEmpty);
+      backend.algoliaStatus = 200;
+      // Search itself carries on at once.
+      await search.typeAhead(storeCode: 'en', query: 'sofa');
+      expect(backend.lastCall.first.indexName, 'hubmarket_en_products');
+    });
+  });
+
   group('AlgoliaSearch', () {
     AppConfig config() => AppConfig.current;
 
