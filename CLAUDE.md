@@ -109,5 +109,6 @@ Compile-time backend switches are `BackendCapabilities`
 `whatsappOtpLogin: true` and `guestCheckoutOtp: false`; whatever depends on
 HubApp follows the run-time probe instead. Push is dormant until the Firebase
 secrets are set: no Firebase config is in the repo (CI injects it from
-`FIREBASE_*_CONFIG_BASE64`), the Android manifest removes `POST_NOTIFICATIONS`, and
-device registration (`hmRegisterDevice`) waits for FCM and HubAppAccount's `push` flag.
+`FIREBASE_*_CONFIG_BASE64`), the Android manifest declares `POST_NOTIFICATIONS` (asked
+once, with FCM, on Android 13+), and device registration (`hmRegisterDevice`) waits for
+FCM and HubAppAccount's `push` flag.

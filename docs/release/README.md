@@ -226,8 +226,9 @@ works (one extra request per image); check with `curl -I` on a resized product i
    notification permission once at first launch, and the app registers its FCM token with the store
    (`hmRegisterDevice`) whenever the server's `push` switch is on. Set the secrets when steps 3 to 5
    are ready, not before.
-3. Delete the `POST_NOTIFICATIONS` removal element at the top of `AndroidManifest.xml`; the app then
-   asks once on Android 13+.
+3. **Done 2 Oct 2026:** the `POST_NOTIFICATIONS` removal is gone from `AndroidManifest.xml` and the
+   permission is declared there (`test/platform/notification_permission_test.dart` keeps it so); a
+   build with the Firebase config asks once on Android 13+, right after FCM starts.
 4. Upload an **APNs authentication key** to Firebase (Cloud Messaging › Apple app configuration) and
    make sure the App ID has the Push Notifications capability (the entitlement `aps-environment`
    is already `production`).

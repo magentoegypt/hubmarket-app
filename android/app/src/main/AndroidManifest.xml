@@ -1,15 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- No push until Hub Market's own Firebase project exists (no
-         google-services.json yet), so the app declares no notification
-         permission and nothing can put "Allow notifications?" in front of a
-         user who can't receive one. This also strips the copies merged in
-         from the Firebase / local-notification libraries. Delete this element
-         when FCM is configured; NotificationService asks once FCM is up. -->
-    <uses-permission
-        android:name="android.permission.POST_NOTIFICATIONS"
-        tools:node="remove"/>
+    <!-- Android 13+ asks once, when NotificationService starts FCM (a build
+         without the Firebase config, injected by CI from secrets, never gets
+         that far). Declared here, not left to the library manifests that merge
+         it in, so an update of those cannot drop it. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Hub Market"
         android:name="${applicationName}"

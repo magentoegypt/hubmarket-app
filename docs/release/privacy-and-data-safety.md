@@ -110,11 +110,12 @@ in-app dialog says the same.
 ## 5. Permissions and system prompts
 
 **Android** (merged manifest of the dev build, read with `aapt2 dump permissions`): `INTERNET`,
-`ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `VIBRATE`, and the Firebase receive permission. No
-"dangerous" permission: photos come through the system photo picker and the camera through the
-system camera app, so there is no storage, camera or location grant. `POST_NOTIFICATIONS` is
-removed on purpose (`tools:node="remove"` in `AndroidManifest.xml`) until Firebase exists, so no
-one is asked to allow notifications they cannot receive.
+`ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `VIBRATE`, the Firebase receive permission, and
+`POST_NOTIFICATIONS` (declared in `AndroidManifest.xml` since 2 Oct 2026; list it again when the
+merged manifest is next read). The only runtime ("dangerous") permission is `POST_NOTIFICATIONS`
+on Android 13+, asked once and only in a build that carries the Firebase config, so no one is
+asked to allow notifications they cannot receive. Photos come through the system photo picker and
+the camera through the system camera app, so there is no storage, camera or location grant.
 
 **iOS**: `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` (both say the photo is for
 showing a store what is wrong with a returned item; English only, there are no localised
@@ -123,9 +124,9 @@ for push; `ITSAppUsesNonExemptEncryption` false (only standard TLS); App Transpo
 defaults (no cleartext exception: the live server serves https only). No
 `NSUserTrackingUsageDescription`, because nothing tracks.
 
-**When Firebase is configured**: delete the `POST_NOTIFICATIONS` removal in the manifest, add the
-config files, turn on the Push capability for the App ID, then update sections 3 and 4 (Device ID)
-and the privacy manifest if they changed.
+**Firebase is configured in CI builds** (2 Oct 2026): the config files are injected from secrets, the
+manifest declares `POST_NOTIFICATIONS`, and the App ID has the Push capability. Still to do before a
+submission: update sections 3 and 4 (Device ID) and the privacy manifest if they changed.
 
 ## 6. Account deletion
 
