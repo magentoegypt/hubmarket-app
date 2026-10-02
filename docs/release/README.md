@@ -26,7 +26,7 @@ the code, not from memory. Nothing here publishes anything or creates an account
 | iOS privacy | An app privacy manifest is in the project, and the leftover cleartext (HTTP) exception from the Zoonze base is gone: the live server serves only HTTPS. |
 | Screenshots | Capture pipeline for both platforms (iOS captured in English and Arabic; Android waits for an unlocked phone). The catalogue is still test data and the hero and seller profiles still say Egypt, so the shots are not store-ready. |
 | Deep links | Templates ready; blocked on the Play signing SHA-256, the Apple Team ID and the web team. |
-| Push notifications | Dormant until a Firebase project exists (section 6). |
+| Push notifications | The Firebase project **Hub Market** (`hub-market-1d742`) exists with the Android and iOS apps registered (2 Oct 2026). Its config files are injected from two secrets and never committed (section 3), so push stays dormant until those are set and the steps of section 6 are done. |
 | Payment | Cash on delivery only. Card, Tabby and Tamara wait on DEV08 and DEV09. |
 
 ## 2. What we need from the client
@@ -35,7 +35,10 @@ the code, not from memory. Nothing here publishes anything or creates an account
 1. A **Google Play Console** developer account (an organisation account, verified) and who gets access.
 2. An **Apple Developer Program** membership (organisation) with App Store Connect access; the
    ten-character **Team ID**.
-3. A **Firebase project** for push (Android and iOS apps registered with the two ids above).
+3. ~~A **Firebase project** for push~~ Done 2 Oct 2026: the project Hub Market, with both apps
+   registered, sits in the agency's Google account; add the client as an Owner (Project settings ›
+   Users and permissions) when ownership moves. Still needed: the **APNs key** uploaded in Cloud
+   Messaging (section 6).
 
 **Decisions**
 4. ~~The store **name**~~ Decided: **Hub Market** (30 Sep 2026; "ME Hub Market" from DEV03 is dropped).
@@ -45,7 +48,8 @@ the code, not from memory. Nothing here publishes anything or creates an account
 6. The **payment path** for launch (cash on delivery only, or card, Tabby, Tamara).
 7. What **pharmacies and other restricted categories** may list (privacy document, section 7).
 8. **Crash reporting** (Firebase Crashlytics) before launch, yes or no: it changes the privacy answers.
-9. Firebase config files **committed or injected from secrets** (privacy document, question 9).
+9. ~~Firebase config files committed or injected from secrets~~ Decided 2 Oct 2026: **injected from
+   secrets, never committed** (section 3; privacy document, question 9).
 
 **Content and legal**
 10. A real **privacy policy** and a **terms page**, English and Arabic, and a **deletion page** URL.
@@ -79,6 +83,7 @@ is public. Encode a file with `base64 -w0 <file>` (Linux, Git Bash) or `base64 -
 | `ANDROID_KEY_ALIAS` | same | `hubmarket` if the command above was used. |
 | `PLAY_SERVICE_ACCOUNT_JSON` | `Release · Android`, only when `play_track` is not `none` | A Google Cloud service-account key (JSON). In Play Console › Users and permissions, invite the service account's email and give it release rights on the app; create the key in Google Cloud › IAM › Service accounts. |
 | `LOADLY_API_KEY` | push builds, `Release · Android` (apk) | Already set; uploads the QA build. |
+| `FIREBASE_ANDROID_CONFIG_BASE64` | every Android build of `build-on-push.yml`, `Release · Android` (prod flavor only) | Optional, for push: the `google-services.json` of the app "Hub Market (Android)" (Firebase console › Project settings › Your apps), base64 (commands below). Without it the app builds without FCM. |
 
 **Signatures and updates.** Until these secrets exist, every CI build is signed with a debug key the
 runner generates anew on each run (checked 1 Oct 2026: two consecutive deploys carry different
@@ -97,9 +102,27 @@ Play copy and a Loadly copy cannot update each other either: uninstall when chan
 | `IOS_APPSTORE_PROFILE_BASE64` | `Release · iOS` (`testflight`) | An **App Store** provisioning profile for `com.hubmarket.app`: Profiles › + › App Store Connect, pick the App ID and the certificate, download the `.mobileprovision`. |
 | `IOS_ADHOC_PROFILE_BASE64` | `Release · iOS` (`adhoc`), `Build · iOS` | Optional: an **Ad Hoc** profile listing the test devices' UDIDs, for installing on phones without TestFlight. |
 | `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_KEY_CONTENT_BASE64` | `Release · iOS` (`testflight`) | App Store Connect › Users and Access › Integrations › App Store Connect API: create a key with the App Manager role; copy its Key ID and the Issuer ID; download the `.p8` (once) and base64 it. |
+| `FIREBASE_IOS_CONFIG_BASE64` | every iOS build of `build-on-push.yml`, `Release · iOS`, `Build · iOS` | Optional, for push: the `GoogleService-Info.plist` of the app "Hub Market (iOS)", base64 (commands below). Without it the app builds without FCM. |
 
-**Files that are not secrets but do not exist yet** (push): `android/app/google-services.json` and
-`ios/Runner/GoogleService-Info.plist`. See section 6.
+**Firebase config (push).** The project **Hub Market** (`hub-market-1d742`, free Spark plan, Google
+Analytics and Gemini off) holds the apps "Hub Market (Android)" and "Hub Market (iOS)", both
+`com.hubmarket.app`. Their config files are **never committed** (the repo is public; `.gitignore`
+lists both): `tool/firebase_config.sh` writes `android/app/google-services.json` and
+`ios/Runner/GoogleService-Info.plist` from the two secrets above just before each build, refuses a
+file that is not for `com.hubmarket.app`, and prints only the project id. Without a secret the build
+goes ahead without FCM. Download each file in Firebase console › Project settings › Your apps (a
+browser may save a second download as `google-services (1).json`: use the one that was just
+downloaded), then, in the folder that holds them:
+
+```bash
+base64 -w0 google-services.json | gh secret set FIREBASE_ANDROID_CONFIG_BASE64 -R magentoegypt/hubmarket-app
+```
+
+```bash
+base64 -w0 GoogleService-Info.plist | gh secret set FIREBASE_IOS_CONFIG_BASE64 -R magentoegypt/hubmarket-app
+```
+
+**Setting a secret turns push on in the next build of that platform** (see section 6).
 
 ## 3b. Automatic deployment on every push to main
 
@@ -187,14 +210,22 @@ follows the host. So do the WebP copies of product images: the app asks the Grap
 `<resized image>.webp` and falls back to the original on any failure, so a host without them still
 works (one extra request per image); check with `curl -I` on a resized product image plus `.webp`.
 
-## 6. Turning on push (when the Firebase project exists)
+## 6. Turning on push (the Firebase project exists)
 
-1. Register the Android package `com.hubmarket.app` and the iOS bundle `com.hubmarket.app` (and
-   `.dev` / `.staging` if those flavors should receive push) in the Firebase project.
-2. Add `android/app/google-services.json` (the Gradle plugin turns on by itself when it exists) and
-   `ios/Runner/GoogleService-Info.plist`. On iOS the plist must be in the Runner target's *Copy
-   Bundle Resources*: add it in Xcode, or ask us to add the project reference. The app initialises
-   Firebase from the bundled file only, never from options compiled into the code.
+1. **Done 2 Oct 2026:** `com.hubmarket.app` is registered for Android and iOS in the project Hub
+   Market. Register `.dev` / `.staging` too only if those flavors should receive push (an Android dev
+   or staging build with the config file present fails at the Google services plugin unless its
+   package is in the file; `release-android.yml` only injects the file for the prod flavor).
+2. **Set the two secrets** `FIREBASE_ANDROID_CONFIG_BASE64` and `FIREBASE_IOS_CONFIG_BASE64`
+   (section 3): CI then writes `android/app/google-services.json` and
+   `ios/Runner/GoogleService-Info.plist` before each build, and neither is committed. Android: the
+   Gradle plugin turns on by itself when the file exists. iOS: the Runner target's *Copy Firebase
+   config (when present)* build phase copies the plist into the app, so there is nothing to add in
+   Xcode. The app initialises Firebase from the bundled file only, never from options compiled into
+   the code. **From the first build with a secret, push is live in that app:** the iPhone app asks for
+   notification permission once at first launch, and the app registers its FCM token with the store
+   (`hmRegisterDevice`) whenever the server's `push` switch is on. Set the secrets when steps 3 to 5
+   are ready, not before.
 3. Delete the `POST_NOTIFICATIONS` removal element at the top of `AndroidManifest.xml`; the app then
    asks once on Android 13+.
 4. Upload an **APNs authentication key** to Firebase (Cloud Messaging › Apple app configuration) and
