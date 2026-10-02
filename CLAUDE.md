@@ -39,7 +39,7 @@ backend modules as Hub Market facts.
 - Release readiness: `docs/release/README.md` (status, what the client provides, secrets → workflows, first Android and iOS release, production-domain switch) with the EN/AR store listing, the privacy and data-safety answers, the App Review notes, the deep-link files and the screenshot plan beside it. Keep `ios/Runner/PrivacyInfo.xcprivacy` and `docs/release/privacy-and-data-safety.md` in step. Screenshots: `tool/ios_screenshots.sh` (CI, macOS) and `tool/android_screenshots.sh` (a phone that stays unlocked).
 - Never send a GraphQL **mutation** to the live server from tooling or tests — queries and introspection only.
 - CI: `build-on-push.yml` runs on every push to main (`[skip ci]` skips it): the gate (analyze, test, the tool tests, `validate_ops.py --schema-file` offline), then the prod APK to Loadly, the signed App Store IPA to TestFlight, an ad-hoc IPA to Loadly (once `IOS_ADHOC_PROFILE_BASE64` exists) and the app bundle to Play internal testing (once the Play secrets exist and the variable `PLAY_AUTO_PUBLISH` is `true`). Builds are numbered by `tool/build_number.sh` (the commit count); the repository variable `DEPLOY_ON_PUSH=false` pauses the store and iOS uploads. `ci.yml` runs the gate on pull requests. `release-*.yml` and `build-ios.yml` are manual. Details: `docs/release/README.md` section 3b. Until the `ANDROID_*` secrets exist the APK is debug-signed with a key the runner makes anew on every run, so Android refuses to install a build over an older one: uninstall first (`docs/release/README.md` section 3).
-- The repo is **public**: no signing files in git (`ios/signing/` is ignored). CI decodes them from base64 secrets — `ANDROID_KEYSTORE_BASE64` (+ passwords), `IOS_P12_BASE64` + `IOS_P12_PASSWORD`, `IOS_APPSTORE_PROFILE_BASE64` / `IOS_ADHOC_PROFILE_BASE64`.
+- The repo is **public**: no signing files in git (`ios/signing/` is ignored). CI decodes them from base64 secrets — `ANDROID_KEYSTORE_BASE64` (+ passwords), `IOS_P12_BASE64` + `IOS_P12_PASSWORD`, `IOS_APPSTORE_PROFILE_BASE64` / `IOS_ADHOC_PROFILE_BASE64`. The Firebase client config is injected the same way and never committed (`.gitignore`): `tool/firebase_config.sh` writes `google-services.json` / `GoogleService-Info.plist` from `FIREBASE_ANDROID_CONFIG_BASE64` / `FIREBASE_IOS_CONFIG_BASE64` before each build and refuses a file that is not for `com.hubmarket.app`; setting a secret turns push on in that platform's next build (`docs/release/README.md` sections 3 and 6).
 
 ## 3. Content is managed in Magento — nothing marketing-related is hard-coded
 
@@ -107,6 +107,7 @@ their section. Small commits; messages end with the Co-Authored-By trailer.
 Compile-time backend switches are `BackendCapabilities`
 (`lib/core/config/backend_capabilities.dart`): `hubMarket` has
 `whatsappOtpLogin: true` and `guestCheckoutOtp: false`; whatever depends on
-HubApp follows the run-time probe instead. Push is dormant: no Firebase config
-is bundled, the Android manifest removes `POST_NOTIFICATIONS`, and device
-registration (`hmRegisterDevice`) waits for FCM and HubAppAccount's `push` flag.
+HubApp follows the run-time probe instead. Push is dormant until the Firebase
+secrets are set: no Firebase config is in the repo (CI injects it from
+`FIREBASE_*_CONFIG_BASE64`), the Android manifest removes `POST_NOTIFICATIONS`, and
+device registration (`hmRegisterDevice`) waits for FCM and HubAppAccount's `push` flag.

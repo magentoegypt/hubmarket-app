@@ -88,6 +88,13 @@ jobs:
       - name: Generate GraphQL typed Dart (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      # Firebase client config for FCM, from a secret (the repo is public, so it is
+      # never committed). Without the secret the app builds without FCM.
+      - name: Firebase config (when configured)
+        env:
+          FIREBASE_IOS_CONFIG_BASE64: ${{ secrets.FIREBASE_IOS_CONFIG_BASE64 }}
+        run: bash tool/firebase_config.sh ios
+
       # ---- App Store / TestFlight ----
       - name: Build signed App Store IPA
         if: ${{ inputs.distribution == 'testflight' }}

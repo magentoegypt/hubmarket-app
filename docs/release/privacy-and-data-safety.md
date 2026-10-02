@@ -252,5 +252,5 @@ the mobile app. It should say, in English and Arabic:
 | 6 | Add crash reporting (Firebase Crashlytics) before launch? | Optional. It would add "crash logs, diagnostics" and a device id to both forms and to the privacy manifest. |
 | 7 | Return photos may carry GPS data from a phone camera. | Strip photo metadata on the server (a follow-up on the backend PR). |
 | 8 | What may pharmacies and other restricted categories list? | Decide before the rating and policy forms. |
-| 9 | Commit the Firebase config files or inject them from secrets? | Either works: they are not secrets, but restrict the API keys by package name and bundle id. The repo is public, so secrets keep it tidier. |
+| 9 | Commit the Firebase config files or inject them from secrets? | **Decided 2 Oct 2026: inject from secrets, never commit** (`tool/firebase_config.sh`, `docs/release/README.md` section 3). The files are not secrets in themselves, but still restrict the API keys by package name and bundle id in Google Cloud. |
 | 10 | Localise the iOS camera and photo prompts into Arabic? | Optional polish: add `InfoPlist.strings` for `ar`. |

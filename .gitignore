@@ -47,8 +47,11 @@ app.*.map.json
 # This repo is PUBLIC: signing material never goes into git. CI decodes the
 # Android keystore and the iOS certificate + profiles from base64 GitHub
 # secrets (build-on-push.yml, release-android.yml, release-ios.yml,
-# build-ios.yml). No Firebase client config (google-services.json /
-# GoogleService-Info.plist) exists yet: push is dormant.
+# build-ios.yml). The Firebase client config (google-services.json /
+# GoogleService-Info.plist) is injected the same way by tool/firebase_config.sh,
+# from FIREBASE_ANDROID_CONFIG_BASE64 / FIREBASE_IOS_CONFIG_BASE64: ignored here.
+**/google-services*.json
+**/GoogleService-Info*.plist
 android/key.properties
 **/*.jks
 **/*.keystore

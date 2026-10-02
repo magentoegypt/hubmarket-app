@@ -12,6 +12,10 @@ name: Build and deploy · main
 # while accounts arrive. Pause the TestFlight, Play and iOS Loadly uploads without editing
 # anything: repository variable DEPLOY_ON_PUSH = false. The Android Loadly upload always runs.
 #
+# The Firebase client config (FCM) is injected into the Android and iOS builds from the secrets
+# FIREBASE_ANDROID_CONFIG_BASE64 and FIREBASE_IOS_CONFIG_BASE64 (tool/firebase_config.sh). The repo
+# is public, so neither file is committed; without the secrets the app builds with push off.
+#
 # Every build is numbered by tool/build_number.sh (the number of commits on main), so each upload
 # is higher than the last, as both stores require; the +N in pubspec.yaml no longer matters here.
 # The manual workflows (release-android.yml, release-ios.yml, build-ios.yml) stay for one-off runs.
@@ -145,6 +149,13 @@ jobs:
       - name: Generate GraphQL typed Dart (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      # Firebase client config for FCM, from a secret (the repo is public, so it is never
+      # committed). Without the secret the app builds without FCM and push stays off.
+      - name: Firebase config (when configured)
+        env:
+          FIREBASE_ANDROID_CONFIG_BASE64: ${{ secrets.FIREBASE_ANDROID_CONFIG_BASE64 }}
+        run: bash tool/firebase_config.sh android
+
       - name: Write keystore + key.properties (when configured)
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -209,6 +220,11 @@ jobs:
       - run: flutter pub get
       - name: Generate GraphQL typed Dart (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Firebase config (when configured)
+        env:
+          FIREBASE_ANDROID_CONFIG_BASE64: ${{ secrets.FIREBASE_ANDROID_CONFIG_BASE64 }}
+        run: bash tool/firebase_config.sh android
 
       # The upload key: without it Play rejects the bundle, so the plan job only
       # lets this job run when all four ANDROID_* secrets are set.
@@ -286,6 +302,11 @@ jobs:
       - name: Generate GraphQL typed Dart (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Firebase config (when configured)
+        env:
+          FIREBASE_IOS_CONFIG_BASE64: ${{ secrets.FIREBASE_IOS_CONFIG_BASE64 }}
+        run: bash tool/firebase_config.sh ios
+
       - name: Build signed App Store IPA
         env:
           IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
@@ -341,6 +362,11 @@ jobs:
       - run: flutter pub get
       - name: Generate GraphQL typed Dart (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Firebase config (when configured)
+        env:
+          FIREBASE_IOS_CONFIG_BASE64: ${{ secrets.FIREBASE_IOS_CONFIG_BASE64 }}
+        run: bash tool/firebase_config.sh ios
 
       - name: Build signed ad-hoc IPA
         env:
