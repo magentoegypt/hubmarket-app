@@ -60,7 +60,7 @@ void main() {
     );
     // The frame's order: apartment, street, area, emirate, country.
     expect(
-      find.text('1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+      find.text('1204, Marina Gate 2, Dubai / Dubai Marina, United Arab Emirates'),
       findsOneWidget,
     );
     expect(find.text('Standard delivery'), findsOneWidget);
@@ -78,27 +78,21 @@ void main() {
 
     await tapText(tester, 'Continue to shipping method');
     // Email, name, mobile, emirate and street are required.
-    expect(find.text('Required'), findsNWidgets(5));
+    expect(find.text('Required'), findsNWidgets(4));
+    expect(find.text('Please select a valid location'), findsNWidgets(2));
     expect(repo.calls, isNot(contains('setShippingAddress')));
     // Still on the form.
     expect(find.text('Ship to'), findsNothing);
   });
 
-  testWidgets('the typed area is the city of the address; without one the '
-      'emirate stands in', (tester) async {
+  testWidgets('selected city and locality are sent with the internal UAE region', (tester) async {
     final repo = checkoutRepository();
     await mount(tester, repo);
     await throughAddress(tester);
-    expect(repo.lastAddress?['address'], isNotNull);
-    expect((repo.lastAddress!['address'] as Map)['city'], 'Dubai Marina');
-
-    // Blank the area: Magento's required city falls back to the emirate.
-    final fresh = checkoutRepository();
-    await mount(tester, fresh);
-    await fillGuestAddress(tester);
-    await tester.enterText(find.byType(TextField).at(3), '');
-    await tapText(tester, 'Continue to shipping method');
-    expect((fresh.lastAddress!['address'] as Map)['city'], 'Dubai');
+    final address = repo.lastAddress!['address'] as Map;
+    expect(address['city'], 'Dubai / Dubai Marina');
+    expect(address['country_code'], 'AE');
+    expect(address['region_id'], 200);
   });
 
   testWidgets(

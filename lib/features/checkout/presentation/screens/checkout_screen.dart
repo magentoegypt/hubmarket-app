@@ -6,7 +6,7 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../app/theme/hub_icons.dart';
-import '../../../../core/address/regions.dart';
+import '../../../../core/address/city_manager.dart';
 import '../../../../core/config/backend_capabilities.dart';
 import '../../../../core/config/free_shipping.dart';
 import '../../../../core/validation/validators.dart';
@@ -141,19 +141,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Map<String, dynamic> _addressInput() {
     final name = _address.splitName();
     final postcode = _postcode.text.trim();
-    final regions = ref.read(regionsProvider).valueOrNull ?? const [];
     return <String, dynamic>{
       'firstname': name.first,
       'lastname': name.last,
       'telephone': _address.e164Phone(),
       'street': _address.streetLines(),
-      'city': CheckoutAddressForm.cityFor(_address, regions),
-      'country_code': addressCountryCode,
-      ...regionInput(
-        regionId: _address.regionId.value,
-        regions: regions,
-        fallbackName: _address.region.text,
-      ),
+      'city': _address.area.text.trim(),
+      'country_code': _address.country.value,
+      if (_address.regionId.value != null) 'region_id': _address.regionId.value,
+      if (_address.region.text.isNotEmpty) 'region': _address.region.text,
       if (postcode.isNotEmpty) 'postcode': postcode,
     };
   }
@@ -162,19 +158,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// apartment, street, area, emirate, country.
   String _typedAddressLine(AppLocalizations l10n) {
     var emirate = _address.region.text.trim();
-    final regions = ref.read(regionsProvider).valueOrNull ?? const [];
-    for (final r in regions) {
-      if (r.id == _address.regionId.value) {
-        emirate = r.name;
-        break;
-      }
-    }
     return shipToAddressLine(
       apartment: _address.apartment.text,
       street: _address.street.text,
       area: _address.area.text,
       emirate: emirate,
-      country: l10n.checkoutAddressCountry,
+      country: locationCountryName(
+        _address.country.value,
+        Localizations.localeOf(context).languageCode == 'ar',
+      ),
       separator: addressSeparator(context),
     );
   }

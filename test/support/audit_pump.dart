@@ -1,3 +1,5 @@
+import 'package:hubmarket_app/core/address/city_fields.dart';
+import 'city_fake.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -125,6 +127,7 @@ List<Override> auditOverrides({
   appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
   pushNotificationsAvailableProvider.overrideWithValue(false),
   hubAppOverride(hubApp ?? const HubAppState.available(kSampleHmAppConfig)),
+  cityDirectoryProvider.overrideWithValue(FakeCityDirectory()),
   ...overrides,
 ];
 
