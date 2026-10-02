@@ -249,7 +249,8 @@ class _SlidesPanelState extends State<_SlidesPanel> {
                 child: Align(
                   alignment: AlignmentDirectional.bottomStart,
                   child: _KickerPill(
-                    label: slide.kicker!,
+                    // In capitals, as the frame and the website set it.
+                    label: slide.kicker!.toUpperCase(),
                     color: slide.accent ?? AppColors.successStrong,
                   ),
                 ),

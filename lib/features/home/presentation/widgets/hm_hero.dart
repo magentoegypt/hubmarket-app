@@ -176,7 +176,12 @@ class HmHeroSlide extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     if (banner.kicker != null) ...[
-                      HmPill(label: banner.kicker!, color: accent),
+                      // In capitals, as the frame sets it (the website does it
+                      // with CSS): the admin types it in any case.
+                      HmPill(
+                        label: banner.kicker!.toUpperCase(),
+                        color: accent,
+                      ),
                       const SizedBox(height: 8),
                     ],
                     ConstrainedBox(

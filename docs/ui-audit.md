@@ -188,22 +188,20 @@ Where copy comes from the admin or the live store, the frame's sample wording di
 texts, the Home "Sell on Hub Market" card, which stays hidden until its CMS block `hm_home_sell` exists).
 
 **Home on the live server (a full-page capture of build 372 on the test phone, 2 Oct 2026, against Figma 07).** The
-admin's 18 Home sections are all drawn, in the frame's order (the frame's other layers are the signed-in
-active-order card, which needs a sign-in and an open order, and "Sell on Hub Market"). What the frame shows and the
-live Home does not, and who owns each:
+admin's 18 Home sections were all drawn, in the frame's order (the frame's other layers are the signed-in
+active-order card, which needs a sign-in and an open order, and "Sell on Hub Market"). The four differences that were
+content were closed in the admin the same day (the backend note `vendor-app-api.md` on `figma-parity-home`): the
+"Sell on Hub Market" block (a last CMS block section, `hm_home_sell`), the fourth promo tile "Bundle Deals" (no image,
+tone `#F26522`: the app draws a tile without an image as a solid card in its tone), the Featured Stores subtitle, and
+Today's Deals' More link (cleared, so "All Deals" opens the Deals page). The hero kickers are set in capitals by the
+app (the frame and the website do it; the admin types any case; a tile's kicker stays as typed). What still differs:
 
-- **"Sell on Hub Market"** (the navy card at the end): the CMS block `hm_home_sell` does not exist and the admin has no
-  CMS block section for it. Create the block (a heading, a paragraph and a paragraph holding only the "Start selling"
-  link) and add a CMS block section for it at the end of the Home sections.
-- **The fourth promo tile, "Bundle Deals"** ("This week only" / "Buy more, pay less"): there is no Hero Banner record
-  of slot Tile for it (Electronics Deals, Beauty & Cosmetics and Kids & Toys exist).
-- **The Featured Stores subtitle** ("Verified sellers on Hub Market"): the section's subtitle is empty in the admin.
-- **Today's Deals "All Deals"**: the section's More link is `all.html` (the All category), so the Deals page
-  (`hmDeals`, Figma 10b) is never opened. Clear the link and the app falls back to the Deals page.
-- **Hero kickers**: the frame types them in capitals ("SAME-DAY DELIVERY"); the app prints what the admin typed.
 - **Picked For You**: the "AI ENGINE" pill and the "Personalised recommendations based on your search history &
   behaviour" subtitle are the deliberate deviation of section 4 (the admin's own subtitle is shown); the "YOUR
-  SEARCHES" chips appear once the customer has searched (a fresh install has no history).
+  SEARCHES" chips appear once the customer has searched (a fresh install has no history). The products are the same
+  four top-rated ones for everyone (HubApp ranks PICKED_FOR_YOU by rating, at least two approved reviews, up to the
+  section limit, and flags it `personalizable`: the app may swap in the customer's own recently viewed), and Refresh
+  gets them again: `hmAppHome` is a cached public GET, the section has no offset and no badge field.
 - Signed in only: the active-order card, the bell's unread dot, the cart count on the tab.
 
 Small known gaps: Welcome's hero is a little shorter than the frame on a phone (the frame's content is taller than the
