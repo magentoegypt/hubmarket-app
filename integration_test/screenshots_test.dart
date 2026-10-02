@@ -17,6 +17,7 @@ import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/store/store_controller.dart';
 import 'package:hubmarket_app/features/notifications/data/notification_inbox.dart';
+import 'package:hubmarket_app/features/personalization/data/personalization_identity.dart';
 
 /// Captures the store-listing screenshots (App Store and Google Play) against
 /// the LIVE backend, in the language set by SHOT_LOCALE.
@@ -42,6 +43,9 @@ void main() {
     await initializeDateFormatting();
     await Hive.initFlutter();
     final cache = await LocalCache.open();
+    // Answered "Not now" to the one-time "Personalise my picks?" sheet, so it
+    // does not cover the Home in the shots (and nothing personal is sent).
+    await cache.writeString(kPersonalizationEnabledKey, 'false');
     final prefs = await SharedPreferences.getInstance();
     await NotificationInbox.instance.init(cache);
     final appVersion = await readAppSemver();

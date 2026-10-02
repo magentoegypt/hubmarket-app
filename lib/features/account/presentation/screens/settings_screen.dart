@@ -118,7 +118,8 @@ class SettingsScreen extends ConsumerWidget {
           ],
 
           // Picked For You and the events behind it (Algolia Insights, under a
-          // random id of this install): on until the shopper turns it off.
+          // random id of this install): off until the shopper allows it (the
+          // sheet on the Home asks once), and turning it off deletes the id.
           GroupLabel(l10n.settingsPersonalisationGroup),
           GroupCard(
             children: [
@@ -126,7 +127,7 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile.adaptive(
                   value: personalised,
                   onChanged: (v) => ref
-                      .read(personalizationEnabledProvider.notifier)
+                      .read(personalizationConsentProvider.notifier)
                       .set(v),
                   title: Text(l10n.settingsPersonalisationTitle),
                   subtitle: Text(l10n.settingsPersonalisationBody),

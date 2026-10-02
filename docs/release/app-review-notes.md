@@ -84,7 +84,7 @@ Account > Notifications.
 
 PRIVACY
 
-No advertising, no tracking across apps, no analytics SDK. The products a customer views or orders are sent to the store's search provider (Algolia) under a random id to personalise "Picked For You"; Settings > Personalised picks switches it off. The privacy policy is at [URL]. Photos are only
+No advertising, no tracking across apps, no analytics SDK. The first time the Home opens, the app asks "Personalise my picks?" (Allow / Not now). Only after Allow are the products a customer views or orders sent to the store's search provider (Algolia) under a random id to personalise "Picked For You"; without it nothing is sent and the app works the same. Settings > Personalised picks changes the answer. The privacy policy is at [URL]. Photos are only
 used when a customer attaches them to a return request; the app never asks for library access.
 
 CONTACT

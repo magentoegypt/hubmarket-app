@@ -29,9 +29,19 @@ import 'package:hubmarket_app/features/catalog/domain/product_page.dart';
 import 'package:hubmarket_app/features/catalog/domain/review_pages.dart';
 import 'package:hubmarket_app/features/cms/data/cms_repository.dart';
 import 'package:hubmarket_app/features/cms/domain/cms_page.dart';
+import 'package:hubmarket_app/features/personalization/data/personalization_identity.dart';
 
 class FakeLocalCache implements LocalCache {
-  FakeLocalCache([this._stores]);
+  /// A phone that already answered "Personalise my picks?" with Not now: the
+  /// question does not open over the Home in a test that mounts it, and nothing
+  /// personal is sent.
+  FakeLocalCache([this._stores]) {
+    _kv[kPersonalizationEnabledKey] = 'false';
+  }
+
+  /// A phone that was never asked: the Home opens the question.
+  FakeLocalCache.neverAsked([this._stores]);
+
   final List<Map<String, dynamic>>? _stores;
   final Map<String, String> _kv = {};
 

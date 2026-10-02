@@ -365,6 +365,22 @@ void main() {
       expect(t.ids.asked, isEmpty);
     });
 
+    test('sends nothing without a token: no consent, no id', () async {
+      final algolia = _Algolia();
+      final tracker = InsightsTracker(
+        enabled: () => true,
+        settings: () async => _settings,
+        token: () => null,
+        ids: _FixedIds(const {'sku1': '101'}),
+        client: InsightsClient(algolia.client),
+      );
+      tracker
+        ..productViewed('sku1')
+        ..addedToWishlist('sku1');
+      await pumpEventQueue();
+      expect(algolia.requests, isEmpty);
+    });
+
     test('an event is dropped when the switch goes off while its ids are on '
         'their way', () async {
       final t = make();

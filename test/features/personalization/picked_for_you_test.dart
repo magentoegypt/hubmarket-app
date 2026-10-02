@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
+import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
 import 'package:hubmarket_app/features/personalization/data/personalization_identity.dart';
 import 'package:hubmarket_app/features/personalization/data/picked_for_you_repository.dart';
@@ -11,6 +12,7 @@ import 'package:hubmarket_app/features/personalization/domain/personal_picks.dar
 import 'package:hubmarket_app/features/personalization/presentation/personal_picks_provider.dart';
 
 import '../../support/audit_pump.dart';
+import '../../support/fakes.dart';
 import '../../support/hubapp_fakes.dart';
 
 Product _p(int n) => Product(sku: 'sku$n', name: 'Product $n', urlKey: 'p$n');
@@ -63,10 +65,23 @@ class _FakePicksRepository extends PickedForYouRepository {
   }
 }
 
-ProviderContainer _container(_FakePicksRepository repository, {List<Override> more = const []}) {
+/// A container whose phone answered the "Personalise my picks?" question with
+/// [answer]: `'true'` (Allow, the default here), `'false'` (Not now) or null
+/// (never asked).
+ProviderContainer _container(
+  _FakePicksRepository repository, {
+  String? answer = 'true',
+  List<Override> more = const [],
+}) {
+  final cache = FakeLocalCache.neverAsked();
+  if (answer != null) cache.writeString(kPersonalizationEnabledKey, answer);
   final container = ProviderContainer(
     overrides: auditOverrides(
-      overrides: [pickedForYouRepositoryProvider.overrideWithValue(repository), ...more],
+      overrides: [
+        localCacheProvider.overrideWithValue(cache),
+        pickedForYouRepositoryProvider.overrideWithValue(repository),
+        ...more,
+      ],
     ),
   );
   addTearDown(container.dispose);
@@ -219,13 +234,36 @@ void main() {
       expect(await container.read(personalPicksProvider.future), isNull);
     });
 
-    test('is null, and nothing is asked, with personalisation off', () async {
+    test('is null, and nothing is asked, until the shopper allows it: not '
+        'asked yet and Not now are the same', () async {
+      for (final answer in <String?>[null, 'false']) {
+        final repository = _FakePicksRepository(personal);
+        final container = _container(repository, answer: answer);
+
+        expect(await container.read(personalPicksProvider.future), isNull);
+        expect(repository.tokens, isEmpty, reason: '$answer');
+      }
+    });
+
+    test('is null, and nothing is asked, once the shopper turns it off', () async {
       final repository = _FakePicksRepository(personal);
       final container = _container(repository);
-      await container.read(personalizationEnabledProvider.notifier).set(false);
+      await container.read(personalizationConsentProvider.notifier).set(false);
 
       expect(await container.read(personalPicksProvider.future), isNull);
       expect(repository.tokens, isEmpty);
+    });
+
+    test('asks, with a new token, when the shopper allows it later', () async {
+      final repository = _FakePicksRepository(personal);
+      final container = _container(repository, answer: null);
+      expect(await container.read(personalPicksProvider.future), isNull);
+
+      await container.read(personalizationConsentProvider.notifier).allow();
+
+      expect(await container.read(personalPicksProvider.future), same(personal));
+      expect(repository.tokens, hasLength(1));
+      expect(isValidPersonalizationToken(repository.tokens.single), isTrue);
     });
 
     test('is null on any failure: the section from the Home stands', () async {
@@ -235,11 +273,5 @@ void main() {
       }
     });
 
-    test('personalisation is on until the shopper turns it off, and stays off', () async {
-      final container = _container(_FakePicksRepository(personal));
-      expect(container.read(personalizationEnabledProvider), isTrue);
-      await container.read(personalizationEnabledProvider.notifier).set(false);
-      expect(container.read(personalizationEnabledProvider), isFalse);
-    });
   });
 }

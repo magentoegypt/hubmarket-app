@@ -112,6 +112,11 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
 - "Picked for you" shows the admin's badge ("AI ENGINE") and the "Personalised recommendations…" subtitle only
   when the shopper's own picks arrive (`hmPickedForYou`, `personalized: true`); until then it is the top-rated list
   with the admin's subtitle and no pill: the app never labels the generic list as personal (QA02).
+- The Home opens a one-time "Personalise my picks?" sheet (Allow / Not now) that no frame draws: a consent
+  question, not a design (`PersonalizationConsentPrompt`, built from the Payment-failed sheet's chrome). Until
+  Allow the app sends no Insights event and asks no personal picks, so the section stays the top-rated list.
+  The test fakes answer it with Not now (`FakeLocalCache()`; `FakeLocalCache.neverAsked()` opens it), so no
+  audit scene shows it.
 - No free-shipping progress bar: the live schema has no threshold (`free_shipping_subtotal`).
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.
@@ -200,9 +205,10 @@ app (the frame and the website do it; the admin types any case; a tile's kicker 
 
 - **Picked For You** follows the frame once the shopper has a profile: the badge (admin text, "AI ENGINE"), the
   "Personalised recommendations based on your search history & behaviour" subtitle and the shopper's own picks come
-  with `hmPickedForYou` (`personalized: true`). Before that, and for a new install (Algolia builds profiles in
-  batches, about an hour after the first events), it is the 16 top-rated products, four at a time, with the admin's
-  subtitle and no pill. The "YOUR SEARCHES" chips appear once the customer has searched.
+  with `hmPickedForYou` (`personalized: true`). Before that, and for a new install (the shopper first says Allow
+  to "Personalise my picks?", and Algolia builds profiles in batches, about an hour after the first events), it is
+  the 16 top-rated products, four at a time, with the admin's subtitle and no pill. The "YOUR SEARCHES" chips appear
+  once the customer has searched.
 - Signed in only: the active-order card, the bell's unread dot, the cart count on the tab.
 
 Small known gaps: Welcome's hero is a little shorter than the frame on a phone (the frame's content is taller than the

@@ -25,6 +25,7 @@ import '../../catalog/presentation/widgets/product_card.dart';
 import '../../catalog/presentation/widgets/product_skeletons.dart';
 import '../../notifications/presentation/notification_bell.dart';
 import '../../personalization/presentation/personal_picks_provider.dart';
+import '../../personalization/presentation/personalization_consent_prompt.dart';
 import '../data/home_content_repository.dart';
 import '../domain/hm_home.dart';
 import 'active_order_providers.dart';
@@ -95,7 +96,8 @@ class HubHomeScreen extends ConsumerWidget {
       currentTab: AppTab.home,
       showSearch: false,
       appBar: _HomeHeader(deliverLine: _HomeHeader.deliverLineFor(context)),
-      body: body,
+      // The one-time "Personalise my picks?" question, asked over the Home.
+      body: PersonalizationConsentPrompt(child: body),
     );
   }
 }
