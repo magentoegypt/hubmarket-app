@@ -7,6 +7,7 @@ import '../domain/search_highlight.dart';
 import '../domain/search_results.dart';
 import 'algolia/algolia_search.dart';
 import 'catalog_repository.dart';
+import '../../../core/address/delivery_headers.dart';
 
 /// The app's catalogue search (QA01: "search behaves like the website").
 ///
@@ -18,7 +19,12 @@ import 'catalog_repository.dart';
 /// result says which engine answered ([SearchEngine]), and only an Algolia
 /// answer carries the "Search by algolia" attribution.
 class CatalogSearch {
-  CatalogSearch({required this._algolia, required this._catalog});
+  CatalogSearch({
+    required this._algolia,
+    required this._catalog,
+    this.deliveryScoped = false,
+  });
+  final bool deliveryScoped;
 
   final AlgoliaSearch _algolia;
   final CatalogRepository _catalog;
@@ -49,15 +55,17 @@ class CatalogSearch {
     String? scopeUid,
     List<Category> tree = const <Category>[],
   }) async {
-    try {
-      return await _algolia.typeAhead(
-        storeCode: storeCode,
-        query: query,
-        scopeUid: scopeUid,
-        tree: tree,
-      );
-    } on Object catch (error) {
-      _noteFallback(error);
+    if (!deliveryScoped) {
+      try {
+        return await _algolia.typeAhead(
+          storeCode: storeCode,
+          query: query,
+          scopeUid: scopeUid,
+          tree: tree,
+        );
+      } on Object catch (error) {
+        _noteFallback(error);
+      }
     }
 
     final page = await _catalog.fetchProducts(
@@ -107,6 +115,7 @@ class CatalogSearch {
     SearchEngine? engine,
     List<Category> tree = const <Category>[],
   }) async {
+    if (deliveryScoped) engine = SearchEngine.catalog;
     if (engine != SearchEngine.catalog) {
       try {
         return await _algolia.results(
@@ -167,7 +176,9 @@ class CatalogSearch {
   Future<List<String>> trySuggestions({
     required String storeCode,
     required String query,
-  }) => _algolia.trySuggestions(storeCode: storeCode, query: query);
+  }) => deliveryScoped
+      ? Future.value([])
+      : _algolia.trySuggestions(storeCode: storeCode, query: query);
 
   static ProductSortField _productSort(SearchSort sort) =>
       switch ((sort.attribute, sort.descending)) {
@@ -187,5 +198,6 @@ final catalogSearchProvider = Provider<CatalogSearch>(
   (ref) => CatalogSearch(
     algolia: ref.watch(algoliaSearchProvider),
     catalog: ref.watch(catalogRepositoryProvider),
+    deliveryScoped: ref.watch(deliveryHeadersProvider).isNotEmpty,
   ),
 );

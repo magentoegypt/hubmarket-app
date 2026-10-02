@@ -103,9 +103,7 @@ class CatalogRepository {
 
     final data = await _query(
       CatalogQueries.categoryThumbnails(uids.length),
-      <String, dynamic>{
-        for (var i = 0; i < uids.length; i++) 'u$i': uids[i],
-      },
+      <String, dynamic>{for (var i = 0; i < uids.length; i++) 'u$i': uids[i]},
     );
 
     final thumbnails = <String, String>{};
@@ -449,7 +447,7 @@ class CatalogRepository {
 
 final catalogRepositoryProvider = Provider<CatalogRepository>(
   (ref) => CatalogRepository(
-    ref.watch(graphqlClientProvider),
+    ref.watch(deliveryCatalogClientProvider),
     marketplace: ref.watch(marketplaceGateProvider),
   ),
 );
