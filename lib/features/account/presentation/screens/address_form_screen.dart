@@ -6,23 +6,20 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
-import '../../../../core/address/regions.dart';
+import '../../../../core/address/city_fields.dart';
 import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/address_form.dart';
 import '../../../../core/widgets/hub_bottom_action_bar.dart';
-import '../../../../core/widgets/hub_bottom_sheet.dart';
 import '../../../../core/widgets/hub_button.dart';
 import '../../../../core/widgets/hub_chip.dart';
 import '../../../../core/widgets/hub_icon_button.dart';
-import '../../../../core/widgets/hub_radio_dot.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/widgets/auth_field.dart';
 import '../../data/account_repository.dart';
 import '../../data/address_rules.dart';
 import '../../domain/customer_address.dart';
-import '../emirate_names.dart';
 
 /// Add / edit address (Figma 24b): a close button and a hairline under the bar,
 /// labelled fields with a leading icon, the emirate as a picker, "Save as"
@@ -57,6 +54,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     final a = widget.initial;
     _postcode = TextEditingController(text: a?.postcode ?? '');
     _address = AddressFormController(
+      country: a?.countryCode ?? 'AE',
       fullName: a?.fullName ?? '',
       phone: a?.telephone ?? '',
       area: a?.city ?? '',
@@ -69,9 +67,16 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     // The field shows the whole number, "+971 50 123 4567" (the controller
     // starts with the digits after the dial code).
     if (a != null && a.telephone.trim().isNotEmpty) {
-      _address.phone.text = Phone.display(a.telephone);
+      _address.phone.text = a.countryCode == 'AE'
+          ? Phone.display(a.telephone)
+          : a.telephone;
     }
+    _address.country.addListener(_countryChanged);
     _selectedLabelId = a?.labelOptionId;
+  }
+
+  void _countryChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -85,12 +90,6 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     final name = _address.splitName();
-    // The store's region_id when it has UAE regions, else the emirate's name.
-    final region = regionInput(
-      regionId: _address.regionId.value,
-      regions: ref.read(regionsProvider).valueOrNull ?? const [],
-      fallbackName: _address.region.text,
-    );
     final address = CustomerAddress(
       id: widget.initial?.id,
       firstName: name.first,
@@ -100,9 +99,9 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       apartment: _address.apartment.text.trim(),
       city: _address.area.text.trim(),
       postcode: _postcode.text.trim(),
-      region: (region['region'] as String?) ?? '',
-      regionId: region['region_id'] as int?,
-      countryCode: addressCountryCode,
+      region: _address.region.text,
+      regionId: _address.regionId.value,
+      countryCode: _address.country.value,
       defaultShipping: _address.isDefault.value,
       labelOptionId: _selectedLabelId,
     );
@@ -132,7 +131,10 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     final l10n = AppLocalizations.of(context);
     final isEdit = widget.initial != null;
     final postcodeRequired =
-        ref.watch(postcodeRequiredProvider).valueOrNull ?? false;
+        ref
+            .watch(postcodeRequiredByCountryProvider(_address.country.value))
+            .valueOrNull ??
+        true;
     return Scaffold(
       appBar: HubTopBar(
         title: isEdit ? l10n.addressEdit : l10n.addressAdd,
@@ -166,10 +168,10 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                 hint: '+971 50 123 4567',
                 keyboardType: TextInputType.phone,
                 ltrInput: true,
-                validator: (v) => Validators.uaePhone(context, v),
+                validator: (v) => _address.validatePhone(context, v),
               ),
               const SizedBox(height: 14),
-              _EmirateField(controller: _address),
+              AddressCityFields(controller: _address),
               const SizedBox(height: 14),
               AuthField(
                 controller: _address.street,
@@ -216,245 +218,6 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
           loading: _busy,
           onPressed: _save,
         ),
-      ),
-    );
-  }
-}
-
-/// "Emirate" (Figma 24b): the label over a 52 px field — globe, the chosen
-/// emirate, chevron — which opens the list of emirates. When the list can't be
-/// read the field is a plain text box so the form is never blocked.
-class _EmirateField extends ConsumerWidget {
-  const _EmirateField({required this.controller});
-
-  final AddressFormController controller;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final regions = ref.watch(regionsProvider);
-    return regions.when(
-      data: (list) => ValueListenableBuilder<int?>(
-        valueListenable: controller.regionId,
-        builder: (context, id, _) {
-          // The store has no regions for the UAE, so a saved address has the
-          // emirate as text only: that is what the field shows until another
-          // is picked.
-          RegionOption? picked;
-          for (final r in list) {
-            if (r.id == id) picked = r;
-          }
-          final shown = emirateLabel(
-            l10n,
-            picked?.name ?? controller.region.text,
-          );
-          return FormField<String>(
-            initialValue: shown,
-            validator: (_) => shown.isEmpty ? l10n.validationRequired : null,
-            builder: (field) => _SelectField(
-              label: l10n.fieldEmirate,
-              icon: HubIcons.globe,
-              value: shown,
-              errorText: field.errorText,
-              onTap: () async {
-                final chosen = await showHubBottomSheet<RegionOption>(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  builder: (_) => _EmiratePicker(
-                    title: l10n.fieldEmirate,
-                    options: list,
-                    selected: picked?.id,
-                  ),
-                );
-                if (chosen == null) return;
-                controller.regionId.value = chosen.id;
-                controller.region.text = chosen.name;
-                // There's no separate Area/City field (matching the website),
-                // so Magento's required `city` is the emirate's name.
-                controller.area.text = chosen.name;
-                field.didChange(emirateLabel(l10n, chosen.name));
-              },
-            ),
-          );
-        },
-      ),
-      loading: () => _SelectField(
-        label: l10n.fieldEmirate,
-        icon: HubIcons.globe,
-        value: '',
-        loading: true,
-      ),
-      // Emirate list unavailable → free text, so the form isn't blocked.
-      error: (_, _) => AuthField(
-        controller: controller.region,
-        label: l10n.fieldEmirate,
-        icon: HubIcons.globe,
-        validator: (v) => Validators.required(context, v),
-      ),
-    );
-  }
-}
-
-/// A select that opens a picker: the label over a 52 px field with a leading
-/// icon, the value (or the hint) and a chevron — the look of `AuthField`, for
-/// a choice rather than typing.
-class _SelectField extends StatelessWidget {
-  const _SelectField({
-    required this.label,
-    required this.icon,
-    required this.value,
-    this.onTap,
-    this.errorText,
-    this.loading = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final String value;
-  final VoidCallback? onTap;
-  final String? errorText;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppTextStyles.of(context);
-    final red = errorText != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          label,
-          style: t.captionStrong.copyWith(color: AppColors.inkHeading),
-        ),
-        const SizedBox(height: 6),
-        Material(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: red ? AppColors.danger : AppColors.borderStrong,
-              width: red ? 1.5 : 1,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: loading ? null : onTap,
-            child: SizedBox(
-              height: 52,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Icon(icon, size: 20, color: AppColors.inkMuted),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: t.body.copyWith(color: AppColors.inkHeading),
-                      ),
-                    ),
-                    if (loading)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      const Icon(
-                        HubIcons.chevronDown,
-                        size: 20,
-                        color: AppColors.inkMuted,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (red) ...[
-          const SizedBox(height: 6),
-          AuthHelperLine.error(errorText!),
-        ],
-      ],
-    );
-  }
-}
-
-/// The emirates to choose from: one row each, the chosen one marked with the
-/// frames' radio.
-class _EmiratePicker extends StatelessWidget {
-  const _EmiratePicker({
-    required this.title,
-    required this.options,
-    required this.selected,
-  });
-
-  final String title;
-  final List<RegionOption> options;
-  final int? selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppTextStyles.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderStrong,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: t.heading2.copyWith(color: context.scaffoldHeading),
-          ),
-          const SizedBox(height: 4),
-          for (final option in options)
-            InkWell(
-              onTap: () => Navigator.of(context).pop(option),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: context.isDarkMode
-                          ? Colors.white12
-                          : AppColors.borderSubtle,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    HubRadioDot(selected: option.id == selected),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        emirateLabel(AppLocalizations.of(context), option.name),
-                        style: t.body.copyWith(color: context.scaffoldHeading),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }
@@ -550,9 +313,7 @@ class _DefaultCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         l10n.addressDefaultHint,
-                        style: t.caption.copyWith(
-                          color: context.scaffoldMuted,
-                        ),
+                        style: t.caption.copyWith(color: context.scaffoldMuted),
                       ),
                     ],
                   ),

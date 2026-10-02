@@ -1,3 +1,5 @@
+import 'package:hubmarket_app/core/address/city_fields.dart';
+import '../../support/city_fake.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -259,7 +261,8 @@ Widget checkoutHarness({
       backendCapabilitiesProvider.overrideWithValue(capabilities),
       graphqlClientProvider.overrideWithValue(fakeGraphQLClient()),
       regionsProvider.overrideWith((ref) async => uaeFallbackRegions),
-      postcodeRequiredProvider.overrideWith((ref) async => false),
+      postcodeRequiredByCountryProvider('AE').overrideWith((ref) async => false),
+      cityDirectoryProvider.overrideWithValue(FakeCityDirectory()),
       addressesProvider.overrideWith(
         (ref) async => signedIn ? const [kSavedAddress] : const [],
       ),
@@ -284,16 +287,9 @@ Future<void> fillGuestAddress(WidgetTester tester) async {
   await type(0, 'sara.ahmed@gmail.com');
   await type(1, 'Sara Ahmed');
   await type(2, '+971 50 123 4567');
-  await type(3, 'Dubai Marina');
-  await type(4, 'Marina Gate 2');
-  await type(5, '1204');
-  final emirate = find.byType(DropdownButtonFormField<int>);
-  await tester.ensureVisible(emirate);
-  await tester.pumpAndSettle();
-  await tester.tap(emirate);
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Dubai').last);
-  await tester.pumpAndSettle();
+  await type(3, 'Marina Gate 2');
+  await type(4, '1204');
+  await chooseDubai(tester);
 }
 
 /// Taps a footer / card action by its text and settles.

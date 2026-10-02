@@ -36,7 +36,15 @@ bool postcodeRequiredFor(String? optionalZipCountries, String country) {
 /// When the setting can't be read, the field is shown: an unnecessary postcode
 /// costs a few keystrokes, a missing one leaves the shopper stuck on an error
 /// they have no field to fix.
-final postcodeRequiredProvider = FutureProvider<bool>((ref) async {
+final postcodeRequiredProvider = FutureProvider<bool>(
+  (ref) =>
+      ref.watch(postcodeRequiredByCountryProvider(addressCountryCode).future),
+);
+
+final postcodeRequiredByCountryProvider = FutureProvider.family<bool, String>((
+  ref,
+  country,
+) async {
   ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
   final client = ref.watch(graphqlClientProvider);
   try {
@@ -52,7 +60,7 @@ final postcodeRequiredProvider = FutureProvider<bool>((ref) async {
         (result.data?['storeConfig']
                 as Map<String, dynamic>?)?['optional_zip_countries']
             as String?;
-    return postcodeRequiredFor(list, addressCountryCode);
+    return postcodeRequiredFor(list, country);
   } catch (_) {
     return true;
   }

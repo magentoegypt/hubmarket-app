@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hubmarket_app/app/theme/hub_icons.dart';
+import '../../support/city_fake.dart';
 import 'package:hubmarket_app/features/account/data/address_rules.dart';
 import 'package:hubmarket_app/features/account/domain/customer_address.dart';
 import 'package:hubmarket_app/features/account/presentation/screens/address_form_screen.dart';
@@ -67,7 +67,7 @@ List<CustomerAddress> _book(String locale) {
       telephone: '+971501234567',
       apartment: ar ? 'شقة 1204' : 'Apt 1204',
       street: ar ? 'مارينا جيت 2' : 'Marina Gate 2',
-      city: ar ? 'دبي مارينا' : 'Dubai Marina',
+      city: 'Dubai — Dubai Marina',
       region: ar ? 'دبي' : 'Dubai',
       defaultShipping: true,
       labelText: ar ? 'المنزل' : 'Home',
@@ -87,7 +87,7 @@ List<CustomerAddress> _book(String locale) {
 
 /// The UAE has no postcodes: the frame has no such field, and a store whose
 /// settings make it optional shows none.
-final _noPostcode = postcodeRequiredProvider.overrideWith((ref) async => false);
+final _noPostcode = postcodeRequiredByCountryProvider('AE').overrideWith((ref) async => false);
 
 void main() {
   setUpAll(loadAppFonts);
@@ -117,7 +117,7 @@ void main() {
       findsNWidgets(2),
     );
     expect(
-      find.text('Apt 1204, Marina Gate 2, Dubai Marina, Dubai, UAE'),
+      find.text('Apt 1204, Marina Gate 2, Dubai — Dubai Marina, Dubai, UAE'),
       findsOneWidget,
     );
     expect(
@@ -157,10 +157,7 @@ void main() {
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), ar ? 'سارة أحمد' : 'Sara Ahmed');
       await tester.enterText(fields.at(1), '+971 50 123 4567');
-      await tester.tap(find.byIcon(HubIcons.globe));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(ar ? 'دبي' : 'Dubai').last);
-      await tester.pumpAndSettle();
+      await chooseDubai(tester, arabic: ar);
       await tester.enterText(
         fields.at(2),
         ar ? 'مارينا جيت 2' : 'Marina Gate 2',
@@ -199,10 +196,7 @@ void main() {
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), 'Sara Ahmed');
     await tester.enterText(fields.at(1), '050 123 4567');
-    await tester.tap(find.byIcon(HubIcons.globe));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Dubai').last);
-    await tester.pumpAndSettle();
+    await chooseDubai(tester);
     await tester.enterText(fields.at(2), 'Marina Gate 2');
     await tester.enterText(fields.at(3), '1204');
     await tester.tap(find.text('Work'));
@@ -215,8 +209,8 @@ void main() {
     expect(saved.firstName, 'Sara');
     expect(saved.lastName, 'Ahmed');
     expect(saved.telephone, '+971501234567');
-    expect(saved.region, 'Dubai');
-    expect(saved.city, 'Dubai');
+    expect(saved.regionId, 200);
+    expect(saved.city, 'Dubai — Dubai Marina');
     expect(saved.street, 'Marina Gate 2');
     expect(saved.apartment, '1204');
     expect(saved.labelOptionId, '2');

@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../l10n/l10n.dart';
-import '../address/regions.dart';
+import '../address/city_fields.dart';
 import '../validation/phone.dart';
 import '../validation/validators.dart';
-import 'phone_number_field.dart';
 
 /// Holds the editable address fields, created and disposed by the host screen.
 /// Mirrors the Figma "Add Address" form: a single Full Name, phone, an Emirate
@@ -15,6 +14,7 @@ import 'phone_number_field.dart';
 /// without the host needing a `setState`.
 class AddressFormController {
   AddressFormController({
+    String country = 'AE',
     String fullName = '',
     String phone = '',
     String area = '',
@@ -23,11 +23,14 @@ class AddressFormController {
     String region = '',
     int? regionId,
     bool isDefault = false,
-  }) : fullName = TextEditingController(text: fullName),
+  }) : country = ValueNotifier(country),
+       fullName = TextEditingController(text: fullName),
        // The phone field shows a fixed `+971` chip, so it holds only the local
        // subscriber digits — strip the country code off any prefilled E.164
        // value (a saved address) so it isn't doubled.
-       phone = TextEditingController(text: Phone.localPart(phone)),
+       phone = TextEditingController(
+         text: country == 'AE' ? Phone.localPart(phone) : phone,
+       ),
        area = TextEditingController(text: area),
        street = TextEditingController(text: street),
        apartment = TextEditingController(text: apartment),
@@ -35,6 +38,7 @@ class AddressFormController {
        regionId = ValueNotifier<int?>(regionId),
        isDefault = ValueNotifier<bool>(isDefault);
 
+  final ValueNotifier<String> country;
   final TextEditingController fullName;
   final TextEditingController phone;
 
@@ -67,12 +71,26 @@ class AddressFormController {
         .toList();
     if (parts.isEmpty) return (first: '', last: '');
     if (parts.length == 1) return (first: parts.first, last: parts.first);
-    return (first: parts.sublist(0, parts.length - 1).join(' '), last: parts.last);
+    return (
+      first: parts.sublist(0, parts.length - 1).join(' '),
+      last: parts.last,
+    );
   }
 
   /// The phone in explicit E.164 (`+971…`) for Magento / the guest-OTP flow —
   /// the field only holds local digits, so re-add the country code on read.
-  String e164Phone() => Phone.normalizeUae(phone.text);
+  String e164Phone() => country.value == 'AE'
+      ? Phone.normalizeUae(phone.text)
+      : phone.text.trim();
+
+  String? validatePhone(BuildContext context, String? value) =>
+      country.value == 'AE'
+      ? Validators.uaePhone(context, value)
+      : RegExp(r'^\+[1-9]\d{7,14}$').hasMatch((value ?? '').trim())
+      ? null
+      : (Localizations.localeOf(context).languageCode == 'ar'
+            ? 'أدخل رقم الهاتف مع رمز الدولة'
+            : 'Enter phone including +country code');
 
   /// Magento `street` array — drops the apartment line when empty.
   List<String> streetLines() => [
@@ -84,6 +102,7 @@ class AddressFormController {
     for (final c in [fullName, phone, area, street, apartment, region]) {
       c.dispose();
     }
+    country.dispose();
     regionId.dispose();
     isDefault.dispose();
   }
@@ -102,7 +121,7 @@ class AddressForm extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final regions = ref.watch(regionsProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -121,24 +140,14 @@ class AddressForm extends ConsumerWidget {
           // The website's phone field carries a country-code prefix — use the
           // shared `+971` chip field (same as registration) and validate a UAE
           // mobile so the guest-checkout OTP always has a well-formed number.
-          child: PhoneNumberField(
+          child: TextFormField(
             controller: controller.phone,
-            hint: l10n.authPhoneHint,
-            validator: (v) => Validators.uaePhone(context, v),
+            decoration: InputDecoration(hintText: l10n.authPhoneHint),
+            validator: (v) => controller.validatePhone(context, v),
           ),
         ),
         const SizedBox(height: 14),
-        // State + Country are stacked (not side-by-side) so the full country
-        // name "United Arab Emirates" shows without truncating on a phone.
-        _LabeledField(
-          label: l10n.fieldEmirate,
-          child: _emirateInput(context, l10n, regions),
-        ),
-        const SizedBox(height: 14),
-        _LabeledField(
-          label: l10n.fieldCountryLabel,
-          child: _countryField(l10n),
-        ),
+        AddressCityFields(controller: controller),
         const SizedBox(height: 14),
         _LabeledField(
           label: l10n.fieldStreet,
@@ -157,79 +166,6 @@ class AddressForm extends ConsumerWidget {
       ],
     );
   }
-
-  Widget _emirateInput(
-    BuildContext context,
-    AppLocalizations l10n,
-    AsyncValue<List<RegionOption>> regions,
-  ) => regions.when(
-    data: (list) => ValueListenableBuilder<int?>(
-      valueListenable: controller.regionId,
-      builder: (context, value, _) => DropdownButtonFormField<int>(
-        initialValue: value,
-        isExpanded: true,
-        decoration: const InputDecoration(),
-        hint: Text(
-          l10n.fieldEmirate,
-          style: const TextStyle(color: AppColors.inkFaint, fontSize: 13.5),
-        ),
-        items: [
-          for (final r in list)
-            DropdownMenuItem<int>(value: r.id, child: Text(r.name)),
-        ],
-        onChanged: (v) {
-          controller.regionId.value = v;
-          // There's no separate Area/City field now (matching the website), so
-          // derive Magento's required `city` from the selected state name.
-          if (v != null) {
-            for (final r in list) {
-              if (r.id == v) {
-                controller.area.text = r.name;
-                break;
-              }
-            }
-          }
-        },
-        validator: (v) => v == null ? l10n.validationRequired : null,
-      ),
-    ),
-    loading: () => const TextField(
-      enabled: false,
-      decoration: InputDecoration(
-        suffixIcon: Padding(
-          padding: EdgeInsets.all(12),
-          child: SizedBox(
-            height: 16,
-            width: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-    ),
-    // Emirate list unavailable → free-text fallback so the form isn't blocked.
-    error: (_, _) => TextFormField(
-      controller: controller.region,
-      validator: (v) => Validators.required(context, v),
-    ),
-  );
-
-  /// Country — a dropdown (matching the website's Country control) showing the
-  /// full localized country name. The UAE is the only market, so it carries a
-  /// single fixed option; it's a dropdown rather than a static field so it reads
-  /// as dynamic and the full name is always visible (QA 86d3mdefm #1).
-  Widget _countryField(AppLocalizations l10n) =>
-      DropdownButtonFormField<String>(
-        initialValue: addressCountryCode,
-        isExpanded: true,
-        decoration: const InputDecoration(),
-        items: [
-          DropdownMenuItem<String>(
-            value: addressCountryCode,
-            child: Text(l10n.countryUae),
-          ),
-        ],
-        onChanged: (_) {},
-      );
 
   Widget _input(
     TextEditingController controller,

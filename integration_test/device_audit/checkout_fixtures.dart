@@ -1,3 +1,4 @@
+import '../../test/support/city_fake.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -323,7 +324,7 @@ List<Override> checkoutOverrides({
     checkoutRepository(registeredEmail: registeredEmail),
   ),
   regionsProvider.overrideWith((ref) async => uaeFallbackRegions),
-  postcodeRequiredProvider.overrideWith((ref) async => false),
+  postcodeRequiredByCountryProvider('AE').overrideWith((ref) async => false),
   addressesProvider.overrideWith(
     (ref) async => signedIn ? const [kSavedAddress] : const <CustomerAddress>[],
   ),
@@ -376,14 +377,7 @@ Future<void> fillGuestAddress(WidgetTester tester) async {
   await type(0, 'sara.ahmed@gmail.com');
   await type(1, 'Sara Ahmed');
   await type(2, '+971 50 123 4567');
-  await type(3, 'Dubai Marina');
-  await type(4, 'Marina Gate 2');
-  await type(5, '1204');
-  final emirate = find.byType(DropdownButtonFormField<int>);
-  await tester.ensureVisible(emirate);
-  await pumpFor(tester, 400);
-  await tester.tap(emirate);
-  await pumpFor(tester, 500);
-  await tester.tap(find.text('Dubai').last);
-  await pumpFor(tester, 500);
+  await type(3, 'Marina Gate 2');
+  await type(4, '1204');
+  await chooseDubai(tester);
 }

@@ -80,10 +80,11 @@ class CustomerAddress {
   /// `region` (falling back to `city`). The country is always the UAE here, so
   /// it isn't repeated on every card (previously rendered as a raw "AE").
   String get summary {
-    final emirate = region.isNotEmpty ? region : city;
+    final emirate = countryCode != 'AE' && region != city ? region : '';
     return [
       street,
       apartment,
+      city,
       emirate,
     ].where((p) => p.isNotEmpty).join(', ');
   }

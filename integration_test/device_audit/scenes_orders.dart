@@ -1,6 +1,6 @@
+import '../../test/support/city_fake.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hubmarket_app/app/theme/hub_icons.dart';
 import 'package:hubmarket_app/core/address/regions.dart';
 import 'package:hubmarket_app/core/config/store_features.dart';
 import 'package:hubmarket_app/core/config/store_timezone.dart';
@@ -152,7 +152,7 @@ List<AuditScene> scenes() => [
     setup: (locale) => AuditSetup(
       account: AddressBook(const [], locale: locale),
       overrides: [
-        postcodeRequiredProvider.overrideWith((ref) async => false),
+        postcodeRequiredByCountryProvider('AE').overrideWith((ref) async => false),
         regionsProvider.overrideWith((ref) async => uaeFallbackRegions),
       ],
     ),
@@ -162,8 +162,7 @@ List<AuditScene> scenes() => [
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), ar ? 'سارة أحمد' : 'Sara Ahmed');
       await tester.enterText(fields.at(1), '+971 50 123 4567');
-      await tapVisible(tester, find.byIcon(HubIcons.globe));
-      await tapVisible(tester, find.text(ar ? 'دبي' : 'Dubai').last);
+      await chooseDubai(tester, arabic: ar);
       await tester.enterText(
         fields.at(2),
         ar ? 'مارينا جيت 2' : 'Marina Gate 2',
