@@ -25,12 +25,7 @@ class AddressFormController {
     bool isDefault = false,
   }) : country = ValueNotifier(country),
        fullName = TextEditingController(text: fullName),
-       // The phone field shows a fixed `+971` chip, so it holds only the local
-       // subscriber digits — strip the country code off any prefilled E.164
-       // value (a saved address) so it isn't doubled.
-       phone = TextEditingController(
-         text: country == 'AE' ? Phone.localPart(phone) : phone,
-       ),
+       phone = TextEditingController(text: phone),
        area = TextEditingController(text: area),
        street = TextEditingController(text: street),
        apartment = TextEditingController(text: apartment),
@@ -79,18 +74,26 @@ class AddressFormController {
 
   /// The phone in explicit E.164 (`+971…`) for Magento / the guest-OTP flow —
   /// the field only holds local digits, so re-add the country code on read.
-  String e164Phone() => country.value == 'AE'
-      ? Phone.normalizeUae(phone.text)
-      : phone.text.trim();
+  String e164Phone() {
+    final raw = phone.text.trim();
+    return country.value == 'AE' || raw.startsWith('+') || raw.startsWith('00')
+        ? Phone.normalizeUae(raw)
+        : raw;
+  }
 
-  String? validatePhone(BuildContext context, String? value) =>
-      country.value == 'AE'
-      ? Validators.uaePhone(context, value)
-      : RegExp(r'^\+[1-9]\d{7,14}$').hasMatch((value ?? '').trim())
-      ? null
-      : (Localizations.localeOf(context).languageCode == 'ar'
-            ? 'أدخل رقم الهاتف مع رمز الدولة'
-            : 'Enter phone including +country code');
+  String? validatePhone(BuildContext context, String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return Validators.required(context, value);
+    // A delivery country must not change the customer's international number.
+    if (raw.startsWith('+') || raw.startsWith('00')) {
+      if (RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(Phone.normalizeUae(raw))) return null;
+    } else if (country.value == 'AE') {
+      return Validators.uaePhone(context, value);
+    }
+    return Localizations.localeOf(context).languageCode == 'ar'
+        ? 'أدخل رقم الهاتف مع رمز الدولة'
+        : 'Enter phone including +country code';
+  }
 
   /// Magento `street` array — drops the apartment line when empty.
   List<String> streetLines() => [

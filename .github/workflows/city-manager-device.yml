@@ -5,6 +5,9 @@ on:
     paths:
       - .github/workflows/city-manager-device.yml
       - integration_test/city_manager_native_test.dart
+      - test/city_manager_test.dart
+      - lib/core/address/**
+      - lib/core/widgets/address_form.dart
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,3 +1,4 @@
+import 'package:hubmarket_app/core/widgets/address_form.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,15 @@ Map<String, dynamic> row(int id, int region, String name) => {
   'location_id': '$id', 'region_id': '$region', 'name_en': name, 'name_ar': '',
 };
 void main() {
+  test('Delivery country preserves the international phone number', () {
+    final address=AddressFormController(country:'AE', phone:'+20 100 000 0000');
+    expect(address.e164Phone(), '+201000000000');
+    address.country.value='US';
+    expect(address.e164Phone(), '+201000000000');
+    address.phone.text='+971 50 123 4567';
+    expect(address.e164Phone(), '+971501234567');
+    address.dispose();
+  });
   final requests = <Uri>[];
   CityDirectory directory({bool error = false, bool emptyLocalities = false}) => CityDirectory('https://example.invalid/graphql', MockClient((request) async {
     requests.add(request.url);
