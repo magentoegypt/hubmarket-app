@@ -93,25 +93,24 @@ void main() {
       matching: find.byType(Switch),
     );
 
-    testWidgets('the switch is there whether or not push is, and starts on', (
-      tester,
-    ) async {
-      await _pump(tester);
+    bool switched(WidgetTester tester) => tester
+        .widget<SwitchListTile>(
+          find.widgetWithText(SwitchListTile, en.settingsPersonalisationTitle),
+        )
+        .value;
+
+    testWidgets('the switch is there whether or not push is, and starts off: '
+        'nothing is used until the shopper allows it', (tester) async {
+      await _pump(tester, cache: FakeLocalCache.neverAsked());
       expect(find.text(en.settingsPersonalisationGroup.toUpperCase()), findsOneWidget);
       expect(find.text(en.settingsPersonalisationTitle), findsOneWidget);
       expect(find.text(en.settingsPersonalisationBody), findsOneWidget);
-      expect(
-        tester.widget<SwitchListTile>(
-          find.widgetWithText(SwitchListTile, en.settingsPersonalisationTitle),
-        ).value,
-        isTrue,
-      );
+      expect(switched(tester), isFalse);
     });
 
-    testWidgets('turning it off is kept, turning it on again too', (
-      tester,
-    ) async {
-      final cache = FakeLocalCache();
+    testWidgets('turning it on is kept; turning it off is kept too and deletes '
+        'the random id', (tester) async {
+      final cache = FakeLocalCache.neverAsked();
       await _pump(tester, cache: cache);
       final tile = find.widgetWithText(
         SwitchListTile,
@@ -121,25 +120,28 @@ void main() {
       await tester.ensureVisible(tile);
       await tester.tap(switchOf(en.settingsPersonalisationTitle));
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(tile).value, isFalse);
-      expect(cache.readString(kPersonalizationEnabledKey), 'false');
+      expect(switched(tester), isTrue);
+      expect(cache.readString(kPersonalizationEnabledKey), 'true');
 
+      // The id the app made for this install while it was allowed.
+      await cache.writeString(kPersonalizationTokenKey, 'hm-abc123');
       await tester.tap(switchOf(en.settingsPersonalisationTitle));
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(tile).value, isTrue);
-      expect(cache.readString(kPersonalizationEnabledKey), 'true');
+      expect(switched(tester), isFalse);
+      expect(cache.readString(kPersonalizationEnabledKey), 'false');
+      expect(cache.readString(kPersonalizationTokenKey), isNull);
     });
 
-    testWidgets('a shopper who turned it off finds it off', (tester) async {
+    testWidgets('a shopper who allowed it finds it on', (tester) async {
       final cache = FakeLocalCache()
-        ..writeString(kPersonalizationEnabledKey, 'false');
+        ..writeString(kPersonalizationEnabledKey, 'true');
       await _pump(tester, cache: cache);
-      expect(
-        tester.widget<SwitchListTile>(
-          find.widgetWithText(SwitchListTile, en.settingsPersonalisationTitle),
-        ).value,
-        isFalse,
-      );
+      expect(switched(tester), isTrue);
+    });
+
+    testWidgets('a shopper who said Not now finds it off', (tester) async {
+      await _pump(tester);
+      expect(switched(tester), isFalse);
     });
   });
 

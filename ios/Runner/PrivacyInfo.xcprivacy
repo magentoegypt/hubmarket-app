@@ -148,7 +148,8 @@
 		</dict>
 		<!-- Products viewed, tapped, added to the cart or wishlist and ordered,
 		     sent to Algolia Insights under the install id to personalise
-		     "Picked For You". Off with Settings > Personalised picks. Declared
+		     "Picked For You", only after the shopper taps Allow on "Personalise
+		     my picks?" (Settings > Personalised picks changes it). Declared
 		     as linked to be safe: the id stays on the install. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>

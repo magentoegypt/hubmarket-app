@@ -29,8 +29,9 @@ class TrackedLine {
 ///
 /// Every call returns at once and nothing it does can fail the caller: the
 /// work (settings, product ids, the request) runs in the background, is
-/// skipped when the shopper switched personalisation off in Settings, and a
-/// failure only means one event less.
+/// skipped unless the shopper allowed personalisation (never asked, "Not now"
+/// and the Settings switch off all mean no events), and a failure only means
+/// one event less.
 class InsightsTracker {
   InsightsTracker({
     required this.enabled,
@@ -41,15 +42,17 @@ class InsightsTracker {
     DateTime Function()? clock,
   }) : _clock = clock ?? DateTime.now;
 
-  /// Whether personalisation is on in Settings.
+  /// Whether the shopper allowed personalisation (the prompt on the Home, the
+  /// Settings switch).
   final bool Function() enabled;
 
   /// Algolia's credentials and index for the active store view; null when
   /// there are none.
   final Future<AlgoliaSettings?> Function() settings;
 
-  /// This install's user token.
-  final String Function() token;
+  /// This install's user token; null while the shopper has not allowed
+  /// personalisation, and then nothing is sent.
+  final String? Function() token;
   final ProductObjectIds ids;
   final InsightsClient client;
   final DateTime Function() _clock;
@@ -147,8 +150,9 @@ class InsightsTracker {
       if (resolved.isEmpty) return;
       // The switch may have been turned off while the ids were on their way.
       if (!enabled()) return;
-      final at = _clock();
       final userToken = token();
+      if (userToken == null) return;
+      final at = _clock();
       final payload = [
         for (final event in build(resolved, algolia))
           ...event.toJson(index: algolia.productsIndex, userToken: userToken, at: at),

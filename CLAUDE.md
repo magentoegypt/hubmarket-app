@@ -77,8 +77,13 @@ answers `personalized: true`; only then the section shows the admin's `badge` an
 "Personalised recommendations…" subtitle (the generic list is never labelled personal). The picks
 come from Algolia Personalization, fed by Insights events the app sends under the same token
 (`Viewed Product`, `Product Clicked`, `Added to Cart`, `Added to Wishlist`, `Placed order`: the
-website's names; product ids are the decoded GraphQL `uid`). Settings > Personalised picks
-switches both off; the privacy documents and `PrivacyInfo.xcprivacy` describe it.
+website's names; product ids are the decoded GraphQL `uid`). **All of it is ask-first** (decided
+2 Oct 2026, as the website's cookie consent): the Home opens a one-time "Personalise my picks?"
+sheet (Allow / Not now, `PersonalizationConsentPrompt`), and until Allow the app sends no event,
+makes no token and does not call `hmPickedForYou`. Settings > Personalised picks changes the
+answer, and turning it off deletes the token; the privacy documents and `PrivacyInfo.xcprivacy`
+describe it. Test fakes answer the question with Not now (`FakeLocalCache()`; use
+`FakeLocalCache.neverAsked()` to open it).
 
 Only the app icon, the native launch screen and interface wording ship with the
 app (see Figma G3).

@@ -46,6 +46,9 @@ content is a four-line change. One thing to know when picking them:
 - **The live server is slow on the first call**, so the category, product and search shots wait
   20-24 s. The test prints `IMAGES <shot>: n painted, m pending <urls>` for each shot, so a blank
   photo in a capture shows up in the log.
+- **The "Personalise my picks?" sheet** opens over the Home of a fresh install. The test writes the
+  answer "Not now" into the cache before it starts, so the shots show the shop and the Picked For You
+  section is the top-rated list (a real shopper's own picks need their consent and about an hour).
 
 ## How to capture
 
