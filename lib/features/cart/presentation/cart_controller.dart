@@ -4,6 +4,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/storage/local_cache.dart';
 import '../../../core/store/store_controller.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../personalization/data/insights_tracker.dart';
 import '../data/cart_repository.dart';
 import '../domain/bundle_cart_request.dart';
 import '../domain/cart.dart';
@@ -156,6 +157,16 @@ class CartController extends Notifier<CartState> {
         cart = await _repo.addProducts(await _ensureCartId(), [item]);
       }
       state = state.copyWith(cart: cart, isMutating: false);
+      // "Added to Cart" for Algolia Personalization, at the line's unit price.
+      final line = cart.items.where((i) => i.sku == sku).firstOrNull;
+      trackInsights(
+        () => ref.read(insightsTrackerProvider),
+        (tracker) => tracker.addedToCart(
+          sku,
+          quantity: quantity,
+          unitPrice: line?.unitPrice,
+        ),
+      );
     } catch (error) {
       state = state.copyWith(isMutating: false, error: error);
       rethrow;

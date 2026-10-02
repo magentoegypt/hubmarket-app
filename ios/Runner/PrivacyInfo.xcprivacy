@@ -118,8 +118,9 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- The customer account behind the session token, and the FCM push
-		     token sent to the store so order updates reach this phone. -->
+		<!-- The customer account behind the session token, the FCM push token
+		     sent to the store so order updates reach this phone, and the random
+		     install id Algolia Personalization keys a profile on. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeUserID</string>
@@ -142,6 +143,23 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeProductPersonalization</string>
+			</array>
+		</dict>
+		<!-- Products viewed, tapped, added to the cart or wishlist and ordered,
+		     sent to Algolia Insights under the install id to personalise
+		     "Picked For You". Off with Settings > Personalised picks. Declared
+		     as linked to be safe: the id stays on the install. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeProductPersonalization</string>
 			</array>
 		</dict>
 		<!-- Search terms typed in the app reach the store's search (Algolia,

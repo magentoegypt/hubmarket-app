@@ -20,11 +20,13 @@ import 'package:hubmarket_app/features/catalog/presentation/screens/product_deta
 import 'package:hubmarket_app/features/catalog/presentation/screens/search_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_buy_bar.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
+import 'package:hubmarket_app/features/personalization/data/insights_tracker.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/fonts.dart';
 import '../../../support/hubapp_fakes.dart';
+import '../../../support/insights_fakes.dart';
 import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// Serves one canned [ProductDetail] instead of the shared sample.
@@ -45,6 +47,7 @@ Widget _harness(
   List<Uri>? launched,
   GlobalKey? boundary,
   String initialLocation = '/product/coco-mademoiselle',
+  List<Override> overrides = const [],
 }) {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -107,6 +110,7 @@ Widget _harness(
         launched?.add(uri);
         return true;
       }),
+      ...overrides,
     ],
     child: boundary == null ? app : RepaintBoundary(key: boundary, child: app),
   );
@@ -164,6 +168,28 @@ Future<void> _phone(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('opening the page tells Algolia Personalization the product was '
+      'viewed, once', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 3600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final insights = RecordingInsightsTracker();
+    await tester.pumpWidget(
+      _harness(
+        'en',
+        overrides: [insightsTrackerProvider.overrideWithValue(insights)],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(insights.calls, ['view:CHANEL-COCO']);
+
+    // Choosing a variant rebuilds the page: still one view.
+    await tester.tap(find.text('100ml'));
+    await tester.pumpAndSettle();
+    expect(insights.calls, ['view:CHANEL-COCO']);
+  });
+
   testWidgets('renders product detail and updates price on variant select', (
     tester,
   ) async {
