@@ -262,6 +262,14 @@ class DeliveryCoverageText extends ConsumerWidget {
   }
 }
 
+Future<void> showDeliveryPicker(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const _DeliveryPicker(),
+    );
+
 class _DeliveryPicker extends ConsumerStatefulWidget {
   const _DeliveryPicker();
   @override

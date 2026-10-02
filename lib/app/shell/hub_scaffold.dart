@@ -92,7 +92,10 @@ class _HubScaffoldState extends State<HubScaffold> {
       onPopInvokedWithResult: _onBack,
       child: Scaffold(
         appBar: widget.appBar,
-        body: widget.showTabBar && widget.currentTab != AppTab.account
+        body:
+            widget.showTabBar &&
+                widget.currentTab != AppTab.account &&
+                widget.currentTab != AppTab.home
             ? Column(
                 children: [
                   DeliveryLocationBar(
