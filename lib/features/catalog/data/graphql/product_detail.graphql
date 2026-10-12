@@ -5,7 +5,7 @@
 # field). "You may also like" = core related + upsell links, merged app-side.
 # Codegen mirror of CatalogQueries.productDetail.
 query ProductDetail($urlKey: String!) {
-  products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
+  products(filter: { url_key: { eq: $urlKey } }, pageSize: 20) {
     items {
       __typename
       sku

@@ -7,6 +7,7 @@ import '../../../core/graphql/graphql_client.dart';
 import '../../../core/util/media.dart';
 import '../domain/product_detail.dart';
 import '../domain/review_pages.dart';
+import 'product_mapper.dart';
 
 /// Core Magento review reads: a product's published reviews, paged, and the
 /// signed-in customer's own reviews.
@@ -26,9 +27,14 @@ fragment ReviewFields on ProductReview {
 
   /// `ProductReviews` has no total count — `review_count` on the product is
   /// the total; `page_info.total_pages` drives paging.
+  ///
+  /// The product page is read with `pageSize: 20` for the product list, not 1:
+  /// the key of a product inside a bundle also answers the bundle, possibly
+  /// first, and the item with the key is picked app-side (`productWithUrlKey`).
+  /// (`$pageSize` below is the reviews', not the products'.)
   static final String productReviews = _withReviewFields(r'''
 query ProductReviews($urlKey: String!, $pageSize: Int!, $currentPage: Int!) {
-  products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
+  products(filter: { url_key: { eq: $urlKey } }, pageSize: 20) {
     items {
       sku
       name
@@ -79,11 +85,11 @@ class ReviewsRepository {
       'pageSize': pageSize,
       'currentPage': currentPage,
     });
-    final items =
-        (data['products'] as Map<String, dynamic>?)?['items']
-            as List<dynamic>?;
-    final product = (items == null || items.isEmpty) ? null : items.first;
-    if (product is! Map<String, dynamic>) return null;
+    final product = productWithUrlKey(
+      (data['products'] as Map<String, dynamic>?)?['items'],
+      urlKey,
+    );
+    if (product == null) return null;
     final reviews = product['reviews'] as Map<String, dynamic>?;
     final pageInfo = reviews?['page_info'] as Map<String, dynamic>?;
     return ProductReviewsPage(

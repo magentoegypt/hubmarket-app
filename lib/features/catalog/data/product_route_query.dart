@@ -26,7 +26,7 @@ final String productDetailByRoute = productDetailByRouteOf(
 // and tool/validate_ops.py only reads triple-quoted strings.
 const String _byUrlKey =
     'query ProductDetail(\$urlKey: String!) {\n'
-    '  products(filter: { url_key: { eq: \$urlKey } }, pageSize: 1) {\n'
+    '  products(filter: { url_key: { eq: \$urlKey } }, pageSize: 20) {\n'
     '    items {';
 
 const String _byUrl =
