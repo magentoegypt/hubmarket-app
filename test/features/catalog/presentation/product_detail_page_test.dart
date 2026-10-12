@@ -254,6 +254,131 @@ void main() {
     });
   });
 
+  group('the SKU in Specifications (QA TC104)', () {
+    /// A value of the Specifications table.
+    Finder row(String text) => find.descendant(
+      of: find.byType(PdpSpecRows),
+      matching: find.text(text),
+    );
+
+    /// The SKU as the page prints it: in a left-to-right isolate.
+    Finder sku(String value) => row('\u2066$value\u2069');
+
+    testWidgets("is the product's own until every option is chosen", (
+      tester,
+    ) async {
+      await _pump(tester);
+
+      expect(row(_en.specSku), findsOneWidget);
+      expect(sku('LOLY-DR-0231'), findsOneWidget);
+
+      // Half a choice never guesses a variant.
+      await tester.tap(_option('color', 11));
+      await tester.pumpAndSettle();
+      expect(sku('LOLY-DR-0231'), findsOneWidget);
+      expect(find.textContaining('LOLY-DR-0231-'), findsNothing);
+    });
+
+    testWidgets('follows the variant the colour and the size pick', (
+      tester,
+    ) async {
+      await _pump(tester);
+
+      await _choose(tester);
+      expect(sku('LOLY-DR-0231-11-23'), findsOneWidget);
+      expect(sku('LOLY-DR-0231'), findsNothing);
+
+      await tester.tap(_option('size', 24));
+      await tester.pumpAndSettle();
+      expect(sku('LOLY-DR-0231-11-24'), findsOneWidget);
+      expect(sku('LOLY-DR-0231-11-23'), findsNothing);
+
+      await tester.tap(_option('color', 12));
+      await tester.pumpAndSettle();
+      expect(sku('LOLY-DR-0231-12-24'), findsOneWidget);
+    });
+
+    testWidgets("a sold-out variant still names its own SKU", (tester) async {
+      await _pump(tester);
+
+      await _choose(tester, size: 25);
+      expect(sku('LOLY-DR-0231-11-25'), findsOneWidget);
+    });
+
+    testWidgets("the cart still gets the product's SKU with the options", (
+      tester,
+    ) async {
+      final cart = _Cart();
+      await _pump(tester, cart: cart);
+
+      await _choose(tester);
+      expect(sku('LOLY-DR-0231-11-23'), findsOneWidget);
+      await tester.tap(find.textContaining(_en.pdpAddToCart));
+      await tester.pumpAndSettle();
+
+      // What is printed is not what is sent: Magento resolves the variant
+      // from the parent's SKU and the chosen options.
+      expect(cart.added, [
+        {
+          'sku': 'LOLY-DR-0231',
+          'quantity': 1,
+          'selected_options': ['uid-color-11', 'uid-size-23'],
+        },
+      ]);
+    });
+
+    testWidgets("a SKU with Arabic words in it is kept left to right", (
+      tester,
+    ) async {
+      // QA's own configurable product has SKUs like this one: in the Arabic
+      // page they would be laid out right to left, in pieces.
+      const arabicSku = 'test-config -pro-اسود-XS';
+      await _pump(
+        tester,
+        locale: 'ar',
+        detail: ProductDetail(
+          sku: 'test-config -pro',
+          name: 'منتج تيست قابل للتكوين',
+          urlKey: 'floral-dress',
+          finalPrice: floralDressDetail().finalPrice,
+          options: const [
+            ConfigurableOption(
+              attributeCode: 'size',
+              label: 'المقاس',
+              values: [
+                SwatchValue(
+                  valueIndex: 300,
+                  label: 'XS',
+                  uid: 'uid-size-300',
+                ),
+              ],
+            ),
+          ],
+          variants: const [
+            ProductVariant(sku: arabicSku, attributes: {'size': 300}),
+          ],
+        ),
+      );
+      expect(sku('test-config -pro'), findsOneWidget);
+
+      await tester.tap(_option('size', 300));
+      await tester.pumpAndSettle();
+      expect(sku(arabicSku), findsOneWidget);
+    });
+
+    testWidgets('Arabic: the same, under "رقم المنتج"', (tester) async {
+      await _pump(tester, locale: 'ar');
+      final ar = lookupAppLocalizations(const Locale('ar'));
+
+      expect(row(ar.specSku), findsOneWidget);
+      expect(sku('LOLY-DR-0231'), findsOneWidget);
+
+      await _choose(tester);
+      expect(sku('LOLY-DR-0231-11-23'), findsOneWidget);
+      expect(sku('LOLY-DR-0231'), findsNothing);
+    });
+  });
+
   group('the sections', () {
     testWidgets('"Description & material" opens on a tap; "Specifications" '
         'starts open', (tester) async {
@@ -265,7 +390,7 @@ void main() {
       );
       // Specifications: the attribute rows and the SKU.
       expect(find.text('Polyester crepe'), findsOneWidget);
-      expect(find.text('LOLY-DR-0231'), findsOneWidget);
+      expect(find.text('\u2066LOLY-DR-0231\u2069'), findsOneWidget);
 
       await tester.tap(find.text(_en.pdpDescriptionMaterial));
       await tester.pumpAndSettle();
