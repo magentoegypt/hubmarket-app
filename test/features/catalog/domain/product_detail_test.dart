@@ -96,6 +96,67 @@ void main() {
       });
     });
 
+    group('the SKU the page prints (QA TC104)', () {
+      const sizes = ConfigurableOption(
+        attributeCode: 'size',
+        label: 'Size',
+        values: [
+          SwatchValue(valueIndex: 1, label: 'S'),
+          SwatchValue(valueIndex: 2, label: 'M'),
+        ],
+      );
+      const colours = ConfigurableOption(
+        attributeCode: 'color',
+        label: 'Colour',
+        values: [
+          SwatchValue(valueIndex: 9, label: 'Beige floral'),
+          SwatchValue(valueIndex: 10, label: 'Charcoal'),
+        ],
+      );
+      const dress = ProductDetail(
+        sku: 'DRESS',
+        name: 'Dress',
+        urlKey: 'dress',
+        options: [colours, sizes],
+        variants: [
+          ProductVariant(sku: 'DRESS-9-1', attributes: {'color': 9, 'size': 1}),
+          ProductVariant(sku: 'DRESS-9-2', attributes: {'color': 9, 'size': 2}),
+          ProductVariant(
+            sku: 'DRESS-10-1',
+            attributes: {'color': 10, 'size': 1},
+          ),
+          // The store sent this one without a SKU.
+          ProductVariant(sku: '', attributes: {'color': 10, 'size': 2}),
+        ],
+      );
+
+      test("the product's own until every option is chosen", () {
+        expect(dress.skuFor({}), 'DRESS');
+        // Half a choice never guesses a variant.
+        expect(dress.skuFor({'color': 9}), 'DRESS');
+        expect(dress.skuFor({'size': 1}), 'DRESS');
+      });
+
+      test("the chosen variant's, and it follows each change", () {
+        expect(dress.skuFor({'color': 9, 'size': 1}), 'DRESS-9-1');
+        expect(dress.skuFor({'color': 9, 'size': 2}), 'DRESS-9-2');
+        expect(dress.skuFor({'color': 10, 'size': 1}), 'DRESS-10-1');
+      });
+
+      test("the product's own for a combination no variant has", () {
+        expect(dress.skuFor({'color': 11, 'size': 1}), 'DRESS');
+      });
+
+      test("the product's own when the variant came without a SKU", () {
+        expect(dress.skuFor({'color': 10, 'size': 2}), 'DRESS');
+      });
+
+      test("the product's own for a product without options", () {
+        const simple = ProductDetail(sku: 'S', name: 'S', urlKey: 's');
+        expect(simple.skuFor({}), 'S');
+      });
+    });
+
     group('primaryCategory (where "See all" goes)', () {
       ProductDetail filed(List<ProductCategoryRef> categories) => ProductDetail(
         sku: 'S',

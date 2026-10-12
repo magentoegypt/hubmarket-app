@@ -332,6 +332,16 @@ class ProductDetail {
     return null;
   }
 
+  /// The SKU the page prints for [selection] (QA TC104): the SKU of the variant
+  /// the whole choice picks, else the product's own — before the first choice,
+  /// between choices, for a combination no variant has, and for a variant the
+  /// store sent without a SKU — as the website's SKU line does. It is only what
+  /// is shown: the cart takes the product's [sku] with the chosen options.
+  String skuFor(Map<String, int> selection) {
+    final chosen = variantFor(selection)?.sku;
+    return chosen == null || chosen.isEmpty ? sku : chosen;
+  }
+
   /// Units left of what [selection] picks: the chosen variant's, or the
   /// product's own when it has no options. Null when the store doesn't say —
   /// today it doesn't, until the "Only X left" threshold is set in the admin.

@@ -357,7 +357,10 @@ class _Content extends ConsumerWidget {
     final specs = <(String, String)>[
       for (final attr in product.attributes)
         (_specLabel(l10n, attr), attr.value),
-      (l10n.specSku, product.sku),
+      // The chosen variant's own SKU once every option is picked (QA TC104),
+      // left to right: a variant's SKU can hold Arabic words ("…-اسود-XS"),
+      // which the Arabic page would lay out right to left, in pieces.
+      (l10n.specSku, '\u2066${product.skuFor(selection)}\u2069'),
     ];
     final description = product.description ?? '';
     final features = product.shortDescription ?? '';
