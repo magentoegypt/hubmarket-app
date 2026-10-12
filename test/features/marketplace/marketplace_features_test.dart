@@ -116,6 +116,104 @@ void main() {
     },
   );
 
+  // FulfillmentTracking (CL036-DEV17): `CustomerOrder.hm_fulfillment`.
+  group('where the parcels are (the fulfillment capability)', () {
+    test(
+      'a server that lists it gets the deliveries, and only they come on',
+      () async {
+        final container = await _container(
+          _available(capabilities: {'fulfillment'}),
+        );
+
+        expect(
+          container.read(marketplaceFeaturesProvider),
+          const MarketplaceFeatures(fulfillment: true),
+        );
+        expect(container.read(hubAppCapabilityProvider('fulfillment')), isTrue);
+      },
+    );
+
+    test(
+      'a server that lists other satellites but not it does not get asked',
+      () async {
+        final container = await _container(
+          _available(capabilities: {'orders', 'vendors', 'bundle'}),
+        );
+
+        expect(
+          container.read(marketplaceFeaturesProvider).fulfillment,
+          isFalse,
+        );
+        expect(
+          container.read(hubAppCapabilityProvider('fulfillment')),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'a HubApp from before the capability list is never asked either',
+      () async {
+        // The module announces itself through that list, so there is nothing to
+        // guess: the P3 satellites stay as they were.
+        final container = await _container(_available());
+
+        expect(
+          container.read(marketplaceFeaturesProvider),
+          const MarketplaceFeatures(
+            sellers: true,
+            bundles: true,
+            packages: true,
+          ),
+        );
+      },
+    );
+
+    test(
+      'hm_fulfillment turned down at run time switches only it off',
+      () async {
+        final container = await _container(
+          _available(capabilities: {'orders', 'vendors', 'fulfillment'}),
+        );
+        expect(container.read(marketplaceFeaturesProvider).fulfillment, isTrue);
+
+        container
+            .read(marketplaceMissingProvider.notifier)
+            .fulfillmentMissing();
+
+        expect(
+          container.read(marketplaceFeaturesProvider),
+          const MarketplaceFeatures(
+            sellers: true,
+            packages: true,
+            listingSellers: true,
+            storeExtras: true,
+          ),
+        );
+      },
+    );
+
+    test('the other satellites turned down do not take it with them', () async {
+      final container = await _container(
+        _available(capabilities: {'orders', 'vendors', 'fulfillment'}),
+      );
+      container.read(marketplaceMissingProvider.notifier)
+        ..packagesMissing()
+        ..sellersMissing();
+
+      expect(
+        container.read(marketplaceFeaturesProvider),
+        const MarketplaceFeatures(fulfillment: true),
+      );
+    });
+
+    test('without HubApp it is off', () async {
+      final container = await _container(const HubAppState.unavailable());
+
+      expect(container.read(marketplaceFeaturesProvider).fulfillment, isFalse);
+    });
+  });
+
   test('without HubApp, nothing', () async {
     for (final state in [
       const HubAppState.unknown(),

@@ -14,6 +14,7 @@ import '../../../../l10n/l10n.dart';
 import '../../domain/order.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
+import '../widgets/order_deliveries.dart';
 import '../widgets/order_packages.dart';
 import '../../../../app/theme/hub_icons.dart';
 
@@ -25,6 +26,11 @@ typedef _Step = ({String label, String time, bool done});
 /// carrier + tracking number(s) once a shipment exists, delivery address,
 /// items, and a help link. Reached from the My Orders "Track" action — and,
 /// for a guest, straight from checkout — with the [CustomerOrder].
+///
+/// When the server serves `hm_fulfillment` (FulfillmentTracking) the banner is
+/// its overall status, and its "Delivery progress" — each delivery with its
+/// seller, courier, tracking number, expected date and timeline — stands in for
+/// the stages and the tracking section inferred here, worded as on the website.
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   const OrderTrackingScreen({super.key, required this.order});
 
@@ -89,6 +95,10 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   IconData _statusIcon() {
+    // Where the server says the parcels are, when it does.
+    if (order.hasDeliveries) {
+      return deliveryIconOf(order.fulfillment!.statusCode);
+    }
     if (order.isOnHold) return HubIcons.circlePause;
     return switch (_stageIndex()) {
       < 0 => HubIcons.circleX,
@@ -100,6 +110,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
   }
 
   String _statusLabel(AppLocalizations l10n) {
+    // The server's own words for where the parcels are, as the website has them.
+    if (order.hasDeliveries) return order.fulfillment!.statusLabel;
     // Hold reads over the stage: the order is paused where it got to, and
     // saying "Order Confirmed" while it sits on hold would be misleading.
     if (order.isOnHold) return l10n.orderStatusOnHold;
@@ -130,14 +142,23 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
     // One package per store, as on the order detail (22): the server's own
     // split when HubApp has it, else the lines by seller; null keeps one list.
     final packages = orderPackageViews(order);
-    // Numbers a package card shows are not listed again in Tracking.
+    // Where the server says the parcels are (FulfillmentTracking): its
+    // deliveries stand in for the stages inferred below and carry the couriers
+    // and numbers, so the package cards keep to the lines.
+    final hasDeliveries = order.hasDeliveries;
+    // Numbers a package card or a delivery shows are not listed again in
+    // Tracking.
     final packaged = packagedTrackingNumbers(packages);
     final looseTrackings = [
       for (final t in order.trackings)
-        if (!packaged.contains(t.number)) t,
+        if (hasDeliveries
+            ? !order.fulfillment!.showsTracking(t.number)
+            : !packaged.contains(t.number))
+          t,
     ];
     final showTracking =
-        looseTrackings.isNotEmpty || !anyPackageShipped(packages);
+        looseTrackings.isNotEmpty ||
+        (!hasDeliveries && !anyPackageShipped(packages));
 
     return HubScaffold(
       currentTab: AppTab.account,
@@ -204,23 +225,48 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
           ),
           const _Band(),
 
-          // Order Status timeline.
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
-            child: Text(
-              l10n.orderStatusTitle,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: AppColors.inkHeading,
+          if (hasDeliveries) ...[
+            // Delivery progress: the server's deliveries, as the website shows
+            // them (the status card above already says the overall status).
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+              child: Text(
+                l10n.orderDeliveryProgress,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppColors.inkHeading,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-            child: _Timeline(steps: steps),
-          ),
-          const _Band(),
+            // White cards on the page grey, as the packages below.
+            ColoredBox(
+              color: groupedPageColor(context),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: OrderDeliveries(order: order, heading: false),
+              ),
+            ),
+            const _Band(),
+          ] else ...[
+            // Order Status timeline.
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+              child: Text(
+                l10n.orderStatusTitle,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppColors.inkHeading,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+              child: _Timeline(steps: steps),
+            ),
+            const _Band(),
+          ],
 
           // Carrier + tracking number(s) — the whole point of this screen. Only
           // rendered once Magento has a shipment; no fabricated placeholder.
@@ -320,6 +366,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
                         index: i + 1,
                         view: packages[i],
                         order: order,
+                        showProgress: !hasDeliveries,
                       ),
                     ],
                     const SizedBox(height: 12),

@@ -135,6 +135,14 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
   `<iframe>`'s title when it has one): no frame draws it. A tap hands the video's own page (YouTube, Vimeo, or
   the video file) to the platform, as every foreign link does: the player is never loaded inside the app, so
   nothing from the embed runs there. The audit scene is `C14_pdp` `description`.
+- Order detail (22) and Track order (26) show the server's "Delivery progress" (FulfillmentTracking
+  `hm_fulfillment`, CL036-DEV17) where the frames draw each store's own timeline: the overall status, then each
+  delivery (seller, route, lines, courier and number, expected date, timeline) in the store view's words, as the
+  website's order page shows it. No frame draws it: it is built from the package card's parts (white card, status pill,
+  20 px step discs, the "Track parcel" button, a copy action). While deliveries are shown the store cards drop their own
+  status pill, timeline and Track parcel and keep the lines, the store's updates and Contact store; an order the server
+  has no deliveries for keeps the frames' cards exactly (every audit scene is that state). The delivery state is
+  captured by `test/features/account/order_deliveries_render_test.dart` into `build/test_screens/dev17_*`.
 - No free-shipping progress bar: the live schema has no threshold (`free_shipping_subtotal`).
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.

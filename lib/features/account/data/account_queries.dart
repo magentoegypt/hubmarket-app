@@ -130,17 +130,61 @@ fragment HmOrderPackages on CustomerOrder {
     fragments: '$hmOrderPackages\n${HmFragments.seller}\n${HmFragments.link}',
   );
 
+  /// Where the order's parcels are (FulfillmentTracking `hm_fulfillment`,
+  /// CL036-DEV17): the overall status and each delivery with its seller,
+  /// courier, expected date and timeline, worded by the server in the store
+  /// view's language. `items { id }` is what each delivery's `item_uids` points
+  /// at; GraphQL merges these `items` with [_orderFields]'.
+  static const String hmOrderFulfillment = r'''
+fragment HmOrderFulfillment on CustomerOrder {
+  items { id }
+  hm_fulfillment {
+    status_code
+    status_label
+    deliveries {
+      id
+      route
+      route_label
+      handled_by
+      status_code
+      status_label
+      tracked
+      seller { ...HmSellerFields }
+      courier { type label name tracking_number tracking_url }
+      expected_delivery
+      updated_at
+      item_uids
+      timeline { status_code status_label at }
+    }
+  }
+}
+''';
+
+  /// [document] with `...HmOrderFulfillment` beside each `...OrderFields`; sent
+  /// only while the server lists the `fulfillment` capability (see
+  /// [withHubApp]).
+  static String withFulfillment(String document) => SellerSelections.beside(
+    document,
+    anchor: 'OrderFields',
+    spread: 'HmOrderFulfillment',
+    fragments:
+        '$hmOrderFulfillment\n${HmFragments.seller}\n${HmFragments.link}',
+  );
+
   /// The order [document] as the server can take it: plus each line's seller
-  /// when [sellers], plus the per-store packages when [packages]; [document]
-  /// itself when neither (today's server).
+  /// when [sellers], plus the per-store packages when [packages], plus where
+  /// the parcels are when [fulfillment]; [document] itself when none (today's
+  /// server).
   static String withHubApp(
     String document, {
     required bool sellers,
     required bool packages,
+    bool fulfillment = false,
   }) {
     var twin = document;
     if (sellers) twin = withSellers(twin);
     if (packages) twin = withPackages(twin);
+    if (fulfillment) twin = withFulfillment(twin);
     return twin;
   }
 

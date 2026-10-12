@@ -80,6 +80,17 @@ rebuild: the retry and the Retry button are for that. Remote feature flags (`hmA
 `returns`, `whatsapp_login`, `push` — an unset flag counts as off. The Figma
 section "G · Managed from the backend" shows the admin screens and the full map.
 
+**FulfillmentTracking** (`MagentoEgypt_FulfillmentTracking`, CL036-DEV17, in `figma-parity-home` since
+`898ad1206`; capability `fulfillment`) adds `CustomerOrder.hm_fulfillment`: the order's overall delivery status and its
+deliveries (route, seller, courier and tracking number, expected date, timeline), worded by the server in the store
+view's language and shared with the website's "Delivery progress" on the order page, so the app prints its words and
+only chooses the colours (`deliveryToneOf`). The app asks for it on every order document (list, one order, guest order,
+cancel) only while `hmAppConfig.capabilities` lists `fulfillment` (no capability list, no field) and drops it on its
+own when the server refuses it ("Cannot query field"), like `hm_seller` and `hm_packages`
+(`MarketplaceFeatures.fulfillment`, `AccountQueries.withFulfillment`, `OrderFulfillment` in `features/account/domain/`).
+The order detail and Track order show it as "Delivery progress" (`OrderDeliveries`); the store package cards then keep
+to the lines, and a tracking number no delivery lists stays under Tracking. Read-only: nothing is sent to it.
+
 **Picked For You is personal** (`features/personalization/`). The Home draws the cached
 top-rated section (16 products; Refresh turns to the next four), then asks `hmPickedForYou`
 (an uncached POST) with this install's random user token and swaps its picks in only when it

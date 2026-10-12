@@ -1063,6 +1063,23 @@
   "orderTrackingSection": "Tracking",
   "orderShippingLabel": "Shipping",
   "orderNoTracking": "Tracking details appear here once your order ships.",
+  "orderDeliveryProgress": "Delivery progress",
+  "orderExpectedDelivery": "Expected delivery: {date}",
+  "@orderExpectedDelivery": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "orderDeliverySoldBy": "Sold by {seller}",
+  "@orderDeliverySoldBy": {
+    "placeholders": {
+      "seller": {
+        "type": "String"
+      }
+    }
+  },
   "orderTrackingCopied": "Tracking number copied",
   "orderViewDetails": "View Details",
   "orderViewOrder": "View order",

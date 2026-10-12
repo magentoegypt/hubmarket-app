@@ -19,40 +19,35 @@ class RecordingMarketplaceGate implements MarketplaceGate {
   int sellersMissingCalls = 0;
   int bundlesMissingCalls = 0;
   int packagesMissingCalls = 0;
+  int fulfillmentMissingCalls = 0;
 
   @override
   void sellersMissing() {
     sellersMissingCalls++;
     // HubAppVendors is gone: its listing sellers and store extras with it.
-    features = MarketplaceFeatures(
+    features = features.copyWith(
       sellers: false,
-      bundles: features.bundles,
-      packages: features.packages,
+      listingSellers: false,
+      storeExtras: false,
     );
   }
 
   @override
   void bundlesMissing() {
     bundlesMissingCalls++;
-    features = MarketplaceFeatures(
-      sellers: features.sellers,
-      bundles: false,
-      packages: features.packages,
-      listingSellers: features.listingSellers,
-      storeExtras: features.storeExtras,
-    );
+    features = features.copyWith(bundles: false);
   }
 
   @override
   void packagesMissing() {
     packagesMissingCalls++;
-    features = MarketplaceFeatures(
-      sellers: features.sellers,
-      bundles: features.bundles,
-      packages: false,
-      listingSellers: features.listingSellers,
-      storeExtras: features.storeExtras,
-    );
+    features = features.copyWith(packages: false);
+  }
+
+  @override
+  void fulfillmentMissing() {
+    fulfillmentMissingCalls++;
+    features = features.copyWith(fulfillment: false);
   }
 }
 
