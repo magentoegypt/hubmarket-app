@@ -15,9 +15,15 @@ class WishlistData {
   const WishlistData({
     required this.id,
     this.entries = const <WishlistEntry>[],
+    this.itemsCount,
   });
   final String id;
   final List<WishlistEntry> entries;
+
+  /// The store's own count of what is saved (`Wishlist.items_count`), which
+  /// also covers the products beyond the first page of [entries]; null when the
+  /// answer carried none.
+  final int? itemsCount;
 }
 
 class WishlistRepository {
@@ -95,7 +101,12 @@ class WishlistRepository {
           ),
         )
         .toList();
-    return WishlistData(id: json['id']?.toString() ?? '', entries: entries);
+    final count = json['items_count'];
+    return WishlistData(
+      id: json['id']?.toString() ?? '',
+      entries: entries,
+      itemsCount: count is num ? count.toInt() : null,
+    );
   }
 
   /// Runs a wishlist [document] — its seller twin while the gate allows it

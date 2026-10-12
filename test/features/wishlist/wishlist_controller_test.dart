@@ -4,6 +4,8 @@ import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/auth/data/auth_repository.dart';
 import 'package:hubmarket_app/features/auth/presentation/auth_controller.dart';
 import 'package:hubmarket_app/features/wishlist/data/wishlist_repository.dart';
+import 'package:hubmarket_app/features/catalog/domain/product.dart';
+import 'package:hubmarket_app/features/wishlist/domain/wishlist_entry.dart';
 import 'package:hubmarket_app/features/wishlist/presentation/wishlist_controller.dart';
 
 import '../../support/fakes.dart';
@@ -69,6 +71,82 @@ void main() {
       await container.read(authControllerProvider.notifier).logout();
       await pumpEventQueue();
       expect(container.read(wishlistControllerProvider).entries, isEmpty);
+    });
+  });
+
+  group('WishlistState.count (the badge on the Wishlist tab)', () {
+    WishlistEntry saved(int n) => WishlistEntry(
+      id: 'item-$n',
+      product: Product(sku: 'sku$n', name: 'Product $n', urlKey: 'p$n'),
+    );
+
+    Future<ProviderContainer> signedIn(FakeWishlistRepository repo) async {
+      final container = _container(repo);
+      await container
+          .read(authControllerProvider.notifier)
+          .login('layla@example.com', 'password1');
+      await pumpEventQueue();
+      return container;
+    }
+
+    test('is zero for a guest, and for a wishlist with nothing in it', () async {
+      final guest = _container(FakeWishlistRepository(entries: [saved(1)]));
+      expect(guest.read(wishlistControllerProvider).count, 0);
+
+      final empty = await signedIn(FakeWishlistRepository());
+      expect(empty.read(wishlistControllerProvider).count, 0);
+    });
+
+    test('counts what is saved once the wishlist has loaded', () async {
+      final container = await signedIn(
+        FakeWishlistRepository(entries: [saved(1), saved(2), saved(3)]),
+      );
+      expect(container.read(wishlistControllerProvider).count, 3);
+    });
+
+    test('goes up with every add and down with every remove', () async {
+      final container = await signedIn(
+        FakeWishlistRepository(entries: [saved(1), saved(2)]),
+      );
+      final notifier = container.read(wishlistControllerProvider.notifier);
+
+      await notifier.toggle('NEW');
+      expect(container.read(wishlistControllerProvider).count, 3);
+      await notifier.toggle('sku1');
+      expect(container.read(wishlistControllerProvider).count, 2);
+      await notifier.removeSkus(['sku2', 'NEW']);
+      expect(container.read(wishlistControllerProvider).count, 0);
+    });
+
+    test('is the count the store gives when the first page holds fewer than it '
+        'saved, and still follows an add', () async {
+      final container = await signedIn(
+        FakeWishlistRepository(entries: [saved(1), saved(2)], itemsCount: 25),
+      );
+      expect(container.read(wishlistControllerProvider).entries, hasLength(2));
+      expect(container.read(wishlistControllerProvider).count, 25);
+
+      await container.read(wishlistControllerProvider.notifier).toggle('NEW');
+      expect(container.read(wishlistControllerProvider).count, 26);
+    });
+
+    test('an answer without a count falls back on the entries in hand', () {
+      final state = WishlistState(entries: [saved(1), saved(2)]);
+      expect(state.itemsCount, isNull);
+      expect(state.count, 2);
+      // A count smaller than the entries never lowers it.
+      expect(WishlistState(entries: [saved(1), saved(2)], itemsCount: 1).count, 2);
+    });
+
+    test('goes back to zero at sign-out', () async {
+      final container = await signedIn(
+        FakeWishlistRepository(entries: [saved(1)]),
+      );
+      expect(container.read(wishlistControllerProvider).count, 1);
+
+      await container.read(authControllerProvider.notifier).logout();
+      await pumpEventQueue();
+      expect(container.read(wishlistControllerProvider).count, 0);
     });
   });
 }
