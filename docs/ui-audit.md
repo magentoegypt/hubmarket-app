@@ -129,6 +129,12 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
   "99+" past 99) although the frame's Tab bar draws one on the cart only: QA TC101 asked for it and the website's header
   heart has it since 7 Oct. It reads the wishlist the app already holds (`WishlistState.count`: the store's
   `items_count`, else the entries), so it costs no request.
+- The product page's "Description & material" draws what the seller put in the description and the short
+  description — paragraphs, headings, lists, tables, pictures at the full width and videos — where the frame
+  draws one paragraph (QA TC102). A video is a navy 16:9 card with a play button and "Watch video" (the
+  `<iframe>`'s title when it has one): no frame draws it. A tap hands the video's own page (YouTube, Vimeo, or
+  the video file) to the platform, as every foreign link does: the player is never loaded inside the app, so
+  nothing from the embed runs there. The audit scene is `C14_pdp` `description`.
 - No free-shipping progress bar: the live schema has no threshold (`free_shipping_subtotal`).
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.

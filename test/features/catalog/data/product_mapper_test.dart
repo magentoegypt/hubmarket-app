@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/features/catalog/data/product_mapper.dart';
 import 'package:hubmarket_app/features/catalog/domain/product.dart';
+import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
+import 'package:hubmarket_app/features/cms/domain/cms_document.dart';
 
 /// Fixed "today" for every date-window assertion (mid-afternoon, local time).
 final _today = DateTime(2026, 9, 29, 15, 30);
@@ -386,6 +388,98 @@ void main() {
           ('dimensions', 'high width'),
         ],
       );
+    });
+  });
+
+  // QA TC102: an image or a video the seller adds to a description was thrown
+  // away with its tags. The markup below is what the live store sends.
+  group('PDP description keeps its pictures and videos', () {
+    const pageBuilderImage =
+        '<figure data-content-type="image" data-appearance="full-width" '
+        'data-element="main"><img class="pagebuilder-mobile-hidden" '
+        'src="https://hub-market.magento2.click/media/wysiwyg/a.jpg" alt="" '
+        'data-element="desktop_image"><img class="pagebuilder-mobile-only" '
+        'src="https://hub-market.magento2.click/media/wysiwyg/a.jpg" alt="" '
+        'data-element="mobile_image"></figure>';
+    const pageBuilderVideo =
+        '<div data-content-type="video" data-appearance="default" '
+        'data-element="main"><div class="pagebuilder-video-container">'
+        '<iframe frameborder="0" allowfullscreen="" '
+        'src="https://www.youtube.com/embed/Rl6EvEeN348?autoplay=1&amp;mute=1" '
+        'data-element="video"></iframe></div></div>';
+
+    ProductDetail detail({String? description, String? short}) =>
+        productDetailFromJson({
+          ..._json(),
+          if (description != null) 'description': {'html': description},
+          if (short != null) 'short_description': {'html': short},
+        });
+
+    test('words stay words, and the pictures and videos come as blocks', () {
+      final product = detail(
+        description:
+            '<style>#html-body [data-pb-style=X]{display:none}</style>'
+            '<div data-content-type="text"><p>Great sound</p></div>'
+            '$pageBuilderImage$pageBuilderVideo',
+      );
+
+      // The plain text is the words alone: no CSS, no addresses.
+      expect(product.description, 'Great sound');
+      final blocks = product.descriptionBlocks;
+      expect(blocks.map((b) => b.runtimeType), [
+        CmsParagraph,
+        CmsImage,
+        CmsVideo,
+      ]);
+      expect(
+        (blocks[1] as CmsImage).src,
+        'https://hub-market.magento2.click/media/wysiwyg/a.jpg',
+      );
+      expect(
+        (blocks[2] as CmsVideo).url,
+        'https://www.youtube.com/watch?v=Rl6EvEeN348',
+      );
+    });
+
+    test('a description that is one picture has no text, only the picture', () {
+      final product = detail(description: pageBuilderImage);
+      expect(product.description, isNull);
+      expect(product.descriptionBlocks.single, isA<CmsImage>());
+    });
+
+    test('the short description is read the same way', () {
+      // Live ("test config-pro"): two lines of Arabic, then a screenshot.
+      final product = detail(
+        short:
+            '<p>الماتريال : ستان <br>العناية : قابل للكي <br>'
+            '<img src="https://hub-market.magento2.click/media/.renditions/'
+            'wysiwyg/Screenshot_2026-06-18_145724_1.png" alt=""></p>',
+      );
+      expect(product.shortDescription, 'الماتريال : ستان\nالعناية : قابل للكي');
+      final blocks = product.shortDescriptionBlocks;
+      expect((blocks[0] as CmsParagraph).text, 'الماتريال : ستان\nالعناية : قابل للكي');
+      expect(
+        (blocks[1] as CmsImage).src,
+        'https://hub-market.magento2.click/media/.renditions/wysiwyg/'
+        'Screenshot_2026-06-18_145724_1.png',
+      );
+      expect(blocks, hasLength(2));
+    });
+
+    test('text typed into a plain field keeps its lines', () {
+      final product = detail(description: 'Water resistant\nTwo-year warranty');
+      expect(product.description, 'Water resistant\nTwo-year warranty');
+      expect(
+        (product.descriptionBlocks.single as CmsParagraph).text,
+        'Water resistant\nTwo-year warranty',
+      );
+    });
+
+    test('nothing to show, no blocks', () {
+      expect(detail().descriptionBlocks, isEmpty);
+      expect(detail(description: '').descriptionBlocks, isEmpty);
+      expect(detail(description: '  <p>&nbsp;</p> ').descriptionBlocks, isEmpty);
+      expect(detail(short: '<div></div>').shortDescriptionBlocks, isEmpty);
     });
   });
 

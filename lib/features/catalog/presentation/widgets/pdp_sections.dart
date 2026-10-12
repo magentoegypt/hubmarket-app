@@ -9,6 +9,8 @@ import '../../../../core/util/image_prefetch.dart';
 import '../../../../core/widgets/hub_button.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../cms/domain/cms_document.dart';
+import '../../../cms/presentation/widgets/cms_html_view.dart';
 import '../../../home/domain/home_content.dart';
 import '../../../home/presentation/widgets/hm_cms_sections.dart';
 import '../../domain/product.dart';
@@ -609,6 +611,45 @@ class PdpParagraph extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// One of the product's texts in the description accordion, as the seller wrote
+/// it: [blocks] — its paragraphs, lists, pictures and videos — in the type of
+/// [PdpParagraph], with pictures at the full width. A video is a card; a tap on
+/// it, or on a link, goes to [onLink]. Without blocks (a page built from plain
+/// text alone) it is the [text] as one paragraph.
+class PdpRichText extends StatelessWidget {
+  const PdpRichText({
+    super.key,
+    required this.blocks,
+    required this.text,
+    required this.onLink,
+    this.mediaBase = '',
+  });
+
+  final List<CmsBlock> blocks;
+  final String text;
+  final ValueChanged<String> onLink;
+
+  /// Where a store-relative picture path (`/media/wysiwyg/…`) is found.
+  final String mediaBase;
+
+  @override
+  Widget build(BuildContext context) {
+    if (blocks.isEmpty) return PdpParagraph(text);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: CmsHtmlView(
+        blocks: blocks,
+        onLink: onLink,
+        mediaBase: mediaBase,
+        bodyStyle: AppTextStyles.of(
+          context,
+        ).body.copyWith(color: AppColors.inkMuted),
+        fullWidthImages: true,
+      ),
+    );
+  }
 }
 
 /// Figma "Ratings & reviews": the title with "See all 27", the summary — the

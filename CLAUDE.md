@@ -44,7 +44,7 @@ Default Category › Enable Category: Yes (the REST read `GET /rest/V1/categorie
 - `dart run build_runner build --delete-conflicting-outputs` — graphql_codegen for `lib/**/data/graphql/*.graphql`.
 - `python tool/gen_possible_types.py` — regenerates `lib/core/graphql/possible_types.dart` (every interface and union of the live SDL plus the contract, with its implementers). The client's cache needs it: without it a fragment on an interface (`fragment F on ProductInterface`) comes back empty. Run it after refreshing the schema or the contract; the tool tests (CI) fail when it is stale (`--check`).
 - `flutter analyze` · `flutter test` · `dart run flutter_launcher_icons` (icons from `assets/branding/`).
-- Device audit (`docs/device-audit.md`): every Figma screen mounted with the widget tests' fakes at the test phone's size (360 x 820 dp, its real status and navigation bars) — `flutter test test/device_audit/device_audit_host_test.dart` (24 s, 74 scenes in en + ar, fails on any layout overflow), or on the phone with `bash tool/device_audit.sh` (the phone's OS asks for a tap on Install each run: the script keeps offering the APK for about 12 minutes). `python tool/ui_audit/device_pairs.py en|ar` lays each frame beside the capture.
+- Device audit (`docs/device-audit.md`): every Figma screen mounted with the widget tests' fakes at the test phone's size (360 x 820 dp, its real status and navigation bars) — `flutter test test/device_audit/device_audit_host_test.dart` (24 s, 75 scenes in en + ar, fails on any layout overflow), or on the phone with `bash tool/device_audit.sh` (the phone's OS asks for a tap on Install each run: the script keeps offering the APK for about 12 minutes). `python tool/ui_audit/device_pairs.py en|ar` lays each frame beside the capture.
 - Release readiness: `docs/release/README.md` (status, what the client provides, secrets → workflows, first Android and iOS release, production-domain switch) with the EN/AR store listing, the privacy and data-safety answers, the App Review notes, the deep-link files and the screenshot plan beside it. Keep `ios/Runner/PrivacyInfo.xcprivacy` and `docs/release/privacy-and-data-safety.md` in step. Screenshots: `tool/ios_screenshots.sh` (CI, macOS) and `tool/android_screenshots.sh` (a phone that stays unlocked).
 - Never send a GraphQL **mutation** to the live server from tooling or tests — queries and introspection only.
 - CI: `build-on-push.yml` runs on every push to main (`[skip ci]` skips it): the gate (analyze, test, the tool tests, `validate_ops.py --schema-file` offline), then the prod APK to Loadly, the signed App Store IPA to TestFlight, an ad-hoc IPA to Loadly (once `IOS_ADHOC_PROFILE_BASE64` exists) and the app bundle to Play internal testing (once the Play secrets exist and the variable `PLAY_AUTO_PUBLISH` is `true`). Builds are numbered by `tool/build_number.sh` (the commit count); the repository variable `DEPLOY_ON_PUSH=false` pauses the store and iOS uploads. `ci.yml` runs the gate on pull requests. `release-*.yml` and `build-ios.yml` are manual. Details: `docs/release/README.md` section 3b. Until the `ANDROID_*` secrets exist the APK is debug-signed with a key the runner makes anew on every run, so Android refuses to install a build over an older one: uninstall first (`docs/release/README.md` section 3).
@@ -106,6 +106,18 @@ code>…` as dialled (`MobileNumber::canonical`). Sign-in, registration, passwor
 (`mobileOnly`); an address takes any valid number. The chip starts on the UAE and the delivery address country stays
 UAE. Whether WhatsApp delivers a code to a non-UAE number is the SMS provider's: not testable from the app (a send is
 a write).
+
+**A product's description keeps its media** (QA TC102). `ProductDetail.description` / `shortDescription` stay plain
+text (the bundle page's teaser uses them); the product page draws `descriptionBlocks` / `shortDescriptionBlocks`,
+the same HTML read by `CmsDocument.parse(html, embeds: true)` and drawn by `CmsHtmlView(fullWidthImages: true)`,
+the renderer the CMS pages use. What the live catalogue's Page Builder markup needed, and a test per item holds:
+every picture is written twice (desktop and mobile `<img>`, one drawn), the HTML Code element holds
+entity-encoded markup (unpacked, a few levels at most), and videos are YouTube `<iframe>`s with autoplay
+parameters or `.mp4` `<video>`s on other hosts. A video is a card that hands its provider's own watch page
+(`embeddedVideoUrl`: YouTube and Vimeo only, rebuilt from the id; other iframes stay out) or its file to the platform
+through `openStorefrontUrl`; nothing is embedded in the app. `embeds` is opt-in, so the CMS pages keep dropping
+videos. Page Builder sliders and rows keep their pictures in a `data-background-images` JSON attribute that the store
+writes with unescaped quotes, so those pictures are not drawn.
 
 Only the app icon, the native launch screen and interface wording ship with the
 app (see Figma G3).

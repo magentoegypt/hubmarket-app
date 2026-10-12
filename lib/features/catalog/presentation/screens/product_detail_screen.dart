@@ -10,6 +10,7 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
+import '../../../../core/config/app_config.dart';
 import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/store/store_controller.dart';
 import '../../../../core/store/store_urls.dart';
@@ -18,6 +19,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
+import '../../../cms/presentation/cms_navigation.dart';
 import '../../../home/presentation/home_providers.dart';
 import '../../../marketplace/domain/product_offer.dart';
 import '../../../marketplace/marketplace_features.dart';
@@ -359,6 +361,15 @@ class _Content extends ConsumerWidget {
     ];
     final description = product.description ?? '';
     final features = product.shortDescription ?? '';
+    // What a text holds besides words — a picture, a video — is only in its
+    // blocks: a description that is one photo has no text at all (QA TC102).
+    final hasDescription =
+        description.isNotEmpty || product.descriptionBlocks.isNotEmpty;
+    final hasFeatures =
+        features.isNotEmpty || product.shortDescriptionBlocks.isNotEmpty;
+    final mediaBase = Uri.parse(
+      ref.watch(appConfigProvider).graphqlEndpoint,
+    ).origin;
     final category = product.primaryCategory;
     final rail = product.alsoLike.isNotEmpty;
 
@@ -428,16 +439,22 @@ class _Content extends ConsumerWidget {
           onAdd: onAddOffer,
         ),
       if (delivery.isNotEmpty) PdpTrustRow(rows: delivery),
-      if (description.isNotEmpty || features.isNotEmpty)
+      if (hasDescription || hasFeatures)
         PdpAccordion(
           title: l10n.pdpDescriptionMaterial,
           topRule: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (description.isNotEmpty) PdpParagraph(description),
-              if (features.isNotEmpty) ...[
-                if (description.isNotEmpty)
+              if (hasDescription)
+                PdpRichText(
+                  blocks: product.descriptionBlocks,
+                  text: description,
+                  mediaBase: mediaBase,
+                  onLink: (href) => openCmsHref(context, ref, href),
+                ),
+              if (hasFeatures) ...[
+                if (hasDescription)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
@@ -445,7 +462,12 @@ class _Content extends ConsumerWidget {
                       style: t.bodyStrong.copyWith(color: AppColors.inkHeading),
                     ),
                   ),
-                PdpParagraph(features),
+                PdpRichText(
+                  blocks: product.shortDescriptionBlocks,
+                  text: features,
+                  mediaBase: mediaBase,
+                  onLink: (href) => openCmsHref(context, ref, href),
+                ),
               ],
             ],
           ),

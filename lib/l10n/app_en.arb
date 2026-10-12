@@ -1774,6 +1774,10 @@
   "@pdpDescriptionMaterial": {
     "description": "Figma 14 accordion: the product's description and key features."
   },
+  "cmsWatchVideo": "Watch video",
+  "@cmsWatchVideo": {
+    "description": "The label on a video card inside a product description (or a content page): tapping it plays the video."
+  },
   "pdpSpecifications": "Specifications",
   "@pdpSpecifications": {
     "description": "Figma 14 accordion: the attribute table."

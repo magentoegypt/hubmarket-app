@@ -86,13 +86,20 @@ Future<void> _pickDressOptions(WidgetTester tester) async {
   await pumpFor(tester, 200);
 }
 
-AuditSetup _dressSetup(String locale) {
+/// Opens the "Description & material" accordion, scrolling the page to it.
+Future<void> _openDescription(WidgetTester tester, String locale) =>
+    _tapScrolled(tester, find.text(_l10n(locale).pdpDescriptionMaterial));
+
+/// The dress; [richDescription] gives it a description the way a seller fills
+/// one in — a picture, a heading, a list, a video — in place of one line.
+AuditSetup _dressSetup(String locale, {bool richDescription = false}) {
+  final dress = floralDressDetail(locale: locale, withCategory: true);
   return AuditSetup(
     overrides: [
       catalogRepositoryProvider.overrideWithValue(
         DetailCatalog(
           withBlankPhotos(
-            floralDressDetail(locale: locale, withCategory: true),
+            richDescription ? withRichDescription(dress, locale) : dress,
           ),
         ),
       ),
@@ -339,6 +346,19 @@ List<AuditScene> scenes() => [
     setup: _dressSetup,
     act: (tester, locale) => _pickDressOptions(tester),
     scrolls: 3,
+  ),
+  // The same page with its description open, filled in the way a seller does
+  // (QA TC102): a picture, a heading, a list and a video. No frame draws
+  // them; the app's own picture tile and video card do.
+  AuditScene(
+    frame: 'C14_pdp',
+    name: 'description',
+    pushed: false,
+    signedIn: false,
+    screen: (_) => const ProductDetailScreen(urlKey: 'floral-dress'),
+    setup: (locale) => _dressSetup(locale, richDescription: true),
+    act: _openDescription,
+    scrolls: 1,
   ),
   // The duffle bag, whose "Sold by N other sellers" card lists the offers
   // (pdp_other_sellers) ...

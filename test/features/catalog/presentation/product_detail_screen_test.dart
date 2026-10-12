@@ -11,6 +11,7 @@ import 'package:hubmarket_app/core/storage/locale_prefs.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/core/store/store_repository.dart';
 import 'package:hubmarket_app/core/util/launch.dart';
+import 'package:hubmarket_app/core/widgets/network_image.dart';
 import 'package:hubmarket_app/features/catalog/data/brands_provider.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/brand.dart';
@@ -19,6 +20,8 @@ import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/screens/search_screen.dart';
 import 'package:hubmarket_app/features/catalog/presentation/widgets/pdp_buy_bar.dart';
+import 'package:hubmarket_app/features/cms/domain/cms_document.dart';
+import 'package:hubmarket_app/features/cms/presentation/widgets/cms_html_view.dart';
 import 'package:hubmarket_app/features/home/presentation/home_providers.dart';
 import 'package:hubmarket_app/features/personalization/data/insights_tracker.dart';
 import 'package:hubmarket_app/l10n/l10n.dart';
@@ -27,6 +30,7 @@ import '../../../support/fakes.dart';
 import '../../../support/fonts.dart';
 import '../../../support/hubapp_fakes.dart';
 import '../../../support/insights_fakes.dart';
+import '../../../support/pdp_fixtures.dart';
 import 'package:hubmarket_app/app/theme/hub_icons.dart';
 
 /// Serves one canned [ProductDetail] instead of the shared sample.
@@ -559,6 +563,194 @@ void main() {
       await tester.tap(find.text('Chanel'));
       await tester.pumpAndSettle();
       expect(find.byType(SearchScreen), findsOneWidget);
+    });
+  });
+
+  // QA TC102: "added media (an image or a video, in the short or the long
+  // description) does not show on the app".
+  group('the description shows what the seller put in it', () {
+    quietNetworkImages();
+
+    const picture =
+        '<figure data-content-type="image"><img '
+        'class="pagebuilder-mobile-hidden" '
+        'src="https://hub-market.magento2.click/media/wysiwyg/a.jpg">'
+        '<img class="pagebuilder-mobile-only" '
+        'src="https://hub-market.magento2.click/media/wysiwyg/a.jpg"></figure>';
+    const video =
+        '<div data-content-type="video"><iframe '
+        'src="https://www.youtube.com/embed/Rl6EvEeN348?autoplay=1&amp;mute=1">'
+        '</iframe></div>';
+
+    ProductDetail rich({
+      String? description,
+      String? html,
+      String? short,
+      String? shortHtml,
+    }) => ProductDetail(
+      sku: kSampleDetail.sku,
+      name: kSampleDetail.name,
+      urlKey: kSampleDetail.urlKey,
+      regularPrice: kSampleDetail.regularPrice,
+      finalPrice: kSampleDetail.finalPrice,
+      description: description,
+      descriptionBlocks: html == null
+          ? const []
+          : CmsDocument.parse(html, embeds: true),
+      shortDescription: short,
+      shortDescriptionBlocks: shortHtml == null
+          ? const []
+          : CmsDocument.parse(shortHtml, embeds: true),
+    );
+
+    Future<void> tall(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390, 4200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> open(WidgetTester tester, AppLocalizations l10n) async {
+      await tester.tap(find.text(l10n.pdpDescriptionMaterial));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a picture and a video, in the description and the short one', (
+      tester,
+    ) async {
+      await tall(tester);
+      final launched = <Uri>[];
+      await tester.pumpWidget(
+        _harness(
+          'en',
+          repository: _DetailRepository(
+            rich(
+              description: 'Great sound',
+              html: '<p>Great sound</p>$picture$video',
+              short: 'Two lines',
+              shortHtml:
+                  '<p>Two lines</p>'
+                  '<img src="https://hub-market.magento2.click/media/b.png">',
+            ),
+          ),
+          launched: launched,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await open(tester, l10n);
+
+      expect(find.text('Great sound'), findsOneWidget);
+      expect(find.text(l10n.tabKeyFeatures), findsOneWidget);
+      expect(find.text('Two lines'), findsOneWidget);
+      // One picture in the description (its desktop and mobile copies drawn
+      // once) and one in the short description.
+      expect(
+        find.descendant(
+          of: find.byType(CmsHtmlView),
+          matching: find.byType(HubImage),
+        ),
+        findsNWidgets(2),
+      );
+      expect(find.text(l10n.cmsWatchVideo), findsOneWidget);
+
+      // A tap on the video hands the player's own page to the platform.
+      await tester.tap(find.text(l10n.cmsWatchVideo));
+      expect(launched, [Uri.parse('https://www.youtube.com/watch?v=Rl6EvEeN348')]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a description that is a picture alone still has its accordion', (
+      tester,
+    ) async {
+      await tall(tester);
+      await tester.pumpWidget(
+        _harness(
+          'en',
+          repository: _DetailRepository(rich(html: picture)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      expect(find.text(l10n.pdpDescriptionMaterial), findsOneWidget);
+      await open(tester, l10n);
+      expect(
+        find.descendant(
+          of: find.byType(CmsHtmlView),
+          matching: find.byType(HubImage),
+        ),
+        findsOneWidget,
+      );
+      // No words, so no "Key features" heading above anything.
+      expect(find.text(l10n.tabKeyFeatures), findsNothing);
+    });
+
+    testWidgets('a short description with a picture alone is under its heading', (
+      tester,
+    ) async {
+      await tall(tester);
+      await tester.pumpWidget(
+        _harness(
+          'en',
+          repository: _DetailRepository(
+            rich(
+              description: 'Sturdy and light',
+              html: '<p>Sturdy and light</p>',
+              shortHtml: '<img src="https://hub-market.magento2.click/m/c.png">',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await open(tester, l10n);
+
+      expect(find.text(l10n.tabKeyFeatures), findsOneWidget);
+      expect(find.byType(HubImage), findsWidgets);
+    });
+
+    testWidgets('a page built from plain text alone shows that text, as before', (
+      tester,
+    ) async {
+      await tall(tester);
+      await tester.pumpWidget(
+        _harness(
+          'en',
+          repository: _DetailRepository(rich(description: 'Just words')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await open(tester, l10n);
+
+      expect(find.text('Just words'), findsOneWidget);
+      expect(find.byType(CmsHtmlView), findsNothing);
+    });
+
+    testWidgets('Arabic: the same, right to left, without an overflow', (
+      tester,
+    ) async {
+      await tall(tester);
+      await tester.pumpWidget(
+        _harness(
+          'ar',
+          repository: _DetailRepository(
+            rich(
+              description: 'صوت رائع',
+              html: '<p>صوت رائع</p>$picture$video'
+                  '<ul><li>ضمان سنتين</li></ul>',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('ar'));
+      await open(tester, l10n);
+
+      expect(find.text('صوت رائع'), findsOneWidget);
+      expect(find.text('ضمان سنتين'), findsOneWidget);
+      expect(find.text('شاهد الفيديو'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 }

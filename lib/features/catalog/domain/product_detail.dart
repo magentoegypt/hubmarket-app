@@ -1,3 +1,4 @@
+import '../../cms/domain/cms_document.dart';
 import 'money.dart';
 import 'product.dart';
 
@@ -194,6 +195,8 @@ class ProductDetail {
     this.brandOptionId,
     this.description,
     this.shortDescription,
+    this.descriptionBlocks = const <CmsBlock>[],
+    this.shortDescriptionBlocks = const <CmsBlock>[],
     this.attributes = const <ProductAttribute>[],
     this.gallery = const <String>[],
     this.regularPrice,
@@ -230,6 +233,16 @@ class ProductDetail {
 
   /// Plain-text short description / key features (HTML already stripped).
   final String? shortDescription;
+
+  /// The description as the store holds it, read as markup: its pictures,
+  /// videos, headings and lists, which the product page draws. [description]
+  /// stays for the places that only have room for words. Empty when the product
+  /// has none — and for a page built from plain text alone, which then shows
+  /// that text.
+  final List<CmsBlock> descriptionBlocks;
+
+  /// [descriptionBlocks] of the short description / key features.
+  final List<CmsBlock> shortDescriptionBlocks;
 
   /// Storefront-visible additional attributes for the "More Information" tab.
   final List<ProductAttribute> attributes;

@@ -1,4 +1,5 @@
 import '../../../core/util/media.dart';
+import '../../cms/domain/cms_document.dart';
 import '../domain/money.dart';
 import '../domain/product.dart';
 import '../domain/product_detail.dart';
@@ -287,6 +288,12 @@ ProductDetail productDetailFromJson(
     shortDescription: _stripHtml(
       (json['short_description'] as Map<String, dynamic>?)?['html'] as String?,
     ),
+    descriptionBlocks: _descriptionBlocks(
+      (json['description'] as Map<String, dynamic>?)?['html'] as String?,
+    ),
+    shortDescriptionBlocks: _descriptionBlocks(
+      (json['short_description'] as Map<String, dynamic>?)?['html'] as String?,
+    ),
     gallery: gallery.toSet().toList(growable: false),
     regularPrice: moneyFromJson(
       minPrice?['regular_price'] as Map<String, dynamic>?,
@@ -378,6 +385,21 @@ String _decodeHtmlEntities(String s) => s
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
     .replaceAll('&amp;', '&');
+
+/// A description's HTML as the blocks the product page draws — its text, and
+/// the pictures and videos the seller put in it (QA TC102: they were thrown
+/// away with the tags).
+///
+/// Text typed into a plain field has newlines and no markup at all; its lines
+/// are kept.
+List<CmsBlock> _descriptionBlocks(String? html) {
+  final source = (html ?? '').trim();
+  if (source.isEmpty) return const <CmsBlock>[];
+  final markup = source.contains('<')
+      ? source
+      : source.replaceAll(RegExp(r'\r?\n'), '<br>');
+  return CmsDocument.parse(markup, embeds: true);
+}
 
 String? _stripHtml(String? html) {
   if (html == null || html.isEmpty) return null;
