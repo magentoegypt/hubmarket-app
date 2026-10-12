@@ -375,7 +375,18 @@ class FakeCheckoutRepository implements CheckoutRepository {
 }
 
 class FakeWishlistRepository implements WishlistRepository {
-  WishlistData _data = const WishlistData(id: 'wl-1');
+  /// A wishlist of [entries] (none by default). [itemsCount] is the store's own
+  /// count of what is saved, when it differs from the entries on the first page.
+  FakeWishlistRepository({
+    List<WishlistEntry> entries = const <WishlistEntry>[],
+    int? itemsCount,
+  }) : _data = WishlistData(
+         id: 'wl-1',
+         entries: entries,
+         itemsCount: itemsCount ?? entries.length,
+       );
+
+  WishlistData _data;
 
   @override
   Future<WishlistData?> fetchWishlist() async => _data;
@@ -391,27 +402,27 @@ class FakeWishlistRepository implements WishlistRepository {
           product: Product(sku: sku, name: sku, urlKey: sku),
         ),
       ],
+      itemsCount: (_data.itemsCount ?? _data.entries.length) + 1,
     );
     return _data;
   }
 
   @override
-  Future<WishlistData> removeItem(String wishlistId, String itemId) async {
-    _data = WishlistData(
-      id: wishlistId,
-      entries: _data.entries.where((e) => e.id != itemId).toList(),
-    );
-    return _data;
-  }
+  Future<WishlistData> removeItem(String wishlistId, String itemId) =>
+      removeItems(wishlistId, [itemId]);
 
   @override
   Future<WishlistData> removeItems(
     String wishlistId,
     List<String> itemIds,
   ) async {
+    final kept = _data.entries.where((e) => !itemIds.contains(e.id)).toList();
+    final removed = _data.entries.length - kept.length;
     _data = WishlistData(
       id: wishlistId,
-      entries: _data.entries.where((e) => !itemIds.contains(e.id)).toList(),
+      entries: kept,
+      itemsCount: ((_data.itemsCount ?? _data.entries.length) - removed)
+          .clamp(0, 1 << 20),
     );
     return _data;
   }

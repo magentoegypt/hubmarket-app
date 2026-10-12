@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/cart/presentation/cart_controller.dart';
+import '../../features/wishlist/presentation/wishlist_controller.dart';
 import '../../l10n/l10n.dart';
 import '../routes.dart';
 import '../theme/app_colors.dart';
@@ -15,7 +16,9 @@ import '../theme/hub_icons.dart';
 /// Figma component "Tab bar": white, a 1 px `border/subtle` rule on top, five
 /// equal tabs of a 24 px outline icon over a 12 px label. The active tab turns
 /// orange (icon `accent`, label `accent-strong`, label one weight up); the rest
-/// are muted grey. Only the cart carries a count badge (orange pill, white 11 px).
+/// are muted grey. The cart carries a count badge (orange pill, white 11 px) and,
+/// since QA TC101 (the frame draws none), so does the wishlist: the number of
+/// products saved, as the website's header shows it.
 class HubBottomNav extends ConsumerWidget {
   const HubBottomNav({super.key, required this.current});
 
@@ -26,6 +29,11 @@ class HubBottomNav extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final cartCount = ref.watch(
       cartControllerProvider.select((s) => s.itemCount),
+    );
+    // Read from the wishlist the app already holds (loaded at sign-in, changed
+    // by every add and remove): no request of its own. Zero for a guest.
+    final wishlistCount = ref.watch(
+      wishlistControllerProvider.select((s) => s.count),
     );
 
     return Container(
@@ -72,6 +80,7 @@ class HubBottomNav extends ConsumerWidget {
                   current: current,
                   icon: HubIcons.heart,
                   label: l10n.navWishlist,
+                  badge: wishlistCount,
                 ),
                 _NavItem(
                   tab: AppTab.account,
@@ -161,7 +170,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// The cart's count: an orange pill (Figma `badge`: px 5, py 1, 11 px Bold).
+/// A tab's count: an orange pill (Figma `badge`: px 5, py 1, 11 px Bold).
 class _CountBadge extends StatelessWidget {
   const _CountBadge({required this.count});
 

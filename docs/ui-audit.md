@@ -117,6 +117,10 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
   Allow the app sends no Insights event and asks no personal picks, so the section stays the top-rated list.
   The test fakes answer it with Not now (`FakeLocalCache()`; `FakeLocalCache.neverAsked()` opens it), so no
   audit scene shows it.
+- The Wishlist tab carries a count badge (the number of products saved, orange disc, hidden at zero and for a guest,
+  "99+" past 99) although the frame's Tab bar draws one on the cart only: QA TC101 asked for it and the website's header
+  heart has it since 7 Oct. It reads the wishlist the app already holds (`WishlistState.count`: the store's
+  `items_count`, else the entries), so it costs no request.
 - No free-shipping progress bar: the live schema has no threshold (`free_shipping_subtotal`).
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.

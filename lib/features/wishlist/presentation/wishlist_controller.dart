@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/store/store_controller.dart';
@@ -10,14 +12,25 @@ class WishlistState {
   const WishlistState({
     this.id,
     this.entries = const <WishlistEntry>[],
+    this.itemsCount,
     this.isLoading = false,
     this.error,
   });
 
   final String? id;
   final List<WishlistEntry> entries;
+
+  /// The store's own count of what is saved, when it said (see
+  /// [WishlistData.itemsCount]).
+  final int? itemsCount;
   final bool isLoading;
   final Object? error;
+
+  /// How many products are saved: what the Wishlist tab's badge shows. The
+  /// store's count when it is larger than the entries on hand (a wishlist is
+  /// read a page at a time), otherwise the entries themselves. Zero for a
+  /// guest, who has no wishlist.
+  int get count => math.max(entries.length, itemsCount ?? 0);
 
   Set<String> get skus => {for (final e in entries) e.product.sku};
   bool contains(String sku) => skus.contains(sku);
@@ -34,11 +47,13 @@ class WishlistState {
   WishlistState copyWith({
     String? id,
     List<WishlistEntry>? entries,
+    int? itemsCount,
     bool? isLoading,
     Object? error = _keep,
   }) => WishlistState(
     id: id ?? this.id,
     entries: entries ?? this.entries,
+    itemsCount: itemsCount ?? this.itemsCount,
     isLoading: isLoading ?? this.isLoading,
     error: identical(error, _keep) ? this.error : error,
   );
@@ -81,11 +96,19 @@ class WishlistController extends Notifier<WishlistState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final data = await _repo.fetchWishlist();
-      state = WishlistState(id: data?.id, entries: data?.entries ?? const []);
+      state = _from(data);
     } catch (error) {
       state = state.copyWith(isLoading: false, error: error);
     }
   }
+
+  /// The state an answer from the store makes (the wishlist's id, its first
+  /// page of items and the store's count of all of them); none is an empty one.
+  WishlistState _from(WishlistData? data) => WishlistState(
+    id: data?.id,
+    entries: data?.entries ?? const <WishlistEntry>[],
+    itemsCount: data?.itemsCount,
+  );
 
   Future<void> refresh() => _load();
 
@@ -104,7 +127,7 @@ class WishlistController extends Notifier<WishlistState> {
     if (itemIds.isEmpty) return;
     try {
       final data = await _repo.removeItems(wishlistId, itemIds);
-      state = WishlistState(id: data.id, entries: data.entries);
+      state = _from(data);
     } catch (error) {
       state = state.copyWith(error: error);
     }
@@ -130,7 +153,7 @@ class WishlistController extends Notifier<WishlistState> {
           (tracker) => tracker.addedToWishlist(sku),
         );
       }
-      state = WishlistState(id: data.id, entries: data.entries);
+      state = _from(data);
     } catch (error) {
       state = state.copyWith(error: error);
     }

@@ -3,6 +3,7 @@ abstract final class WishlistQueries {
   static const String _wishlistFields = r'''
 fragment WishlistFields on Wishlist {
   id
+  items_count
   items_v2 {
     items {
       id
