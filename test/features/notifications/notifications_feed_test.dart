@@ -151,8 +151,19 @@ void main() {
   });
 
   testWidgets('today and earlier, with the footer', (tester) async {
+    // The clock time asserted below is read off this item, not recomputed from
+    // a second `DateTime.now()`: that one is a different instant, and when a
+    // minute turns between the two the label no longer matches. It is stamped
+    // now rather than minutes ago so that it is still today just after
+    // midnight.
+    final today = _item(
+      'a',
+      'Out for delivery',
+      NotificationKind.order,
+      ago: Duration.zero,
+    );
     await _pump(tester, [
-      _item('a', 'Out for delivery', NotificationKind.order),
+      today,
       _item(
         'b',
         'Price drop on your wishlist',
@@ -165,12 +176,11 @@ void main() {
     expect(find.text('EARLIER'), findsOneWidget);
     expect(find.text(en.notificationsKeptNote), findsOneWidget);
     // Today's row shows its clock time, an older one its date.
-    final now = DateTime.now();
-    final hh = now.subtract(const Duration(minutes: 5));
+    final at = today.receivedAt;
     expect(
       find.text(
-        '${hh.hour.toString().padLeft(2, '0')}:'
-        '${hh.minute.toString().padLeft(2, '0')}',
+        '${at.hour.toString().padLeft(2, '0')}:'
+        '${at.minute.toString().padLeft(2, '0')}',
       ),
       findsOneWidget,
     );
