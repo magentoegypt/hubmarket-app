@@ -83,6 +83,61 @@ query CategoryTree {
 }
 ''';
 
+  /// The store view's root category uid (`storeConfig.root_category_uid`):
+  /// where [categoriesUnderRoot] starts when [categoryTree] finds no root.
+  static const String storeRootUid = r'''
+query StoreRootCategory {
+  storeConfig {
+    root_category_uid
+  }
+}
+''';
+
+  /// The categories directly below a parent — the store's root — with the two
+  /// levels under each: [categoryTree]'s answer without walking down from the
+  /// root itself.
+  ///
+  /// Magento's `categoryList` starts at the root category and returns nothing
+  /// while that root is switched off (Catalog › Categories › Default Category ›
+  /// Enable Category: No — as it was from 3 Oct 2026), although every category
+  /// below it is active and the website's menu still lists them. Asking for
+  /// the children by their parent still answers. One page of up to 100: the
+  /// default page (20) would cut the store's 28 off.
+  static const String categoriesUnderRoot = r'''
+query CategoriesUnderRoot($parent: String!) {
+  categories(
+    filters: {parent_category_uid: {eq: $parent}}
+    pageSize: 100
+    currentPage: 1
+  ) {
+    items {
+      uid
+      name
+      url_key
+      image
+      include_in_menu
+      product_count
+      children {
+        uid
+        name
+        url_key
+        image
+        include_in_menu
+        product_count
+        children {
+          uid
+          name
+          url_key
+          image
+          include_in_menu
+          product_count
+        }
+      }
+    }
+  }
+}
+''';
+
   /// One category by its uid, with the two levels below it — wherever it sits,
   /// also a category the admin keeps out of the menu (`include_in_menu` 0: on
   /// Hub Market Shoes, Bags, Mobile & Tablet ...), which [categoryTree] leaves

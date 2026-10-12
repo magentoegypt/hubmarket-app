@@ -83,6 +83,8 @@
   "availableStoresTitle": "Available store views",
   "navHome": "Home",
   "navCategories": "Categories",
+  "categoriesUnavailableTitle": "Categories aren't available right now",
+  "categoriesUnavailableBody": "We couldn't find any categories to show. Please try again in a moment.",
   "navCart": "Cart",
   "navWishlist": "Wishlist",
   "navAccount": "Account",

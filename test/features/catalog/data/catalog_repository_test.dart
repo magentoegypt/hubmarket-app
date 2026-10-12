@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gql/ast.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
+import 'package:hubmarket_app/core/error/failure.dart';
+import 'package:hubmarket_app/features/catalog/data/catalog_queries.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 
 /// A client that records each request's variables and answers with [data].
@@ -26,6 +28,38 @@ class _RecordingClient {
       );
       return Stream<Response>.value(
         Response(data: data, response: const {}, context: const Context()),
+      );
+    }),
+    cache: GraphQLCache(),
+  );
+}
+
+/// A client that answers each operation with its own data (null: an error)
+/// and writes down what was asked, in order.
+class _ScriptedClient {
+  _ScriptedClient(this.answers);
+
+  final Map<String, Map<String, dynamic>> answers;
+  final List<String?> operations = [];
+  final List<Map<String, dynamic>> variables = [];
+
+  GraphQLClient get client => GraphQLClient(
+    link: Link.function((request, [forward]) {
+      final name = request.operation.document.definitions
+          .whereType<OperationDefinitionNode>()
+          .first
+          .name
+          ?.value;
+      operations.add(name);
+      variables.add(request.variables);
+      final data = answers[name];
+      return Stream<Response>.value(
+        data == null
+            ? Response(
+                errors: [GraphQLError(message: 'unexpected $name')],
+                response: const {},
+              )
+            : Response(data: data, response: const {}, context: const Context()),
       );
     }),
     cache: GraphQLCache(),
@@ -264,6 +298,137 @@ void main() {
           'https://hub-market.magento2.click/abominable-hoodie.html',
         ),
         'abominable-hoodie.html',
+      );
+    });
+  });
+
+  group('CatalogRepository.fetchCategoryTree', () {
+    Map<String, dynamic> storeConfig(String? uid) => {
+      '__typename': 'Query',
+      'storeConfig': {'__typename': 'StoreConfig', 'root_category_uid': uid},
+    };
+
+    Map<String, dynamic> categories(List<Map<String, dynamic>> items) => {
+      '__typename': 'Query',
+      'categories': {'__typename': 'CategoryResult', 'items': items},
+    };
+
+    // What Hub Market answered on 12 Oct 2026, after its root was switched off:
+    // no root at all.
+    const noRoot = <String, dynamic>{
+      '__typename': 'Query',
+      'categoryList': <dynamic>[],
+    };
+
+    test('walks down from the root when there is one, and asks nothing '
+        'else', () async {
+      final scripted = _ScriptedClient({
+        'CategoryTree': {
+          '__typename': 'Query',
+          'categoryList': [
+            _node(
+              'Mg==',
+              'Default Category',
+              'default-category',
+              menu: 1,
+              products: 0,
+              children: [
+                _node('MTAx', 'Grocery', 'grocery', menu: 1, products: 19, children: []),
+                _node('MTQw', 'Fashion', 'fashion', menu: 1, products: 23, children: []),
+                _node('NTM=', 'Shoes', 'shoes', menu: 0, products: 14, children: []),
+              ],
+            ),
+          ],
+        },
+      });
+
+      final tree = await CatalogRepository(scripted.client).fetchCategoryTree();
+
+      expect(tree.map((c) => c.name), ['Grocery', 'Fashion']);
+      expect(scripted.operations, ['CategoryTree']);
+    });
+
+    test('with no root (it is switched off) asks for the root\'s children by '
+        'their parent, and keeps those in the menu with their children', () async {
+      final scripted = _ScriptedClient({
+        'CategoryTree': noRoot,
+        'StoreRootCategory': storeConfig('Mg=='),
+        'CategoriesUnderRoot': categories([
+          _node(
+            'MTAx',
+            'Grocery',
+            'grocery',
+            menu: 1,
+            products: 19,
+            children: [
+              _node('MTE2', 'Dairy Products', 'dairy', menu: 1, products: 4, children: []),
+            ],
+          ),
+          _node('NTM=', 'Shoes', 'shoes', menu: 0, products: 14, children: []),
+          _node('MTQw', 'Fashion', 'fashion', menu: 1, products: 23, children: []),
+        ]),
+      });
+
+      final tree = await CatalogRepository(scripted.client).fetchCategoryTree();
+
+      expect(scripted.operations, [
+        'CategoryTree',
+        'StoreRootCategory',
+        'CategoriesUnderRoot',
+      ]);
+      expect(scripted.variables.last, {'parent': 'Mg=='});
+      // The menu's, in Magento's order; Shoes is out of the menu.
+      expect(tree.map((c) => c.name), ['Grocery', 'Fashion']);
+      expect(tree.first.children.single.name, 'Dairy Products');
+      expect(tree.first.productCount, 19);
+    });
+
+    test('one page is asked for, wide enough for the store\'s 28 top '
+        'categories', () {
+      expect(CatalogQueries.categoriesUnderRoot, contains('pageSize: 100'));
+      expect(
+        CatalogQueries.categoriesUnderRoot,
+        contains('parent_category_uid: {eq: \$parent}'),
+      );
+    });
+
+    test('a store view that names no root has no categories to show', () async {
+      final scripted = _ScriptedClient({
+        'CategoryTree': noRoot,
+        'StoreRootCategory': storeConfig(null),
+      });
+
+      expect(
+        await CatalogRepository(scripted.client).fetchCategoryTree(),
+        isEmpty,
+      );
+      expect(scripted.operations, ['CategoryTree', 'StoreRootCategory']);
+    });
+
+    test('nothing under the root is nothing, not an error', () async {
+      final scripted = _ScriptedClient({
+        'CategoryTree': noRoot,
+        'StoreRootCategory': storeConfig('Mg=='),
+        'CategoriesUnderRoot': categories([]),
+      });
+
+      expect(
+        await CatalogRepository(scripted.client).fetchCategoryTree(),
+        isEmpty,
+      );
+    });
+
+    test('a failure of the fallback is a failure, so the screen can offer '
+        'Retry', () async {
+      final scripted = _ScriptedClient({
+        'CategoryTree': noRoot,
+        'StoreRootCategory': storeConfig('Mg=='),
+        // No answer for CategoriesUnderRoot: the request fails.
+      });
+
+      await expectLater(
+        CatalogRepository(scripted.client).fetchCategoryTree(),
+        throwsA(isA<Failure>()),
       );
     });
   });
