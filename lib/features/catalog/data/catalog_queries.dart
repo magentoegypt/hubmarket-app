@@ -314,9 +314,13 @@ query SearchProducts(
   /// variants, gallery, description, reviews, and the "You may also like"
   /// candidates (core `related_products` + `upsell_products`; merged,
   /// de-duplicated and capped app-side by `alsoLikeFromJson`).
+  ///
+  /// `pageSize: 20`, not 1: the key of a product that sits inside a bundle also
+  /// answers the bundle, which may come first, and the item with the key is
+  /// picked app-side (`productWithUrlKey`, `kUrlKeyLookupPageSize`).
   static const String productDetail = r'''
 query ProductDetail($urlKey: String!) {
-  products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
+  products(filter: { url_key: { eq: $urlKey } }, pageSize: 20) {
     items {
       __typename
       sku

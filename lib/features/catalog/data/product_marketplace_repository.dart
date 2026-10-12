@@ -20,10 +20,16 @@ import 'product_mapper.dart';
 abstract final class ProductMarketplaceQueries {
   /// The page by its url_key, with other sellers' offers (HubAppVendors
   /// P3.1): what the current backend answers.
+  ///
+  /// `pageSize: 20` and `url_key` in the selection: the key of a product that
+  /// sits inside a bundle also answers the bundle, which may come first, and
+  /// the item with the key is picked app-side (`productWithUrlKey`). Taking the
+  /// bundle's extras turned the product's page into the bundle's.
   static const String productMarketplace = r'''
 query HmProductMarketplace($urlKey: String!) {
-  products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
+  products(filter: { url_key: { eq: $urlKey } }, pageSize: 20) {
     items {
+      url_key
       ...HmProductMarketplaceFields
       ...HmProductOfferFields
     }
@@ -35,8 +41,9 @@ query HmProductMarketplace($urlKey: String!) {
   /// offers yet (P2): the seller and a bundle's options only.
   static const String productMarketplaceSellers = r'''
 query HmProductMarketplaceSellers($urlKey: String!) {
-  products(filter: { url_key: { eq: $urlKey } }, pageSize: 1) {
+  products(filter: { url_key: { eq: $urlKey } }, pageSize: 20) {
     items {
+      url_key
       ...HmProductMarketplaceFields
     }
   }
@@ -196,10 +203,13 @@ class ProductMarketplaceRepository {
       // Fragments on ProductInterface: see runHubAppQuery.
       fetchPolicy: FetchPolicy.noCache,
     );
-    final items =
-        (data['products'] as Map<String, dynamic>?)?['items'] as List<dynamic>?;
-    final first = items == null || items.isEmpty ? null : items.first;
-    if (first is Map<String, dynamic>) return productMarketplaceFromJson(first);
+    // The item with the key, not the first: a bundle that offers the product
+    // may come first (see [ProductMarketplaceQueries.productMarketplace]).
+    final product = productWithUrlKey(
+      (data['products'] as Map<String, dynamic>?)?['items'],
+      urlKey,
+    );
+    if (product != null) return productMarketplaceFromJson(product);
     if (!withOffers) return null;
     final routed = await runHubAppQuery(
       _client,

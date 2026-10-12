@@ -11,6 +11,45 @@ const String kBrandAttributeCode = 'mgs_brand';
 
 const Set<String> _brandAttributeCodes = {kBrandAttributeCode, 'manufacturer'};
 
+/// How many products a lookup by `url_key` asks the store for, where it used
+/// to ask for one. See [productWithUrlKey].
+const int kUrlKeyLookupPageSize = 20;
+
+/// The item of a `products(filter: {url_key: {eq: …}})` answer that has
+/// [urlKey], or null when none does.
+///
+/// One key can answer several products: the store's search index folds a
+/// bundle's options into the bundle, so the key of an option finds every
+/// bundle that offers it, and a bundle may come first (live, 12 Oct 2026:
+/// `bose-700` answers the "Gaming Set" bundle, then the headphones). Reading
+/// the first item opened the bundle's page for the product, and asking for one
+/// item never even got the product. The keys are compared as the store writes
+/// them (trimmed, lower-case, percent-escapes decoded). A lone item is taken
+/// as it is, as before: a spelling that differs cannot be told from the
+/// quirk, but a single answer cannot be the quirk.
+Map<String, dynamic>? productWithUrlKey(Object? items, String urlKey) {
+  if (items is! List) return null;
+  final products = items.whereType<Map<String, dynamic>>().toList();
+  final wanted = _urlKeyForm(urlKey);
+  for (final product in products) {
+    final key = product['url_key'];
+    if (key is String && _urlKeyForm(key) == wanted) return product;
+  }
+  return products.length == 1 ? products.single : null;
+}
+
+String _urlKeyForm(String key) {
+  var form = key.trim();
+  try {
+    form = Uri.decodeComponent(form);
+  } on ArgumentError {
+    // Not percent-encoded after all: compared as written.
+  } on FormatException {
+    // The same, as newer SDKs say it.
+  }
+  return form.toLowerCase();
+}
+
 /// Shared parsers for the common `Money` and listing-`Product` GraphQL shapes,
 /// reused by catalogue and wishlist repositories.
 Money? moneyFromJson(Map<String, dynamic>? json) {

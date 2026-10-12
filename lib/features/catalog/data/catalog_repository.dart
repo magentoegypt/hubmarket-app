@@ -279,16 +279,19 @@ class CatalogRepository {
   }
 
   /// Single product by url_key (PDP). Returns null when not found.
+  ///
+  /// The store may answer other products with the key's own (a bundle that
+  /// offers it, possibly first), so it is the item whose url_key is [urlKey]
+  /// that is read, not the first one ([productWithUrlKey]).
   Future<ProductDetail?> fetchProductDetail(String urlKey) async {
     final data = await _query(CatalogQueries.productDetail, <String, dynamic>{
       'urlKey': urlKey,
     });
-    final items =
-        (data['products'] as Map<String, dynamic>?)?['items'] as List<dynamic>?;
-    if (items == null || items.isEmpty) return null;
-    final first = items.first;
-    if (first is! Map<String, dynamic>) return null;
-    return productDetailFromJson(first);
+    final product = productWithUrlKey(
+      (data['products'] as Map<String, dynamic>?)?['items'],
+      urlKey,
+    );
+    return product == null ? null : productDetailFromJson(product);
   }
 
   Future<List<ReviewRatingMetadata>> fetchReviewRatingsMetadata() async {
