@@ -53,7 +53,7 @@ Future<void> openStorefrontUrl(
   // `mailto:`, `tel:`, `whatsapp:` — the platform owns these.
   final scheme = uri.scheme.toLowerCase();
   if (scheme.isNotEmpty && scheme != 'http' && scheme != 'https') {
-    launchExternalUri(uri);
+    ref.read(externalUriLauncherProvider)(uri);
     return;
   }
 
@@ -66,7 +66,7 @@ Future<void> openStorefrontUrl(
   }
 
   if (uri.host.isNotEmpty && !isInternalStoreUrl(ref, url)) {
-    launchExternalUri(uri);
+    ref.read(externalUriLauncherProvider)(uri);
     return;
   }
 

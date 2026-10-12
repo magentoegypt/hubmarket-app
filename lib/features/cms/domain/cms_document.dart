@@ -1,6 +1,8 @@
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
+import 'cms_video.dart';
+
 /// A run of text inside a paragraph, heading, list item or table cell, with
 /// the formatting the renderer supports. `\n` stands for a `<br>`.
 class CmsInline {
@@ -96,6 +98,23 @@ class CmsImage extends CmsBlock {
   final String? href;
 }
 
+/// A video the markup embeds, drawn as a card that hands [url] to the platform
+/// when it is tapped. Only produced when [CmsDocument.parse] is asked for
+/// `embeds`.
+class CmsVideo extends CmsBlock {
+  const CmsVideo({required this.url, this.title = '', this.poster});
+
+  /// Where playing it goes: a provider's watch page (see [embeddedVideoUrl]) or
+  /// the video file itself, which may be a store-relative path.
+  final String url;
+
+  /// The frame's `title`, empty when it had none.
+  final String title;
+
+  /// The picture behind the play button, when a `<video poster>` gave one.
+  final String? poster;
+}
+
 class CmsTableCell {
   const CmsTableCell(this.inlines, {this.header = false});
   final List<CmsInline> inlines;
@@ -132,10 +151,21 @@ typedef CmsSection = ({int index, String title});
 /// rules. Layout wrappers (`div`, `section`, Page Builder rows…) are
 /// flattened; scripts, styles, forms and embeds are dropped rather than shown
 /// half-rendered.
+///
+/// Markup that arrives entity-encoded (`&lt;p&gt;…`, what Page Builder's HTML
+/// Code element and a good deal of Arabic content hold) is unpacked and read as
+/// markup, and Page Builder's desktop/mobile pair of every picture is drawn
+/// once.
 abstract final class CmsDocument {
-  static List<CmsBlock> parse(String html) {
+  /// [embeds] also keeps the videos the markup carries — a YouTube or Vimeo
+  /// player (see [embeddedVideoUrl]) and `<video>` files — as [CmsVideo]
+  /// blocks. Without it they are dropped like every other embed, which is what
+  /// pages written before videos were drawn (and their tests) rely on.
+  static List<CmsBlock> parse(String html, {bool embeds = false}) {
     if (html.trim().isEmpty) return const <CmsBlock>[];
-    return _Parser().blocks(html_parser.parseFragment(html).nodes);
+    return _Parser(
+      embeds: embeds,
+    ).blocks(html_parser.parseFragment(html).nodes);
   }
 
   /// The text of [inlines], with `<br>`s as newlines.
@@ -167,6 +197,8 @@ abstract final class CmsDocument {
             walk(b.children);
           case CmsImage():
             out.write('${b.alt} ');
+          case CmsVideo():
+            out.write('${b.title} ');
           case CmsRule():
             break;
         }
@@ -235,6 +267,12 @@ class _Style {
 }
 
 class _Parser {
+  _Parser({required this.embeds});
+
+  /// Whether `<iframe>` players and `<video>` files become [CmsVideo]s
+  /// (otherwise they are dropped with the other embeds).
+  final bool embeds;
+
   /// Never rendered: code, forms and embeds a native page can't honour.
   static const Set<String> _dropped = {
     'script', 'style', 'noscript', 'template', 'head', 'meta', 'link',
@@ -246,8 +284,34 @@ class _Parser {
   static const Set<String> _containers = {
     'div', 'section', 'article', 'main', 'header', 'footer', 'aside', 'nav',
     'figure', 'figcaption', 'center', 'details', 'summary', 'dl', 'dt', 'dd',
-    'address', 'body', 'html', 'tbody', 'thead', 'tfoot', 'li',
+    'address', 'body', 'html', 'tbody', 'thead', 'tfoot', 'li', 'picture',
   };
+
+  /// Markup written as text — `&lt;div&gt;…&lt;/div&gt;`, which the parser hands
+  /// back as the characters `<div>…</div>` — has to be read as markup again.
+  static final RegExp _markupAsText = RegExp(
+    r'<\s*/?\s*[a-zA-Z][a-zA-Z0-9-]*(\s[^<>]*)?/?>',
+  );
+
+  /// Unpacking stops here, so text that keeps decoding to more text cannot
+  /// recurse for ever.
+  static const int _maxUnpack = 3;
+  int _unpacked = 0;
+
+  /// The nodes [text] holds when it is really markup written as text, else null.
+  List<dom.Node>? _markupIn(String text) {
+    if (_unpacked >= _maxUnpack || !_markupAsText.hasMatch(text)) return null;
+    return html_parser.parseFragment(text).nodes;
+  }
+
+  T _unpack<T>(T Function() read) {
+    _unpacked++;
+    try {
+      return read();
+    } finally {
+      _unpacked--;
+    }
+  }
 
   static const Set<String> _blockTags = {
     'p', 'ul', 'ol', 'table', 'img', 'hr', 'blockquote', 'h1', 'h2', 'h3',
@@ -266,11 +330,23 @@ class _Parser {
 
     for (final node in nodes) {
       if (node is dom.Text) {
+        final inner = _markupIn(node.text);
+        if (inner != null) {
+          flush();
+          out.addAll(_unpack(() => blocks(inner)));
+          continue;
+        }
         pending.addAll(_textRuns(node.text, const _Style()));
         continue;
       }
       if (node is! dom.Element) continue;
       final tag = node.localName ?? '';
+      if (embeds && (tag == 'iframe' || tag == 'video')) {
+        flush();
+        final video = _video(node);
+        if (video != null) out.add(video);
+        continue;
+      }
       if (_dropped.contains(tag)) continue;
       if (tag == 'br') {
         pending.add(const CmsInline('\n'));
@@ -346,6 +422,13 @@ class _Parser {
             out.addAll(blocks(node.nodes));
           } else {
             pending.addAll(_inlines([node], const _Style()));
+            // A picture or video wrapped in an inline element
+            // (`<span><img></span>`) is a block of its own, after the text.
+            final media = _embedded(node);
+            if (media.isNotEmpty) {
+              flush();
+              out.addAll(media);
+            }
           }
       }
     }
@@ -357,10 +440,21 @@ class _Parser {
     final out = <CmsBlock>[];
     final runs = _tidy(_inlines(p.nodes, const _Style()));
     if (runs.isNotEmpty) out.add(CmsParagraph(runs));
-    // Images inside a paragraph become blocks of their own, after its text.
-    for (final img in p.querySelectorAll('img')) {
-      final image = _image(img);
-      if (image != null) out.add(image);
+    // Pictures and videos inside a paragraph become blocks of their own,
+    // after its text.
+    out.addAll(_embedded(p));
+    return out;
+  }
+
+  /// The pictures — and, with [embeds], the videos — inside [scope], in order,
+  /// each a block of its own.
+  List<CmsBlock> _embedded(dom.Element scope) {
+    final out = <CmsBlock>[];
+    for (final el in scope.querySelectorAll(
+      embeds ? 'img, iframe, video' : 'img',
+    )) {
+      final block = el.localName == 'img' ? _image(el) : _video(el);
+      if (block != null) out.add(block);
     }
     return out;
   }
@@ -369,6 +463,11 @@ class _Parser {
     final out = <CmsInline>[];
     for (final node in nodes) {
       if (node is dom.Text) {
+        final inner = _markupIn(node.text);
+        if (inner != null) {
+          out.addAll(_unpack(() => _inlines(inner, style)));
+          continue;
+        }
         out.addAll(_textRuns(node.text, style));
         continue;
       }
@@ -490,14 +589,97 @@ class _Parser {
   }
 
   CmsImage? _image(dom.Element img) {
-    final src = (img.attributes['src'] ?? img.attributes['data-src'] ?? '')
-        .trim();
-    if (src.isEmpty || src.startsWith('data:')) return null;
+    if (_isDesktopTwin(img)) return null;
+    final src = _imageSource(img);
+    if (src == null) return null;
     return CmsImage(
       src: src,
       alt: (img.attributes['alt'] ?? '').trim(),
       width: _dimension(img.attributes['width']),
       height: _dimension(img.attributes['height']),
+    );
+  }
+
+  /// The URL an `<img>` really loads: a lazy-loader's `data-src` (its `src` is
+  /// a placeholder) before `src`, then the first `srcset` candidate.
+  String? _imageSource(dom.Element img) {
+    for (final key in const ['data-src', 'data-lazy-src', 'data-original', 'src']) {
+      final url = _mediaUrl(img.attributes[key]);
+      if (url != null) return url;
+    }
+    final srcset = img.attributes['srcset'] ?? img.attributes['data-srcset'];
+    if (srcset == null) return null;
+    final first = srcset.split(',').first.trim().split(RegExp(r'\s+')).first;
+    return _mediaUrl(first);
+  }
+
+  /// Page Builder writes every picture twice: a desktop `<img>` (class
+  /// `pagebuilder-mobile-hidden`) and a mobile one (`pagebuilder-mobile-only`),
+  /// and its CSS shows one of them. A phone shows the mobile one, so the desktop
+  /// twin is skipped — when the mobile one has a picture to show.
+  bool _isDesktopTwin(dom.Element img) {
+    if (!img.classes.contains('pagebuilder-mobile-hidden')) return false;
+    return img.parent?.children.any(
+          (sibling) =>
+              sibling != img &&
+              sibling.localName == 'img' &&
+              sibling.classes.contains('pagebuilder-mobile-only') &&
+              _imageSource(sibling) != null,
+        ) ??
+        false;
+  }
+
+  /// [raw] as a URL the app may load, or null: nothing, a `data:` payload, or
+  /// any scheme but http(s) (`javascript:`, `file:`, …). A store-relative path
+  /// passes as it is; `//host/path` gets https.
+  String? _mediaUrl(String? raw) {
+    var value = (raw ?? '').trim();
+    if (value.isEmpty) return null;
+    if (value.startsWith('//')) value = 'https:$value';
+    final colon = value.indexOf(':');
+    final slash = value.indexOf('/');
+    final hasScheme = colon > 0 && (slash == -1 || colon < slash);
+    if (hasScheme) {
+      final scheme = value.substring(0, colon).toLowerCase();
+      if (scheme != 'http' && scheme != 'https') return null;
+    }
+    return value;
+  }
+
+  /// An `<iframe>` player of a provider [embeddedVideoUrl] knows, or a `<video>`
+  /// (its `src`, else its first `<source>`); null for anything else.
+  CmsVideo? _video(dom.Element el) {
+    final title = (el.attributes['title'] ?? '').trim();
+    if (el.localName == 'iframe') {
+      final url = embeddedVideoUrl(
+        el.attributes['src'] ?? el.attributes['data-src'],
+      );
+      return url == null ? null : CmsVideo(url: url, title: title);
+    }
+    var src = _mediaUrl(el.attributes['src']);
+    if (src == null) {
+      // The MP4 when the seller offers several (WebM does not play on iOS),
+      // else the first the platform could be asked for.
+      String? first;
+      for (final source in el.querySelectorAll('source')) {
+        final url = _mediaUrl(source.attributes['src']);
+        if (url == null) continue;
+        first ??= url;
+        final type = (source.attributes['type'] ?? '').toLowerCase();
+        if (type.contains('mp4') ||
+            Uri.tryParse(url)?.path.toLowerCase().endsWith('.mp4') == true) {
+          src = url;
+          break;
+        }
+      }
+      src ??= first;
+    }
+    if (src == null) return null;
+    return CmsVideo(
+      // A page player pasted into a <video> still plays on its own page.
+      url: embeddedVideoUrl(src) ?? src,
+      title: title,
+      poster: _mediaUrl(el.attributes['poster']),
     );
   }
 

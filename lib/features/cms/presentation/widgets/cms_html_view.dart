@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/util/media.dart';
 import '../../../../core/widgets/network_image.dart';
+import '../../../../l10n/l10n.dart';
 import '../../domain/cms_document.dart';
 
 /// Draws parsed CMS content ([CmsDocument.parse]) with native widgets.
@@ -20,6 +22,10 @@ import '../../domain/cms_document.dart';
 /// headings in EN/Title with 6 px under them and 16 between sections. Without
 /// it the content keeps the compact look the Home, the store pages and the
 /// return form give it.
+///
+/// A [CmsVideo] is a card: tapping it reports the video's URL through [onLink]
+/// like a link, and the platform plays it — nothing from an embedded player runs
+/// inside the app.
 class CmsHtmlView extends StatefulWidget {
   const CmsHtmlView({
     super.key,
@@ -29,6 +35,8 @@ class CmsHtmlView extends StatefulWidget {
     this.mediaBase = '',
     this.compact = false,
     this.page = false,
+    this.bodyStyle,
+    this.fullWidthImages = false,
   });
 
   final List<CmsBlock> blocks;
@@ -43,6 +51,15 @@ class CmsHtmlView extends StatefulWidget {
 
   /// The content page's type and rhythm (see the class doc).
   final bool page;
+
+  /// The type of body text and list markers, when the screen has its own (the
+  /// product page's description); otherwise the one [compact] / [page] pick.
+  final TextStyle? bodyStyle;
+
+  /// Pictures take the full width at their own proportions (a product's
+  /// photographs and banners), instead of the 180 px strip the other pages give
+  /// them. An image that states its size is drawn no wider than that.
+  final bool fullWidthImages;
 
   @override
   State<CmsHtmlView> createState() => _CmsHtmlViewState();
@@ -67,17 +84,19 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
 
   double get _bodySize => widget.compact ? 14 : 15;
 
-  TextStyle _body(BuildContext context) => widget.page
-      ? AppTextStyles.of(context).body.copyWith(
-          color: context.isDarkMode
-              ? context.scaffoldMuted
-              : AppColors.inkSubtle,
-        )
-      : TextStyle(
-          fontSize: _bodySize,
-          height: 1.5,
-          color: context.scaffoldMuted,
-        );
+  TextStyle _body(BuildContext context) =>
+      widget.bodyStyle ??
+      (widget.page
+          ? AppTextStyles.of(context).body.copyWith(
+              color: context.isDarkMode
+                  ? context.scaffoldMuted
+                  : AppColors.inkSubtle,
+            )
+          : TextStyle(
+              fontSize: _bodySize,
+              height: 1.5,
+              color: context.scaffoldMuted,
+            ));
 
   /// The index of the first heading among the top-level blocks, or -1.
   int _firstHeading = -1;
@@ -164,6 +183,8 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
         return _list(context, block, depth: depth);
       case CmsImage():
         return _image(block);
+      case CmsVideo():
+        return _video(context, block);
       case CmsTable():
         return _table(context, block);
       case CmsQuote():
@@ -248,6 +269,9 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
 
   Widget _image(CmsImage image) {
     final url = resolveMediaUrl(image.src, widget.mediaBase);
+    if (widget.fullWidthImages) {
+      return _linked(image.href, _fullWidthImage(image, url));
+    }
     Widget child = HubImage(
       url: url,
       fit: BoxFit.contain,
@@ -259,9 +283,122 @@ class _CmsHtmlViewState extends State<CmsHtmlView> {
         ? AspectRatio(aspectRatio: w / h, child: child)
         : SizedBox(height: 180, child: child);
     child = ClipRRect(borderRadius: BorderRadius.circular(12), child: child);
-    final href = image.href;
-    if (href == null) return child;
-    return GestureDetector(onTap: () => widget.onLink(href), child: child);
+    return _linked(image.href, child);
+  }
+
+  Widget _linked(String? href, Widget child) => href == null
+      ? child
+      : GestureDetector(onTap: () => widget.onLink(href), child: child);
+
+  /// A picture at the full width, in its own proportions: the ratio its
+  /// `width` and `height` give (and no wider than they say), else the loaded
+  /// file's — the placeholder holds a 16:9 space until it arrives.
+  Widget _fullWidthImage(CmsImage image, String url) {
+    final w = image.width;
+    final h = image.height;
+    final stated = w != null && h != null;
+    final ratio = stated ? w / h : 16 / 9;
+    Widget space(Widget child) => AspectRatio(aspectRatio: ratio, child: child);
+    Widget picture = HubImage(
+      url: url,
+      fit: stated ? BoxFit.contain : BoxFit.fitWidth,
+      semanticLabel: image.alt.isEmpty ? null : image.alt,
+      placeholder: (_) => space(const ColoredBox(color: AppColors.surfaceTint)),
+      error: (_) => space(
+        const ColoredBox(
+          color: AppColors.surfaceTint,
+          child: Center(child: Icon(HubIcons.image, color: AppColors.inkMuted)),
+        ),
+      ),
+    );
+    if (stated) {
+      picture = space(picture);
+    }
+    picture = ClipRRect(borderRadius: BorderRadius.circular(12), child: picture);
+    if (stated) {
+      picture = Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: w),
+          child: picture,
+        ),
+      );
+    }
+    return picture;
+  }
+
+  /// A video: a 16:9 card with a play button (over its poster, when it has
+  /// one) and its title. A tap reports the URL like a link does, and the
+  /// platform plays it.
+  Widget _video(BuildContext context, CmsVideo video) {
+    final url = resolveMediaUrl(video.url, widget.mediaBase);
+    if (url.isEmpty) return const SizedBox.shrink();
+    final label = video.title.isEmpty
+        ? AppLocalizations.of(context).cmsWatchVideo
+        : video.title;
+    final poster = resolveMediaUrl(video.poster, widget.mediaBase);
+    return Semantics(
+      button: true,
+      label: label,
+      // The card's own tap, spoken for it: `excludeSemantics` drops the
+      // InkWell's, and a screen reader would find a button it cannot press.
+      onTap: () => widget.onLink(url),
+      excludeSemantics: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Material(
+            color: AppColors.brandPrimary,
+            child: InkWell(
+              onTap: () => widget.onLink(url),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (poster.isNotEmpty) ...[
+                    HubImage(
+                      url: poster,
+                      fit: BoxFit.cover,
+                      error: (_) => const SizedBox.shrink(),
+                    ),
+                    const ColoredBox(color: Color(0x660F2144)),
+                  ],
+                  Center(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow_rounded,
+                        size: 36,
+                        color: AppColors.brandPrimary,
+                      ),
+                    ),
+                  ),
+                  PositionedDirectional(
+                    start: 12,
+                    end: 12,
+                    bottom: 10,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _table(BuildContext context, CmsTable table) {

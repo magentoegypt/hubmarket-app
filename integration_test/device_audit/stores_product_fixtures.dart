@@ -6,6 +6,7 @@ import 'package:hubmarket_app/features/catalog/data/product_route_query.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
 import 'package:hubmarket_app/features/catalog/domain/product_detail.dart';
 import 'package:hubmarket_app/features/catalog/domain/review_subject.dart';
+import 'package:hubmarket_app/features/cms/domain/cms_document.dart';
 
 import '../../test/support/fakes.dart';
 import '../../test/support/hubapp_fakes.dart';
@@ -345,6 +346,8 @@ ProductDetail withBlankPhotos(ProductDetail detail, {int count = 4}) =>
       brandOptionId: detail.brandOptionId,
       description: detail.description,
       shortDescription: detail.shortDescription,
+      descriptionBlocks: detail.descriptionBlocks,
+      shortDescriptionBlocks: detail.shortDescriptionBlocks,
       attributes: detail.attributes,
       gallery: List<String>.filled(count, ''),
       regularPrice: detail.regularPrice,
@@ -360,3 +363,61 @@ ProductDetail withBlankPhotos(ProductDetail detail, {int count = 4}) =>
       onlyLeft: detail.onlyLeft,
       categories: detail.categories,
     );
+
+/// [detail] with a description made the way a seller makes one (QA TC102): a
+/// paragraph, a picture, a heading, a list, a video — and the same again in the
+/// short description. Its pictures have no URL, for the reason [withBlankPhotos]
+/// gives; the page draws the tile a picture that failed to load gets.
+ProductDetail withRichDescription(ProductDetail detail, String locale) {
+  final ar = locale == 'ar';
+  CmsParagraph words(String en, String arabic) =>
+      CmsParagraph([CmsInline(ar ? arabic : en)]);
+  final description = [
+    words(
+      'A soft crepe dress with a corset waist that ties at the back, cut to '
+          'sit just above the knee.',
+      'فستان كريب ناعم بخصر مشد يُربط من الخلف، بقصّة تصل إلى ما فوق الركبة '
+          'بقليل.',
+    ),
+    const CmsImage(src: ''),
+    CmsHeading(2, [CmsInline(ar ? 'العناية بالقماش' : 'Caring for it')]),
+    CmsList(
+      ordered: false,
+      items: [
+        [words('Machine wash cold', 'غسيل بالغسالة بماء بارد')],
+        [words('Iron on a low heat', 'كي على حرارة منخفضة')],
+      ],
+    ),
+    const CmsVideo(url: 'https://www.youtube.com/watch?v=Rl6EvEeN348'),
+  ];
+  final short = [
+    words('Corset waist · ties at the back', 'خصر مشد · يُربط من الخلف'),
+    const CmsImage(src: ''),
+  ];
+  return ProductDetail(
+    sku: detail.sku,
+    name: detail.name,
+    urlKey: detail.urlKey,
+    typeId: detail.typeId,
+    brand: detail.brand,
+    brandOptionId: detail.brandOptionId,
+    description: CmsDocument.plainText(description),
+    shortDescription: CmsDocument.plainText(short),
+    descriptionBlocks: description,
+    shortDescriptionBlocks: short,
+    attributes: detail.attributes,
+    gallery: detail.gallery,
+    regularPrice: detail.regularPrice,
+    finalPrice: detail.finalPrice,
+    inStock: detail.inStock,
+    badge: detail.badge,
+    options: detail.options,
+    variants: detail.variants,
+    ratingSummary: detail.ratingSummary,
+    reviewCount: detail.reviewCount,
+    reviews: detail.reviews,
+    alsoLike: detail.alsoLike,
+    onlyLeft: detail.onlyLeft,
+    categories: detail.categories,
+  );
+}

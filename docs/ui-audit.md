@@ -117,6 +117,12 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
   Allow the app sends no Insights event and asks no personal picks, so the section stays the top-rated list.
   The test fakes answer it with Not now (`FakeLocalCache()`; `FakeLocalCache.neverAsked()` opens it), so no
   audit scene shows it.
+- The product page's "Description & material" draws what the seller put in the description and the short
+  description — paragraphs, headings, lists, tables, pictures at the full width and videos — where the frame
+  draws one paragraph (QA TC102). A video is a navy 16:9 card with a play button and "Watch video" (the
+  `<iframe>`'s title when it has one): no frame draws it. A tap hands the video's own page (YouTube, Vimeo, or
+  the video file) to the platform, as every foreign link does: the player is never loaded inside the app, so
+  nothing from the embed runs there. The audit scene is `C14_pdp` `description`.
 - No free-shipping progress bar: the live schema has no threshold (`free_shipping_subtotal`).
 - Password rule and OTP masking copy follow the product decision, not the frame.
 - Tabby / Tamara blocks: the live backend has no `tabbyConfig` and no Tamara session.
