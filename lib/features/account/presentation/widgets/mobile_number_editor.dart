@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/phone/phone_field_controller.dart';
 import '../../../../core/validation/phone.dart';
-import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/button_spinner.dart';
 import '../../../../core/widgets/phone_number_field.dart';
 import '../../../../l10n/l10n.dart';
@@ -33,7 +33,7 @@ class MobileNumberEditor extends ConsumerStatefulWidget {
 
 class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
   final _phoneKey = GlobalKey<FormState>();
-  final _phone = TextEditingController();
+  final _phone = PhoneFieldController();
   bool _editing = false;
   bool _busy = false;
   String? _phoneError;
@@ -78,7 +78,7 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
 
   Future<void> _sendCode() async {
     if (!_phoneKey.currentState!.validate()) return;
-    final e164 = Phone.normalizeUae(_phone.text);
+    final e164 = _phone.e164;
     final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
@@ -159,10 +159,9 @@ class _MobileNumberEditorState extends ConsumerState<MobileNumberEditor> {
             const SizedBox(height: 8),
             PhoneNumberField(
               controller: _phone,
-              hint: l10n.authPhoneHint,
+              mobileOnly: true,
               enabled: !_busy,
               errorText: _phoneError,
-              validator: (v) => Validators.uaePhone(context, v),
               onChanged: (_) {
                 if (_phoneError != null) setState(() => _phoneError = null);
               },

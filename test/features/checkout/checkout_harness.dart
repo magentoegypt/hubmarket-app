@@ -274,7 +274,10 @@ Widget checkoutHarness({
 /// Types the guest's contact and address (Figma 17a) into the form: the email,
 /// full name, mobile number, then — after the emirate picker — area, street &
 /// building and apartment / villa.
-Future<void> fillGuestAddress(WidgetTester tester) async {
+Future<void> fillGuestAddress(
+  WidgetTester tester, {
+  String phone = '+971 50 123 4567',
+}) async {
   final fields = find.byType(TextField);
   Future<void> type(int index, String text) async {
     await tester.ensureVisible(fields.at(index));
@@ -283,7 +286,7 @@ Future<void> fillGuestAddress(WidgetTester tester) async {
 
   await type(0, 'sara.ahmed@gmail.com');
   await type(1, 'Sara Ahmed');
-  await type(2, '+971 50 123 4567');
+  await type(2, phone);
   await type(3, 'Dubai Marina');
   await type(4, 'Marina Gate 2');
   await type(5, '1204');

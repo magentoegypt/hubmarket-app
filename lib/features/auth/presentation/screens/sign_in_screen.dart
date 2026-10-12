@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../core/config/backend_capabilities.dart';
-import '../../../../core/validation/phone.dart';
+import '../../../../core/phone/phone_field_controller.dart';
 import '../../../../core/validation/validators.dart';
+import '../../../../core/widgets/phone_number_field.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
@@ -44,7 +45,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _mobile = TextEditingController();
+  final _mobile = PhoneFieldController();
 
   bool _mobileTab = false;
   bool _busy = false;
@@ -96,7 +97,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Future<void> _sendCode() async {
     setState(() => _submitted = true);
     if (!_formKey.currentState!.validate()) return;
-    final phone = Phone.normalizeUae(_mobile.text);
+    final phone = _mobile.e164;
     final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
@@ -254,17 +255,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   ];
 
   List<Widget> _mobileSection(AppLocalizations l10n) => [
-    AuthField(
+    PhoneNumberField(
       controller: _mobile,
       label: l10n.fieldMobileWhatsapp,
-      icon: HubIcons.phone,
-      hint: l10n.authPhonePlaceholder,
-      keyboardType: TextInputType.phone,
+      mobileOnly: true,
       textInputAction: TextInputAction.done,
       autofillHints: const [AutofillHints.telephoneNumber],
-      ltrInput: true,
       errorText: _mobileError,
-      validator: (v) => Validators.uaePhone(context, v),
       onChanged: (_) {
         if (_mobileError != null) setState(() => _mobileError = null);
       },

@@ -256,7 +256,7 @@ class CheckoutController extends Notifier<CheckoutState> {
         await _repo.setGuestEmail(cartId, email);
       }
       final methods = await _repo.setShippingAddress(cartId, shippingAddress);
-      final phone = Phone.normalizeUae(telephone);
+      final phone = Phone.normalize(telephone);
       // Keep a prior guest-OTP verification only when the phone is unchanged —
       // the code was sent to that number, so editing an unrelated address
       // field (same phone) shouldn't force re-verification, but a new number

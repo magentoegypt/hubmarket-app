@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/validation/phone.dart';
+import '../../../../core/phone/phone_field_controller.dart';
 import '../../../../core/validation/validators.dart';
+import '../../../../core/widgets/phone_number_field.dart';
 import '../../../../l10n/l10n.dart';
 import '../../domain/auth_error.dart';
 import '../auth_controller.dart';
@@ -37,7 +38,7 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _mobile = TextEditingController();
+  final _mobile = PhoneFieldController();
 
   bool _mobileTab = false;
   bool _busy = false;
@@ -64,7 +65,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     });
     try {
       if (_mobileTab) {
-        final phone = Phone.normalizeUae(_mobile.text);
+        final phone = _mobile.e164;
         await _auth.requestPasswordResetOtp(phone);
         if (!mounted) return;
         setState(() => _busy = false);
@@ -136,17 +137,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             onChanged: _switchTab,
           ),
           if (_mobileTab)
-            AuthField(
+            PhoneNumberField(
               key: const ValueKey('forgot-mobile'),
               controller: _mobile,
               label: l10n.fieldMobileWhatsapp,
-              icon: HubIcons.phone,
-              hint: l10n.authPhonePlaceholder,
-              keyboardType: TextInputType.phone,
+              mobileOnly: true,
               textInputAction: TextInputAction.done,
-              ltrInput: true,
               errorText: _fieldError,
-              validator: (v) => Validators.uaePhone(context, v),
               onChanged: (_) => _clearFieldError(),
               onSubmitted: (_) => _submit(),
             )

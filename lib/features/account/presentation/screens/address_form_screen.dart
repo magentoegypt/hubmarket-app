@@ -7,7 +7,6 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../app/theme/theme_x.dart';
 import '../../../../core/address/regions.dart';
-import '../../../../core/validation/phone.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/address_form.dart';
 import '../../../../core/widgets/hub_bottom_action_bar.dart';
@@ -17,6 +16,7 @@ import '../../../../core/widgets/hub_chip.dart';
 import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/hub_radio_dot.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
+import '../../../../core/widgets/phone_number_field.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../auth/presentation/widgets/auth_field.dart';
 import '../../data/account_repository.dart';
@@ -66,11 +66,6 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       regionId: a?.regionId,
       isDefault: a?.defaultShipping ?? false,
     );
-    // The field shows the whole number, "+971 50 123 4567" (the controller
-    // starts with the digits after the dial code).
-    if (a != null && a.telephone.trim().isNotEmpty) {
-      _address.phone.text = Phone.display(a.telephone);
-    }
     _selectedLabelId = a?.labelOptionId;
   }
 
@@ -159,14 +154,10 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                 validator: (v) => Validators.required(context, v),
               ),
               const SizedBox(height: 14),
-              AuthField(
+              PhoneNumberField(
                 controller: _address.phone,
                 label: l10n.fieldPhone,
-                icon: HubIcons.phone,
-                hint: '+971 50 123 4567',
-                keyboardType: TextInputType.phone,
-                ltrInput: true,
-                validator: (v) => Validators.uaePhone(context, v),
+                autofillHints: const [AutofillHints.telephoneNumber],
               ),
               const SizedBox(height: 14),
               _EmirateField(controller: _address),

@@ -6,8 +6,9 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/config/store_features.dart';
-import '../../../../core/validation/phone.dart';
+import '../../../../core/phone/phone_field_controller.dart';
 import '../../../../core/validation/validators.dart';
+import '../../../../core/widgets/phone_number_field.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cms/presentation/widgets/legal_links_text.dart';
 import '../../domain/auth_error.dart';
@@ -41,7 +42,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _email = TextEditingController();
-  final _mobile = TextEditingController();
+  final _mobile = PhoneFieldController();
   final _password = TextEditingController();
 
   bool _busy = false;
@@ -85,7 +86,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     if (!valid || !_agreedToTerms) return;
 
     final l10n = AppLocalizations.of(context);
-    final phone = Phone.normalizeUae(_mobile.text);
+    final phone = _mobile.e164;
     setState(() => _busy = true);
     try {
       await _auth.requestRegistrationOtp(phone);
@@ -200,16 +201,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               if (_emailError != null) setState(() => _emailError = null);
             },
           ),
-          AuthField(
+          PhoneNumberField(
             controller: _mobile,
             label: l10n.fieldMobileWhatsapp,
-            icon: HubIcons.phone,
-            hint: l10n.authPhonePlaceholder,
-            keyboardType: TextInputType.phone,
+            mobileOnly: true,
             autofillHints: const [AutofillHints.telephoneNumber],
-            ltrInput: true,
+            textInputAction: TextInputAction.next,
             errorText: _mobileError,
-            validator: (v) => Validators.uaePhone(context, v),
             onChanged: (_) {
               if (_mobileError != null) setState(() => _mobileError = null);
             },

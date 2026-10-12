@@ -7,6 +7,7 @@ import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/address/regions.dart';
 import '../../../../core/validation/validators.dart';
 import '../../../../core/widgets/address_form.dart';
+import '../../../../core/widgets/phone_number_field.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../account/data/address_rules.dart';
 import '../../../auth/presentation/widgets/auth_field.dart';
@@ -64,17 +65,13 @@ class CheckoutAddressForm extends ConsumerWidget {
         autofillHints: const [AutofillHints.name],
         validator: (v) => Validators.required(context, v),
       ),
-      // The phone is typed as the shopper writes it (+971 50 …, 050 …, 50 …):
+      // The number is typed as the shopper writes it in the country on the chip
+      // (050 …, 50 …), or with its country code (+971 50 …, which sets the chip):
       // the controller turns it into E.164 for Magento.
-      AuthField(
+      PhoneNumberField(
         controller: controller.phone,
         label: l10n.checkoutFieldMobile,
-        icon: HubIcons.phone,
-        hint: l10n.authPhoneHint,
-        keyboardType: TextInputType.phone,
         autofillHints: const [AutofillHints.telephoneNumber],
-        ltrInput: true,
-        validator: (v) => Validators.uaePhone(context, v),
       ),
       _EmirateField(controller: controller, regions: regions),
       AuthField(
