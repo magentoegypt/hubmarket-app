@@ -88,6 +88,16 @@ recent searches ("YOUR SEARCHES:"); before they have searched it shows the store
 from Algolia ("TOP SEARCHES:": `<index>_suggestions` asked for an empty query, analytics off;
 `topSearchesProvider`), which needs no consent.
 
+**Phone numbers are any country's.** Every phone field is a `PhoneNumberField` (`lib/core/widgets/`) over a
+`PhoneFieldController` (`lib/core/phone/`): a country chip that opens a searchable list of all 245 regions (names in
+English and Arabic from CLDR through Node's ICU, `node tool/gen_country_names.mjs`), the number checked with
+libphonenumber's rules (`phone_numbers_parser`: trunk 0, grouping, Arabic digits, mobile versus landline), a number
+pasted with its code (`+20 100…`, `00971…`) setting the chip, and E.164 on the wire: the backend takes `+<country
+code>…` as dialled (`MobileNumber::canonical`). Sign-in, registration, password reset and change-mobile need a mobile
+(`mobileOnly`); an address takes any valid number. The chip starts on the UAE and the delivery address country stays
+UAE. Whether WhatsApp delivers a code to a non-UAE number is the SMS provider's: not testable from the app (a send is
+a write).
+
 Only the app icon, the native launch screen and interface wording ship with the
 app (see Figma G3).
 

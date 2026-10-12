@@ -19,6 +19,9 @@ class _AddressBook extends FakeAccountRepository {
   List<CustomerAddress> addresses;
   final String locale;
   final List<({int id, bool defaultShipping})> updates = [];
+
+  /// The telephone of every address saved by an update.
+  final List<String> updatedPhones = [];
   final List<int> deleted = [];
 
   @override
@@ -27,6 +30,7 @@ class _AddressBook extends FakeAccountRepository {
   @override
   Future<void> updateAddress(int id, CustomerAddress address) async {
     updates.add((id: id, defaultShipping: address.defaultShipping));
+    updatedPhones.add(address.telephone);
   }
 
   @override
@@ -240,15 +244,50 @@ void main() {
       tester.widget<TextField>(fields.at(0)).controller!.text,
       'Sara Ahmed',
     );
+    // The phone: the calling code on the chip, the rest in the field.
+    expect(find.text('+971'), findsOneWidget);
     expect(
       tester.widget<TextField>(fields.at(1)).controller!.text,
-      '+971 50 123 4567',
+      '50 123 4567',
     );
     // Saved as text only (the store has no UAE regions): shown as it is.
     expect(find.text('Dubai'), findsOneWidget);
     await tester.tap(find.text('Save address'));
     await tester.pumpAndSettle();
     expect(book.updates, [(id: 1, defaultShipping: true)]);
+  });
+
+  testWidgets('24b Edit address: a number of another country reopens on its '
+      'chip and is saved as it was', (tester) async {
+    final egyptian = CustomerAddress(
+      id: 3,
+      firstName: 'Mona',
+      lastName: 'Said',
+      telephone: '+201001234567',
+      street: 'Marina Gate 2',
+      city: 'Dubai Marina',
+      region: 'Dubai',
+    );
+    final book = _AddressBook([egyptian]);
+    await pumpAudit(
+      tester,
+      height: 1198,
+      screen: AddressFormScreen(initial: egyptian),
+      account: book,
+      overrides: [_noPostcode],
+    );
+
+    // Egypt's calling code on the chip, the rest of the number in the field.
+    expect(find.text('+20'), findsOneWidget);
+    expect(find.text('+971'), findsNothing);
+    expect(
+      tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text,
+      '10 01234567',
+    );
+
+    await tester.tap(find.text('Save address'));
+    await tester.pumpAndSettle();
+    expect(book.updatedPhones, ['+201001234567']);
   });
 
   testWidgets('24b Add address: asks for the required fields', (tester) async {

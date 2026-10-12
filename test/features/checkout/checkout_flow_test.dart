@@ -39,6 +39,18 @@ void main() {
     await tapText(tester, 'Continue to shipping method');
   }
 
+  testWidgets('a guest number of another country is shipped in E.164: the '
+      'code on the number sets the chip', (tester) async {
+    final repo = checkoutRepository();
+    await mount(tester, repo);
+
+    await fillGuestAddress(tester, phone: '+20 100 123 4567');
+    expect(find.text('+20'), findsOneWidget);
+    await tapText(tester, 'Continue to shipping method');
+
+    expect((repo.lastAddress!['address'] as Map)['telephone'], '+201001234567');
+  });
+
   testWidgets('a guest gives contact and address first, then a shipping '
       'method', (tester) async {
     final repo = checkoutRepository();

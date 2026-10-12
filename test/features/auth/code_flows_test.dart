@@ -222,7 +222,7 @@ void main() {
 
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), _typed);
+    await tester.enterText(find.byType(TextField), _typed);
     await tester.tap(find.text('Send WhatsApp code'));
     await tester.pumpAndSettle();
 

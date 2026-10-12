@@ -109,6 +109,14 @@ strings in a script with `chr(92)`, or write the raw character on purpose.
 
 - No social sign-in (Apple / Google / Facebook) and no per-store coupons or per-store delivery estimates:
   the backend has none.
+- Every phone field has a country chip (the flag, the calling code and a chevron) that opens a searchable list of all
+  the countries, and checks the number against the rules of the country picked, although the frames draw a UAE-only
+  `+971` field: QA TC99 asked for the website's behaviour (its intl-tel-input dropdown, every country allowed). Numbers
+  are sent as E.164 and read with libphonenumber's rules (`phone_numbers_parser`); sign-in, registration, password reset
+  and changing the mobile need a mobile, an address takes any valid number. The chip starts on the UAE (the store's
+  country); the website's own field starts on Egypt and lists Egypt and the US first, a setting of its SMS module
+  that predates the Hub Market store: `kDefaultPhoneCountry` and `kPreferredPhoneCountries`
+  (`lib/core/phone/phone_country.dart`) follow it if the client wants that. Delivery addresses stay UAE-only.
 - "Picked for you" shows the admin's badge ("AI ENGINE") and the "Personalised recommendations…" subtitle only
   when the shopper's own picks arrive (`hmPickedForYou`, `personalized: true`); until then it is the top-rated list
   with the admin's subtitle and no pill: the app never labels the generic list as personal (QA02).

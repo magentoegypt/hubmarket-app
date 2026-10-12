@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme/app_colors.dart';
 import '../../l10n/l10n.dart';
 import '../address/regions.dart';
-import '../validation/phone.dart';
+import '../phone/phone_field_controller.dart';
 import '../validation/validators.dart';
 import 'phone_number_field.dart';
 
@@ -24,10 +24,9 @@ class AddressFormController {
     int? regionId,
     bool isDefault = false,
   }) : fullName = TextEditingController(text: fullName),
-       // The phone field shows a fixed `+971` chip, so it holds only the local
-       // subscriber digits — strip the country code off any prefilled E.164
-       // value (a saved address) so it isn't doubled.
-       phone = TextEditingController(text: Phone.localPart(phone)),
+       // A saved address's number (E.164, or an older UAE spelling) fills the
+       // field: its country on the chip, the rest in the number.
+       phone = PhoneFieldController(number: phone),
        area = TextEditingController(text: area),
        street = TextEditingController(text: street),
        apartment = TextEditingController(text: apartment),
@@ -36,7 +35,7 @@ class AddressFormController {
        isDefault = ValueNotifier<bool>(isDefault);
 
   final TextEditingController fullName;
-  final TextEditingController phone;
+  final PhoneFieldController phone;
 
   /// Locality / district (Magento `city`), e.g. "Jumeirah 1".
   final TextEditingController area;
@@ -70,9 +69,10 @@ class AddressFormController {
     return (first: parts.sublist(0, parts.length - 1).join(' '), last: parts.last);
   }
 
-  /// The phone in explicit E.164 (`+971…`) for Magento / the guest-OTP flow —
-  /// the field only holds local digits, so re-add the country code on read.
-  String e164Phone() => Phone.normalizeUae(phone.text);
+  /// The phone in explicit E.164 (`+971…`, `+20…`) for Magento / the guest-OTP
+  /// flow — the field holds the number of the country on its chip, so the
+  /// country code is added on read.
+  String e164Phone() => phone.e164;
 
   /// Magento `street` array — drops the apartment line when empty.
   List<String> streetLines() => [
@@ -81,7 +81,8 @@ class AddressFormController {
   ];
 
   void dispose() {
-    for (final c in [fullName, phone, area, street, apartment, region]) {
+    phone.dispose();
+    for (final c in [fullName, area, street, apartment, region]) {
       c.dispose();
     }
     regionId.dispose();
@@ -118,14 +119,9 @@ class AddressForm extends ConsumerWidget {
         const SizedBox(height: 14),
         _LabeledField(
           label: l10n.fieldPhone,
-          // The website's phone field carries a country-code prefix — use the
-          // shared `+971` chip field (same as registration) and validate a UAE
-          // mobile so the guest-checkout OTP always has a well-formed number.
-          child: PhoneNumberField(
-            controller: controller.phone,
-            hint: l10n.authPhoneHint,
-            validator: (v) => Validators.uaePhone(context, v),
-          ),
+          // The website's phone field has a country dropdown: the same chip
+          // field as registration, checked against the picked country.
+          child: PhoneNumberField(controller: controller.phone),
         ),
         const SizedBox(height: 14),
         // State + Country are stacked (not side-by-side) so the full country

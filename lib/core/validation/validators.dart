@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import '../../l10n/l10n.dart';
 import 'password_policy.dart';
-import 'phone.dart';
 
 /// Localized form-field validators.
 abstract final class Validators {
@@ -65,13 +64,6 @@ abstract final class Validators {
       return AppLocalizations.of(context).validationRequired;
     }
     return meetsPasswordRule(value, policy) ? null : '';
-  }
-
-  /// UAE mobile number (E.164 or local) for the WhatsApp-OTP flows.
-  static String? uaePhone(BuildContext context, String? value) {
-    final l10n = AppLocalizations.of(context);
-    if (value == null || value.trim().isEmpty) return l10n.validationRequired;
-    return Phone.isValidUae(value) ? null : l10n.validationPhoneUae;
   }
 
   /// Confirms two password fields match (used by the phone-reset flow). The
