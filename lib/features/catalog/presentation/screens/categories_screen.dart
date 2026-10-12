@@ -9,6 +9,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
 import '../../../../core/hubapp/hubapp_models.dart';
 import '../../../../core/widgets/async_value_view.dart';
+import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/hub_icon_button.dart';
 import '../../../../core/widgets/hub_top_bar.dart';
 import '../../../../core/widgets/network_image.dart';
@@ -75,7 +76,18 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               if (c.includeInMenu && c.name.isNotEmpty) c,
           ];
           if (menu.isEmpty) {
-            return Center(child: Text(l10n.stateEmpty));
+            // Never a blank page: a store that answers without a category
+            // (its root switched off, a read that came back empty) says so and
+            // asks again on Retry — the tree is kept for the session otherwise.
+            return EmptyState(
+              icon: HubIcons.layoutGrid,
+              title: l10n.categoriesUnavailableTitle,
+              body: l10n.categoriesUnavailableBody,
+              action: FilledButton(
+                onPressed: () => ref.invalidate(categoryTreeProvider),
+                child: Text(l10n.actionRetry),
+              ),
+            );
           }
           final selected = menu.firstWhere(
             (c) => c.uid == _selectedUid,

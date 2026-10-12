@@ -330,6 +330,39 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
+  for (final locale in ['en', 'ar']) {
+    final l10n = lookupAppLocalizations(Locale(locale));
+
+    testWidgets('a store with no category says so, never a blank page, and '
+        'Retry asks again ($locale)', (tester) async {
+      _phone(tester);
+      final key = GlobalKey();
+      final catalog = _FlakyCatalog(_tree(locale));
+      await withRealShadows(() async {
+        await tester.pumpWidget(
+          _harness(key, locale: locale, catalog: catalog),
+        );
+        await tester.pumpAndSettle();
+        await captureScreen(tester, key, 'audit_08_categories_empty_$locale');
+      });
+
+      expect(find.text(l10n.categoriesUnavailableTitle), findsOneWidget);
+      expect(find.text(l10n.categoriesUnavailableBody), findsOneWidget);
+      expect(find.text(l10n.actionRetry), findsOneWidget);
+      // The page keeps its bar and tab bar around it.
+      expect(find.text(l10n.navCategories), findsWidgets);
+      expect(find.byType(TypeTile), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text(l10n.actionRetry));
+      await tester.pumpAndSettle();
+
+      expect(catalog.asked, 2);
+      expect(find.text(l10n.categoriesUnavailableTitle), findsNothing);
+      expect(find.text(_tree(locale).first.name), findsWidgets);
+    });
+  }
+
   testWidgets('the sub-category route lists the tiles of the category', (
     tester,
   ) async {
@@ -348,6 +381,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('PLP Rocking Chairs'), findsOneWidget);
   });
+}
+
+/// A catalogue that has no category the first time it is asked and [tree] the
+/// next (the store's root switched back on).
+class _FlakyCatalog extends FakeCatalogRepository {
+  _FlakyCatalog(this.tree);
+
+  final List<Category> tree;
+  int asked = 0;
+
+  @override
+  Future<List<Category>> fetchCategoryTree() async =>
+      ++asked == 1 ? const <Category>[] : tree;
 }
 
 /// A catalogue whose category tree arrives when the test says.

@@ -58,12 +58,41 @@ class CatalogRepository {
         .whereType<Map<String, dynamic>>()
         .map(_parseCategory)
         .toList();
+    // No root at all: Magento leaves an inactive root out of `categoryList`
+    // (Default Category switched off in the admin, 3 Oct 2026), which emptied
+    // the Categories tab for every shopper. Its children are still there, so
+    // ask for them directly.
+    if (roots.isEmpty) return _fetchStoreRootChildren();
     // categoryList returns the root category(ies); the browsable set is the
     // root's children when present. Hide categories flagged out of navigation.
-    final source = (roots.isNotEmpty && roots.first.children.isNotEmpty)
+    final source = roots.first.children.isNotEmpty
         ? roots.first.children
         : roots;
     return source.where((c) => c.includeInMenu).toList(growable: false);
+  }
+
+  /// The browsable categories asked for by their parent, the store view's root
+  /// ([CatalogQueries.categoriesUnderRoot]): what [fetchCategoryTree] falls
+  /// back on when `categoryList` has no root. Empty when the store view names
+  /// no root or it has no children in the menu.
+  Future<List<Category>> _fetchStoreRootChildren() async {
+    final config = await _query(CatalogQueries.storeRootUid, const {});
+    final rootUid =
+        (config['storeConfig'] as Map<String, dynamic>?)?['root_category_uid']
+            as String?;
+    if (rootUid == null || rootUid.isEmpty) return const <Category>[];
+    final data = await _query(CatalogQueries.categoriesUnderRoot, {
+      'parent': rootUid,
+    });
+    final items =
+        (data['categories'] as Map<String, dynamic>?)?['items']
+            as List<dynamic>? ??
+        const [];
+    return items
+        .whereType<Map<String, dynamic>>()
+        .map(_parseCategory)
+        .where((c) => c.includeInMenu)
+        .toList(growable: false);
   }
 
   /// One category by its [uid], wherever it sits — also one the admin keeps out

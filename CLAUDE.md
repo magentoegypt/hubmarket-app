@@ -28,6 +28,15 @@ backend modules as Hub Market facts.
 | Product images | GraphQL gives one URL for `image`, `small_image`, `thumbnail` and every gallery entry: a resized copy under `/media/catalog/product/cache/<hash>/…` (800-1600 px, JPEG or PNG) on `hub-market.magento2.click` (`Cache-Control: max-age=604800`). The storefront keeps a **WebP twin** of each resized file at the same URL **+ `.webp`** (its `<picture>`): same pixels, 33 % (JPEG) to 94 % (PNG) fewer bytes, encoded from the original upload since 1 Oct 2026 (sharper), made within ~10 min of an upload. Only resized files have one: the placeholder, original uploads and other media folders answer 404 on `.webp`, and the uncached `multi.magento2.click` 404s a twin not made yet (the public host falls back to the JPEG). `HubImage` requests the twin for those URLs on the GraphQL host and falls back to the original on any failure (`webpTwinUrl`, `lib/core/util/media.dart`). `Accept: image/webp` changes nothing |
 | Not in the live core schema (Zoonze had them) | hero slides, home banners/sections, brands, blog, `magentoegypt_beauty_*` config, `free_shipping_subtotal`, `cod_fee`, `is_new_arrival` / `is_bestseller`, `also_like_products`, `rating_histogram`, avatars, `registerDeviceToken`. The HubApp contract now covers some: hero + home sections → `hmAppHome`, brands → `hmBrands`, best sellers → `hmBestSellers`, device tokens → `hmRegisterDevice` |
 
+**Categories need the store's root category switched on.** Magento's `categoryList` starts at the root
+(`Default Category`, id 2, `storeConfig.root_category_uid`) and answers `[]` while that root is disabled, although every
+category below it is active and the website's own menu still lists them: on 3 Oct 2026 12:00 someone saved the root with
+Enable Category = No, and from then on the Categories tab (and Search's "Popular categories") had nothing to show. The app
+now asks for the root's children by their parent when `categoryList` has no root (`CatalogQueries.categoriesUnderRoot`,
+`parent_category_uid`, one page of 100: the default page of 20 would cut the store's 28 off), and a tree that is empty
+anyway shows a state with Retry instead of a blank page. The data fix is still the admin's: Catalog › Categories ›
+Default Category › Enable Category: Yes (the REST read `GET /rest/V1/categories/2` shows `is_active`).
+
 ## 2. Tooling
 
 - `python tool/introspect_to_sdl.py` — refresh `lib/core/graphql/schema.graphql` from the live endpoint.

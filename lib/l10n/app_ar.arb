@@ -70,6 +70,8 @@
   "availableStoresTitle": "طرق عرض المتجر المتاحة",
   "navHome": "الرئيسية",
   "navCategories": "الأقسام",
+  "categoriesUnavailableTitle": "الأقسام غير متاحة حاليًا",
+  "categoriesUnavailableBody": "لم نتمكن من العثور على أقسام لعرضها. يُرجى المحاولة مرة أخرى بعد قليل.",
   "navCart": "السلة",
   "navWishlist": "المفضلة",
   "navAccount": "حسابي",
