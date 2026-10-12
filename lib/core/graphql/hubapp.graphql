@@ -1005,3 +1005,45 @@ type HmOrderPackageComment @doc(description: "A comment shown to the customer.")
     message: String! @doc(description: "Plain text.")
     created_at: String! @doc(description: "When, ISO-8601 UTC.")
 }
+
+# ===================== FulfillmentTracking/etc/schema.graphqls (CL036-DEV17, origin/figma-parity-home 898ad1206) =====================
+
+type CustomerOrder {
+    hm_fulfillment: HmFulfillment @resolver(class: "MagentoEgypt\\FulfillmentTracking\\Model\\Resolver\\OrderFulfillment") @doc(description: "Delivery progress of the order, as the website's order page shows it under Delivery progress. Asked for only when hmAppConfig.capabilities lists `fulfillment`. Also on guestOrder and guestOrderByToken; one batch for every order of a response. Null only when the order's progress could not be read.")
+}
+
+type HmFulfillment @doc(description: "Where an order's parcels are.") {
+    status_code: String! @doc(description: "Overall status: ordered, preparing, ready_for_pickup, to_hub, at_hub, shipped, on_the_way, delivered, completed, delayed, on_hold, canceled or refunded. Through the warehouse, the last leg decides once it moves; until then the slowest leg into the warehouse does.")
+    status_label: String! @doc(description: "The overall status in the store view's language.")
+    deliveries: [HmDelivery!]! @doc(description: "The order's deliveries: one per seller for orders placed before fulfillment planning, one per leg (direct, into the warehouse, out of it) for planned orders.")
+}
+
+type HmDelivery @doc(description: "One delivery of an order.") {
+    id: ID! @doc(description: "Stable within the order: delivery-1, delivery-2 and so on.")
+    route: String! @doc(description: "direct (seller to customer), to_hub (seller to the Hub Market warehouse) or from_hub (warehouse to customer).")
+    route_label: String! @doc(description: "The route in the store view's language.")
+    seller: HmSellerSummary @doc(description: "Whose items travel in it; Hub Market for a consolidated leg out of the warehouse; null when the seller is no longer approved.")
+    handled_by: String @doc(description: "seller when the seller delivers it, hub_market when Hub Market does, null while not yet decided.")
+    status_code: String! @doc(description: "ordered, preparing, ready_for_pickup, to_hub, at_hub, shipped, on_the_way, delivered, completed, delayed, on_hold, canceled or refunded.")
+    status_label: String! @doc(description: "The status in the store view's language.")
+    tracked: Boolean! @doc(description: "True when the delivery team has recorded progress for it. False: the status follows the order and its Magento shipments, as the website order page does (shipped, completed and so on).")
+    courier: HmDeliveryCourier @doc(description: "Who carries it, when known.")
+    expected_delivery: String @doc(description: "Expected delivery, ISO-8601 UTC, when the delivery team set one.")
+    updated_at: String @doc(description: "Last change, ISO-8601 UTC.")
+    item_uids: [ID!]! @doc(description: "OrderItemInterface.id of the lines it carries. A line can appear in a leg into the warehouse and again in the leg out of it.")
+    timeline: [HmDeliveryStep!]! @doc(description: "What happened, oldest first, starting with the order being placed.")
+}
+
+type HmDeliveryCourier @doc(description: "Who carries a delivery.") {
+    type: String! @doc(description: "third_party for a courier company, own when the seller or Hub Market delivers with its own drivers.")
+    label: String! @doc(description: "Courier, Seller's own delivery or Hub Market delivery, in the store view's language.")
+    name: String @doc(description: "Courier company as recorded, for third_party.")
+    tracking_number: String @doc(description: "Tracking number, for third_party.")
+    tracking_url: String @doc(description: "The courier's public tracking page for the number, when one can be built (dhl, fedex, ups, usps); null otherwise: show the number to copy.")
+}
+
+type HmDeliveryStep @doc(description: "One step of a delivery's timeline.") {
+    status_code: String! @doc(description: "Same codes as HmDelivery.status_code.")
+    status_label: String! @doc(description: "In the store view's language.")
+    at: String @doc(description: "When, ISO-8601 UTC; null when not recorded.")
+}

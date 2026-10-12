@@ -527,6 +527,7 @@ class AccountRepository {
           .length,
       shipmentCount: shipmentCount,
       packages: OrderPackage.listFromJson(json['hm_packages']),
+      fulfillment: OrderFulfillment.fromJson(json['hm_fulfillment']),
     );
   }
 
@@ -616,11 +617,12 @@ class AccountRepository {
   }
 
   /// Runs an order [document], asking for each line's seller while HubApp
-  /// serves `hm_seller` and for the per-store packages while it serves
-  /// `hm_packages` (two satellites, each deployable on its own). A server that
-  /// turns a selection down ("Cannot query field") ran nothing — validation
-  /// comes first — so the document goes out again without what it named, and
-  /// the gate stops asking for it; without either, the plain [document].
+  /// serves `hm_seller`, for the per-store packages while it serves
+  /// `hm_packages`, and for where the parcels are while it serves
+  /// `hm_fulfillment` (three satellites, each deployable on its own). A server
+  /// that turns a selection down ("Cannot query field") ran nothing —
+  /// validation comes first — so the document goes out again without what it
+  /// named, and the gate stops asking for it; without any, the plain [document].
   Future<Map<String, dynamic>> _orderRun(
     String document,
     Map<String, dynamic> variables, {
@@ -629,13 +631,15 @@ class AccountRepository {
     final features = _marketplace.features;
     var sellers = features.sellers;
     var packages = features.packages;
-    while (sellers || packages) {
+    var fulfillment = features.fulfillment;
+    while (sellers || packages || fulfillment) {
       try {
         return await _run(
           AccountQueries.withHubApp(
             document,
             sellers: sellers,
             packages: packages,
+            fulfillment: fulfillment,
           ),
           variables,
           mutation: mutation,
@@ -645,14 +649,20 @@ class AccountRepository {
         final message = missing.message;
         final noPackages = packages && _namesPackages(message);
         final noSellers = sellers && _namesSellers(message);
-        // A refusal naming neither: drop both rather than guess.
-        if (noPackages || !noSellers) {
+        final noFulfillment = fulfillment && _namesFulfillment(message);
+        final named = noPackages || noSellers || noFulfillment;
+        // A refusal naming none of them: drop all rather than guess.
+        if (noPackages || !named) {
           if (packages) _marketplace.packagesMissing();
           packages = false;
         }
-        if (noSellers || !noPackages) {
+        if (noSellers || !named) {
           if (sellers) _marketplace.sellersMissing();
           sellers = false;
+        }
+        if (noFulfillment || !named) {
+          if (fulfillment) _marketplace.fulfillmentMissing();
+          fulfillment = false;
         }
       }
     }
@@ -664,6 +674,11 @@ class AccountRepository {
 
   static bool _namesSellers(String message) =>
       message.contains('hm_seller') || message.contains('HmSellerSummary');
+
+  static bool _namesFulfillment(String message) =>
+      message.contains('hm_fulfillment') ||
+      message.contains('HmFulfillment') ||
+      message.contains('HmDelivery');
 
   /// [throwMissing]: a "Cannot query field" answer throws [HubAppMissing]
   /// rather than a [Failure]. [credentialCheck]: the request checks a

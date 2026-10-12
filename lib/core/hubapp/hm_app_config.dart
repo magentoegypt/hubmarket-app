@@ -139,6 +139,10 @@ abstract final class HubAppCapability {
   /// `MagentoEgypt_HubAppReturns`.
   static const String returns = 'returns';
 
+  /// `MagentoEgypt_FulfillmentTracking`: `CustomerOrder.hm_fulfillment`, where
+  /// an order's parcels are (the website's "Delivery progress").
+  static const String fulfillment = 'fulfillment';
+
   /// `MagentoEgypt_HubAppAccount`.
   static const String account = 'account';
 }

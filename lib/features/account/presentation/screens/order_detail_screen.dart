@@ -21,6 +21,7 @@ import '../../domain/order.dart';
 import '../order_actions.dart';
 import '../order_format.dart';
 import '../widgets/order_cancel_section.dart';
+import '../widgets/order_deliveries.dart';
 import '../widgets/order_packages.dart';
 import '../widgets/order_status_pill.dart';
 
@@ -30,9 +31,14 @@ import '../widgets/order_status_pill.dart';
 /// and actions, where it goes, what it cost and how it was paid, and "Cancel
 /// order" when the store and the order allow it (Figma 22 / 21b).
 ///
+/// With FulfillmentTracking (`hm_fulfillment`) a "Delivery progress" section
+/// comes first, as on the website: each delivery's status, courier, tracking
+/// number, expected date and timeline; the store cards then keep to the items.
+///
 /// Not drawn, because the backend has nothing behind them: the invoice and
 /// shipment documents of the frame's "Documents" card (and "Download invoice"
-/// beside the date), "Print order", and the delivery estimate of each package.
+/// beside the date), "Print order", and — without FulfillmentTracking — the
+/// delivery estimate of each package.
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({super.key, required this.order});
 
@@ -57,16 +63,25 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     // Figma 22: one package per store — the server's own split when HubApp
     // has it, else the lines by seller; null keeps one list.
     final packages = orderPackageViews(order);
-    // Numbers a package card shows are not listed again below.
+    // Where the server says the parcels are (FulfillmentTracking): its
+    // deliveries carry each parcel's status, courier and number, so the package
+    // cards keep to the lines.
+    final hasDeliveries = order.hasDeliveries;
+    // Numbers a package card or a delivery shows are not listed again below.
     final packaged = packagedTrackingNumbers(packages);
     final looseTrackings = [
       for (final tracking in order.trackings)
-        if (!packaged.contains(tracking.number)) tracking,
+        if (hasDeliveries
+            ? !order.fulfillment!.showsTracking(tracking.number)
+            : !packaged.contains(tracking.number))
+          tracking,
     ];
     // Before a package ships its timeline says so; an order the server did not
-    // split keeps the note where the numbers will appear.
+    // split keeps the note where the numbers will appear; deliveries say it
+    // themselves.
     final showTracking =
-        looseTrackings.isNotEmpty || (packages == null && !order.hasShipment);
+        looseTrackings.isNotEmpty ||
+        (!hasDeliveries && packages == null && !order.hasShipment);
     final reorderable = order.lines.any((l) => (l.sku ?? '').isNotEmpty);
     final billingDiffers =
         (order.billingAddress ?? '').isNotEmpty &&
@@ -78,9 +93,16 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         l10n.orderPlacedOn(orderFmtPlaced(order.date, locale, storeZone)),
         style: t.caption.copyWith(color: context.scaffoldMuted),
       ),
+      // Delivery progress (FulfillmentTracking), in the store view's words.
+      if (hasDeliveries) OrderDeliveries(order: order),
       if (packages != null)
         for (var i = 0; i < packages.length; i++)
-          OrderPackageCard(index: i + 1, view: packages[i], order: order)
+          OrderPackageCard(
+            index: i + 1,
+            view: packages[i],
+            order: order,
+            showProgress: !hasDeliveries,
+          )
       else
         OrderPackageCard(
           index: 1,
@@ -88,6 +110,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           view: OrderPackageView(lines: order.lines),
           title: l10n.orderItemsSection,
           statusPill: OrderStatusPill(order: order),
+          showProgress: !hasDeliveries,
         ),
       if (showTracking) _TrackingCard(trackings: looseTrackings),
       if ((order.shippingAddress ?? '').isNotEmpty)

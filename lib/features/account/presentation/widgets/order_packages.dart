@@ -175,6 +175,7 @@ class OrderPackageCard extends ConsumerWidget {
     this.line,
     this.title,
     this.statusPill,
+    this.showProgress = true,
   });
 
   /// 1-based, in the order the packages come.
@@ -193,6 +194,12 @@ class OrderPackageCard extends ConsumerWidget {
 
   /// Replaces the package's status pill (the order's own, without packages).
   final Widget? statusPill;
+
+  /// The package's own status, timeline and Track parcel button. False where
+  /// the page shows the server's delivery progress (`hm_fulfillment`) instead,
+  /// which then says where each parcel is, as the website does: the card keeps
+  /// the store, its lines, its updates and Contact store.
+  final bool showProgress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -215,10 +222,10 @@ class OrderPackageCard extends ConsumerWidget {
     final parcelTrack = package?.tracks
         .where((track) => track.trackingUrl != null)
         .firstOrNull;
-    final steps = package == null
+    final steps = package == null || !showProgress
         ? null
         : _steps(l10n, order, package, locale, zone, parcelTrack);
-    final parcel = parcelTrack;
+    final parcel = showProgress ? parcelTrack : null;
     final storeCode = seller?.storeCode;
     final phone = storeCode == null
         ? null
@@ -271,7 +278,7 @@ class OrderPackageCard extends ConsumerWidget {
               ],
             ),
           ),
-          if (statusPill != null || package != null) ...[
+          if (showProgress && (statusPill != null || package != null)) ...[
             const SizedBox(width: 8),
             statusPill ?? OrderPackageStatusPill(package: package!),
           ],

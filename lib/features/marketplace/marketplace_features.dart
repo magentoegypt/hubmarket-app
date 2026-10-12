@@ -11,6 +11,7 @@ class MarketplaceFeatures {
     this.sellers = false,
     this.bundles = false,
     this.packages = false,
+    this.fulfillment = false,
     this.listingSellers = false,
     this.storeExtras = false,
   });
@@ -25,6 +26,12 @@ class MarketplaceFeatures {
   /// `CustomerOrder.hm_packages`: an order split by store, with each store's
   /// status, shipments and totals (HubAppOrders).
   final bool packages;
+
+  /// `CustomerOrder.hm_fulfillment`: where the order's parcels are, as the
+  /// website's order page words them: each delivery with its status,
+  /// courier and timeline (FulfillmentTracking). On only while the server
+  /// lists the `fulfillment` capability.
+  final bool fulfillment;
 
   /// `hm_seller` on listing cards (the seller line): only while the server
   /// lists the `vendors` capability. Listings are shared with Build 1, and a
@@ -42,8 +49,26 @@ class MarketplaceFeatures {
     sellers: true,
     bundles: true,
     packages: true,
+    fulfillment: true,
     listingSellers: true,
     storeExtras: true,
+  );
+
+  /// This set with the given flags changed.
+  MarketplaceFeatures copyWith({
+    bool? sellers,
+    bool? bundles,
+    bool? packages,
+    bool? fulfillment,
+    bool? listingSellers,
+    bool? storeExtras,
+  }) => MarketplaceFeatures(
+    sellers: sellers ?? this.sellers,
+    bundles: bundles ?? this.bundles,
+    packages: packages ?? this.packages,
+    fulfillment: fulfillment ?? this.fulfillment,
+    listingSellers: listingSellers ?? this.listingSellers,
+    storeExtras: storeExtras ?? this.storeExtras,
   );
 
   @override
@@ -52,48 +77,91 @@ class MarketplaceFeatures {
       other.sellers == sellers &&
       other.bundles == bundles &&
       other.packages == packages &&
+      other.fulfillment == fulfillment &&
       other.listingSellers == listingSellers &&
       other.storeExtras == storeExtras;
 
   @override
-  int get hashCode =>
-      Object.hash(sellers, bundles, packages, listingSellers, storeExtras);
+  int get hashCode => Object.hash(
+    sellers,
+    bundles,
+    packages,
+    fulfillment,
+    listingSellers,
+    storeExtras,
+  );
 
   @override
   String toString() =>
       'MarketplaceFeatures(sellers: $sellers, bundles: $bundles, '
-      'packages: $packages, listingSellers: $listingSellers, '
-      'storeExtras: $storeExtras)';
+      'packages: $packages, fulfillment: $fulfillment, '
+      'listingSellers: $listingSellers, storeExtras: $storeExtras)';
 }
 
 /// Satellites the server turned down at run time ("Cannot query field
 /// hm_seller") although `hmAppConfig` answered: HubAppVendors, HubAppBundle
-/// and HubAppOrders can each be off on their own. Reset by a store switch,
-/// which probes again.
-typedef MarketplaceMissingState = ({bool sellers, bool bundles, bool packages});
+/// HubAppOrders and FulfillmentTracking can each be off on their own. Reset by
+/// a store switch, which probes again.
+typedef MarketplaceMissingState = ({
+  bool sellers,
+  bool bundles,
+  bool packages,
+  bool fulfillment,
+});
 
 class MarketplaceMissing extends Notifier<MarketplaceMissingState> {
   @override
   MarketplaceMissingState build() {
     ref.watch(storeControllerProvider.select((s) => s.activeStoreCode));
-    return (sellers: false, bundles: false, packages: false);
+    return (
+      sellers: false,
+      bundles: false,
+      packages: false,
+      fulfillment: false,
+    );
   }
 
   void sellersMissing() {
     if (!state.sellers) {
-      state = (sellers: true, bundles: state.bundles, packages: state.packages);
+      state = (
+        sellers: true,
+        bundles: state.bundles,
+        packages: state.packages,
+        fulfillment: state.fulfillment,
+      );
     }
   }
 
   void bundlesMissing() {
     if (!state.bundles) {
-      state = (sellers: state.sellers, bundles: true, packages: state.packages);
+      state = (
+        sellers: state.sellers,
+        bundles: true,
+        packages: state.packages,
+        fulfillment: state.fulfillment,
+      );
     }
   }
 
   void packagesMissing() {
     if (!state.packages) {
-      state = (sellers: state.sellers, bundles: state.bundles, packages: true);
+      state = (
+        sellers: state.sellers,
+        bundles: state.bundles,
+        packages: true,
+        fulfillment: state.fulfillment,
+      );
+    }
+  }
+
+  void fulfillmentMissing() {
+    if (!state.fulfillment) {
+      state = (
+        sellers: state.sellers,
+        bundles: state.bundles,
+        packages: state.packages,
+        fulfillment: true,
+      );
     }
   }
 }
@@ -123,11 +191,16 @@ final marketplaceFeaturesProvider = Provider<MarketplaceFeatures>((ref) {
       capabilities?.contains(HubAppCapability.bundle) ?? !missing.bundles;
   final orders =
       capabilities?.contains(HubAppCapability.orders) ?? !missing.packages;
+  // Only a server that lists its capabilities can have FulfillmentTracking
+  // (the capability is how the module announces itself): no guessing.
+  final fulfillment =
+      capabilities?.contains(HubAppCapability.fulfillment) ?? false;
   final listed = capabilities != null && vendors && !missing.sellers;
   return MarketplaceFeatures(
     sellers: vendors && !missing.sellers,
     bundles: bundle && !missing.bundles,
     packages: orders && !missing.packages,
+    fulfillment: fulfillment && !missing.fulfillment,
     listingSellers: listed,
     storeExtras: listed,
   );
@@ -148,6 +221,9 @@ abstract interface class MarketplaceGate {
 
   /// The server answered "Cannot query field" for `hm_packages`.
   void packagesMissing();
+
+  /// The server answered "Cannot query field" for `hm_fulfillment`.
+  void fulfillmentMissing();
 }
 
 /// A gate with fixed [features] — today's behaviour by default; tests.
@@ -165,6 +241,9 @@ class FixedMarketplaceGate implements MarketplaceGate {
 
   @override
   void packagesMissing() {}
+
+  @override
+  void fulfillmentMissing() {}
 }
 
 class _ProviderGate implements MarketplaceGate {
@@ -186,6 +265,10 @@ class _ProviderGate implements MarketplaceGate {
   @override
   void packagesMissing() =>
       _ref.read(marketplaceMissingProvider.notifier).packagesMissing();
+
+  @override
+  void fulfillmentMissing() =>
+      _ref.read(marketplaceMissingProvider.notifier).fulfillmentMissing();
 }
 
 /// The gate the repositories are built with.

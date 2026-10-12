@@ -209,7 +209,11 @@ void main() {
             ])
           : _orders(_without(packagedOrderJson(), packages: true, sellers: true)),
     );
-    final gate = RecordingMarketplaceGate();
+    // A server from before FulfillmentTracking too: its own tests are in
+    // order_fulfillment_test.dart.
+    final gate = RecordingMarketplaceGate(
+      MarketplaceFeatures.all.copyWith(fulfillment: false),
+    );
     final page = await AccountRepository(
       server.client,
       marketplace: gate,

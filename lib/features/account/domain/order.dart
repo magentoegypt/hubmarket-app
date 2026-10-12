@@ -1,7 +1,9 @@
 import '../../../core/hubapp/hubapp_models.dart';
 import '../../catalog/domain/money.dart';
+import 'order_fulfillment.dart';
 import 'order_package.dart';
 
+export 'order_fulfillment.dart';
 export 'order_package.dart';
 
 class OrderLine {
@@ -93,6 +95,7 @@ class CustomerOrder {
     this.invoiceCount = 0,
     this.shipmentCount = 0,
     this.packages = const <OrderPackage>[],
+    this.fulfillment,
   });
 
   final String number;
@@ -169,6 +172,16 @@ class CustomerOrder {
   /// The order split by store (`hm_packages`, HubAppOrders): each store's
   /// status, shipments and totals. Empty without it.
   final List<OrderPackage> packages;
+
+  /// Where the order's parcels are (`hm_fulfillment`, FulfillmentTracking):
+  /// the overall status and each delivery with its courier and timeline,
+  /// worded by the server as the website's order page words them. Null
+  /// without it, and when the server could not read the order's progress.
+  final OrderFulfillment? fulfillment;
+
+  /// The order has deliveries to show: its tracking draws them in place of
+  /// the stages it infers from invoices and shipments.
+  bool get hasDeliveries => fulfillment?.hasDeliveries ?? false;
 
   bool get hasTracking => trackings.isNotEmpty;
   bool get hasInvoice => invoiceCount > 0;

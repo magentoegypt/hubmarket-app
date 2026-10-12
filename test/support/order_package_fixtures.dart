@@ -60,6 +60,7 @@ CustomerOrder packagedOrder({
   String locale = 'en',
   bool placedAsGuest = false,
   Money? lolyDelivery,
+  OrderFulfillment? fulfillment,
   List<OrderTracking> trackings = const [
     OrderTracking(title: 'DHL', number: dhlNumber, carrier: 'dhl'),
     OrderTracking(title: 'Aramex', number: aramexNumber, carrier: 'custom'),
@@ -81,6 +82,7 @@ CustomerOrder packagedOrder({
     paymentMethodName: 'Cash on delivery',
     shipmentCount: 1,
     trackings: trackings,
+    fulfillment: fulfillment,
     lines: [
       OrderLine(
         name: n.dress,
