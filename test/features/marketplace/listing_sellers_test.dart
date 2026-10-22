@@ -84,11 +84,9 @@ Object Function(Request, String) _server({bool vendors = true}) =>
                 // Read through a fragment: the cache checks its type.
                 '__typename': 'Wishlist',
                 'id': '1',
-                'items_v2': {
-                  'items': [
-                    for (final item in items) {'id': item['sku'], 'product': item},
-                  ],
-                },
+                'items': [
+                  for (final item in items) {'id': item['sku'], 'product': item},
+                ],
               },
             ],
           },

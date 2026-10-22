@@ -27,9 +27,8 @@ class WishlistState {
   final Object? error;
 
   /// How many products are saved: what the Wishlist tab's badge shows. The
-  /// store's count when it is larger than the entries on hand (a wishlist is
-  /// read a page at a time), otherwise the entries themselves. Zero for a
-  /// guest, who has no wishlist.
+  /// store's count when it is larger than the entries on hand, otherwise the
+  /// entries themselves. Zero for a guest, who has no wishlist.
   int get count => math.max(entries.length, itemsCount ?? 0);
 
   Set<String> get skus => {for (final e in entries) e.product.sku};
@@ -73,8 +72,10 @@ class WishlistController extends Notifier<WishlistState> {
       }
     });
     // A language/store switch flips the `Store` header and resets the GraphQL
-    // cache; refetch so item names/prices (and the per-store-view item set)
-    // reflect the new store, matching the cart controller's store listener.
+    // cache; refetch so item names/prices reflect the new store's language,
+    // matching the cart controller's store listener. The set of items is the
+    // same in every language: what was saved under the other store view is
+    // listed too (see [WishlistQueries]).
     ref.listen<String>(
       storeControllerProvider.select((s) => s.activeStoreCode),
       (prev, next) {
