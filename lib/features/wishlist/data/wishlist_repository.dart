@@ -20,9 +20,8 @@ class WishlistData {
   final String id;
   final List<WishlistEntry> entries;
 
-  /// The store's own count of what is saved (`Wishlist.items_count`), which
-  /// also covers the products beyond the first page of [entries]; null when the
-  /// answer carried none.
+  /// The store's own count of what is saved (`Wishlist.items_count`, over every
+  /// store view of the website); null when the answer carried none.
   final int? itemsCount;
 }
 
@@ -88,8 +87,8 @@ class WishlistRepository {
 
   WishlistData _parse(Map<String, dynamic>? json) {
     if (json == null) return const WishlistData(id: '');
-    final items =
-        (json['items_v2'] as Map<String, dynamic>?)?['items'] as List<dynamic>?;
+    // `items`, not `items_v2`: see [WishlistQueries].
+    final items = json['items'] as List<dynamic>?;
     final entries = (items ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(
