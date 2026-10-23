@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hubmarket_app/app/theme/app_theme.dart';
+import 'package:hubmarket_app/core/error/failure.dart';
 import 'package:hubmarket_app/core/graphql/graphql_client.dart';
 import 'package:hubmarket_app/core/hubapp/hubapp.dart';
 import 'package:hubmarket_app/core/storage/local_cache.dart';
@@ -12,6 +13,7 @@ import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/core/store/store_repository.dart';
 import 'package:hubmarket_app/core/util/launch.dart';
 import 'package:hubmarket_app/core/widgets/network_image.dart';
+import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/data/brands_provider.dart';
 import 'package:hubmarket_app/features/catalog/data/catalog_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/brand.dart';
@@ -399,6 +401,64 @@ void main() {
       await tester.tap(find.text('100ml'));
       await tester.pumpAndSettle();
       expect(_addToCart(tester, l10n).onPressed, isNotNull);
+    });
+  });
+
+  // QA TC107: the cart screen read a 503 from the edge as "the store is
+  // temporarily unavailable" while Add to Cart said "Something went wrong"
+  // for the same outage. The sticky bar reports what actually failed.
+  group('a refused Add to Cart says what failed', () {
+    final lamp = ProductDetail(
+      sku: 'HM-SIMPLE-1',
+      name: 'Desk Lamp',
+      urlKey: 'desk-lamp',
+      typeId: 'simple',
+      regularPrice: const Money(amount: 100, currency: 'AED'),
+      finalPrice: const Money(amount: 100, currency: 'AED'),
+    );
+
+    Future<void> tapAdd(WidgetTester tester, Failure failure) async {
+      tester.view.physicalSize = const Size(390, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final cart = FakeCartRepository()..addProductsFailure = failure;
+      await tester.pumpWidget(
+        _harness(
+          'en',
+          repository: _DetailRepository(lamp),
+          initialLocation: '/product/desk-lamp',
+          overrides: [cartRepositoryProvider.overrideWithValue(cart)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.byWidget(_addToCart(tester, l10n)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the edge is down: the store-unavailable line', (tester) async {
+      await tapAdd(tester, const Failure(FailureKind.service));
+
+      expect(
+        find.text(
+          'The store is temporarily unavailable. Please try again shortly.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Something went wrong. Please try again.'), findsNothing);
+    });
+
+    testWidgets("the store's own refusal reaches the shopper", (tester) async {
+      await tapAdd(
+        tester,
+        const Failure(
+          FailureKind.server,
+          detail: 'The requested qty is not available',
+        ),
+      );
+
+      expect(find.text('The requested qty is not available'), findsOneWidget);
     });
   });
 

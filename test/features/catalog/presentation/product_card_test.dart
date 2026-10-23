@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hubmarket_app/app/theme/app_colors.dart';
+import 'package:hubmarket_app/core/error/failure.dart';
+import 'package:hubmarket_app/core/storage/local_cache.dart';
 import 'package:hubmarket_app/core/storage/secure_token_store.dart';
 import 'package:hubmarket_app/features/cart/data/cart_repository.dart';
 import 'package:hubmarket_app/features/catalog/domain/money.dart';
@@ -274,5 +276,70 @@ void main() {
     await tester.pump();
 
     expect(find.text('BESTSELLER'), findsOneWidget);
+  });
+
+  // QA TC107: the cart screen read a 503 from the edge as "the store is
+  // temporarily unavailable" while the card's "+" said "Something went wrong"
+  // for the same outage. The card reports what actually failed.
+  group('a refused "+" says what failed', () {
+    const product = Product(
+      sku: 'HM-SIMPLE-1',
+      name: 'Desk Lamp',
+      urlKey: 'desk-lamp',
+      regularPrice: Money(amount: 100, currency: 'AED'),
+      finalPrice: Money(amount: 100, currency: 'AED'),
+      typeId: 'simple',
+    );
+
+    Future<void> tapAdd(WidgetTester tester, Failure failure) async {
+      final cart = FakeCartRepository()..addProductsFailure = failure;
+      await tester.pumpWidget(
+        _wrap(
+          const ProductCard(product: product),
+          overrides: [
+            cartRepositoryProvider.overrideWithValue(cart),
+            localCacheProvider.overrideWithValue(FakeLocalCache()),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('Add to Cart'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the edge is down: the store-unavailable line', (tester) async {
+      await tapAdd(tester, const Failure(FailureKind.service));
+
+      expect(
+        find.text(
+          'The store is temporarily unavailable. Please try again shortly.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Something went wrong. Please try again.'), findsNothing);
+    });
+
+    testWidgets('the phone is offline: the connection line', (tester) async {
+      await tapAdd(tester, const Failure(FailureKind.network));
+
+      expect(
+        find.text(
+          "We couldn't reach the store. Check your connection and try again.",
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets("the store's own refusal reaches the shopper", (tester) async {
+      await tapAdd(
+        tester,
+        const Failure(
+          FailureKind.server,
+          detail: 'The requested qty is not available',
+        ),
+      );
+
+      expect(find.text('The requested qty is not available'), findsOneWidget);
+    });
   });
 }
