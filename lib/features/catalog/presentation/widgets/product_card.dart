@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/hub_icons.dart';
+import '../../../../core/widgets/failure_message.dart';
 import '../../../../core/widgets/network_image.dart';
 import '../../../../core/widgets/star_glyph.dart';
 import '../../../../l10n/l10n.dart';
@@ -179,8 +180,10 @@ class _ProductCardState extends ConsumerState<ProductCard> {
   /// a bundle's selections ([Product.requiresOptions]) — can't go in by SKU:
   /// Magento refuses it. Its "+" opens the product page instead, as tapping
   /// the card does, and never calls the cart. When the listing doesn't know
-  /// the product's type, the add is attempted and a refusal shows the
-  /// generic error.
+  /// the product's type, the add is attempted and a refusal is reported as it
+  /// came: the store's own words for a refusal it worded ("The requested qty
+  /// is not available"), and the store-unavailable or offline line when the
+  /// call never reached it — the same reading the cart screen gives.
   Future<void> _add() async {
     if (product.requiresOptions) {
       widget.onTap?.call();
@@ -198,9 +201,13 @@ class _ProductCardState extends ConsumerState<ProductCard> {
       // sheet needs this context to find its navigator.
       AddedToCartSheet.show(context, item: AddedItem.fromProduct(product));
       widget.onAddedToCart?.call();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(serverMessageOr(context, error, l10n.errorGeneric)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _adding = false);
     }

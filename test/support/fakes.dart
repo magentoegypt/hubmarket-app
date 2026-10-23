@@ -118,12 +118,20 @@ class FakeCartRepository implements CartRepository {
   @override
   Future<Cart> getCart(String cartId) async => _cart;
 
+  /// Thrown by the next [addProducts] when set (and then cleared).
+  Failure? addProductsFailure;
+
   @override
   Future<Cart> addProducts(
     String cartId,
     List<Map<String, dynamic>> items, {
     bool throwOnUserError = true,
   }) async {
+    final failure = addProductsFailure;
+    if (failure != null) {
+      addProductsFailure = null;
+      throw failure;
+    }
     _cart = Cart(
       id: cartId,
       items: [

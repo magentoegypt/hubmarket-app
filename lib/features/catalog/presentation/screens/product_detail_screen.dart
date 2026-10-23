@@ -16,6 +16,7 @@ import '../../../../core/store/store_controller.dart';
 import '../../../../core/store/store_urls.dart';
 import '../../../../core/util/launch.dart';
 import '../../../../core/widgets/async_value_view.dart';
+import '../../../../core/widgets/failure_message.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../cart/presentation/cart_controller.dart';
 import '../../../cart/presentation/widgets/added_to_cart_sheet.dart';
@@ -582,7 +583,9 @@ class _BrandLink extends ConsumerWidget {
 
 /// How the product page adds to the cart — its own product from the sticky
 /// bar, or another seller's offer from the other-sellers card: [sku] into
-/// the cart, then "Added to cart" (14c) with [item], or the error.
+/// the cart, then "Added to cart" (14c) with [item], or the error as it came:
+/// the store's own words for a refusal it worded, and the store-unavailable or
+/// offline line when the call never reached it.
 Future<void> _addAndConfirm(
   BuildContext context,
   WidgetRef ref, {
@@ -608,11 +611,13 @@ Future<void> _addAndConfirm(
         recommendations: recommendations,
       );
     }
-  } catch (_) {
+  } catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(serverMessageOr(context, error, l10n.errorGeneric)),
+        ),
+      );
     }
   }
 }
